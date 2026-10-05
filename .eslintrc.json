@@ -1,0 +1,36 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "no-restricted-imports": [
+      "error",
+      {
+        "paths": [
+          {
+            "name": "@supabase/supabase-js",
+            "importNames": ["createClient"],
+            "message": "No crees clientes de Supabase sueltos. Usá el contexto de withTenant (ctx.db) o los helpers de @/lib/supabase/clients."
+          }
+        ]
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["src/app/api/**/*.ts"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": ["**/supabase/clients", "**/lib/supabase/clients"],
+                "importNames": ["systemClient", "scopedServiceClient"],
+                "message": "Las rutas no usan service-role directo. Accedé a datos por ctx.db (withTenant). Para casos excepcionales, ctx.db.unsafeRaw() revisado."
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
