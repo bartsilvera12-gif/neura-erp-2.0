@@ -41,14 +41,12 @@ create index if not exists clientes_empresa_idx on :"schema".clientes(empresa_id
 -- El acceso real lo da withTenant (service-role scoped) + estas políticas para la
 -- sesión del usuario (doble red). Las políticas keyean por empresa del usuario.
 -- =============================================================================
-do $$
-declare t text;
-begin
-  foreach t in array array['empresas','usuarios','clientes'] loop
-    execute format('alter table %I.%I enable row level security', :'schema', t);
-    execute format('alter table %I.%I force row level security', :'schema', t);
-  end loop;
-end $$;
+alter table :"schema".empresas enable row level security;
+alter table :"schema".empresas force row level security;
+alter table :"schema".usuarios enable row level security;
+alter table :"schema".usuarios force row level security;
+alter table :"schema".clientes enable row level security;
+alter table :"schema".clientes force row level security;
 
 -- empresa_actual(): la empresa del usuario logueado, según el catálogo del schema.
 create or replace function :"schema".empresa_actual()

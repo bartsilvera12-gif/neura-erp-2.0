@@ -18,7 +18,7 @@ export default function HomePage() {
     setLoading(true);
     setError(null);
     try {
-      setClientes(await apiFetch<Cliente[]>("/api/_ejemplo"));
+      setClientes(await apiFetch<Cliente[]>("/api/ejemplo"));
     } catch (e) {
       setError((e as Error).message);
     } finally {
