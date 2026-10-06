@@ -1,20 +1,23 @@
 {
   "extends": "next/core-web-vitals",
-  "rules": {
-    "no-restricted-imports": [
-      "error",
-      {
-        "paths": [
+  "overrides": [
+    {
+      "files": ["src/app/**/*.ts", "src/app/**/*.tsx"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
           {
-            "name": "@supabase/supabase-js",
-            "importNames": ["createClient"],
-            "message": "No crees clientes de Supabase sueltos. Usá el contexto de withTenant (ctx.db) o los helpers de @/lib/supabase/clients."
+            "paths": [
+              {
+                "name": "@supabase/supabase-js",
+                "importNames": ["createClient"],
+                "message": "No crees clientes de Supabase sueltos en páginas/rutas. Usá los helpers de @/lib/supabase/* (browser) o el ctx de withTenant (server)."
+              }
+            ]
           }
         ]
       }
-    ]
-  },
-  "overrides": [
+    },
     {
       "files": ["src/app/api/**/*.ts"],
       "rules": {
@@ -25,7 +28,7 @@
               {
                 "group": ["**/supabase/clients", "**/lib/supabase/clients"],
                 "importNames": ["systemClient", "scopedServiceClient"],
-                "message": "Las rutas no usan service-role directo. Accedé a datos por ctx.db (withTenant). Para casos excepcionales, ctx.db.unsafeRaw() revisado."
+                "message": "Las rutas no usan service-role directo. Accedé a datos por ctx.db (withTenant); para casos excepcionales, ctx.db.unsafeRaw() revisado."
               }
             ]
           }
