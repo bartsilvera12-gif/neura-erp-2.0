@@ -5,4 +5,6 @@ export const moduloClientes: Modulo = {
   id: "clientes",
   label: "Clientes",
   href: "/clientes",
+  icon: "users",
+  familia: "Comercial",
 };
