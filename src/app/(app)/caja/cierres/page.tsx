@@ -48,6 +48,9 @@ const ATAJOS: [string, string][] = [["hoy", "Hoy"], ["7d", "7 días"], ["mes", "
 export default function CierresCajaPage() {
   const [desde, setDesde] = useState(() => rangoAtajo("mes").desde);
   const [hasta, setHasta] = useState(hoy);
+  // Atajo elegido (no se deduce de las fechas: a principio de mes "7 días" y "Este mes"
+  // dan el mismo rango y el botón tocado tiene que quedar marcado). Fechas a mano → ninguno.
+  const [atajo, setAtajo] = useState<string | null>("mes");
   const [data, setData] = useState<CajasReporte | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +71,6 @@ export default function CierresCajaPage() {
   const t = data?.totales;
   const numerosCajas = useMemo(() => [...new Set((data?.cajas ?? []).map((c) => c.numero_caja))].sort((a, b) => a - b), [data]);
   const cajas = (data?.cajas ?? []).filter((c) => filtroCaja === "" || String(c.numero_caja) === filtroCaja);
-  const atajoActivo = [...ATAJOS].sort(([a]) => (a === "mes" ? -1 : 0)).find(([k]) => { const r = rangoAtajo(k); return r.desde === desde && r.hasta === hasta; })?.[0];
 
   async function exportar() {
     setExportando(true);
@@ -99,9 +101,9 @@ export default function CierresCajaPage() {
               <button
                 key={k}
                 type="button"
-                onClick={() => { const r = rangoAtajo(k); setDesde(r.desde); setHasta(r.hasta); }}
+                onClick={() => { const r = rangoAtajo(k); setDesde(r.desde); setHasta(r.hasta); setAtajo(k); }}
                 className="rounded-[10px] px-3 py-1.5 text-xs font-semibold transition-colors"
-                style={atajoActivo === k ? { backgroundColor: TEAL, color: "#fff" } : { color: "#64748b" }}
+                style={atajo === k ? { backgroundColor: TEAL, color: "#fff" } : { color: "#64748b" }}
               >
                 {label}
               </button>
@@ -109,11 +111,11 @@ export default function CierresCajaPage() {
           </div>
           <label className="flex flex-col gap-1">
             <span className="px-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Desde</span>
-            <input type="date" value={desde} max={hasta} onChange={(e) => e.target.value && setDesde(e.target.value)} className={inputFecha} />
+            <input type="date" value={desde} max={hasta} onChange={(e) => { if (e.target.value) { setDesde(e.target.value); setAtajo(null); } }} className={inputFecha} />
           </label>
           <label className="flex flex-col gap-1">
             <span className="px-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Hasta</span>
-            <input type="date" value={hasta} min={desde} onChange={(e) => e.target.value && setHasta(e.target.value)} className={inputFecha} />
+            <input type="date" value={hasta} min={desde} onChange={(e) => { if (e.target.value) { setHasta(e.target.value); setAtajo(null); } }} className={inputFecha} />
           </label>
           {numerosCajas.length > 1 ? (
             <Select
