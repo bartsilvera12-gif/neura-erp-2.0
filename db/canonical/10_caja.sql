@@ -33,8 +33,10 @@ create table if not exists :"schema".productos (
   proveedor_principal_id uuid,          -- (módulo proveedores, no traído)
   tipo_producto text not null default 'reventa',
   tipo_iva text not null default '10%',
+  descuento_pct numeric not null default 0,   -- % de descuento del producto; la caja lo aplica sola
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  constraint productos_descuento_rango check (descuento_pct >= 0 and descuento_pct <= 100),
   constraint productos_tipo_iva_check check (tipo_iva = any (array['EXENTA','5%','10%'])),
   constraint productos_tipo_producto_check check (tipo_producto = any (array['reventa','repuesto','servicio']))
 );
@@ -86,7 +88,7 @@ create table if not exists :"schema".caja_movimientos (
   anulado_motivo text,
   created_at timestamptz not null default now(),
   constraint caja_mov_tipo_check check (tipo = any (array['ingreso','egreso','retiro','ajuste'])),
-  constraint caja_mov_medio_check check (medio_pago = any (array['efectivo','otro','tarjeta','transferencia','cheque']))
+  constraint caja_mov_medio_check check (medio_pago = any (array['efectivo','otro','tarjeta','transferencia','cheque','pos']))
 );
 create index if not exists caja_mov_caja_idx on :"schema".caja_movimientos(caja_id);
 create index if not exists caja_mov_empresa_idx on :"schema".caja_movimientos(empresa_id);
@@ -167,9 +169,28 @@ create table if not exists :"schema".ventas_pagos_detalle (
   fecha_pago timestamptz not null default now(),
   observacion text,
   created_at timestamptz not null default now(),
-  constraint vpd_metodo_check check (metodo_pago = any (array['efectivo','transferencia','tarjeta','qr','billetera','otro']))
+  constraint vpd_metodo_check check (metodo_pago = any (array['efectivo','transferencia','cheque','tarjeta','tarjeta_debito','tarjeta_credito','pos','pos_debito','pos_credito','qr','billetera','otro']))
 );
 create index if not exists vpd_venta_idx on :"schema".ventas_pagos_detalle(venta_id);
+
+-- =============================================================================
+-- Actualización de schemas creados con una versión anterior de esta receta
+-- (los "create table if not exists" de arriba no tocan tablas que ya existen).
+--   · POS como medio de cobro de la caja
+--   · tarjeta / POS con débito y crédito en el detalle de pagos (pago mixto)
+--   · descuento por producto (Inventario), que la caja aplica al vender
+-- =============================================================================
+alter table :"schema".caja_movimientos drop constraint if exists caja_mov_medio_check;
+alter table :"schema".caja_movimientos add constraint caja_mov_medio_check
+  check (medio_pago = any (array['efectivo','otro','tarjeta','transferencia','cheque','pos']));
+
+alter table :"schema".ventas_pagos_detalle drop constraint if exists vpd_metodo_check;
+alter table :"schema".ventas_pagos_detalle add constraint vpd_metodo_check
+  check (metodo_pago = any (array['efectivo','transferencia','cheque','tarjeta','tarjeta_debito','tarjeta_credito','pos','pos_debito','pos_credito','qr','billetera','otro']));
+
+alter table :"schema".productos add column if not exists descuento_pct numeric not null default 0;
+alter table :"schema".productos drop constraint if exists productos_descuento_rango;
+alter table :"schema".productos add constraint productos_descuento_rango check (descuento_pct >= 0 and descuento_pct <= 100);
 
 -- =============================================================================
 -- RLS deny-by-default + políticas por empresa (misma lógica que el core).
