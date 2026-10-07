@@ -11,5 +11,6 @@ export const moduloInventario: Modulo = {
   children: [
     { label: "Productos", href: "/inventario" },
     { label: "Categorías", href: "/inventario/categorias" },
+    { label: "Movimientos", href: "/inventario/movimientos" },
   ],
 };

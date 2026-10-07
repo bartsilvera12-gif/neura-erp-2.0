@@ -1,7 +1,8 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { History, ImagePlus, Loader2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Drawer } from "@/components/Drawer";
@@ -131,6 +132,11 @@ export function ProductoForm({
           <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
             Este producto está <strong>inactivo</strong> (solo lectura). Reactivalo desde el listado para poder editarlo.
           </p>
+        ) : null}
+        {editando ? (
+          <Link href={`/inventario/movimientos?producto=${producto!.id}`} className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--brand)] hover:underline">
+            <History className="h-3.5 w-3.5" /> Ver movimientos de stock
+          </Link>
         ) : null}
         <fieldset disabled={soloLectura} className="space-y-4 disabled:opacity-70">
         <div className="flex items-center gap-4">

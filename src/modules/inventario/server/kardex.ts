@@ -12,6 +12,9 @@ export async function registrarMovimiento(
   m: { producto_id: string; producto_nombre: string; producto_sku: string; delta: number; costo_unitario: number; origen: Origen; referencia: string },
 ) {
   if (!m.delta) return;
+  // Nombre del usuario (igual que lo guardan las funciones de venta/anulación en la base).
+  const u = await ctx.db.select("usuarios", "nombre").eq("id", ctx.usuarioId).limit(1);
+  const nombre = (u.data?.[0] as { nombre?: string } | undefined)?.nombre;
   const { error } = await ctx.db.insert("movimientos_inventario", {
     producto_id: m.producto_id,
     producto_nombre: m.producto_nombre,
@@ -22,7 +25,7 @@ export async function registrarMovimiento(
     origen: m.origen,
     referencia: m.referencia,
     created_by: ctx.usuarioId,
-    usuario_nombre: ctx.user.email ?? null,
+    usuario_nombre: nombre || ctx.user.email || null,
   });
   if (error) console.error("[kardex]", error.message);
 }
