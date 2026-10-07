@@ -47,12 +47,6 @@ export type CajasReporte = {
   desde: string;
   hasta: string;
   cajas: CajaReporteFila[];
-  /**
-   * Ventas por DÍA de venta (hora de Paraguay), caja y medio — para los gráficos.
-   * medio: efectivo | tarjeta | pos | transferencia | otros | credito.
-   * Va por caja para que el filtro de caja de la pantalla también filtre los gráficos.
-   */
-  diario: { fecha: string; caja_id: string; medio: string; monto: number }[];
   totales: {
     cantidad_cajas: number;
     cajas_abiertas: number;
@@ -145,8 +139,8 @@ async function nombresUsuarios(db: TenantDb, ids: string[]) {
   return map;
 }
 
-type Mov = { caja_id: string; tipo: string; monto: number; medio: string; venta_id: string | null; created_at?: string };
-type VentaCred = { caja_id: string; total: number; tipo_venta: string; estado: string; fecha?: string };
+type Mov = { caja_id: string; tipo: string; monto: number; medio: string; venta_id: string | null };
+type VentaCred = { caja_id: string; total: number; tipo_venta: string; estado: string };
 
 function armarFila(c: Fila, movs: Mov[], ventas: VentaCred[], nombres: Map<string, string>): CajaReporteFila {
   const ventaMovs = movs.filter((m) => m.venta_id && m.tipo === "ingreso");
@@ -210,7 +204,6 @@ const aMov = (m: Fila): Mov => ({
   monto: num(m.monto),
   medio: String(m.medio_pago ?? "efectivo").trim().toLowerCase(),
   venta_id: m.venta_id ? String(m.venta_id) : null,
-  created_at: m.created_at ? String(m.created_at) : undefined,
 });
 
 // ── Listado ───────────────────────────────────────────────────────────────────
@@ -233,7 +226,7 @@ export async function getReporteCajas(db: TenantDb, rango: ReturnType<typeof res
     const lote = ids.slice(i, i + 150);
     const movRaw = await todas((a, b) =>
       db
-        .select("caja_movimientos", "id, caja_id, tipo, monto, medio_pago, venta_id, created_at")
+        .select("caja_movimientos", "id, caja_id, tipo, monto, medio_pago, venta_id")
         .in("caja_id", lote)
         .is("anulado_at", null)
         .order("id", { ascending: true })
@@ -242,13 +235,13 @@ export async function getReporteCajas(db: TenantDb, rango: ReturnType<typeof res
     movs.push(...movRaw.map(aMov));
     const vRaw = await todas((a, b) =>
       db
-        .select("ventas", "id, caja_id, total, tipo_venta, estado, fecha")
+        .select("ventas", "id, caja_id, total, tipo_venta, estado")
         .in("caja_id", lote)
         .eq("tipo_venta", "CREDITO")
         .order("id", { ascending: true })
         .range(a, b),
     );
-    ventas.push(...vRaw.map((v) => ({ caja_id: String(v.caja_id), total: num(v.total), tipo_venta: String(v.tipo_venta), estado: String(v.estado), fecha: String(v.fecha) })));
+    ventas.push(...vRaw.map((v) => ({ caja_id: String(v.caja_id), total: num(v.total), tipo_venta: String(v.tipo_venta), estado: String(v.estado) })));
   }
 
   const nombres = await nombresUsuarios(db, cajasRaw.flatMap((c) => [String(c.abierta_por ?? ""), String(c.cerrada_por ?? "")]));
@@ -265,7 +258,6 @@ export async function getReporteCajas(db: TenantDb, rango: ReturnType<typeof res
   const conDif = cajas.filter((c) => c.diferencia != null && c.diferencia !== 0);
   return {
     desde: rango.desde,
-    diario: armarDiario(movs, ventas),
     hasta: rango.hasta,
     cajas,
     totales: {
@@ -285,28 +277,6 @@ export async function getReporteCajas(db: TenantDb, rango: ReturnType<typeof res
       cajas_con_diferencia: conDif.length,
     },
   };
-}
-
-/** Agrega ventas por (día de Paraguay, caja, medio): contado desde caja_movimientos, crédito desde ventas. */
-function armarDiario(movs: Mov[], ventas: VentaCred[]): CajasReporte["diario"] {
-  const diaPY = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "America/Asuncion" });
-  const acc = new Map<string, { fecha: string; caja_id: string; medio: string; monto: number }>();
-  const sumar = (fecha: string, caja_id: string, medio: string, monto: number) => {
-    const k = `${fecha}|${caja_id}|${medio}`;
-    const e = acc.get(k) ?? { fecha, caja_id, medio, monto: 0 };
-    e.monto += monto;
-    acc.set(k, e);
-  };
-  for (const m of movs) {
-    if (!m.venta_id || m.tipo !== "ingreso" || !m.created_at) continue;
-    const medio = ["efectivo", "tarjeta", "pos", "transferencia"].includes(m.medio) ? m.medio : "otros";
-    sumar(diaPY(m.created_at), m.caja_id, medio, m.monto);
-  }
-  for (const v of ventas) {
-    if (v.tipo_venta !== "CREDITO" || v.estado === "anulada" || !v.fecha) continue;
-    sumar(diaPY(v.fecha), v.caja_id, "credito", v.total);
-  }
-  return [...acc.values()].sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
 }
 
 // ── Detalle de un turno ───────────────────────────────────────────────────────
