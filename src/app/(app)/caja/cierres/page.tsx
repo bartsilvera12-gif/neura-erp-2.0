@@ -11,6 +11,7 @@ import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
+import { GraficosCierres } from "@/modules/caja/GraficosCierres";
 import { formatGs } from "@/modules/caja/lib";
 import { estadoCajaLabel, type CajasReporte } from "@/modules/caja/reporte-cajas";
 
@@ -157,6 +158,11 @@ export default function CierresCajaPage() {
               hint={`${t.cajas_con_diferencia} caja(s) con diferencia`}
             />
             <Kpi label="Faltantes / Sobrantes" value={`${formatGs(t.faltantes)} / ${formatGs(t.sobrantes)}`} hint="faltante / sobrante acumulado" />
+          </div>
+
+          {/* Gráficos gerenciales (respetan el filtro de caja) */}
+          <div className={`transition-opacity ${cargando ? "opacity-60" : ""}`}>
+            <GraficosCierres data={data} cajas={cajas} />
           </div>
 
           {/* Detalle de turnos */}
