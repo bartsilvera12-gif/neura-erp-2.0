@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowDownLeft,
-  Banknote,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -84,19 +83,16 @@ export default function CajaDashboard() {
         <p className="mt-1 text-sm text-slate-500">Caja de ventas y despacho de productos</p>
       </div>
 
-      {/* Estado de la caja */}
-      <section>
-        <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
-          <Wallet className="h-4 w-4" style={{ color: TEAL }} /> Caja abierta
-        </h2>
-        {cargando ? (
-          <div className="h-32 animate-pulse rounded-2xl border border-slate-200 bg-white" />
-        ) : caja ? (
+      {/* Estado de la caja: solo si hay un turno abierto. Abrir caja se hace desde
+          Nueva venta (panel del turno), no desde Órdenes de venta. */}
+      {caja ? (
+        <section>
+          <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
+            <Wallet className="h-4 w-4" style={{ color: TEAL }} /> Caja abierta
+          </h2>
           <TarjetaCaja caja={caja} arqueo={arqueo} onCambio={cargar} />
-        ) : (
-          <Apertura onAbierta={cargar} />
-        )}
-      </section>
+        </section>
+      ) : null}
 
       {/* Órdenes de venta */}
       <Ordenes caja={caja} listo={!cargando} />
@@ -161,40 +157,6 @@ function Cifra({ label, valor, icono: Icono, destacado }: { label: string; valor
         <Icono className="mt-px h-3 w-3 shrink-0" /> <span>{label}</span>
       </p>
       <p className="mt-1 whitespace-nowrap text-lg font-bold tabular-nums tracking-tight" style={destacado ? { color: TEAL } : { color: "#0f172a" }}>{valor}</p>
-    </div>
-  );
-}
-
-// ── Apertura ────────────────────────────────────────────────────────────────
-function Apertura({ onAbierta }: { onAbierta: () => void }) {
-  const [monto, setMonto] = useState("");
-  const [guardando, setGuardando] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  async function abrir() {
-    setGuardando(true); setError(null);
-    try {
-      await apiFetch("/api/caja", { method: "POST", body: JSON.stringify({ monto_apertura: Number(monto) || 0 }) });
-      onAbierta();
-    } catch (e) { setError((e as Error).message); setGuardando(false); }
-  }
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-8">
-      <div className="mx-auto max-w-sm text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full" style={{ backgroundColor: `${TEAL}1a` }}>
-          <Banknote className="h-7 w-7" style={{ color: TEAL }} />
-        </div>
-        <h3 className="mt-4 text-lg font-bold text-slate-900">Abrir caja</h3>
-        <p className="mt-1 text-sm text-slate-500">Contá el efectivo con el que arrancás. Es la base contra la que cuadra el arqueo.</p>
-        <label className="mt-6 block text-left">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-widest text-slate-400">Monto de apertura</span>
-          <input autoFocus inputMode="numeric" value={monto} onChange={(e) => setMonto(e.target.value.replace(/\D/g, ""))} placeholder="0"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-right text-lg font-semibold tabular-nums outline-none focus:ring-2" style={{ ["--tw-ring-color" as string]: TEAL }} />
-        </label>
-        {error ? <p className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
-        <button onClick={abrir} disabled={guardando} className="mt-5 w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity disabled:opacity-40" style={{ backgroundColor: TEAL }}>
-          {guardando ? "Abriendo…" : "Abrir caja"}
-        </button>
-      </div>
     </div>
   );
 }
