@@ -6,8 +6,12 @@
 import type { Modulo } from "@/modules/types";
 import { clienteConfig } from "@/cliente.config";
 import { moduloClientes } from "@/modules/clientes/module";
+import { moduloCaja } from "@/modules/caja/module";
+import { moduloInventario } from "@/modules/inventario/module";
 
 const TODOS: Modulo[] = [
+  moduloCaja,
+  moduloInventario,
   moduloClientes,
   // moduloFacturacion,
   // moduloChat,

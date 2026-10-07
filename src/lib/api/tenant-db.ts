@@ -44,6 +44,15 @@ export class TenantDb {
   }
 
   /**
+   * Llama a una función de base (RPC). Para escrituras transaccionales multi-tabla
+   * (ej. crear_venta): la función resuelve empresa_id con empresa_actual() internamente,
+   * así que el aislamiento sigue garantizado por RLS aunque no se filtre acá.
+   */
+  rpc<T = unknown>(fn: string, args?: Record<string, unknown>) {
+    return this.sb.rpc(fn, args) as unknown as Promise<{ data: T | null; error: { message: string } | null }>;
+  }
+
+  /**
    * Escotilla de escape: cliente crudo SIN el filtro de empresa. Úsese sólo en casos
    * revisados y documentados (ej. catálogos globales). Nombre feo a propósito para que
    * salte en revisión de código y en el lint.

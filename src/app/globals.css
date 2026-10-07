@@ -1,5 +1,58 @@
 @import "tailwindcss";
 
-:root { --brand: #3F8E91; --brand-dark: #023047; }
+/* Identidad Neura: blanco + turquesa. El acento es un solo token para que cada
+   clon lo re-tematice; el resto es blanco y escala slate. */
+:root {
+  --brand: #3f8e91;
+  --brand-50: #f0f9f9;
+  --brand-100: #d7eded;
+  --brand-600: #357b7e;
+  --brand-700: #2b6467;
+  --brand-dark: #023047;
+  /* ZENTRA — identidad lateral (turquesa profundo, contenido blanco) */
+  --zentra-sidebar: #0b3a3d;
+  --zentra-sidebar-elevated: #104a4e;
+  --zentra-sidebar-border: rgba(255, 255, 255, 0.08);
+  --zentra-sidebar-hover: rgba(255, 255, 255, 0.06);
+  --zentra-accent: #7dcfd2;
+}
+
 html, body { height: 100%; }
-body { background: #f1f5f9; color: #0f172a; font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+body {
+  background: #f6f8fa;
+  color: #0f172a;
+  font-family: var(--font-jakarta), system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Scrollbars finos, para que los paneles con overflow no se vean toscos. */
+* { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+*::-webkit-scrollbar { width: 8px; height: 8px; }
+*::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
+*::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+/* Solo opacidad: NADA de transform. Un transform persistente (fill-mode both)
+   crea un "containing block" que encierra los modales fixed y evita que el
+   backdrop cubra toda la pantalla (incluido el sidebar). */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.animate-in { animation: fade-in 0.22s ease-out both; }
+
+@keyframes modal-backdrop {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes modal-pop {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes drawer-in {
+  from { transform: translateX(24px); opacity: 0.6; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes rb-pop {
+  from { opacity: 0; transform: translateY(-4px) scaleY(0.96); }
+  to { opacity: 1; transform: translateY(0) scaleY(1); }
+}

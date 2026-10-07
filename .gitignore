@@ -3,3 +3,6 @@
 /out
 .env*.local
 *.log
+
+# cache de TypeScript
+*.tsbuildinfo
