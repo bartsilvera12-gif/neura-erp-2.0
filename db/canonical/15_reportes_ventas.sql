@@ -188,6 +188,34 @@ begin
 end;
 $fn$;
 
+-- =============================================================================
+-- completar_costo_ventas: a las líneas de venta que quedaron con costo 0 (el producto
+-- no tenía costo cargado al venderse) les pone el costo promedio ACTUAL del producto.
+-- Solo toca líneas en 0 de los productos indicados que hoy sí tienen costo; no cambia
+-- precios, totales, stock ni caja. Devuelve cuántas líneas se completaron.
+-- =============================================================================
+create or replace function :"schema".completar_costo_ventas(p_producto_ids uuid[])
+returns integer
+language plpgsql security invoker set search_path = :"schema", public as $fn$
+declare
+  n integer;
+begin
+  if empresa_actual() is null then raise exception 'No hay empresa en la sesión'; end if;
+  update ventas_items vi
+     set costo_unitario = p.costo_promedio
+    from productos p
+   where p.id = vi.producto_id
+     and vi.empresa_id = empresa_actual()
+     and p.empresa_id = empresa_actual()
+     and vi.producto_id = any (p_producto_ids)
+     and coalesce(vi.costo_unitario, 0) = 0
+     and coalesce(p.costo_promedio, 0) > 0;
+  get diagnostics n = row_count;
+  return n;
+end;
+$fn$;
+
+grant execute on function :"schema".completar_costo_ventas(uuid[]) to authenticated, service_role;
 grant execute on function :"schema".categoria_pago(text) to authenticated, service_role;
 grant execute on function :"schema".reporte_ventas_base(date, date, uuid, text, text, text) to authenticated, service_role;
 grant execute on function :"schema".reporte_ventas_resumen(date, date, uuid, text, text, text) to authenticated, service_role;

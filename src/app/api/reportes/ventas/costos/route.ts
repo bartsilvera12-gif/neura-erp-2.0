@@ -1,0 +1,40 @@
+/**
+ * Corregir costos desde el reporte de ventas (ADMIN).
+ *   POST /api/reportes/ventas/costos
+ *   { costos: [{ producto_id, costo }], completar_ventas: boolean }
+ * Carga el costo promedio de cada producto (si viene > 0) y, si se pide, completa con
+ * ese costo las líneas de ventas pasadas que habían quedado en 0. No toca precios,
+ * totales, stock ni caja.
+ */
+import { z } from "zod";
+import { withTenant } from "@/lib/api/with-tenant";
+import { ok, ERR } from "@/lib/api/responses";
+
+const cuerpo = z.object({
+  costos: z.array(z.object({ producto_id: z.string().uuid(), costo: z.coerce.number().min(0) })).min(1).max(500),
+  completar_ventas: z.boolean().default(true),
+});
+
+export const POST = withTenant(
+  async (ctx, _req, input) => {
+    let actualizados = 0;
+    for (const c of input.costos) {
+      if (c.costo <= 0) continue;
+      const { error } = await ctx.db
+        .update("productos", { costo_promedio: c.costo, updated_at: new Date().toISOString() })
+        .eq("id", c.producto_id);
+      if (error) return ERR.server();
+      actualizados++;
+    }
+    let lineas = 0;
+    if (input.completar_ventas) {
+      const { data, error } = await ctx.db.rpc<number>("completar_costo_ventas", {
+        p_producto_ids: input.costos.map((c) => c.producto_id),
+      });
+      if (error) return ERR.server();
+      lineas = Number(data) || 0;
+    }
+    return ok({ productos_actualizados: actualizados, lineas_completadas: lineas });
+  },
+  { roles: ["ADMIN"], body: cuerpo },
+);

@@ -14,6 +14,7 @@ import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
+import { CorregirCostos } from "@/modules/reportes/CorregirCostos";
 import type { Categoria } from "@/modules/inventario/categorias";
 import type { ResumenVentas, VentaDetalle as FilaVenta } from "@/modules/reportes/server/ventas";
 
@@ -81,6 +82,8 @@ export default function ReporteVentasPage() {
   const [viendo, setViendo] = useState<string | null>(null);
   const [bajando, setBajando] = useState<"" | "xlsx" | "pdf">("");
   const [recarga, setRecarga] = useState(0);
+  const [corrigiendo, setCorrigiendo] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
 
   useEffect(() => {
     apiFetch<{ categorias: Categoria[] }>("/api/inventario/categorias").then((r) => setCategorias(r.categorias)).catch(() => {});
@@ -218,12 +221,20 @@ export default function ReporteVentasPage() {
           </div>
 
           {k.productos_sin_costo ? (
-            <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>
-                <strong>{k.productos_sin_costo} producto(s)</strong> se vendieron sin costo cargado: su ganancia figura como el total de la venta, así que la ganancia bruta está sobreestimada.
-                Cargá el costo en <Link href="/inventario" className="font-semibold underline">Inventario</Link> (marcados con * en la tabla de productos).
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+              <span className="flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 shrink-0" />
+                <span><strong>{k.productos_sin_costo} producto(s) vendidos sin costo</strong> · la ganancia está sobreestimada</span>
               </span>
+              <button onClick={() => setCorrigiendo(true)} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700">
+                Corregir costos
+              </button>
+            </div>
+          ) : null}
+          {aviso ? (
+            <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">
+              <span>{aviso}</span>
+              <button onClick={() => setAviso(null)} aria-label="Cerrar aviso" className="rounded p-0.5 text-emerald-600 hover:bg-emerald-100"><X className="h-4 w-4" /></button>
             </div>
           ) : null}
 
@@ -350,6 +361,14 @@ export default function ReporteVentasPage() {
           </div>
         ) : null}
       </Tarjeta>
+
+      {corrigiendo && resumen ? (
+        <CorregirCostos
+          productos={resumen.productos.filter((p) => p.sin_costo)}
+          onClose={() => setCorrigiendo(false)}
+          onListo={(msg) => { setCorrigiendo(false); setAviso(msg); setRecarga((n) => n + 1); }}
+        />
+      ) : null}
 
       {viendo ? <VentaDetalle ventaId={viendo} onClose={() => setViendo(null)} onAnulada={() => { setViendo(null); setRecarga((n) => n + 1); }} /> : null}
     </div>
