@@ -1,4 +1,4 @@
-import { Lock, type LucideIcon } from "lucide-react";
+import { Lock, ShoppingCart, type LucideIcon } from "lucide-react";
 
 /**
  * Catálogo de reportes: alimenta la pantalla /reportes (una tarjeta por reporte).
@@ -13,6 +13,13 @@ export type Reporte = {
 };
 
 export const REPORTES: Reporte[] = [
+  {
+    href: "/reportes/ventas",
+    titulo: "Ventas del período",
+    subtitulo: "Ventas, ganancia e IVA",
+    descripcion: "Cuánto se vendió y se ganó, ticket promedio, IVA a declarar, cobros por medio de pago, ventas por cajero, productos y categorías más vendidos. Excel y PDF.",
+    icono: ShoppingCart,
+  },
   {
     href: "/reportes/cajas",
     titulo: "Cierres de caja",
