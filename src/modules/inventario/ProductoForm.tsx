@@ -7,7 +7,9 @@ import { clienteConfig } from "@/cliente.config";
 import { Drawer } from "@/components/Drawer";
 import { Select } from "@/components/Select";
 import { subirImagenProducto } from "@/modules/caja/upload-imagen";
-import type { Producto, TipoIva } from "@/modules/caja/lib";
+import type { TipoIva } from "@/modules/caja/lib";
+import type { ProductoInventario } from "@/modules/inventario/tipos";
+import type { Categoria } from "@/modules/inventario/categorias";
 
 const BRAND = clienteConfig.color;
 const INPUT =
@@ -15,20 +17,29 @@ const INPUT =
 const ET = "mb-1 block text-xs font-medium text-slate-600";
 const IVAS: TipoIva[] = ["10%", "5%", "EXENTA"];
 
-/** Alta y edición de producto (inventario). Si `producto` viene, edita; si no, crea. */
+/**
+ * Alta y edición de producto (inventario), en el panel lateral. Si `producto` viene,
+ * edita; si no, crea. Un producto inactivo se abre en solo lectura (como Ferretería):
+ * primero hay que reactivarlo.
+ */
 export function ProductoForm({
   producto,
+  categorias = [],
   onClose,
   onSaved,
 }: {
-  producto?: Producto | null;
+  producto?: ProductoInventario | null;
+  categorias?: Categoria[];
   onClose: () => void;
   onSaved: () => void;
 }) {
   const editando = !!producto;
+  const soloLectura = producto?.activo === false;
   const [f, setF] = useState({
     nombre: producto?.nombre ?? "",
     sku: producto?.sku ?? "",
+    codigo_barras: producto?.codigo_barras ?? "",
+    categoria_principal_id: producto?.categoria_principal_id ?? "",
     unidad_medida: producto?.unidad_medida ?? "Unidad",
     tipo_iva: (producto?.tipo_iva ?? "10%") as TipoIva,
     costo_promedio: String(producto?.costo_promedio ?? ""),
@@ -49,7 +60,7 @@ export function ProductoForm({
 
   const set = (k: keyof typeof f, v: unknown) => setF((p) => ({ ...p, [k]: v }));
   const num = (v: string) => (v === "" ? undefined : Number(v));
-  const puede = f.nombre.trim() !== "" && f.sku.trim() !== "";
+  const puede = !soloLectura && f.nombre.trim() !== "" && f.sku.trim() !== "";
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -73,6 +84,8 @@ export function ProductoForm({
     const body = {
       nombre: f.nombre.trim(),
       sku: f.sku.trim(),
+      codigo_barras: f.codigo_barras.trim() || null,
+      categoria_principal_id: f.categoria_principal_id || null,
       unidad_medida: f.unidad_medida.trim() || "Unidad",
       tipo_iva: f.tipo_iva,
       costo_promedio: num(f.costo_promedio) ?? 0,
@@ -101,7 +114,7 @@ export function ProductoForm({
 
   return (
     <Drawer
-      titulo={editando ? "Editar producto" : "Nuevo producto"}
+      titulo={soloLectura ? "Producto inactivo" : editando ? "Editar producto" : "Nuevo producto"}
       subtitulo={editando ? producto?.sku : "Cargá los datos del producto"}
       onClose={onClose}
       footer={
@@ -114,6 +127,12 @@ export function ProductoForm({
       }
     >
       <form id="producto-form" onSubmit={guardar} className="space-y-4">
+        {soloLectura ? (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+            Este producto está <strong>inactivo</strong> (solo lectura). Reactivalo desde el listado para poder editarlo.
+          </p>
+        ) : null}
+        <fieldset disabled={soloLectura} className="space-y-4 disabled:opacity-70">
         <div className="flex items-center gap-4">
           <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
           <button
@@ -149,6 +168,20 @@ export function ProductoForm({
           <label className="col-span-1 block sm:col-span-2">
             <span className={ET}>SKU *</span>
             <input value={f.sku} onChange={(e) => set("sku", e.target.value)} className={INPUT} placeholder="COCA2L" />
+          </label>
+
+          <label className="col-span-1 block sm:col-span-3">
+            <span className={ET}>Código de barras</span>
+            <input value={f.codigo_barras} onChange={(e) => set("codigo_barras", e.target.value)} className={`${INPUT} font-mono`} placeholder="7840000000000" />
+          </label>
+          <label className="col-span-1 block sm:col-span-3">
+            <span className={ET}>Categoría</span>
+            <Select
+              value={f.categoria_principal_id}
+              onChange={(v) => set("categoria_principal_id", v)}
+              block
+              options={[["", "— Sin categoría —"], ...categorias.filter((c) => c.activo || c.id === f.categoria_principal_id).map((c): [string, string] => [c.id, c.nombre])]}
+            />
           </label>
 
           <label className="col-span-1 block sm:col-span-2">
@@ -202,6 +235,7 @@ export function ProductoForm({
           </label>
         </div>
 
+        </fieldset>
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
       </form>
     </Drawer>

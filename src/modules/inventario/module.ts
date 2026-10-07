@@ -8,4 +8,8 @@ export const moduloInventario: Modulo = {
   icon: "package",
   familia: "Operaciones",
   roles: ["ADMIN", "CAJERO", "VENDEDOR"],
+  children: [
+    { label: "Productos", href: "/inventario" },
+    { label: "Categorías", href: "/inventario/categorias" },
+  ],
 };

@@ -18,3 +18,13 @@ export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}
   }
   return (body?.data ?? body) as T;
 }
+
+/** Igual que apiFetch pero manda un form-data (subida de archivos): sin Content-Type JSON. */
+export async function apiForm<T = unknown>(path: string, form: FormData): Promise<T> {
+  const { data } = await browserClient().auth.getSession();
+  const token = data.session?.access_token;
+  const res = await fetch(path, { method: "POST", body: form, headers: token ? { Authorization: `Bearer ${token}` } : {} });
+  const body = await res.json().catch(() => null);
+  if (!res.ok || body?.ok === false) throw new Error(body?.error?.message || `Error ${res.status}`);
+  return (body?.data ?? body) as T;
+}
