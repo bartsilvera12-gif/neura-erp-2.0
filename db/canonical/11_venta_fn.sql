@@ -137,6 +137,12 @@ begin
 
     if prod.controla_stock then
       update productos set stock_actual = stock_actual - v_cant, updated_at = now() where id = prod.id;
+      -- Kardex: la venta es una SALIDA (misma transacción que el descuento de stock).
+      insert into movimientos_inventario (empresa_id, producto_id, producto_nombre, producto_sku, tipo, cantidad,
+                                          costo_unitario, origen, referencia, created_by, usuario_nombre)
+        values (v_empresa, prod.id, prod.nombre, prod.sku, 'SALIDA', v_cant, coalesce(prod.costo_promedio, 0),
+                'venta', 'Venta ' || v_numero, v_usuario,
+                (select u.nombre from usuarios u where u.id = v_usuario));
     end if;
 
     tot_sub := tot_sub + v_sub;
