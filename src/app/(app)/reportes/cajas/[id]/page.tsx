@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * /caja/cierres/[id] — Detalle de un turno de caja (portado de Ferretería República):
+ * /reportes/cajas/[id] — Detalle de un turno de caja (portado de Ferretería República):
  * resumen del arqueo + línea de tiempo (apertura, ventas y movimientos manuales).
  */
 import Link from "next/link";
@@ -126,12 +126,12 @@ export default function DetalleTurnoPage() {
       {/* Encabezado */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <Link href="/caja/cierres" className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800">
+          <Link href="/reportes/cajas" className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800">
             <ArrowLeft className="h-3.5 w-3.5" /> Cierres de caja
           </Link>
           <div className="flex items-center gap-2">
             <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Caja · Reportes</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Reportes · Caja</p>
           </div>
           <h1 className="mt-1 flex flex-wrap items-center gap-2 text-2xl font-semibold tracking-tight text-slate-900">
             Detalle del turno

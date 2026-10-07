@@ -8,11 +8,13 @@ import { clienteConfig } from "@/cliente.config";
 import { moduloClientes } from "@/modules/clientes/module";
 import { moduloCaja } from "@/modules/caja/module";
 import { moduloInventario } from "@/modules/inventario/module";
+import { moduloReportes } from "@/modules/reportes/module";
 
 const TODOS: Modulo[] = [
   moduloCaja,
   moduloInventario,
   moduloClientes,
+  moduloReportes,
   // moduloFacturacion,
   // moduloChat,
   // ...

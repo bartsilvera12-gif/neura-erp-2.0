@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * /caja/cierres — Reporte de cierres de caja (portado de Ferretería República).
+ * /reportes/cajas — Reporte de cierres de caja (portado de Ferretería República).
  * Turnos del período con apertura, cierre, efectivo esperado vs. contado y diferencias.
  */
 import Link from "next/link";
@@ -90,7 +90,7 @@ export default function CierresCajaPage() {
         <div>
           <div className="flex items-center gap-2">
             <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Caja · Reportes</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Reportes · Caja</p>
           </div>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Cierres de caja</h1>
           <p className="mt-1 text-sm text-slate-500">Arqueo de turnos: apertura, cierre, efectivo esperado vs. contado y diferencias.</p>
@@ -214,7 +214,7 @@ export default function CierresCajaPage() {
                           </td>
                           <td className="px-2.5 py-3 text-center">
                             <Link
-                              href={`/caja/cierres/${c.id}`}
+                              href={`/reportes/cajas/${c.id}`}
                               className="inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors hover:bg-[var(--brand-50)]"
                               style={{ borderColor: `${TEAL}55`, color: TEAL }}
                             >

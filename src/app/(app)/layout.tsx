@@ -79,7 +79,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const familias = useMemo(() => {
     const n = q.trim().toLowerCase();
     const visibles = modulos.filter((m) => !n || m.label.toLowerCase().includes(n));
-    const orden = ["Comercial", "Finanzas", "Operaciones", "Administración", "General"];
+    const orden = ["Comercial", "Finanzas", "Operaciones", "Reportes", "Administración", "General"];
     const map = new Map<string, Modulo[]>();
     for (const m of visibles) {
       const fam = m.familia ?? "General";
@@ -179,7 +179,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                             <span className="absolute left-0 top-1 bottom-1 w-px bg-white/10" />
                             {m.children!.map((c) => {
                               // Activo: ruta exacta, o la sub-página del hijo con el prefijo más largo
-                              // (/caja/cierres/<id> marca "Cierres de caja", no "Órdenes de venta").
+                              // (/reportes/cajas/<id> marca "Cierres de caja", no "Todos los reportes").
                               const coincide = (h: string) => pathname === h || pathname.startsWith(`${h}/`);
                               const mejor = m.children!.filter((x) => coincide(x.href)).sort((a, b) => b.href.length - a.href.length)[0];
                               const ca = mejor?.href === c.href;

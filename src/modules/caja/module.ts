@@ -12,6 +12,5 @@ export const moduloCaja: Modulo = {
     { label: "Órdenes de venta", href: "/caja" },
     { label: "Nueva venta", href: "/caja/nueva" },
     { label: "Arqueo / Cierre", href: "/caja/cierre" },
-    { label: "Cierres de caja", href: "/caja/cierres" },
   ],
 };
