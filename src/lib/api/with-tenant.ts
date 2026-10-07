@@ -48,16 +48,52 @@ async function safeJson(req: NextRequest): Promise<unknown> {
   }
 }
 
+// ── Cache de verificación del token ─────────────────────────────────────────
+// Cada request validaba el token contra el servidor de auth (un viaje de red, ~70 ms
+// desde fuera de la VPS). Se recuerda el resultado por token unos segundos: nunca más
+// allá de su vencimiento (exp del JWT). Un logout/revocación tarda a lo sumo TOKEN_TTL_MS
+// en surtir efecto en la API; la RLS de la base sigue validando el token en cada query.
+const TOKEN_TTL_MS = 30_000;
+const TOKEN_CACHE_MAX = 1000;
+const tokenCache = new Map<string, { user: User; hasta: number }>();
+
+function expDelJwt(token: string): number | null {
+  try {
+    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
+    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+async function usuarioDelToken(token: string): Promise<User | null> {
+  const ahora = Date.now();
+  const hit = tokenCache.get(token);
+  if (hit && hit.hasta > ahora) return hit.user;
+  if (hit) tokenCache.delete(token);
+
+  const { data, error } = await authOnlyClient().auth.getUser(token);
+  if (error || !data.user?.id) return null;
+
+  const exp = expDelJwt(token);
+  const hasta = Math.min(ahora + TOKEN_TTL_MS, exp ?? ahora);
+  if (hasta > ahora) {
+    if (tokenCache.size >= TOKEN_CACHE_MAX) tokenCache.delete(tokenCache.keys().next().value!);
+    tokenCache.set(token, { user: data.user, hasta });
+  }
+  return data.user;
+}
+
 export function withTenant<B = unknown>(handler: Handler<B>, opts: Options<B> = {}) {
   return async (req: NextRequest): Promise<Response> => {
     try {
       const bearer = extractBearer(req);
       if (!bearer) return ERR.unauth();
 
-      const { data, error } = await authOnlyClient().auth.getUser(bearer);
-      if (error || !data.user?.id) return ERR.unauth();
+      const user = await usuarioDelToken(bearer);
+      if (!user) return ERR.unauth();
 
-      const session = await resolveTenantSession(data.user.id);
+      const session = await resolveTenantSession(user.id);
       if (!session) return ERR.forbidden();
 
       if (opts.roles && !opts.roles.includes(session.rol)) return ERR.forbidden();
@@ -77,7 +113,7 @@ export function withTenant<B = unknown>(handler: Handler<B>, opts: Options<B> = 
       const db = new TenantDb(sb, session.empresaId);
 
       const ctx: TenantContext = {
-        user: data.user,
+        user,
         usuarioId: session.usuarioId,
         empresaId: session.empresaId,
         rol: session.rol,

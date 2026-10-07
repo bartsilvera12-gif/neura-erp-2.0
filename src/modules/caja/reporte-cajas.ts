@@ -221,30 +221,40 @@ export async function getReporteCajas(db: TenantDb, rango: ReturnType<typeof res
 
   const movs: Mov[] = [];
   const ventas: VentaCred[] = [];
-  // .in() en tandas de 150 ids: con miles de uuids la URL pasa de 8 KB y Kong/Cloudflare la cortan.
-  for (let i = 0; i < ids.length; i += 150) {
-    const lote = ids.slice(i, i + 150);
-    const movRaw = await todas((a, b) =>
-      db
-        .select("caja_movimientos", "id, caja_id, tipo, monto, medio_pago, venta_id")
-        .in("caja_id", lote)
-        .is("anulado_at", null)
-        .order("id", { ascending: true })
-        .range(a, b),
-    );
+  // Nombres de quién abrió/cerró: no depende de los movimientos → va en paralelo.
+  const nombresP = nombresUsuarios(db, cajasRaw.flatMap((c) => [String(c.abierta_por ?? ""), String(c.cerrada_por ?? "")]));
+  // .in() en tandas de 150 ids (con miles de uuids la URL pasa de 8 KB y Kong/Cloudflare
+  // la cortan). Las tandas, y movimientos + créditos de cada una, se piden en paralelo.
+  const lotes: string[][] = [];
+  for (let i = 0; i < ids.length; i += 150) lotes.push(ids.slice(i, i + 150));
+  const resultados = await Promise.all(
+    lotes.map((lote) =>
+      Promise.all([
+        todas((a, b) =>
+          db
+            .select("caja_movimientos", "id, caja_id, tipo, monto, medio_pago, venta_id")
+            .in("caja_id", lote)
+            .is("anulado_at", null)
+            .order("id", { ascending: true })
+            .range(a, b),
+        ),
+        todas((a, b) =>
+          db
+            .select("ventas", "id, caja_id, total, tipo_venta, estado")
+            .in("caja_id", lote)
+            .eq("tipo_venta", "CREDITO")
+            .order("id", { ascending: true })
+            .range(a, b),
+        ),
+      ]),
+    ),
+  );
+  for (const [movRaw, vRaw] of resultados) {
     movs.push(...movRaw.map(aMov));
-    const vRaw = await todas((a, b) =>
-      db
-        .select("ventas", "id, caja_id, total, tipo_venta, estado")
-        .in("caja_id", lote)
-        .eq("tipo_venta", "CREDITO")
-        .order("id", { ascending: true })
-        .range(a, b),
-    );
     ventas.push(...vRaw.map((v) => ({ caja_id: String(v.caja_id), total: num(v.total), tipo_venta: String(v.tipo_venta), estado: String(v.estado) })));
   }
 
-  const nombres = await nombresUsuarios(db, cajasRaw.flatMap((c) => [String(c.abierta_por ?? ""), String(c.cerrada_por ?? "")]));
+  const nombres = await nombresP;
   const cajas = cajasRaw.map((c) =>
     armarFila(
       c,
@@ -281,27 +291,29 @@ export async function getReporteCajas(db: TenantDb, rango: ReturnType<typeof res
 
 // ── Detalle de un turno ───────────────────────────────────────────────────────
 export async function getDetalleCaja(db: TenantDb, id: string): Promise<CajaDetalle | null> {
-  const cq = await db.select("cajas", COLS_CAJA).eq("id", id).limit(1);
+  // Caja, movimientos y ventas del turno son independientes → en paralelo.
+  const [cq, movRaw, vRaw] = await Promise.all([
+    db.select("cajas", COLS_CAJA).eq("id", id).limit(1),
+    todas((a, b) =>
+      db
+        .select("caja_movimientos", "id, caja_id, tipo, concepto, monto, medio_pago, venta_id, observacion, usuario_id, usuario_email, created_at")
+        .eq("caja_id", id)
+        .is("anulado_at", null)
+        .order("created_at", { ascending: true })
+        .range(a, b),
+    ),
+    todas((a, b) =>
+      db
+        .select("ventas", "id, caja_id, numero_control, fecha, total, tipo_venta, estado, metodo_pago")
+        .eq("caja_id", id)
+        .order("fecha", { ascending: true })
+        .order("id", { ascending: true })
+        .range(a, b),
+    ),
+  ]);
   if (cq.error) throw new Error("db");
   const c = (cq.data?.[0] ?? null) as unknown as Fila | null;
   if (!c) return null;
-
-  const movRaw = await todas((a, b) =>
-    db
-      .select("caja_movimientos", "id, caja_id, tipo, concepto, monto, medio_pago, venta_id, observacion, usuario_id, usuario_email, created_at")
-      .eq("caja_id", id)
-      .is("anulado_at", null)
-      .order("created_at", { ascending: true })
-      .range(a, b),
-  );
-  const vRaw = await todas((a, b) =>
-    db
-      .select("ventas", "id, caja_id, numero_control, fecha, total, tipo_venta, estado, metodo_pago")
-      .eq("caja_id", id)
-      .order("fecha", { ascending: true })
-      .order("id", { ascending: true })
-      .range(a, b),
-  );
 
   const nombres = await nombresUsuarios(db, [
     String(c.abierta_por ?? ""),

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ArrowDownLeft,
   Banknote,
@@ -56,14 +56,13 @@ export default function CajaDashboard() {
 
   const cargar = useCallback(async () => {
     try {
-      const r = await apiFetch<{ caja: Caja | null }>("/api/caja");
+      // Caja y arqueo en paralelo (el arqueo ya devuelve null si no hay caja abierta).
+      const [r, a] = await Promise.all([
+        apiFetch<{ caja: Caja | null }>("/api/caja"),
+        apiFetch<{ arqueo: Arqueo | null }>("/api/caja/cierre").catch(() => ({ arqueo: null })),
+      ]);
       setCaja(r.caja);
-      if (r.caja) {
-        const a = await apiFetch<{ arqueo: Arqueo | null }>("/api/caja/cierre");
-        setArqueo(a.arqueo);
-      } else {
-        setArqueo(null);
-      }
+      setArqueo(r.caja ? a.arqueo : null);
     } finally {
       setCargando(false);
     }
@@ -100,7 +99,7 @@ export default function CajaDashboard() {
       </section>
 
       {/* Órdenes de venta */}
-      <Ordenes caja={caja} />
+      <Ordenes caja={caja} listo={!cargando} />
     </div>
   );
 }
@@ -279,11 +278,14 @@ function MovimientoModal({ onClose, onListo }: { onClose: () => void; onListo: (
 }
 
 // ── Órdenes de venta ──────────────────────────────────────────────────────────
-const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
 
-function Ordenes({ caja }: { caja: Caja | null }) {
+function Ordenes({ caja, listo }: { caja: Caja | null; listo: boolean }) {
   const [ventas, setVentas] = useState<Venta[]>([]);
+  const [total, setTotal] = useState(0); // ventas que cumplen los filtros
+  const [totalGeneral, setTotalGeneral] = useState(0); // ventas sin filtrar
+  const [buscando, setBuscando] = useState(false);
   const [busqueda, setBusqueda] = useState("");
+  const [q, setQ] = useState(""); // búsqueda con debounce (la que va al servidor)
   const [tipo, setTipo] = useState("");
   const [iva, setIva] = useState("");
   const [estado, setEstado] = useState("");
@@ -292,66 +294,62 @@ function Ordenes({ caja }: { caja: Caja | null }) {
   const [hasta, setHasta] = useState("");
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
   const [viendo, setViendo] = useState<string | null>(null);
-  // Paginado de la tabla.
+  const [productosOpts, setProductosOpts] = useState<[string, string][]>([["", "Todos los productos"]]);
+  // Paginado EN EL SERVIDOR: solo viaja la página visible (antes se bajaba todo el historial).
   const [porPagina, setPorPagina] = useState(25);
   const [pagina, setPagina] = useState(1);
+  const pedido = useRef(0); // descarta respuestas viejas si el usuario sigue tipeando/filtrando
+
+  // Debounce de la búsqueda: no pegarle al servidor en cada tecla.
+  useEffect(() => {
+    const t = setTimeout(() => setQ(busqueda.trim()), 300);
+    return () => clearTimeout(t);
+  }, [busqueda]);
+
+  // Si cambia lo que se filtra o el tamaño de página, volver a la primera.
+  useEffect(() => { setPagina(1); }, [q, tipo, iva, estado, producto, desde, hasta, porPagina, caja?.id]);
 
   const cargar = useCallback(() => {
-    const url = caja ? `/api/ventas?caja=${caja.id}` : "/api/ventas";
-    apiFetch<Venta[]>(url).then(setVentas).catch(() => setVentas([]));
-  }, [caja]);
+    if (!listo) return; // esperar a saber si hay caja abierta (evita bajar todo y después lo de la caja)
+    const sp = new URLSearchParams({ pagina: String(pagina), por_pagina: String(porPagina) });
+    if (caja) sp.set("caja", caja.id);
+    if (q) sp.set("q", q);
+    if (tipo) sp.set("tipo", tipo);
+    if (iva) sp.set("iva", iva);
+    if (estado) sp.set("estado", estado);
+    if (producto) sp.set("producto", producto);
+    if (desde) sp.set("desde", desde);
+    if (hasta) sp.set("hasta", hasta);
+    const n = ++pedido.current;
+    setBuscando(true);
+    apiFetch<{ rows: Venta[]; total: number; total_general: number }>(`/api/ventas?${sp}`)
+      .then((r) => {
+        if (n !== pedido.current) return;
+        setVentas(r.rows);
+        setTotal(r.total);
+        setTotalGeneral(r.total_general);
+      })
+      .catch(() => { if (n === pedido.current) { setVentas([]); setTotal(0); } })
+      .finally(() => { if (n === pedido.current) setBuscando(false); });
+  }, [listo, caja, pagina, porPagina, q, tipo, iva, estado, producto, desde, hasta]);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
 
+  // Opciones del filtro por producto: el catálogo (ya no se deducen de lo cargado).
+  useEffect(() => {
+    apiFetch<{ nombre: string }[]>("/api/productos")
+      .then((ps) => setProductosOpts([["", "Todos los productos"], ...[...new Set(ps.map((p) => p.nombre))].sort().map((n): [string, string] => [n, n])]))
+      .catch(() => {});
+  }, []);
+
   const filtrosActivos = (tipo ? 1 : 0) + (iva ? 1 : 0) + (estado ? 1 : 0) + (producto ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0);
 
-  // Productos distintos presentes en las ventas cargadas (para el filtro por producto).
-  const productosOpts = useMemo<[string, string][]>(() => {
-    const set = new Set<string>();
-    ventas.forEach((v) => (v.ventas_items ?? []).forEach((i) => i.producto_nombre && set.add(i.producto_nombre)));
-    return [["", "Todos los productos"], ...[...set].sort().map((n) => [n, n] as [string, string])];
-  }, [ventas]);
-
-  const filtradas = useMemo(() => {
-    // Búsqueda inteligente: por tokens, contra CUALQUIER dato de la venta y sus
-    // ítems, sin importar el orden en que se tipee (cada palabra debe aparecer).
-    const terms = norm(busqueda).split(/\s+/).filter(Boolean);
-    const d0 = desde ? new Date(`${desde}T00:00:00`) : null;
-    const d1 = hasta ? new Date(`${hasta}T23:59:59`) : null;
-    return ventas.filter((v) => {
-      if (tipo && v.tipo_venta !== tipo) return false;
-      if (estado && v.estado !== estado) return false;
-      const items = v.ventas_items ?? [];
-      if (iva && !items.some((i) => i.tipo_iva === iva)) return false;
-      if (producto && !items.some((i) => i.producto_nombre === producto)) return false;
-      const f = new Date(v.fecha);
-      if (d0 && f < d0) return false;
-      if (d1 && f > d1) return false;
-      if (!terms.length) return true;
-      const hay = norm(
-        [
-          v.numero_control,
-          v.tipo_venta === "CREDITO" ? "credito crédito" : "contado",
-          v.estado,
-          String(v.total),
-          v.total.toLocaleString("es-PY"),
-          new Date(v.fecha).toLocaleDateString("es-PY"),
-          ...items.flatMap((i) => [i.producto_nombre, i.sku ?? "", i.tipo_iva, "iva " + i.tipo_iva, String(i.cantidad)]),
-        ].join(" "),
-      );
-      return terms.every((t) => hay.includes(t));
-    });
-  }, [ventas, busqueda, tipo, iva, estado, producto, desde, hasta]);
-
-  // Si cambia lo que se filtra o el tamaño de página, volver a la primera.
-  useEffect(() => { setPagina(1); }, [busqueda, tipo, iva, estado, producto, desde, hasta, porPagina]);
-
-  const totalPaginas = Math.max(1, Math.ceil(filtradas.length / porPagina));
+  const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
   const paginaActual = Math.min(pagina, totalPaginas);
   const inicio = (paginaActual - 1) * porPagina;
-  const visibles = filtradas.slice(inicio, inicio + porPagina);
+  const visibles = ventas;
 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -393,7 +391,7 @@ function Ordenes({ caja }: { caja: Caja | null }) {
             <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Filas</span>
             <Select value={String(porPagina)} onChange={(v) => setPorPagina(Number(v))} options={[["25", "25"], ["50", "50"], ["100", "100"]]} minWidth={84} />
           </div>
-          <span className="ml-auto text-sm text-slate-400">{filtradas.length} de {ventas.length} ventas</span>
+          <span className={`ml-auto text-sm text-slate-400 transition-opacity ${buscando ? "opacity-50" : ""}`}>{total.toLocaleString("es-PY")} de {totalGeneral.toLocaleString("es-PY")} ventas</span>
         </div>
 
         {filtrosAbiertos ? (
@@ -438,8 +436,8 @@ function Ordenes({ caja }: { caja: Caja | null }) {
             </tr>
           </thead>
           <tbody>
-            {filtradas.length === 0 ? (
-              <tr><td colSpan={8} className="py-12 text-center text-slate-400">{ventas.length === 0 ? "No hay ventas registradas" : "Ninguna venta coincide con los filtros"}</td></tr>
+            {visibles.length === 0 ? (
+              <tr><td colSpan={8} className="py-12 text-center text-slate-400">{buscando ? "Buscando…" : totalGeneral === 0 ? "No hay ventas registradas" : "Ninguna venta coincide con los filtros"}</td></tr>
             ) : (
               visibles.map((v) => {
                 const items = v.ventas_items ?? [];
@@ -482,11 +480,11 @@ function Ordenes({ caja }: { caja: Caja | null }) {
       </div>
 
       {/* Paginado */}
-      {filtradas.length > 0 ? (
+      {total > 0 ? (
         <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4">
           <span className="text-sm text-slate-500">
-            Mostrando <strong className="font-semibold text-slate-700">{inicio + 1}–{Math.min(inicio + porPagina, filtradas.length)}</strong> de{" "}
-            <strong className="font-semibold text-slate-700">{filtradas.length}</strong>
+            Mostrando <strong className="font-semibold text-slate-700">{inicio + 1}–{Math.min(inicio + porPagina, total)}</strong> de{" "}
+            <strong className="font-semibold text-slate-700">{total.toLocaleString("es-PY")}</strong>
           </span>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1">

@@ -19,9 +19,9 @@ export class TenantDb {
     private readonly empresaId: string,
   ) {}
 
-  /** SELECT acotado a la empresa. */
-  select(table: string, columns = "*") {
-    return this.sb.from(table).select(columns).eq("empresa_id", this.empresaId);
+  /** SELECT acotado a la empresa. `opts.count` pide además el total de filas (paginado). */
+  select(table: string, columns = "*", opts?: { count?: "exact" | "planned" | "estimated"; head?: boolean }) {
+    return this.sb.from(table).select(columns, opts).eq("empresa_id", this.empresaId);
   }
 
   /** INSERT con empresa_id seteado en cada fila. */
