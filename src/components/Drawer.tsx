@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 /**
  * Panel lateral deslizante (slide-over) de alto completo. Para formularios con
  * varios campos: el título queda fijo arriba, el cuerpo scrollea, y el pie
  * (acciones) queda pegado abajo — nunca se corta como un modal centrado alto.
+ * Se monta en <body> (portal): dentro del contenido, la barra superior de la app le
+ * tapaba el título.
  */
 export function Drawer({
   titulo,
@@ -37,9 +40,10 @@ export function Drawer({
     };
   }, [onClose]);
 
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-slate-900/40 backdrop-blur-[2px]"
+      className="fixed inset-0 z-[110] flex justify-end bg-slate-900/40 backdrop-blur-[2px]"
       style={{ animation: "modal-backdrop 0.15s ease-out" }}
       onClick={onClose}
     >
@@ -69,6 +73,7 @@ export function Drawer({
           <footer className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">{footer}</footer>
         ) : null}
       </aside>
-    </div>
+    </div>,
+    document.body,
   );
 }

@@ -252,3 +252,87 @@ end;
 $fn$;
 
 grant execute on function :"schema".aplicar_importacion_productos(jsonb, text, boolean, text, text) to authenticated, service_role;
+
+-- =============================================================================
+-- registrar_movimiento_stock: movimiento MANUAL de stock (pantalla "Nuevo movimiento").
+--   p_tipo 'ENTRADA' | 'SALIDA' → p_cantidad > 0 suma/resta.
+--   p_tipo 'AJUSTE'             → p_cantidad = stock REAL contado; se registra la diferencia
+--                                 (ENTRADA o SALIDA) contra el stock bloqueado en ese momento.
+--   Una ENTRADA de compra con costo recalcula el costo promedio ponderado (CPP).
+--   No deja el stock negativo. Stock + kardex en la misma transacción.
+-- Devuelve { stock_anterior, stock_nuevo, tipo, cantidad, costo_promedio }.
+-- =============================================================================
+create or replace function :"schema".registrar_movimiento_stock(
+  p_producto_id uuid,
+  p_tipo text,
+  p_cantidad numeric,
+  p_costo_unitario numeric,
+  p_origen text,
+  p_referencia text
+) returns jsonb
+language plpgsql
+security invoker
+set search_path = :"schema", public
+as $fn$
+declare
+  v_empresa uuid := empresa_actual();
+  prod record;
+  v_delta numeric;
+  v_nuevo numeric;
+  v_costo numeric := coalesce(p_costo_unitario, 0);
+  v_cpp numeric;
+  v_usuario uuid;
+  v_usuario_nombre text;
+  v_ref text;
+begin
+  if v_empresa is null then raise exception 'No hay empresa en la sesión'; end if;
+  if p_tipo not in ('ENTRADA', 'SALIDA', 'AJUSTE') then raise exception 'Tipo de movimiento inválido'; end if;
+  if p_origen not in ('compra', 'ajuste_manual') then raise exception 'Origen inválido'; end if;
+  if p_cantidad is null or p_cantidad < 0 or (p_tipo <> 'AJUSTE' and p_cantidad = 0) then
+    raise exception 'Cantidad inválida';
+  end if;
+
+  select * into prod from productos where id = p_producto_id and empresa_id = v_empresa for update;
+  if not found then raise exception 'Producto no encontrado'; end if;
+  if not prod.controla_stock then raise exception '"%" no controla stock', prod.nombre; end if;
+
+  v_delta := case p_tipo when 'ENTRADA' then p_cantidad when 'SALIDA' then -p_cantidad
+                         else p_cantidad - prod.stock_actual end;
+  if v_delta = 0 then raise exception 'El stock contado es igual al actual: no hay nada que ajustar'; end if;
+  v_nuevo := prod.stock_actual + v_delta;
+  if v_nuevo < 0 then
+    raise exception 'Stock insuficiente de "%": hay %, no se pueden sacar %', prod.nombre, prod.stock_actual, abs(v_delta);
+  end if;
+
+  -- CPP: solo una entrada de compra con costo cambia el costo promedio.
+  v_cpp := prod.costo_promedio;
+  if v_delta > 0 and p_origen = 'compra' and v_costo > 0 then
+    v_cpp := round(((greatest(prod.stock_actual, 0) * coalesce(prod.costo_promedio, 0)) + (v_delta * v_costo))
+                   / (greatest(prod.stock_actual, 0) + v_delta), 2);
+  end if;
+
+  update productos set stock_actual = v_nuevo, costo_promedio = v_cpp, updated_at = now() where id = prod.id;
+
+  v_ref := coalesce(nullif(btrim(p_referencia), ''),
+                    case when p_tipo = 'AJUSTE' then 'Ajuste por conteo físico' else 'Movimiento manual' end);
+  if p_tipo = 'AJUSTE' then
+    v_ref := v_ref || ' (contado ' || to_char(p_cantidad, 'FM999999990.###') ||
+             ', había ' || to_char(prod.stock_actual, 'FM999999990.###') || ')';
+  end if;
+
+  select u.id, u.nombre into v_usuario, v_usuario_nombre
+    from usuarios u where u.auth_user_id = auth.uid() and u.empresa_id = v_empresa limit 1;
+  insert into movimientos_inventario (empresa_id, producto_id, producto_nombre, producto_sku, tipo, cantidad,
+                                      costo_unitario, origen, referencia, created_by, usuario_nombre)
+    values (v_empresa, prod.id, prod.nombre, prod.sku,
+            case when v_delta > 0 then 'ENTRADA' else 'SALIDA' end, abs(v_delta),
+            case when v_costo > 0 then v_costo else coalesce(prod.costo_promedio, 0) end,
+            p_origen, left(v_ref, 200), v_usuario, v_usuario_nombre);
+
+  return jsonb_build_object('stock_anterior', prod.stock_actual, 'stock_nuevo', v_nuevo,
+                            'tipo', case when v_delta > 0 then 'ENTRADA' else 'SALIDA' end,
+                            'cantidad', abs(v_delta), 'costo_promedio', v_cpp);
+end;
+$fn$;
+
+grant execute on function :"schema".registrar_movimiento_stock(uuid, text, numeric, numeric, text, text) to authenticated, service_role;

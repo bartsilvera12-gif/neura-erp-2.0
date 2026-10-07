@@ -11,12 +11,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownToLine, ArrowLeft, ArrowUpFromLine, Calendar, ChevronLeft, ChevronRight,
-  Download, History, Loader2, Package, Search, X,
+  Download, History, Loader2, Package, Plus, Search, X,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
+import { NuevoMovimiento } from "@/modules/inventario/NuevoMovimiento";
 import { ORIGEN_LABEL, type Movimiento, type OrigenMovimiento, type TipoMovimiento } from "@/modules/inventario/kardex";
 
 const TEAL = clienteConfig.color;
@@ -60,6 +61,13 @@ function Movimientos() {
   const [producto, setProducto] = useState<ProductoFiltro | null>(null);
   const [cargando, setCargando] = useState(true);
   const [exportando, setExportando] = useState(false);
+  const [esAdmin, setEsAdmin] = useState(false);
+  const [nuevo, setNuevo] = useState(false);
+  const [recarga, setRecarga] = useState(0);
+
+  useEffect(() => {
+    apiFetch<{ rol: string }>("/api/me").then((m) => setEsAdmin(m.rol === "ADMIN")).catch(() => {});
+  }, []);
 
   const [busqueda, setBusqueda] = useState("");
   const [q, setQ] = useState("");
@@ -98,7 +106,7 @@ function Movimientos() {
       .catch(() => { if (!cancel) { setItems([]); setTotal(0); } })
       .finally(() => { if (!cancel) setCargando(false); });
     return () => { cancel = true; };
-  }, [filtros, pagina]);
+  }, [filtros, pagina, recarga]);
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const de = total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
@@ -140,6 +148,11 @@ function Movimientos() {
           <p className="mt-1 text-sm text-slate-500">Registro de entradas y salidas de stock</p>
         </div>
         <div className="flex items-center gap-2">
+          {esAdmin ? (
+            <button onClick={() => setNuevo(true)} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-bold text-white shadow-sm transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
+              <Plus className="h-4 w-4" strokeWidth={2.5} /> Nuevo movimiento
+            </button>
+          ) : null}
           <button onClick={exportar} disabled={exportando || total === 0} className="inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-semibold transition hover:bg-[var(--brand-50)] disabled:opacity-50" style={{ borderColor: `${TEAL}55`, color: TEAL }}>
             {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
             {exportando ? "Generando..." : "Exportar Excel"}
@@ -184,7 +197,7 @@ function Movimientos() {
             </span>
           </div>
           <p className="text-[11.5px] text-slate-500">
-            Los movimientos se generan automáticamente desde la <span className="font-semibold" style={{ color: TEAL }}>Caja</span>, las <span className="font-semibold" style={{ color: TEAL }}>importaciones</span> y los <span className="font-semibold" style={{ color: TEAL }}>ajustes de stock</span>.
+            Se generan solos desde la <span className="font-semibold" style={{ color: TEAL }}>Caja</span> y las <span className="font-semibold" style={{ color: TEAL }}>importaciones</span>, o a mano con <span className="font-semibold" style={{ color: TEAL }}>Nuevo movimiento</span>.
           </p>
         </div>
 
@@ -317,6 +330,14 @@ function Movimientos() {
           </div>
         ) : null}
       </section>
+
+      {nuevo ? (
+        <NuevoMovimiento
+          productoInicial={productoId || undefined}
+          onClose={() => setNuevo(false)}
+          onGuardado={() => { setNuevo(false); setPagina(1); setRecarga((k) => k + 1); }}
+        />
+      ) : null}
     </div>
   );
 }

@@ -3,8 +3,9 @@
  *   GET /api/inventario/movimientos?pagina&por_pagina&q&tipo&origen&desde&hasta&producto
  *     → { rows, total, producto? }  (producto: nombre/SKU cuando se filtra por uno)
  */
+import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
-import { ok, ERR } from "@/lib/api/responses";
+import { ok, created, fail, ERR } from "@/lib/api/responses";
 import { consultaMovimientos, filtrosDeUrl } from "@/modules/inventario/server/movimientos";
 
 export const GET = withTenant(async (ctx, req) => {
@@ -23,3 +24,33 @@ export const GET = withTenant(async (ctx, req) => {
   if (res.error && (res.error as { code?: string }).code !== "PGRST103") return ERR.server();
   return ok({ rows: res.data ?? [], total: res.count ?? 0, producto: prod?.data?.[0] ?? null });
 });
+
+const nuevo = z.object({
+  producto_id: z.string().uuid("Elegí un producto"),
+  tipo: z.enum(["ENTRADA", "SALIDA", "AJUSTE"]),
+  cantidad: z.coerce.number().min(0, "Cantidad inválida"),
+  costo_unitario: z.coerce.number().min(0).default(0),
+  origen: z.enum(["compra", "ajuste_manual"]),
+  referencia: z.string().trim().max(150).nullish(),
+});
+
+/**
+ * POST /api/inventario/movimientos — movimiento MANUAL (ADMIN): entrada, salida o ajuste por
+ * conteo. Stock + kardex atómicos en la RPC registrar_movimiento_stock.
+ */
+export const POST = withTenant(
+  async (ctx, _req, input) => {
+    const { data, error } = await ctx.db.rpc("registrar_movimiento_stock", {
+      p_producto_id: input.producto_id,
+      p_tipo: input.tipo,
+      p_cantidad: input.cantidad,
+      p_costo_unitario: input.costo_unitario,
+      p_origen: input.origen,
+      p_referencia: input.referencia ?? "",
+    });
+    // Los mensajes de la función (stock insuficiente, no controla stock…) son para el usuario.
+    if (error) return fail(error.message.replace(/^.*?ERROR:\s*/, ""), 400);
+    return created(data);
+  },
+  { roles: ["ADMIN"], body: nuevo },
+);
