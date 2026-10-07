@@ -6,7 +6,7 @@
  */
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Eye, FileSpreadsheet, Loader2 } from "lucide-react";
+import { ArrowLeft, Eye, FileSpreadsheet, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
@@ -88,6 +88,9 @@ export default function CierresCajaPage() {
       {/* Encabezado */}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
+          <Link href="/reportes" className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800">
+            <ArrowLeft className="h-3.5 w-3.5" /> Reportes
+          </Link>
           <div className="flex items-center gap-2">
             <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Reportes · Caja</p>
