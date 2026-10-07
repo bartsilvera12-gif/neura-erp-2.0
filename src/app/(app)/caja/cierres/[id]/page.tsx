@@ -9,7 +9,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ArrowDownCircle, ArrowLeft, ArrowUpCircle, DoorOpen, Download, Loader2, ShoppingCart } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
-import { abrirHtml } from "@/lib/api/client-blob";
+import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { formatGs } from "@/modules/caja/lib";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
@@ -63,7 +63,7 @@ export default function DetalleTurnoPage() {
 
   async function descargarPdf() {
     setAbriendo(true);
-    try { await abrirHtml(`/api/reportes/cajas/${id}/pdf?auto=1`); } catch { /* best-effort */ } finally { setAbriendo(false); }
+    try { await descargarArchivo(`/api/reportes/cajas/${id}/pdf`, "arqueo-caja.pdf"); } catch { /* best-effort */ } finally { setAbriendo(false); }
   }
 
   const c = data?.caja;
