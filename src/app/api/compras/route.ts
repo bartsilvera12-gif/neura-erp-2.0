@@ -5,6 +5,7 @@
  *        q = búsqueda inteligente (número, proveedor, factura, timbrado, productos).
  *   POST /api/compras → registra la compra (ADMIN): cabecera + ítems + stock, costo
  *        promedio, precio de venta y kardex en una sola transacción (registrar_compra).
+ *        Con orden_compra_id (+ oc_item_id por línea) es la recepción de esa orden.
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
@@ -52,6 +53,8 @@ const cuerpo = z.object({
   moneda: z.enum(["GS", "USD"]).default("GS"),
   tipo_cambio: z.coerce.number().positive().nullish(),
   observacion: z.string().trim().max(2000).nullish(),
+  /** si viene: se está recibiendo esa orden de compra */
+  orden_compra_id: z.string().uuid().nullish(),
   items: z
     .array(
       z.object({
@@ -59,6 +62,7 @@ const cuerpo = z.object({
         cantidad: z.coerce.number().positive("La cantidad tiene que ser mayor a 0"),
         costo_unitario: z.coerce.number().positive("Falta el costo"),
         precio_venta_nuevo: z.coerce.number().min(0).nullish(),
+        oc_item_id: z.string().uuid().nullish(),
       }),
     )
     .min(1, "La compra no tiene productos")

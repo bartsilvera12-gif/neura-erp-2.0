@@ -10,8 +10,9 @@
  * Todo se guarda junto en la base (registrar_compra): stock, costo promedio, precio y kardex.
  */
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeft, CheckCircle2, Loader2, Package, Search, Trash2 } from "lucide-react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { ArrowLeft, CheckCircle2, ClipboardList, Loader2, Package, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import MontoInput from "@/components/ui/MontoInput";
@@ -20,14 +21,10 @@ import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
 import { Variacion, type HistorialCostosData } from "@/modules/inventario/HistorialCostos";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 import type { Proveedor } from "@/modules/proveedores/tipos";
+import type { OrdenCompra } from "@/modules/compras/ordenes";
+import { BuscadorProductos, ET, Fila, gs, INPUT, ivaDe, Segmentado, sumarDias, Tarjeta, usd } from "@/modules/compras/partes";
 
 const TEAL = clienteConfig.color;
-const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
-const ET = "mb-1 block text-xs font-medium text-slate-600";
-const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
-const usd = (v: number) => `US$ ${Number(v || 0).toLocaleString("es-PY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const ivaDe = (importe: number, tipo: string) => (tipo === "10%" ? Math.round(importe / 11) : tipo === "5%" ? Math.round(importe / 21) : 0);
-
 type Linea = {
   key: string;
   prod: ProductoInventario;
@@ -35,15 +32,24 @@ type Linea = {
   costo: number;          // en la moneda de la factura, IVA incluido
   precioNuevo: number;    // 0 = no cambia
   ultima: { costo: number; fecha: string; proveedor: string | null } | null;
+  /** línea de la orden que se está recibiendo */
+  ocItemId?: string;
+  pedido?: number;
+  recibidoAntes?: number;
 };
 
-function sumarDias(fecha: string, dias: number) {
-  const d = new Date(`${fecha}T12:00:00`);
-  d.setDate(d.getDate() + dias);
-  return d.toLocaleDateString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric" });
+// useSearchParams necesita un Suspense alrededor (si no, el build de Next falla).
+export default function NuevaCompraPage() {
+  return (
+    <Suspense>
+      <NuevaCompra />
+    </Suspense>
+  );
 }
 
-export default function NuevaCompraPage() {
+function NuevaCompra() {
+  const ocId = useSearchParams().get("oc");
+  const [orden, setOrden] = useState<OrdenCompra | null>(null);
   const [proveedores, setProveedores] = useState<Proveedor[]>([]);
   const [proveedorId, setProveedorId] = useState<string | null>(null);
   const [factura, setFactura] = useState("");
@@ -62,6 +68,46 @@ export default function NuevaCompraPage() {
   useEffect(() => {
     apiFetch<{ proveedores: Proveedor[] }>("/api/proveedores").then((r) => setProveedores(r.proveedores)).catch(() => {});
   }, []);
+
+  // Recibir una orden de compra: proveedor, condición y moneda de la orden, y sus
+  // productos con lo que falta recibir (se ajusta a lo que llegó de verdad).
+  useEffect(() => {
+    if (!ocId) return;
+    let vivo = true;
+    (async () => {
+      try {
+        const o = await apiFetch<OrdenCompra>(`/api/ordenes-compra/${ocId}`);
+        if (!vivo) return;
+        setOrden(o);
+        setProveedorId(o.proveedor_id);
+        setTipoPago(o.tipo_pago);
+        if (o.plazo_dias) setPlazo(String(o.plazo_dias));
+        setMoneda(o.moneda);
+        if (o.moneda === "USD") setCambio(Number(o.tipo_cambio) || 0);
+        const pendientes = (o.items ?? []).filter((i) => Number(i.cantidad) > Number(i.cantidad_recibida));
+        const prods = await Promise.all(pendientes.map((i) => apiFetch<ProductoInventario>(`/api/productos/${i.producto_id}`).catch(() => null)));
+        if (!vivo) return;
+        setLineas(pendientes.flatMap((i, n) => {
+          const prod = prods[n];
+          if (!prod) return [];
+          return [{
+            key: i.id,
+            prod,
+            cantidad: String(Number(i.cantidad) - Number(i.cantidad_recibida)),
+            costo: Number(i.costo_unitario_original) || 0,
+            precioNuevo: 0,
+            ultima: null,
+            ocItemId: i.id,
+            pedido: Number(i.cantidad),
+            recibidoAntes: Number(i.cantidad_recibida),
+          }];
+        }));
+      } catch (e) {
+        if (vivo) setError((e as Error).message);
+      }
+    })();
+    return () => { vivo = false; };
+  }, [ocId]);
 
   // Al elegir el proveedor se proponen su condición, plazo y moneda habituales.
   function elegirProveedor(id: string | null) {
@@ -143,11 +189,13 @@ export default function NuevaCompraPage() {
           moneda,
           tipo_cambio: moneda === "USD" ? cambio : null,
           observacion: observacion.trim() || null,
+          orden_compra_id: orden?.id ?? null,
           items: lineas.map((l) => ({
             producto_id: l.prod.id,
             cantidad: Number(l.cantidad.replace(",", ".")),
             costo_unitario: l.costo,
             precio_venta_nuevo: l.precioNuevo > 0 ? l.precioNuevo : null,
+            oc_item_id: l.ocItemId ?? null,
           })),
         }),
       });
@@ -179,7 +227,11 @@ export default function NuevaCompraPage() {
         </p>
         <div className="mt-6 flex justify-center gap-2">
           <Link href="/compras" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Ver compras</Link>
-          <button onClick={otra} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Cargar otra compra</button>
+          {orden ? (
+            <Link href="/compras/ordenes" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Ver órdenes de compra</Link>
+          ) : (
+            <button onClick={otra} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Cargar otra compra</button>
+          )}
         </div>
       </div>
     );
@@ -193,8 +245,12 @@ export default function NuevaCompraPage() {
         </Link>
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Operaciones · Compras</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Nueva compra</h1>
-          <p className="mt-1 text-sm text-slate-500">Cargá la factura del proveedor: suma el stock y actualiza los costos solo.</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{orden ? `Recibir ${orden.numero_oc}` : "Nueva compra"}</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {orden
+              ? "Cargá la factura y ajustá las cantidades a lo que llegó de verdad. Lo que no llegó queda pendiente en la orden."
+              : "Cargá la factura del proveedor: suma el stock y actualiza los costos solo."}
+          </p>
         </div>
       </header>
 
@@ -205,7 +261,14 @@ export default function NuevaCompraPage() {
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <span className={ET}>Proveedor *</span>
-                <SelectorProveedor value={proveedorId} onChange={(id) => elegirProveedor(id)} />
+                {orden ? (
+                  <p className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm font-semibold text-slate-800">
+                    <ClipboardList className="h-4 w-4 text-slate-400" /> {orden.proveedor_nombre}
+                    <span className="ml-auto text-xs font-normal text-slate-500">de la {orden.numero_oc}</span>
+                  </p>
+                ) : (
+                  <SelectorProveedor value={proveedorId} onChange={(id) => elegirProveedor(id)} />
+                )}
               </div>
               <label className="block">
                 <span className={ET}>Nº de factura *</span>
@@ -332,6 +395,12 @@ function LineaCompra({ l, moneda, factor, onCambiar, onQuitar }: {
         <div className="min-w-0 flex-1">
           <p className="truncate text-sm font-semibold text-slate-900">{l.prod.nombre}</p>
           <p className="text-[11px] text-slate-500"><span className="font-mono">{l.prod.sku}</span> · stock {Number(l.prod.stock_actual).toLocaleString("es-PY")} {unidad} · IVA {l.prod.tipo_iva}</p>
+          {l.pedido != null ? (
+            <p className="mt-0.5 text-[11px] font-medium text-sky-700">
+              Pedido {l.pedido.toLocaleString("es-PY")}{l.recibidoAntes ? ` · ya llegaron ${l.recibidoAntes.toLocaleString("es-PY")}` : ""}
+              {cant > (l.pedido - (l.recibidoAntes ?? 0)) ? <span className="text-amber-600"> · estás recibiendo más de lo pedido</span> : null}
+            </p>
+          ) : null}
         </div>
         <p className="text-right text-sm font-bold tabular-nums text-slate-900">{gs(totalLinea)}</p>
         <button onClick={onQuitar} aria-label={`Quitar ${l.prod.nombre}`} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
@@ -368,115 +437,3 @@ function LineaCompra({ l, moneda, factor, onCambiar, onQuitar }: {
   );
 }
 
-/** Buscador de productos con búsqueda inteligente; Enter agrega el primero (lector de códigos). */
-function BuscadorProductos({ onElegir }: { onElegir: (p: ProductoInventario) => void }) {
-  const [q, setQ] = useState("");
-  const [res, setRes] = useState<ProductoInventario[]>([]);
-  const [hi, setHi] = useState(0);
-  const [buscando, setBuscando] = useState(false);
-  const [resDe, setResDe] = useState(""); // texto al que corresponden los resultados
-  const ref = useRef<HTMLInputElement>(null);
-
-  const consultar = (t: string) =>
-    apiFetch<{ rows: ProductoInventario[] }>(`/api/productos?paginado=1&por_pagina=8&q=${encodeURIComponent(t)}`).then((r) => r.rows);
-
-  // El lector de códigos tipea y manda Enter enseguida: si los resultados todavía no
-  // son de lo escrito, se busca en el momento y se agrega el primero.
-  async function enter() {
-    const t = q.trim();
-    if (!t) return;
-    if (resDe === t && res[hi]) { elegir(res[hi]); return; }
-    try {
-      const filas = await consultar(t);
-      if (filas[0]) elegir(filas[0]);
-    } catch { /* sin resultados */ }
-  }
-
-  useEffect(() => {
-    const t = q.trim();
-    if (!t) { setRes([]); setResDe(""); return; }
-    let vivo = true;
-    const h = setTimeout(() => {
-      setBuscando(true);
-      consultar(t)
-        .then((rows) => { if (vivo) { setRes(rows); setResDe(t); setHi(0); } })
-        .catch(() => vivo && setRes([]))
-        .finally(() => vivo && setBuscando(false));
-    }, 200);
-    return () => { vivo = false; clearTimeout(h); };
-  }, [q]);
-
-  function elegir(p: ProductoInventario) {
-    onElegir(p);
-    setQ("");
-    setRes([]);
-    setResDe("");
-    ref.current?.focus();
-  }
-
-  return (
-    <div className="relative">
-      <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-      <input ref={ref} value={q} onChange={(e) => setQ(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "ArrowDown") { e.preventDefault(); setHi((h) => Math.min(h + 1, res.length - 1)); }
-          else if (e.key === "ArrowUp") { e.preventDefault(); setHi((h) => Math.max(h - 1, 0)); }
-          else if (e.key === "Enter") { e.preventDefault(); void enter(); }
-          else if (e.key === "Escape") setQ("");
-        }}
-        placeholder="Buscá o escaneá un producto (nombre, SKU o código de barras)…" className={`${INPUT} pl-9`} />
-      {buscando ? <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" /> : null}
-      {res.length ? (
-        <ul className="absolute z-20 mt-1 max-h-80 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
-          {res.map((p, i) => (
-            <li key={p.id}>
-              <button type="button" onMouseEnter={() => setHi(i)} onClick={() => elegir(p)}
-                className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm ${hi === i ? "bg-[var(--brand-50)]" : ""}`}>
-                <span className="min-w-0">
-                  <span className="block truncate font-medium text-slate-800">{p.nombre}</span>
-                  <span className="font-mono text-[11px] text-slate-400">{p.sku}{p.codigo_barras ? ` · ${p.codigo_barras}` : ""}</span>
-                </span>
-                <span className="shrink-0 text-right text-xs text-slate-500">
-                  stock {Number(p.stock_actual).toLocaleString("es-PY")}<br />costo {gs(Number(p.costo_promedio))}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      ) : q.trim() && !buscando ? <p className="mt-1 px-1 text-xs text-slate-400">Ningún producto coincide.</p> : null}
-    </div>
-  );
-}
-
-function Tarjeta({ numero, titulo, extra, children }: { numero: number; titulo: string; extra?: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2.5 text-sm font-semibold text-slate-800">
-          <span className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: TEAL }}>{numero}</span>
-          {titulo}
-        </h2>
-        {extra}
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Fila({ l, v }: { l: string; v: string }) {
-  return <div className="flex justify-between text-slate-600"><dt>{l}</dt><dd className="tabular-nums">{v}</dd></div>;
-}
-
-function Segmentado({ valor, onChange, opciones }: { valor: string; onChange: (v: string) => void; opciones: [string, string][] }) {
-  return (
-    <div className="flex rounded-xl bg-slate-100 p-1">
-      {opciones.map(([v, l]) => (
-        <button key={v} type="button" onClick={() => onChange(v)}
-          className={`flex-1 rounded-lg py-1.5 text-sm font-semibold transition ${valor === v ? "bg-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
-          style={valor === v ? { color: TEAL } : undefined}>
-          {l}
-        </button>
-      ))}
-    </div>
-  );
-}

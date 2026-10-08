@@ -11,6 +11,7 @@ export const moduloCompras: Modulo = {
   children: [
     { label: "Compras", href: "/compras" },
     { label: "Nueva compra", href: "/compras/nueva" },
+    { label: "Órdenes de compra", href: "/compras/ordenes" },
     { label: "Proveedores", href: "/proveedores" },
   ],
 };
