@@ -7,6 +7,7 @@ import { withTenant } from "@/lib/api/with-tenant";
 import { buildXlsx, hoja, xlsxHeaders } from "@/lib/excel/xlsx";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 import { consultaMovimientos, filtrosDeUrl } from "@/modules/inventario/server/movimientos";
+import { variantesBusqueda } from "@/lib/api/busqueda-servidor";
 import { ORIGEN_LABEL } from "@/modules/inventario/kardex";
 
 const TOPE = 50_000;
@@ -27,8 +28,9 @@ export const GET = withTenant(async (ctx, req) => {
   const f = filtrosDeUrl(new URL(req.url).searchParams);
   try {
     const filas: Mov[] = [];
+    const grupos = await variantesBusqueda(ctx.db, f.q);
     for (let desde = 0; desde < TOPE; desde += 1000) {
-      const { data, error } = await consultaMovimientos(ctx.db, f).range(desde, desde + 999);
+      const { data, error } = await consultaMovimientos(ctx.db, f, undefined, grupos).range(desde, desde + 999);
       if (error) throw new Error("db");
       filas.push(...((data ?? []) as unknown as Mov[]));
       if ((data ?? []).length < 1000) break;

@@ -1,6 +1,8 @@
 /**
  * Clientes — lista y alta. "Mejor versión" combinada:
- *   GET  /api/clientes?q=   → lista (busca en nombre/documento/ruc/teléfono), sin borrados
+ *   GET  /api/clientes?q=   → lista sin borrados. Con q, búsqueda inteligente (buscar_clientes:
+ *                             nombre, razón social, CI/RUC con o sin puntos, teléfono, email,
+ *                             ciudad; sin tildes, errores de tipeo, por relevancia)
  *   POST /api/clientes      → alta con anti-duplicados (candado en DB + chequeo amable)
  */
 import { z } from "zod";
@@ -11,13 +13,15 @@ export const COLS =
   "id, nombre, razon_social, tipo_cliente, documento, ruc, telefono, email, ciudad, direccion, condicion_pago, limite_credito, origen, activo, vendedor_usuario_id, creado_at";
 
 export const GET = withTenant(async (ctx, req) => {
-  const q = new URL(req.url).searchParams.get("q")?.trim();
-  let query = ctx.db.select("clientes", COLS).is("deleted_at", null);
+  const sp = new URL(req.url).searchParams;
+  const q = sp.get("q")?.trim().slice(0, 200);
   if (q) {
-    const safe = q.replace(/[%,()]/g, " ");
-    query = query.or(`nombre.ilike.%${safe}%,documento.ilike.%${safe}%,ruc.ilike.%${safe}%,telefono.ilike.%${safe}%`);
+    const limite = Math.min(200, Math.max(1, Number(sp.get("limite")) || 50));
+    const r = await ctx.db.rpc<{ rows: unknown[]; total: number }>("buscar_clientes", { p_q: q, p_limit: limite });
+    if (r.error || !r.data) return ERR.server();
+    return ok(r.data.rows ?? []);
   }
-  const { data, error } = await query.order("nombre", { ascending: true }).limit(500);
+  const { data, error } = await ctx.db.select("clientes", COLS).is("deleted_at", null).order("nombre", { ascending: true }).limit(500);
   if (error) return ERR.server();
   return ok(data ?? []);
 });

@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowDown, ArrowLeft, ArrowUp, Boxes, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, Loader2, Search, X } from "lucide-react";
+import { filtrar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
@@ -83,7 +84,15 @@ export default function ProductosVendidosPage() {
     return sp.toString();
   }, [desde, hasta, categoria, sinVentas]);
 
-  useEffect(() => { setPagina(1); }, [filtros, modo]);
+  // En el detallado la búsqueda la hace la base sobre TODAS las líneas del período
+  // (no solo la página visible), con debounce.
+  const [qDetalle, setQDetalle] = useState("");
+  useEffect(() => {
+    const h = setTimeout(() => setQDetalle(busqueda.trim()), 300);
+    return () => clearTimeout(h);
+  }, [busqueda]);
+
+  useEffect(() => { setPagina(1); }, [filtros, modo, qDetalle]);
 
   // El resumen se usa siempre (cifras de arriba); el detalle solo en modo detallado.
   useEffect(() => {
@@ -100,11 +109,12 @@ export default function ProductosVendidosPage() {
   useEffect(() => {
     if (modo !== "detallado") return;
     let cancel = false;
-    apiFetch<{ total: number; rows: LineaProducto[] }>(`/api/reportes/productos-vendidos?${filtros}&modo=detallado&pagina=${pagina}&por_pagina=${POR_PAGINA}`)
+    const qs = qDetalle ? `&q=${encodeURIComponent(qDetalle)}` : "";
+    apiFetch<{ total: number; rows: LineaProducto[] }>(`/api/reportes/productos-vendidos?${filtros}&modo=detallado&pagina=${pagina}&por_pagina=${POR_PAGINA}${qs}`)
       .then((r) => { if (!cancel) { setLineas(r.rows); setTotalLineas(r.total); } })
       .catch(() => { if (!cancel) { setLineas([]); setTotalLineas(0); } });
     return () => { cancel = true; };
-  }, [filtros, modo, pagina]);
+  }, [filtros, modo, pagina, qDetalle]);
 
   async function bajar(f: "xlsx" | "pdf") {
     setBajando(f);
@@ -117,9 +127,9 @@ export default function ProductosVendidosPage() {
     }
   }
 
-  const q = busqueda.trim().toLowerCase();
   const items = useMemo(() => {
-    const base = (resumen?.items ?? []).filter((i) => !q || [i.nombre, i.sku, i.categoria].some((v) => (v ?? "").toLowerCase().includes(q)));
+    // Búsqueda inteligente; después se ordena por la columna elegida.
+    const base = filtrar(resumen?.items ?? [], busqueda, (i) => ({ principal: i.nombre, otros: [i.categoria], codigos: [i.sku] }));
     const val = (i: ItemProducto): number | string => {
       switch (orden.campo) {
         case "nombre": return i.nombre.toLowerCase();
@@ -135,8 +145,8 @@ export default function ProductosVendidosPage() {
       const c = x < y ? -1 : x > y ? 1 : 0;
       return orden.desc ? -c : c;
     });
-  }, [resumen, q, orden]);
-  const lineasF = lineas.filter((l) => !q || [l.producto, l.sku, l.numero, l.cliente, l.cajero].some((v) => (v ?? "").toLowerCase().includes(q)));
+  }, [resumen, busqueda, orden]);
+  const lineasF = lineas;
 
   const t = resumen?.totales;
   const totalPaginas = Math.max(1, Math.ceil(totalLineas / POR_PAGINA));

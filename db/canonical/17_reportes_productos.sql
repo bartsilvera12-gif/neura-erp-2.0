@@ -81,9 +81,12 @@ begin
 end;
 $fn$;
 
+-- p_q: búsqueda inteligente (19_busqueda.sql) en producto, SKU, número, cliente y cajero,
+-- sobre TODAS las líneas del período (no solo la página visible).
+drop function if exists :"schema".reporte_productos_vendidos_detalle(date, date, text, uuid, integer, integer);
 create or replace function :"schema".reporte_productos_vendidos_detalle(
   p_desde date, p_hasta date, p_categoria text default null, p_producto uuid default null,
-  p_limit integer default 50, p_offset integer default 0
+  p_limit integer default 50, p_offset integer default 0, p_q text default null
 ) returns jsonb
 language plpgsql stable security invoker set search_path = :"schema", public as $fn$
 declare
@@ -97,7 +100,14 @@ begin
       from ventas_items vi
       join ventas v on v.id = vi.venta_id
       left join productos p on p.id = vi.producto_id
+      left join clientes cq on p_q is not null and cq.id = v.cliente_id
+      left join usuarios uq on p_q is not null and uq.auth_user_id = v.created_by and uq.empresa_id = empresa_actual()
      where v.empresa_id = empresa_actual()
+       and (nullif(trim(p_q), '') is null or coincide_busqueda(
+             concat_ws(' ', norm(vi.producto_nombre), compacto(vi.producto_nombre), norm(vi.sku), compacto(vi.sku),
+                       norm(v.numero_control), compacto(v.numero_control), norm(cq.nombre), norm(cq.razon_social),
+                       compacto(cq.ruc), norm(uq.nombre)),
+             tokens_busqueda(p_q)))
        and v.estado <> 'anulada'
        and v.fecha >= (p_desde::timestamp at time zone 'America/Asuncion')
        and v.fecha < ((p_hasta + 1)::timestamp at time zone 'America/Asuncion')
@@ -130,4 +140,4 @@ end;
 $fn$;
 
 grant execute on function :"schema".reporte_productos_vendidos(date, date, text, uuid, boolean) to authenticated, service_role;
-grant execute on function :"schema".reporte_productos_vendidos_detalle(date, date, text, uuid, integer, integer) to authenticated, service_role;
+grant execute on function :"schema".reporte_productos_vendidos_detalle(date, date, text, uuid, integer, integer, text) to authenticated, service_role;

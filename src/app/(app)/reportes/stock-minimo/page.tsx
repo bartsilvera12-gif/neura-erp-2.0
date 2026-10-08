@@ -9,6 +9,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, FileSpreadsheet, FileText, Loader2, PackageMinus, RefreshCw, Search, X } from "lucide-react";
+import { filtrar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
@@ -76,10 +77,8 @@ export default function ReporteStockMinimoPage() {
     }
   }
 
-  const q = busqueda.trim().toLowerCase();
-  const items = (data?.items ?? []).filter(
-    (i) => !q || [i.nombre, i.sku, i.codigo_barras, i.categoria].some((v) => (v ?? "").toLowerCase().includes(q)),
-  );
+  // Búsqueda inteligente (sin tildes, cualquier orden, errores de tipeo); respeta el orden del reporte.
+  const items = filtrar(data?.items ?? [], busqueda, (i) => ({ principal: i.nombre, otros: [i.categoria], codigos: [i.sku, i.codigo_barras] }));
   const t = data?.totales;
 
   return (

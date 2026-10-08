@@ -3,6 +3,7 @@
  * paginado y la exportación a Excel. Solo servidor.
  */
 import type { TenantDb } from "@/lib/api/tenant-db";
+import { condicionGrupo } from "@/lib/api/busqueda-servidor";
 
 export const COLS_MOV =
   "id, producto_id, producto_nombre, producto_sku, tipo, cantidad, costo_unitario, origen, referencia, usuario_nombre, fecha";
@@ -24,8 +25,11 @@ export function filtrosDeUrl(sp: URLSearchParams): FiltrosMov {
   };
 }
 
-/** Arma la consulta filtrada (más reciente primero). */
-export function consultaMovimientos(db: TenantDb, f: FiltrosMov, opts?: { count?: "exact" }) {
+/**
+ * Arma la consulta filtrada (más reciente primero). `grupos` = variantesBusqueda(f.q):
+ * búsqueda inteligente sobre la columna `busqueda` (producto, SKU, referencia, usuario).
+ */
+export function consultaMovimientos(db: TenantDb, f: FiltrosMov, opts?: { count?: "exact" }, grupos: string[][] = []) {
   let q = db.select("movimientos_inventario", COLS_MOV, opts);
   if (TIPOS_MOV.includes(f.tipo)) q = q.eq("tipo", f.tipo);
   if (ORIGENES_MOV.includes(f.origen)) q = q.eq("origen", f.origen);
@@ -33,9 +37,7 @@ export function consultaMovimientos(db: TenantDb, f: FiltrosMov, opts?: { count?
   // Fechas en hora de Paraguay (UTC-3).
   if (RE_FECHA.test(f.desde)) q = q.gte("fecha", `${f.desde}T00:00:00-03:00`);
   if (RE_FECHA.test(f.hasta)) q = q.lte("fecha", `${f.hasta}T23:59:59.999-03:00`);
-  // Cada palabra tiene que aparecer en el producto, el SKU o la referencia (ej. "VTA-000012").
-  for (const t of f.q.split(/\s+/).filter(Boolean).slice(0, 5)) {
-    q = q.or(`producto_nombre.ilike."*${t}*",producto_sku.ilike."*${t}*",referencia.ilike."*${t}*"`);
-  }
+  // Cada palabra (o una variante por error de tipeo) tiene que aparecer, en cualquier orden.
+  for (const g of grupos) q = q.or(condicionGrupo(g));
   return q.order("fecha", { ascending: false }).order("id", { ascending: false });
 }

@@ -11,6 +11,8 @@ export type FiltrosProductos = {
   categoria: string | null;
   producto: string | null;
   sinVentas: boolean;
+  /** búsqueda inteligente del modo detallado (sobre todas las líneas, no solo la página) */
+  q: string | null;
 };
 
 export function filtrosProductos(sp: URLSearchParams): FiltrosProductos {
@@ -25,6 +27,7 @@ export function filtrosProductos(sp: URLSearchParams): FiltrosProductos {
     categoria: cat === "__sin__" || RE_UUID.test(cat) ? cat : null,
     producto: RE_UUID.test(sp.get("producto") ?? "") ? sp.get("producto") : null,
     sinVentas: sp.get("sin_ventas") === "1",
+    q: (sp.get("q") ?? "").trim().slice(0, 200) || null,
   };
 }
 
@@ -53,7 +56,7 @@ export async function resumenProductos(db: TenantDb, f: FiltrosProductos): Promi
 
 export async function detalleProductos(db: TenantDb, f: FiltrosProductos, limite: number, desde: number) {
   const { data, error } = await db.rpc<{ total: number; rows: LineaProducto[] }>("reporte_productos_vendidos_detalle", {
-    p_desde: f.desde, p_hasta: f.hasta, p_categoria: f.categoria, p_producto: f.producto, p_limit: limite, p_offset: desde,
+    p_desde: f.desde, p_hasta: f.hasta, p_categoria: f.categoria, p_producto: f.producto, p_limit: limite, p_offset: desde, p_q: f.q,
   });
   if (error || !data) throw new Error(error?.message ?? "sin datos");
   return data;

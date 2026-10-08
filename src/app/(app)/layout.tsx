@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { filtrar } from "@/lib/busqueda";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -77,8 +78,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const modulos = modulosActivos(me?.rol);
 
   const familias = useMemo(() => {
-    const n = q.trim().toLowerCase();
-    const visibles = modulos.filter((m) => !n || m.label.toLowerCase().includes(n));
+    // Búsqueda inteligente: sin tildes, errores de tipeo; también por la familia ("finanzas").
+    // Busca en el módulo, su familia y sus sub-pantallas ("arqueo" → Caja › Arqueo / Cierre).
+    const visibles = filtrar(modulos, q, (m) => ({ principal: m.label, otros: [m.familia, ...(m.children ?? []).map((c) => c.label)] }));
     const orden = ["Comercial", "Finanzas", "Operaciones", "Reportes", "Administración", "General"];
     const map = new Map<string, Modulo[]>();
     for (const m of visibles) {
@@ -155,7 +157,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               {items.map((m) => {
                 const active = pathname === m.href || pathname.startsWith(`${m.href}/`);
                 const tieneHijos = !!m.children?.length;
-                const abierto = (abiertos[m.id] ?? active) && !collapsed;
+                // Buscando, se despliegan solos para que se vea la sub-pantalla encontrada.
+                const abierto = (q.trim() ? true : (abiertos[m.id] ?? active)) && !collapsed;
                 return (
                   <div key={m.id}>
                     <NavItem

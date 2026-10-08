@@ -13,6 +13,8 @@ export type Producto = {
   id: string;
   nombre: string;
   sku: string;
+  /** para el lector de códigos en la caja */
+  codigo_barras?: string | null;
   precio_venta: number;
   precio_mayorista: number | null;
   precio_distribuidor: number | null;

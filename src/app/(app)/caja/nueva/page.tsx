@@ -11,6 +11,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Package, Search, Trash2 } from "lucide-react";
+import { buscar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { browserClient } from "@/lib/supabase/browser";
 import CajaControlPanel from "@/components/caja/CajaControlPanel";
@@ -163,6 +164,21 @@ export default function CajaPage() {
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 
+  // Búsqueda de clientes en la base (debounce 250 ms).
+  const [clientesBuscados, setClientesBuscados] = useState<Cliente[] | null>(null);
+  useEffect(() => {
+    const t = clienteQuery.trim();
+    setClientesBuscados(null);
+    if (!t) return;
+    let vivo = true;
+    const h = setTimeout(() => {
+      apiFetch<Cliente[]>(`/api/clientes?q=${encodeURIComponent(t)}`)
+        .then((r) => { if (vivo) setClientesBuscados(r); })
+        .catch(() => {});
+    }, 250);
+    return () => { vivo = false; clearTimeout(h); };
+  }, [clienteQuery]);
+
   // Cerrar dropdown de cliente al click fuera.
   useEffect(() => {
     function onDown(e: MouseEvent) {
@@ -236,12 +252,11 @@ export default function CajaPage() {
 
   // ── Derivados ──────────────────────────────────────────────────────────────
   const vendibles = useMemo(() => productos.filter((p) => !p.controla_stock || true), [productos]);
+  // Búsqueda inteligente: nombre, SKU y código de barras (lector), sin tildes, en cualquier
+  // orden y con errores de tipeo; un código exacto va primero (Enter lo agrega).
   const hits = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    if (!term) return [];
-    return vendibles
-      .filter((p) => p.nombre.toLowerCase().includes(term) || p.sku.toLowerCase().includes(term))
-      .slice(0, 8);
+    if (!q.trim()) return [];
+    return buscar(vendibles, q, (p) => ({ principal: p.nombre, codigos: [p.sku, p.codigo_barras] })).slice(0, 8);
   }, [vendibles, q]);
 
   const tierDe = useCallback((l: CartLine): TipoPrecio => (l.tier_manual ? l.tipo_precio : tierPorCantidad(l.cantidad)), []);
@@ -268,12 +283,11 @@ export default function CajaPage() {
 
   // Cliente seleccionado / filtrado.
   const clienteSel = clientes.find((c) => c.id === clienteId) ?? null;
+  // Con texto, busca en la base (todos los clientes, no solo los cargados) y mientras
+  // llega la respuesta usa los que ya están en pantalla con la misma lógica.
   const clientesFiltrados = (clienteQuery.trim() === ""
     ? clientes
-    : clientes.filter((c) => {
-        const t = clienteQuery.toLowerCase();
-        return c.nombre.toLowerCase().includes(t) || (c.documento ?? "").toLowerCase().includes(t) || (c.ruc ?? "").toLowerCase().includes(t);
-      })
+    : clientesBuscados ?? buscar(clientes, clienteQuery, (c) => ({ principal: c.razon_social || c.nombre, otros: [c.nombre, c.telefono], codigos: [c.documento, c.ruc] }))
   ).slice(0, 50);
 
   const clienteObligatorio = tipoDocumento === "factura" || tipoVenta === "CREDITO";
@@ -517,7 +531,7 @@ export default function CajaPage() {
                 {clientesFiltrados.length === 0 ? (
                   <p className="px-3 py-2 text-xs text-slate-400">Sin clientes que coincidan.</p>
                 ) : clientesFiltrados.map((c) => (
-                  <button key={c.id} type="button" onClick={() => { setClienteId(c.id); setClienteQuery(""); setClienteOpen(false); }} className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50">
+                  <button key={c.id} type="button" onClick={() => { if (!clientes.some((x) => x.id === c.id)) setClientes((prev) => [c, ...prev]); setClienteId(c.id); setClienteQuery(""); setClienteOpen(false); }} className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50">
                     <span className="font-medium text-slate-800">{c.nombre}</span>
                     {c.ruc && <span className="ml-2 text-xs text-slate-400">RUC {c.ruc}</span>}
                     {c.documento && !c.ruc && <span className="ml-2 text-xs text-slate-400">{c.documento}</span>}

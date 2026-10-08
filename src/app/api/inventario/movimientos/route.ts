@@ -7,6 +7,7 @@ import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, created, fail, ERR } from "@/lib/api/responses";
 import { consultaMovimientos, filtrosDeUrl } from "@/modules/inventario/server/movimientos";
+import { variantesBusqueda } from "@/lib/api/busqueda-servidor";
 
 export const GET = withTenant(async (ctx, req) => {
   const sp = new URL(req.url).searchParams;
@@ -16,7 +17,7 @@ export const GET = withTenant(async (ctx, req) => {
   const desde = (pagina - 1) * porPagina;
 
   const [res, prod] = await Promise.all([
-    consultaMovimientos(ctx.db, f, { count: "exact" }).range(desde, desde + porPagina - 1),
+    consultaMovimientos(ctx.db, f, { count: "exact" }, await variantesBusqueda(ctx.db, f.q)).range(desde, desde + porPagina - 1),
     /^[0-9a-f-]{36}$/i.test(f.producto)
       ? ctx.db.select("productos", "id, nombre, sku, stock_actual, unidad_medida").eq("id", f.producto).limit(1)
       : Promise.resolve(null),

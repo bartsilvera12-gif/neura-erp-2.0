@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Plus, Search, Users } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { buscar } from "@/lib/busqueda";
 import { clienteConfig } from "@/cliente.config";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
 import { formatGs, type Cliente } from "@/modules/caja/lib";
@@ -33,17 +34,27 @@ export default function ClientesPage() {
     void cargar();
   }, [cargar]);
 
+  // Búsqueda inteligente en la base (nombre, razón social, CI/RUC con o sin puntos,
+  // teléfono, email, ciudad; sin tildes, errores de tipeo, por relevancia). Mientras
+  // llega la respuesta se filtra lo que ya está en pantalla con la misma lógica.
+  const [buscados, setBuscados] = useState<Cliente[] | null>(null);
+  useEffect(() => {
+    const t = q.trim();
+    setBuscados(null);
+    if (!t) return;
+    let vivo = true;
+    const h = setTimeout(() => {
+      apiFetch<Cliente[]>(`/api/clientes?q=${encodeURIComponent(t)}&limite=200`)
+        .then((r) => { if (vivo) setBuscados(r); })
+        .catch(() => {});
+    }, 250);
+    return () => { vivo = false; clearTimeout(h); };
+  }, [q]);
+
   const filtrados = useMemo(() => {
-    const s = q.trim().toLowerCase();
-    if (!s) return clientes;
-    return clientes.filter(
-      (c) =>
-        c.nombre.toLowerCase().includes(s) ||
-        (c.documento ?? "").toLowerCase().includes(s) ||
-        (c.ruc ?? "").toLowerCase().includes(s) ||
-        (c.telefono ?? "").toLowerCase().includes(s),
-    );
-  }, [clientes, q]);
+    if (!q.trim()) return clientes;
+    return buscados ?? buscar(clientes, q, (c) => ({ principal: c.razon_social || c.nombre, otros: [c.nombre, c.telefono], codigos: [c.documento, c.ruc] }));
+  }, [clientes, q, buscados]);
 
   return (
     <div>
@@ -58,7 +69,7 @@ export default function ClientesPage() {
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Buscar…"
+              placeholder="Nombre, RUC, CI o teléfono…"
               className="w-48 rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] sm:w-64"
             />
           </div>

@@ -12,6 +12,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal, flushSync } from "react-dom";
 import { Ban, CheckCircle2, ChevronRight, Loader2, MoreHorizontal, Palette, Pencil, Plus, Search, Tags, X } from "lucide-react";
+import { coincide } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
@@ -161,8 +162,9 @@ export default function CategoriasPage() {
   const q = sinTildes(busqueda.trim());
   const visibles = useMemo(() => {
     if (!q) return arbol;
-    return arbol.filter(({ cat, hijas }) => sinTildes(cat.nombre).includes(q) || hijas.some((h) => sinTildes(h.nombre).includes(q)));
-  }, [arbol, q]);
+    // Búsqueda inteligente (sin tildes, errores de tipeo): la categoría o alguna subcategoría.
+    return arbol.filter(({ cat, hijas }) => coincide(busqueda, { principal: cat.nombre }) || hijas.some((h) => coincide(busqueda, { principal: h.nombre })));
+  }, [arbol, q, busqueda]);
 
   const principalesActivas = categorias.filter((c) => !c.parent_id && c.activo);
   const padreElegido = principalesActivas.find((c) => c.id === padre);
@@ -393,7 +395,7 @@ function EtiquetaSub({ sub, tono, cantidad, q, esAdmin, onEditar, onToggle }: {
   onEditar: () => void;
   onToggle: () => void;
 }) {
-  const coincide = !!q && sinTildes(sub.nombre).includes(q);
+  const resaltar = !!q && coincide(q, { principal: sub.nombre });
   const contenido = (
     <>
       <Resaltado texto={sub.nombre} q={q} />
@@ -403,7 +405,7 @@ function EtiquetaSub({ sub, tono, cantidad, q, esAdmin, onEditar, onToggle }: {
   );
   const estilo = {
     backgroundColor: sub.activo ? tono.fondo : "transparent",
-    borderColor: coincide ? tono.dot : tono.borde,
+    borderColor: resaltar ? tono.dot : tono.borde,
     color: tono.texto,
   };
   const clase = `inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${sub.activo ? "" : "border-dashed opacity-60"}`;

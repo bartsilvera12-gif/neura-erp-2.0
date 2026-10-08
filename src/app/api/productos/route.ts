@@ -3,7 +3,9 @@
  *   GET  /api/productos                → vendibles y activos (POS) — lista completa
  *   GET  /api/productos?scope=inventario → todos los activos — lista completa
  *   GET  /api/productos?paginado=1&pagina&por_pagina&q&categoria&inactivos=1
- *        → { rows, total } paginado EN EL SERVIDOR (pantalla de Inventario)
+ *        → { rows, total } paginado EN EL SERVIDOR (pantalla de Inventario). Con q, búsqueda
+ *          inteligente (buscar_productos: sin tildes, cualquier orden, errores de tipeo,
+ *          SKU/código de barras exacto primero, ordenado por relevancia).
  *   POST /api/productos                → alta (ADMIN); si arranca con stock, queda en el kardex
  */
 import { z } from "zod";
@@ -14,16 +16,28 @@ import { registrarMovimiento } from "@/modules/inventario/server/kardex";
 const COLS =
   "id, nombre, sku, codigo_barras, categoria_principal_id, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, es_vendible, activo, imagen_url";
 
-const limpio = (t: string) => t.replace(/[,()"\\*:]/g, "").trim();
-
 export const GET = withTenant(async (ctx, req) => {
   const sp = new URL(req.url).searchParams;
 
   if (sp.get("paginado") === "1") {
     const porPagina = Math.min(200, Math.max(10, Number(sp.get("por_pagina")) || 25));
     const pagina = Math.max(1, Number(sp.get("pagina")) || 1);
-    const q = limpio(sp.get("q") ?? "");
+    const q = (sp.get("q") ?? "").trim().slice(0, 200);
     const categoria = sp.get("categoria") ?? "";
+    const desde = (pagina - 1) * porPagina;
+
+    if (q) {
+      const { data, error } = await ctx.db.rpc<{ rows: unknown[]; total: number }>("buscar_productos", {
+        p_q: q,
+        p_categoria: categoria === "__sin__" || /^[0-9a-f-]{36}$/i.test(categoria) ? categoria : null,
+        p_inactivos: sp.get("inactivos") === "1",
+        p_solo_vendibles: sp.get("vendibles") === "1",
+        p_limit: porPagina,
+        p_offset: desde,
+      });
+      if (error || !data) return ERR.server();
+      return ok({ rows: data.rows ?? [], total: data.total ?? 0 });
+    }
 
     let query = ctx.db.select("productos", COLS, { count: "exact" });
     if (sp.get("inactivos") !== "1") query = query.eq("activo", true);
@@ -33,11 +47,6 @@ export const GET = withTenant(async (ctx, req) => {
       const { data: hijas } = await ctx.db.select("categorias_productos", "id").eq("parent_id", categoria);
       query = query.in("categoria_principal_id", [categoria, ...((hijas ?? []) as unknown as { id: string }[]).map((h) => h.id)]);
     }
-    // Cada palabra tiene que aparecer en el nombre, el SKU o el código de barras.
-    for (const t of q.split(/\s+/).filter(Boolean).slice(0, 5)) {
-      query = query.or(`nombre.ilike."*${t}*",sku.ilike."*${t}*",codigo_barras.ilike."*${t}*"`);
-    }
-    const desde = (pagina - 1) * porPagina;
     const { data, error, count } = await query
       .order("nombre", { ascending: true })
       .order("id", { ascending: true })
