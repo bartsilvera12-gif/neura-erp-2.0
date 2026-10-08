@@ -359,6 +359,10 @@ $$;
 grant execute on function :"schema".categoria_ruta(uuid) to authenticated, service_role;
 grant execute on function :"schema".categoria_coincide(uuid, text) to authenticated, service_role;
 
+-- Proveedor y factura de cada compra (historial de costos, ver 20_historial_costos.sql).
+alter table :"schema".movimientos_inventario add column if not exists proveedor text;
+alter table :"schema".movimientos_inventario add column if not exists numero_factura text;
+
 -- Productos activos por categoría (pantalla de Categorías en árbol). La madre suma la de
 -- sus subcategorías en la pantalla, no acá.
 create or replace function :"schema".conteo_productos_por_categoria()

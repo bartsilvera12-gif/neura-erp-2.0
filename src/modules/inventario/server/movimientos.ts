@@ -6,7 +6,7 @@ import type { TenantDb } from "@/lib/api/tenant-db";
 import { condicionGrupo } from "@/lib/api/busqueda-servidor";
 
 export const COLS_MOV =
-  "id, producto_id, producto_nombre, producto_sku, tipo, cantidad, costo_unitario, origen, referencia, usuario_nombre, fecha";
+  "id, producto_id, producto_nombre, producto_sku, tipo, cantidad, costo_unitario, origen, referencia, proveedor, numero_factura, usuario_nombre, fecha";
 export const TIPOS_MOV = ["ENTRADA", "SALIDA"];
 export const ORIGENES_MOV = ["inventario_inicial", "ajuste_manual", "venta", "anulacion_venta", "compra"];
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;

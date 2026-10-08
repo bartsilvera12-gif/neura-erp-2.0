@@ -166,14 +166,14 @@ $$;
 
 -- ── Columna "busqueda" (texto normalizado) para los listados que filtra PostgREST ──
 -- Kardex: generada a partir de sus propios datos (producto, SKU, referencia, usuario,
--- origen legible "ajuste manual" / "inventario inicial" y tipo entrada/salida).
+-- origen legible "ajuste manual" / "inventario inicial", tipo entrada/salida, proveedor y factura).
 -- (v2: se recrea si existía sin origen/tipo)
 do $do$
 begin
   if exists (select 1 from information_schema.columns
               where table_schema = current_setting('app.schema_busqueda', true) and table_name = 'movimientos_inventario'
                 and column_name = 'busqueda'
-                and generation_expression not like '%origen%') then
+                and generation_expression not like '%proveedor%') then
     execute format('alter table %I.movimientos_inventario drop column busqueda', current_setting('app.schema_busqueda', true));
   end if;
 end
@@ -183,7 +183,8 @@ alter table :"schema".movimientos_inventario
     :"schema".norm(producto_nombre) || ' ' || :"schema".compacto(producto_nombre) || ' '
     || :"schema".norm(producto_sku) || ' ' || :"schema".compacto(producto_sku) || ' '
     || :"schema".norm(referencia) || ' ' || :"schema".compacto(referencia) || ' ' || :"schema".norm(usuario_nombre) || ' '
-    || replace(coalesce(origen, ''), '_', ' ') || ' ' || lower(coalesce(tipo, ''))
+    || replace(coalesce(origen, ''), '_', ' ') || ' ' || lower(coalesce(tipo, '')) || ' '
+    || :"schema".norm(proveedor) || ' ' || :"schema".compacto(numero_factura)
   ) stored;
 
 -- Ventas: número, tipo, estado, cliente, cajero y nombre/SKU de sus ítems. La mantienen

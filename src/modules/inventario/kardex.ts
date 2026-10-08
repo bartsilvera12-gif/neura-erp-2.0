@@ -12,6 +12,8 @@ export type Movimiento = {
   costo_unitario: number;
   origen: OrigenMovimiento;
   referencia: string | null;
+  proveedor?: string | null;
+  numero_factura?: string | null;
   usuario_nombre: string | null;
   fecha: string;
 };

@@ -14,6 +14,7 @@ import { Drawer } from "@/components/Drawer";
 import { Select } from "@/components/Select";
 import MontoInput from "@/components/ui/MontoInput";
 import { parseNumero } from "@/lib/imports/consolidacion-productos";
+import { Variacion, type HistorialCostosData } from "@/modules/inventario/HistorialCostos";
 
 const BRAND = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
@@ -42,9 +43,35 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
   const [cantidad, setCantidad] = useState("");
   const [costo, setCosto] = useState(0);
   const [referencia, setReferencia] = useState("");
+  const [proveedor, setProveedor] = useState("");
+  const [factura, setFactura] = useState("");
+  const [proveedores, setProveedores] = useState<string[]>([]);
+  const [ultimaCompra, setUltimaCompra] = useState<HistorialCostosData["compras"][number] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const buscarRef = useRef<HTMLInputElement>(null);
+
+  // Proveedores ya cargados, para sugerirlos.
+  useEffect(() => {
+    apiFetch<string[]>("/api/inventario/proveedores").then(setProveedores).catch(() => {});
+  }, []);
+
+  // Última compra del producto elegido: se muestra al cargar el costo y se propone
+  // el mismo proveedor.
+  useEffect(() => {
+    setUltimaCompra(null);
+    if (!prod) return;
+    let vivo = true;
+    apiFetch<HistorialCostosData>(`/api/productos/${prod.id}/costos`)
+      .then((r) => {
+        if (!vivo) return;
+        const u = r.compras.find((c) => c.origen === "compra") ?? r.compras[0] ?? null;
+        setUltimaCompra(u);
+        if (u?.proveedor) setProveedor((p) => p || u.proveedor!);
+      })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, [prod]);
 
   // Producto precargado (viene del historial de un producto).
   useEffect(() => {
@@ -79,7 +106,12 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
     setOrigen(t === "ENTRADA" ? "compra" : "ajuste_manual");
   }
 
+  const esCompra = tipo === "ENTRADA" && origen === "compra";
   const cant = cantidad === "" ? NaN : numero(cantidad);
+  // Variación del costo que se está cargando contra la última compra.
+  const variacion = esCompra && ultimaCompra && ultimaCompra.costo > 0 && costo > 0
+    ? Math.round(((costo - ultimaCompra.costo) / ultimaCompra.costo) * 1000) / 10
+    : null;
   const stock = Number(prod?.stock_actual ?? 0);
   const delta = !prod || !Number.isFinite(cant) ? null : tipo === "ENTRADA" ? cant : tipo === "SALIDA" ? -cant : cant - stock;
   const resultante = delta == null ? null : stock + delta;
@@ -107,6 +139,8 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
           costo_unitario: tipo === "ENTRADA" ? costo : 0,
           origen,
           referencia: referencia.trim() || null,
+          proveedor: esCompra ? proveedor.trim() || null : null,
+          numero_factura: esCompra ? factura.trim() || null : null,
         }),
       });
       onGuardado();
@@ -220,12 +254,38 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
           <label className="block">
             <span className={ET}>Costo unitario (Gs.) {origen === "compra" ? <span className="font-normal text-slate-400">— recalcula el costo promedio</span> : null}</span>
             <MontoInput value={costo} onChange={setCosto} className={`${INPUT} text-right tabular-nums`} placeholder="0" />
+            {esCompra && ultimaCompra ? (
+              <span className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+                <span>
+                  Última compra: <strong className="font-semibold text-slate-700">Gs. {Math.round(ultimaCompra.costo).toLocaleString("es-PY")}</strong>
+                  {" "}el {new Date(ultimaCompra.fecha).toLocaleDateString("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "short" })}
+                  {ultimaCompra.proveedor ? ` · ${ultimaCompra.proveedor}` : ""}
+                </span>
+                {variacion != null ? <Variacion pct={variacion} /> : null}
+              </span>
+            ) : null}
           </label>
+        ) : null}
+
+        {esCompra ? (
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className={ET}>Proveedor <span className="font-normal text-slate-400">(opcional)</span></span>
+              <input value={proveedor} onChange={(e) => setProveedor(e.target.value)} list="proveedores-usados" maxLength={120} placeholder="Ej: Distribuidora Paresa" className={INPUT} />
+              <datalist id="proveedores-usados">
+                {proveedores.map((p) => <option key={p} value={p} />)}
+              </datalist>
+            </label>
+            <label className="block">
+              <span className={ET}>Nº de factura <span className="font-normal text-slate-400">(opcional)</span></span>
+              <input value={factura} onChange={(e) => setFactura(e.target.value)} maxLength={60} placeholder="Ej: 001-001-0000123" className={`${INPUT} font-mono`} />
+            </label>
+          </div>
         ) : null}
 
         <label className="block">
           <span className={ET}>Motivo / referencia <span className="font-normal text-slate-400">(opcional)</span></span>
-          <input value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={150} placeholder={tipo === "ENTRADA" ? "Ej: Factura 001-001-0000123" : tipo === "SALIDA" ? "Ej: Rotura, vencimiento, consumo interno" : "Ej: Inventario de fin de mes"} className={INPUT} />
+          <input value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={150} placeholder={tipo === "ENTRADA" ? "Ej: Reposición semanal" : tipo === "SALIDA" ? "Ej: Rotura, vencimiento, consumo interno" : "Ej: Inventario de fin de mes"} className={INPUT} />
         </label>
 
         {/* Vista previa del impacto */}

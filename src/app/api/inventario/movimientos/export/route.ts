@@ -20,6 +20,8 @@ type Mov = {
   costo_unitario: number;
   origen: string;
   referencia: string | null;
+  proveedor: string | null;
+  numero_factura: string | null;
   usuario_nombre: string | null;
   fecha: string;
 };
@@ -46,6 +48,8 @@ export const GET = withTenant(async (ctx, req) => {
         { header: "Valor", value: (m) => (m.tipo === "SALIDA" ? -1 : 1) * Number(m.cantidad) * (Number(m.costo_unitario) || 0), width: 14 },
         { header: "Origen", value: (m) => ORIGEN_LABEL[m.origen] ?? m.origen, width: 18 },
         { header: "Referencia", value: (m) => m.referencia ?? "", width: 36 },
+        { header: "Proveedor", value: (m) => m.proveedor ?? "", width: 26 },
+        { header: "Factura", value: (m) => m.numero_factura ?? "", width: 18 },
         { header: "Usuario", value: (m) => m.usuario_nombre ?? "", width: 20 },
       ]),
     ]);

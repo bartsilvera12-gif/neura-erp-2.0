@@ -207,7 +207,7 @@ function Movimientos() {
             <div className="relative md:col-span-6">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
-                placeholder="Buscar por producto, SKU o referencia (ej. VTA-000012)..."
+                placeholder="Buscar por producto, SKU, referencia, proveedor o factura..."
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 className={`${input} w-full pl-9 pr-9`}
@@ -300,7 +300,12 @@ function Movimientos() {
                           {ORIGEN_LABEL[m.origen] ?? m.origen}
                         </span>
                       </td>
-                      <td className="max-w-[220px] truncate px-3 py-3 text-xs text-slate-500" title={m.referencia ?? ""}>{m.referencia ?? "—"}</td>
+                      <td className="max-w-[220px] px-3 py-3 text-xs text-slate-500" title={[m.referencia, m.proveedor, m.numero_factura && `Fact. ${m.numero_factura}`].filter(Boolean).join(" · ")}>
+                        <span className="block truncate">{m.referencia ?? "—"}</span>
+                        {m.proveedor || m.numero_factura ? (
+                          <span className="block truncate text-[11px] text-slate-400">{[m.proveedor, m.numero_factura && `Fact. ${m.numero_factura}`].filter(Boolean).join(" · ")}</span>
+                        ) : null}
+                      </td>
                       <td className="px-3 py-3 text-xs text-slate-600">{m.usuario_nombre ?? <span className="text-slate-300">—</span>}</td>
                       <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-slate-500">{fecha(m.fecha)}</td>
                     </tr>

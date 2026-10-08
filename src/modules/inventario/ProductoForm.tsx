@@ -12,6 +12,7 @@ import { subirImagenProducto } from "@/modules/caja/upload-imagen";
 import type { TipoIva } from "@/modules/caja/lib";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 import { partesCategoria, type Categoria } from "@/modules/inventario/categorias";
+import { HistorialCostos } from "@/modules/inventario/HistorialCostos";
 
 const BRAND = clienteConfig.color;
 const INPUT =
@@ -323,6 +324,13 @@ export function ProductoForm({
               </p>
             </div>
           </Bloque>
+
+          {/* ── Historial de costos (solo al editar) ───────────────────────── */}
+          {editando && producto ? (
+            <Bloque titulo="Historial de costos">
+              <HistorialCostos productoId={producto.id} unidad={producto.unidad_medida ?? "Unidad"} />
+            </Bloque>
+          ) : null}
 
           {/* ── Stock ────────────────────────────────────────────────────── */}
           <Bloque titulo="Stock">

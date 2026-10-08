@@ -33,6 +33,8 @@ const nuevo = z.object({
   costo_unitario: z.coerce.number().min(0).default(0),
   origen: z.enum(["compra", "ajuste_manual"]),
   referencia: z.string().trim().max(150).nullish(),
+  proveedor: z.string().trim().max(120).nullish(),
+  numero_factura: z.string().trim().max(60).nullish(),
 });
 
 /**
@@ -48,6 +50,8 @@ export const POST = withTenant(
       p_costo_unitario: input.costo_unitario,
       p_origen: input.origen,
       p_referencia: input.referencia ?? "",
+      p_proveedor: input.proveedor ?? null,
+      p_numero_factura: input.numero_factura ?? null,
     });
     // Los mensajes de la función (stock insuficiente, no controla stock…) son para el usuario.
     if (error) return fail(error.message.replace(/^.*?ERROR:\s*/, ""), 400);
