@@ -71,6 +71,8 @@ const tolerancia = (n: number) => (n >= 8 ? 2 : n >= 4 ? 1 : 0);
  */
 function coincidePalabra(tok: string, texto: string, palabras: string[]): number {
   if (texto.includes(tok)) return 1;
+  // Los números (RUC, CI, teléfono, montos) no se "corrigen": tienen que coincidir.
+  if (!/[a-z]/.test(tok)) return 0;
   const max = tolerancia(tok.length);
   if (!max) return 0;
   for (const p of palabras) {

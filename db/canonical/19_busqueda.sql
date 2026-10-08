@@ -33,11 +33,12 @@ returns text[] language sql immutable parallel safe set search_path = :"schema",
                     where t <> '' and o <= 8), '{}')
 $$;
 
--- Cada palabra tiene que aparecer (o parecerse, si tiene 4+ letras) en el texto.
+-- Cada palabra tiene que aparecer (o parecerse, si tiene 4+ caracteres y alguna letra:
+-- los números —RUC, CI, teléfono, montos— no se "corrigen", tienen que coincidir).
 create or replace function :"schema".coincide_busqueda(p_texto text, p_tokens text[])
 returns boolean language sql immutable parallel safe as $$
   select coalesce(bool_and(p_texto like '%' || t || '%'
-                           or (length(t) >= 4 and extensions.word_similarity(t, p_texto) >= 0.4)), true)
+                           or (length(t) >= 4 and t ~ '[a-z]' and extensions.word_similarity(t, p_texto) >= 0.4)), true)
     from unnest(p_tokens) t
 $$;
 
@@ -154,7 +155,7 @@ language sql stable security invoker set search_path = :"schema", public as $$
       select x.o, array[x.t] || coalesce((
                select array_agg(w order by extensions.word_similarity(x.t, w) desc)
                  from (select w from vocab
-                        where length(x.t) >= 4
+                        where length(x.t) >= 4 and x.t ~ '[a-z]'
                           and not exists (select 1 from vocab v2 where v2.w like '%' || x.t || '%')
                           and extensions.word_similarity(x.t, w) >= 0.4
                         order by extensions.word_similarity(x.t, w) desc, extensions.similarity(x.t, w) desc
