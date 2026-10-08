@@ -7,6 +7,7 @@
  * hay caja abierta (onStateChange) para habilitar/bloquear la venta.
  */
 import { useCallback, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowLeftRight, ChevronDown, ChevronUp, Clock, Lock } from "lucide-react";
 import MontoInput from "@/components/ui/MontoInput";
 import { clienteConfig } from "@/cliente.config";
@@ -40,10 +41,13 @@ export default function CajaControlPanel({
   onStateChange,
   defaultCollapsed = false,
   refreshTick = 0,
+  abrirCierre = false,
 }: {
   onStateChange?: (abierta: boolean) => void;
   defaultCollapsed?: boolean;
   refreshTick?: number;
+  /** abre la ventana de cierre apenas carga (si hay caja abierta) */
+  abrirCierre?: boolean;
 }) {
   const [loading, setLoading] = useState(true);
   const [caja, setCaja] = useState<CajaTurno | null>(null);
@@ -62,6 +66,13 @@ export default function CajaControlPanel({
   }, [onStateChange]);
 
   useEffect(() => { void refresh(); }, [refresh, refreshTick]);
+
+  const [cierrePedido, setCierrePedido] = useState(abrirCierre);
+  useEffect(() => {
+    if (!cierrePedido || loading) return;
+    setCierrePedido(false);
+    if (caja && resumen) setModal("cerrar");
+  }, [cierrePedido, loading, caja, resumen]);
 
   if (loading && !caja) {
     return <div className="rounded-xl border border-slate-200 bg-white p-4 text-sm text-slate-400 shadow-sm">Cargando estado de caja…</div>;
@@ -216,8 +227,10 @@ function ModalShell({ title, children, onClose }: { title: string; children: Rea
     return () => document.removeEventListener("keydown", onKey);
   }, [onClose]);
   // Overlay con scroll propio + centrado: si el modal es más alto que la pantalla,
-  // se puede scrollear y NO se corta ni arriba ni abajo.
-  return (
+  // se puede scrollear y NO se corta ni arriba ni abajo. Va al <body> (portal) para que
+  // la barra de arriba de la app no le tape el título.
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div className="fixed inset-0 z-[120] overflow-y-auto bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
       <div className="flex min-h-full items-center justify-center p-4">
         <div className="flex w-full max-w-md flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -228,7 +241,8 @@ function ModalShell({ title, children, onClose }: { title: string; children: Rea
           <div className="p-4">{children}</div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 
@@ -269,6 +283,9 @@ function AbrirCajaModal({ onClose, onDone }: { onClose: () => void; onDone: () =
 }
 
 // ── Cerrar ─────────────────────────────────────────────────────────────────
+// Única forma de cerrar la caja (reemplaza a la vieja pantalla /caja/cierre). Lo que
+// importa es el EFECTIVO del cajón: lo cobrado por tarjeta/POS/transferencia no está en
+// el cajón, se toma de las ventas registradas y se muestra aparte, solo como información.
 function CerrarCajaModal({ caja, resumen, onClose, onDone }: { caja: CajaTurno; resumen: CajaResumen; onClose: () => void; onDone: () => void }) {
   const [monto, setMonto] = useState("");
   const [obs, setObs] = useState("");
@@ -279,15 +296,12 @@ function CerrarCajaModal({ caja, resumen, onClose, onDone }: { caja: CajaTurno; 
   const transf = resumen.total_transferencia;
   const tarjeta = resumen.total_tarjeta;
   const pos = resumen.total_pos;
-  const electronico = transf + tarjeta + pos; // no entra al cajón físico
+  const otrosMedios = transf + tarjeta + pos; // no entra al cajón físico
   const efectivoEsperado = resumen.efectivo_esperado;
   const manualNet = resumen.ingresos_efectivo - resumen.egresos_efectivo - resumen.retiros_efectivo + resumen.ajustes_efectivo;
-  const cierreTotalEsperado = efectivoEsperado + electronico;
 
   const contado = parseFloat(monto) || 0;
   const difEfectivo = contado - efectivoEsperado;
-  const totalDeclarado = contado + electronico;
-  const difTotal = totalDeclarado - cierreTotalEsperado;
 
   async function submit() {
     setError(null);
@@ -300,47 +314,46 @@ function CerrarCajaModal({ caja, resumen, onClose, onDone }: { caja: CajaTurno; 
 
   return (
     <ModalShell title={`Cerrar caja · turno N° ${caja.numero_caja}`} onClose={onClose}>
-      <SectionLabel>Resumen de ventas del turno</SectionLabel>
+      <SectionLabel>Ventas del turno</SectionLabel>
       <div className="space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
         <Row label="Cantidad de ventas" value={String(resumen.cantidad_ventas)} />
-        <Row label="Ventas en efectivo" value={formatGs(resumen.total_efectivo)} />
-        <Row label="Ventas por transferencia" value={formatGs(transf)} />
-        <Row label="Ventas con tarjeta" value={formatGs(tarjeta)} />
-        <Row label="Ventas con POS" value={formatGs(pos)} />
+        <Row label="Efectivo" value={formatGs(resumen.total_efectivo)} />
+        <Row label="Transferencia" value={formatGs(transf)} />
+        <Row label="Tarjeta (débito / crédito)" value={formatGs(tarjeta)} />
+        <Row label="POS (débito / crédito)" value={formatGs(pos)} />
         <div className="flex justify-between border-t border-slate-200 pt-1.5 font-bold text-slate-900"><span>Total vendido</span><span className="tabular-nums">{formatGs(resumen.total_vendido)}</span></div>
       </div>
 
-      <SectionLabel className="mt-4">Cierre total del turno</SectionLabel>
+      <SectionLabel className="mt-4">Efectivo en el cajón</SectionLabel>
       <div className="rounded-xl border border-sky-200 bg-sky-50 p-3.5">
         <div className="space-y-1.5 text-sm">
           <Row label="Monto de apertura" value={formatGs(apertura)} />
-          <Row label="Total vendido" value={`+ ${formatGs(resumen.total_vendido)}`} />
-          {manualNet !== 0 && <Row label="Movimientos manuales de efectivo" value={`${manualNet > 0 ? "+" : "−"} ${formatGs(Math.abs(manualNet))}`} />}
+          <Row label="Ventas en efectivo" value={`+ ${formatGs(resumen.total_efectivo)}`} />
+          {manualNet !== 0 && <Row label="Entradas y salidas manuales" value={`${manualNet > 0 ? "+" : "−"} ${formatGs(Math.abs(manualNet))}`} />}
         </div>
         <div className="mt-2.5 flex items-baseline justify-between border-t border-sky-200 pt-2.5">
-          <span className="text-sm font-semibold text-sky-900">Cierre total esperado</span>
-          <span className="text-xl font-extrabold tabular-nums text-sky-900">{formatGs(cierreTotalEsperado)}</span>
+          <span className="text-sm font-semibold text-sky-900">Debería haber en el cajón</span>
+          <span className="text-xl font-extrabold tabular-nums text-sky-900">{formatGs(efectivoEsperado)}</span>
         </div>
       </div>
 
-      <SectionLabel className="mt-4">Cierre</SectionLabel>
-      <label className="mb-1.5 block text-sm font-medium text-slate-700">Efectivo físico contado en caja (Gs.)</label>
-      <MontoInput value={monto} onChange={(n) => setMonto(String(n))} placeholder="Ej: 160.000" className={inputClass} decimals={false} autoFocus />
-      <p className="mt-1 text-[11px] leading-snug text-slate-400">Ingresá solo el dinero físico en caja. Transferencias y tarjetas se toman de las ventas registradas.</p>
-
-      {monto !== "" && (
-        <div className="mt-3 space-y-2">
-          <DiffRow label="Diferencia de efectivo físico" hint={`contado − esperado (${formatGs(efectivoEsperado)})`} value={difEfectivo} />
-          <div className="flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-            <span>Total declarado (efectivo + transf. + tarjetas + POS)</span>
-            <span className="font-medium tabular-nums text-slate-700">{formatGs(totalDeclarado)}</span>
-          </div>
-          <DiffRow label="Diferencia total del turno" hint={`declarado − cierre total (${formatGs(cierreTotalEsperado)})`} value={difTotal} />
-        </div>
+      <label className="mb-1.5 mt-4 block text-sm font-semibold text-slate-800">¿Cuánto efectivo contaste en el cajón?</label>
+      <MontoInput value={monto} onChange={(n) => setMonto(String(n))} placeholder={`Ej: ${formatGs(efectivoEsperado).replace("Gs. ", "")}`} className={inputClass} decimals={false} autoFocus />
+      {monto !== "" ? (
+        <ResultadoArqueo diferencia={difEfectivo} />
+      ) : (
+        <p className="mt-1 text-[11px] leading-snug text-slate-400">Contá solo los billetes y monedas. Lo cobrado por otros medios ya lo tiene el sistema.</p>
       )}
 
-      <label className="mb-1.5 mt-3 block text-sm font-medium text-slate-700">Observación (opcional)</label>
-      <textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={2} className={inputClass} />
+      {otrosMedios > 0 ? (
+        <div className="mt-3 flex justify-between rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
+          <span>Cobrado por otros medios (no está en el cajón)</span>
+          <span className="font-medium tabular-nums text-slate-700">{formatGs(otrosMedios)}</span>
+        </div>
+      ) : null}
+
+      <label className="mb-1.5 mt-3 block text-sm font-medium text-slate-700">Observación {monto !== "" && difEfectivo !== 0 ? <span className="font-normal text-slate-400">(contá qué pasó con la diferencia)</span> : <span className="font-normal text-slate-400">(opcional)</span>}</label>
+      <textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={2} className={inputClass} placeholder={monto !== "" && difEfectivo !== 0 ? "Ej: se dio mal un vuelto" : ""} />
       <ErrorBanner msg={error} />
       <div className="mt-4 flex justify-end gap-2">
         <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50">Cancelar</button>
@@ -350,22 +363,24 @@ function CerrarCajaModal({ caja, resumen, onClose, onDone }: { caja: CajaTurno; 
   );
 }
 
+/** Resultado del arqueo en grande, apenas se escribe lo contado: cuadra / sobra / falta. */
+function ResultadoArqueo({ diferencia }: { diferencia: number }) {
+  const cuadra = diferencia === 0;
+  const tono = cuadra ? "border-emerald-200 bg-emerald-50 text-emerald-800" : diferencia > 0 ? "border-sky-200 bg-sky-50 text-sky-800" : "border-red-200 bg-red-50 text-red-800";
+  const texto = cuadra ? "Cuadra justo" : diferencia > 0 ? "Sobra efectivo" : "Falta efectivo";
+  return (
+    <div className={`mt-2 flex items-center justify-between rounded-xl border px-4 py-3 ${tono}`}>
+      <span className="text-sm font-semibold">{texto}</span>
+      <span className="text-lg font-extrabold tabular-nums">{cuadra ? "✓" : `${diferencia > 0 ? "+ " : "− "}${formatGs(Math.abs(diferencia))}`}</span>
+    </div>
+  );
+}
+
 function Row({ label, value }: { label: string; value: string }) {
   return <div className="flex justify-between text-slate-600"><span>{label}</span><span className="tabular-nums">{value}</span></div>;
 }
 function SectionLabel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return <p className={`mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 ${className}`}>{children}</p>;
-}
-function DiffRow({ label, hint, value }: { label: string; hint: string; value: number }) {
-  const tone = value === 0 ? "bg-emerald-50 text-emerald-700" : value > 0 ? "bg-sky-50 text-sky-700" : "bg-red-50 text-red-700";
-  const signo = value > 0 ? "+ " : value < 0 ? "− " : "";
-  const estado = value > 0 ? "(sobra)" : value < 0 ? "(falta)" : "(cuadra)";
-  return (
-    <div className={`flex items-center justify-between rounded-lg px-3 py-2 text-sm font-semibold ${tone}`}>
-      <span>{label} <span className="font-normal opacity-70">{estado}</span><span className="mt-0.5 block text-[10px] font-normal opacity-60">{hint}</span></span>
-      <span className="tabular-nums">{signo}{formatGs(Math.abs(value))}</span>
-    </div>
-  );
 }
 
 // ── Movimiento ─────────────────────────────────────────────────────────────

@@ -9,7 +9,8 @@
  */
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Package, Search, Trash2 } from "lucide-react";
 import { buscar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -100,7 +101,27 @@ function nuevaIdempotencyKey(): string {
   return `vk_${Date.now()}_${Math.random().toString(36).slice(2)}`;
 }
 
+// useSearchParams necesita un Suspense alrededor (si no, el build de Next falla).
 export default function CajaPage() {
+  return (
+    <Suspense>
+      <CajaPageContenido />
+    </Suspense>
+  );
+}
+
+function CajaPageContenido() {
+  // ?cerrar=1 → abre la ventana de cierre (menú "Arqueo / Cierre", botones de Órdenes).
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pedirCierre = searchParams.get("cerrar") === "1";
+  const [cierreTick, setCierreTick] = useState(0);
+  useEffect(() => {
+    if (!pedirCierre) return;
+    setCierreTick((t) => t + 1);
+    router.replace("/caja/nueva", { scroll: false });
+  }, [pedirCierre, router]);
+
   // ── Datos ──────────────────────────────────────────────────────────────────
   const [productos, setProductos] = useState<Producto[]>([]);
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -483,7 +504,7 @@ export default function CajaPage() {
 
       {/* Caja por turno: gate de la venta. Sin caja abierta no se puede cobrar. */}
       <div className="shrink-0">
-        <CajaControlPanel onStateChange={setCajaAbierta} defaultCollapsed refreshTick={refreshCaja} />
+        <CajaControlPanel key={`caja-${cierreTick}`} onStateChange={setCajaAbierta} defaultCollapsed refreshTick={refreshCaja} abrirCierre={cierreTick > 0} />
       </div>
 
       {ventaOk && (

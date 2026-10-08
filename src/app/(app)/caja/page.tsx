@@ -130,7 +130,7 @@ function TarjetaCaja({ caja, arqueo, onCambio }: { caja: Caja; arqueo: Arqueo | 
           <button onClick={() => setMov(true)} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
             <Plus className="h-4 w-4" /> Movimiento
           </button>
-          <Link href="/caja/cierre" className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700">
+          <Link href="/caja/nueva?cerrar=1" className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700">
             <Lock className="h-4 w-4" /> Cerrar
           </Link>
         </div>
@@ -321,7 +321,7 @@ function Ordenes({ caja, listo }: { caja: Caja | null; listo: boolean }) {
           <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Órdenes de venta</h2>
         </div>
         <div className="flex items-center gap-2">
-          <Link href="/caja/cierre" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Arqueo de caja</Link>
+          <Link href="/caja/nueva?cerrar=1" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Arqueo y cierre</Link>
           <Link href="/caja/nueva" className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:brightness-95" style={{ backgroundColor: TEAL }}>+ Nueva venta</Link>
         </div>
       </div>
