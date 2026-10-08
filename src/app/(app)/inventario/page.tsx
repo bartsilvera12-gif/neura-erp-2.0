@@ -235,22 +235,21 @@ export default function InventarioPage() {
                 <th className="px-3 py-3 text-right">Costo</th>
                 <th className="px-3 py-3 text-right">Precio</th>
                 <th className="px-3 py-3 text-center">Stock</th>
-                <th className="hidden px-3 py-3 text-right lg:table-cell">Margen</th>
-                <th className="hidden px-3 py-3 text-center lg:table-cell">Valuación</th>
+                <th className="hidden px-3 py-3 text-right lg:table-cell" title="Qué parte del precio de venta es ganancia: (precio − costo) ÷ precio">Margen</th>
                 <th className="w-px px-5 py-3 text-center">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {cargando && productos.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-5 py-16 text-center">
+                  <td colSpan={8} className="px-5 py-16 text-center">
                     <Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" />
                     <p className="mt-2 text-xs text-slate-500">Cargando productos...</p>
                   </td>
                 </tr>
               ) : productos.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-5 py-16 text-center">
+                  <td colSpan={8} className="px-5 py-16 text-center">
                     <Package className="mx-auto h-8 w-8 text-slate-300" />
                     <p className="mt-3 text-sm font-medium text-slate-700">No se encontraron productos</p>
                     <p className="mt-1 text-xs text-slate-500">{hayFiltros ? "Probá con otra búsqueda o cambiá los filtros." : "Aún no cargaste productos. Empezá creando uno nuevo."}</p>
@@ -319,10 +318,6 @@ export default function InventarioPage() {
                         )}
                       </td>
                       <td className={`hidden px-3 py-3 text-right font-semibold tabular-nums lg:table-cell ${margenColor(margen)}`}>{margen.toFixed(1)}%</td>
-                      <td className="hidden px-3 py-3 text-center lg:table-cell">
-                        {/* El 2.0 valúa a costo promedio ponderado. */}
-                        <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-blue-700" title="Costo promedio ponderado">CPP</span>
-                      </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center justify-center gap-1">
                           <button onClick={() => setForm({ open: true, prod: p })} title={inactivo ? "Ver producto (inactivo)" : "Editar producto"} aria-label={`${inactivo ? "Ver" : "Editar"} ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)]">
