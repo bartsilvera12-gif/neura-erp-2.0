@@ -17,6 +17,7 @@ const editar = z.object({
   codigo: z.string().trim().max(60).nullish(),
   descripcion: z.string().trim().max(500).nullish(),
   parent_id: z.string().uuid().nullish(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color inválido").nullish(),
   activo: z.boolean().optional(),
 });
 
@@ -42,6 +43,7 @@ export const PATCH = withTenant(
     if (input.codigo !== undefined) patch.codigo = input.codigo ? input.codigo.toUpperCase() : null;
     if (input.descripcion !== undefined) patch.descripcion = input.descripcion || null;
     if (input.parent_id !== undefined) patch.parent_id = input.parent_id ?? null;
+    if (input.color !== undefined) patch.color = input.color ?? null;
     if (input.activo !== undefined) patch.activo = input.activo;
     const { data, error } = await ctx.db.update("categorias_productos", patch).eq("id", id).select("id");
     if (error) {

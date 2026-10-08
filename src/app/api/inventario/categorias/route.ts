@@ -31,6 +31,7 @@ const crear = z.object({
   codigo: z.string().trim().max(60).nullish(),
   descripcion: z.string().trim().max(500).nullish(),
   parent_id: z.string().uuid().nullish(),
+  color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color inválido").nullish(),
   activo: z.boolean().optional(),
 });
 
@@ -51,6 +52,7 @@ export const POST = withTenant(
       codigo: input.codigo ? input.codigo.toUpperCase() : slugCodigo(nombre),
       descripcion: input.descripcion || null,
       parent_id: input.parent_id ?? null,
+      color: input.parent_id ? null : input.color ?? null,
       activo: input.activo !== false,
     });
     if (error) {

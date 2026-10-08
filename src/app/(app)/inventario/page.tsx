@@ -19,7 +19,7 @@ import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { ProductoForm } from "@/modules/inventario/ProductoForm";
 import { ExcelImportWizard } from "@/modules/inventario/ExcelImportWizard";
-import { colorCategoria, opcionesFiltroCategoria, partesCategoria, rutaCategoria, type Categoria } from "@/modules/inventario/categorias";
+import { colorCategoria, coloresPorCategoria, opcionesFiltroCategoria, partesCategoria, rutaCategoria, type Categoria } from "@/modules/inventario/categorias";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 
 const TEAL = clienteConfig.color;
@@ -90,6 +90,7 @@ export default function InventarioPage() {
   const desdeIdx = total === 0 ? 0 : (paginaSegura - 1) * porPagina + 1;
   const hastaIdx = Math.min(paginaSegura * porPagina, total);
   const categoriaPorId = useMemo(() => new Map(categorias.map((c) => [c.id, c])), [categorias]);
+  const colores = useMemo(() => coloresPorCategoria(categorias), [categorias]);
   const hayFiltros = !!busqueda || !!categoriaId;
 
   async function toggleActivo(p: ProductoInventario) {
@@ -289,7 +290,7 @@ export default function InventarioPage() {
                       <td className="hidden px-3 py-3 text-xs text-slate-600 md:table-cell">
                         {catMadre ? (
                           (() => {
-                            const c = colorCategoria(catMadre.nombre);
+                            const c = colores.get(catMadre.id) ?? colorCategoria(catMadre.nombre);
                             const ruta = catSub ? `${catMadre.nombre} › ${catSub.nombre}` : catMadre.nombre;
                             return (
                               <span className="inline-flex max-w-full items-center gap-1.5 truncate whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)]" title={ruta}>

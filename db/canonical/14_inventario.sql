@@ -370,3 +370,9 @@ language sql stable security invoker set search_path = :"schema", public as $$
    group by categoria_principal_id
 $$;
 grant execute on function :"schema".conteo_productos_por_categoria() to authenticated, service_role;
+
+-- Color elegido por el usuario para la categoría principal (las subcategorías usan el de su
+-- categoría). Vacío = el sistema asigna uno distinto a cada una.
+alter table :"schema".categorias_productos add column if not exists color text;
+alter table :"schema".categorias_productos drop constraint if exists chk_categoria_color;
+alter table :"schema".categorias_productos add constraint chk_categoria_color check (color is null or color ~ '^#[0-9a-fA-F]{6}$');

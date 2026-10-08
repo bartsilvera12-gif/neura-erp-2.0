@@ -6,9 +6,12 @@ export type Categoria = {
   descripcion: string | null;
   parent_id: string | null;
   activo: boolean;
+  /** color elegido (#rrggbb) — solo categorías principales; null = automático */
+  color?: string | null;
+  created_at?: string;
 };
 
-export const COLS_CATEGORIA = "id, nombre, codigo, descripcion, parent_id, activo, created_at, updated_at";
+export const COLS_CATEGORIA = "id, nombre, codigo, descripcion, parent_id, activo, color, created_at, updated_at";
 
 /** Código a partir del nombre: minúsculas, sin acentos, _ como separador (máx. 60). */
 export function slugCodigo(nombre: string): string {
@@ -20,7 +23,7 @@ export function slugCodigo(nombre: string): string {
  * Color consistente por categoría (hash del nombre): cada categoría queda con el suyo
  * y el ojo agrupa rápido la columna. Paleta de Ferretería.
  */
-const PALETA = [
+export const PALETA = [
   { dot: "#0ea5e9", bg: "#f0f9ff" }, { dot: "#10b981", bg: "#ecfdf5" }, { dot: "#f59e0b", bg: "#fffbeb" },
   { dot: "#8b5cf6", bg: "#f5f3ff" }, { dot: "#ec4899", bg: "#fdf2f8" }, { dot: "#06b6d4", bg: "#ecfeff" },
   { dot: "#ef4444", bg: "#fef2f2" }, { dot: "#14b8a6", bg: "#f0fdfa" }, { dot: "#a855f7", bg: "#faf5ff" },
@@ -58,4 +61,38 @@ export function opcionesFiltroCategoria(categorias: Categoria[]): [string, strin
     [m.id, m.nombre],
     ...orden.filter((c) => c.parent_id === m.id).map((c): [string, string] => [c.id, `${m.nombre} › ${c.nombre}`]),
   ]);
+}
+
+export type ColorCategoria = { dot: string; bg: string };
+
+/** Color de un hex elegido: si es de la paleta usa su fondo; si no, el mismo color suave. */
+export function colorDeHex(hex: string): ColorCategoria {
+  return PALETA.find((p) => p.dot.toLowerCase() === hex.toLowerCase()) ?? { dot: hex, bg: `${hex}1f` };
+}
+
+/**
+ * Color de cada categoría: el que eligió el usuario, y si no eligió, uno DISTINTO de los
+ * que quedan libres (en orden de creación, así crear una nueva no le cambia el color a las
+ * demás). Las subcategorías usan el color de su categoría.
+ */
+export function coloresPorCategoria(categorias: Categoria[]) {
+  const raices = categorias
+    .filter((c) => !c.parent_id)
+    .sort((a, b) => (a.created_at ?? "").localeCompare(b.created_at ?? "") || a.nombre.localeCompare(b.nombre, "es"));
+  const mapa = new Map<string, ColorCategoria>();
+  const usados = new Set(raices.filter((c) => c.color).map((c) => c.color!.toLowerCase()));
+  const libres = PALETA.filter((p) => !usados.has(p.dot.toLowerCase()));
+  let i = 0;
+  for (const c of raices) {
+    if (c.color) mapa.set(c.id, colorDeHex(c.color));
+    else mapa.set(c.id, libres.length ? libres[i++ % libres.length] : PALETA[i++ % PALETA.length]);
+  }
+  for (const c of categorias) if (c.parent_id && mapa.has(c.parent_id)) mapa.set(c.id, mapa.get(c.parent_id)!);
+  return mapa;
+}
+
+/** Primer color que ninguna categoría está mostrando (para proponerlo al crear una nueva). */
+export function colorLibre(categorias: Categoria[]): string {
+  const enUso = new Set([...coloresPorCategoria(categorias).values()].map((c) => c.dot.toLowerCase()));
+  return (PALETA.find((p) => !enUso.has(p.dot.toLowerCase())) ?? PALETA[0]).dot;
 }

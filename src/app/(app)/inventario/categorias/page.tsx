@@ -9,11 +9,11 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronDown, ChevronRight, CornerDownRight, Loader2, Pencil, Plus, Search, Tags, X } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, CornerDownRight, Loader2, Pencil, Plus, Search, Tags, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
-import { colorCategoria, type Categoria } from "@/modules/inventario/categorias";
+import { colorCategoria, colorLibre, coloresPorCategoria, PALETA, type Categoria, type ColorCategoria } from "@/modules/inventario/categorias";
 
 const TEAL = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
@@ -29,6 +29,7 @@ export default function CategoriasPage() {
   const [esAdmin, setEsAdmin] = useState(false);
   const [nombre, setNombre] = useState("");
   const [padre, setPadre] = useState("");
+  const [colorNuevo, setColorNuevo] = useState<string | null>(null); // null = el libre que propone el sistema
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState<Categoria | null>(null);
@@ -55,10 +56,10 @@ export default function CategoriasPage() {
   const abrir = (id: string) => setCerradas((s) => { const n = new Set(s); n.delete(id); return n; });
   const alternar = (id: string) => setCerradas((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
-  async function crearCategoria(nombreNuevo: string, parentId: string | null) {
+  async function crearCategoria(nombreNuevo: string, parentId: string | null, color: string | null = null) {
     await apiFetch("/api/inventario/categorias", {
       method: "POST",
-      body: JSON.stringify({ nombre: nombreNuevo.trim(), parent_id: parentId }),
+      body: JSON.stringify({ nombre: nombreNuevo.trim(), parent_id: parentId, color: parentId ? null : color }),
     });
     if (parentId) abrir(parentId);
     await cargar();
@@ -70,8 +71,9 @@ export default function CategoriasPage() {
     setCreando(true);
     setError(null);
     try {
-      await crearCategoria(nombre, padre || null);
+      await crearCategoria(nombre, padre || null, colorElegido);
       setNombre("");
+      setColorNuevo(null);
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -101,6 +103,7 @@ export default function CategoriasPage() {
     return raices.map((r) => ({ cat: r, hijas: orden.filter((c) => c.parent_id === r.id) }));
   }, [categorias]);
 
+  const colores = useMemo(() => coloresPorCategoria(categorias), [categorias]);
   const q = sinTildes(busqueda.trim());
   const visibles = useMemo(() => {
     if (!q) return arbol;
@@ -114,6 +117,7 @@ export default function CategoriasPage() {
 
   const principalesActivas = categorias.filter((c) => !c.parent_id && c.activo);
   const padreElegido = principalesActivas.find((c) => c.id === padre);
+  const colorElegido = colorNuevo ?? colorLibre(categorias);
   const totalSubs = categorias.filter((c) => c.parent_id).length;
   const conHijas = arbol.filter((g) => g.hijas.length > 0).map((g) => g.cat.id);
   const todoAbierto = conHijas.every((id) => !cerradas.has(id));
@@ -158,6 +162,17 @@ export default function CategoriasPage() {
               {creando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               {creando ? "Creando..." : padreElegido ? "Crear subcategoría" : "Crear categoría"}
             </button>
+            <div className="sm:col-span-3">
+              <span className={ET}>Color</span>
+              {padreElegido ? (
+                <p className="flex items-center gap-2 py-1 text-xs text-slate-500">
+                  <Punto col={colores.get(padreElegido.id) ?? colorCategoria(padreElegido.nombre)} />
+                  Usa el color de {padreElegido.nombre}
+                </p>
+              ) : (
+                <SelectorColor valor={colorElegido} onChange={setColorNuevo} />
+              )}
+            </div>
           </form>
           <p className="mt-2 text-[11px] text-slate-400">
             {padreElegido && nombre.trim() ? (
@@ -207,7 +222,7 @@ export default function CategoriasPage() {
         ) : (
           <ul className="divide-y divide-slate-100">
             {visibles.map(({ cat, hijas }) => {
-              const col = colorCategoria(cat.nombre);
+              const col = colores.get(cat.id) ?? colorCategoria(cat.nombre);
               const abierta = !!q || !cerradas.has(cat.id);
               const total = (conteo[cat.id] ?? 0) + hijas.reduce((a, h) => a + (conteo[h.id] ?? 0), 0);
               const tieneHijas = hijas.length > 0;
@@ -222,7 +237,13 @@ export default function CategoriasPage() {
                     >
                       {abierta ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                     </button>
-                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: col.dot, boxShadow: `0 0 0 3px ${col.bg}` }} />
+                    {esAdmin ? (
+                      <button onClick={() => setEditando(cat)} title="Cambiar color" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition hover:scale-125">
+                        <Punto col={col} />
+                      </button>
+                    ) : (
+                      <Punto col={col} />
+                    )}
                     <button onClick={() => tieneHijas && alternar(cat.id)} className={`min-w-0 flex-1 text-left ${tieneHijas ? "cursor-pointer" : "cursor-default"}`}>
                       <p className="truncate text-sm font-bold text-slate-900">
                         <Resaltado texto={cat.nombre} q={q} />
@@ -280,7 +301,7 @@ export default function CategoriasPage() {
         )}
       </section>
 
-      {editando ? <EditarCategoria categoria={editando} categorias={categorias} onClose={() => setEditando(null)} onGuardado={() => { setEditando(null); void cargar(); }} /> : null}
+      {editando ? <EditarCategoria categoria={editando} categorias={categorias} colorActual={colores.get(editando.id)} onClose={() => setEditando(null)} onGuardado={() => { setEditando(null); void cargar(); }} /> : null}
     </div>
   );
 }
@@ -294,6 +315,34 @@ function Acciones({ c, toggling, onEditar, onToggle }: { c: Categoria; toggling:
       <button onClick={onToggle} disabled={toggling} className={`rounded-lg px-2 py-1 text-xs font-medium transition hover:bg-white disabled:opacity-40 ${c.activo ? "text-slate-500 hover:text-amber-600" : "text-emerald-600 hover:text-emerald-700"}`}>
         {toggling ? "..." : c.activo ? "Desactivar" : "Activar"}
       </button>
+    </div>
+  );
+}
+
+function Punto({ col }: { col: ColorCategoria }) {
+  return <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: col.dot, boxShadow: `0 0 0 3px ${col.bg}` }} />;
+}
+
+/** Fila de colores para elegir con un toque; el elegido lleva un check. */
+function SelectorColor({ valor, onChange }: { valor: string; onChange: (hex: string) => void }) {
+  return (
+    <div className="flex flex-wrap gap-2 py-1" role="radiogroup" aria-label="Color de la categoría">
+      {PALETA.map((p) => {
+        const sel = p.dot.toLowerCase() === valor.toLowerCase();
+        return (
+          <button
+            key={p.dot}
+            type="button"
+            role="radio"
+            aria-checked={sel}
+            onClick={() => onChange(p.dot)}
+            className="flex h-8 w-8 items-center justify-center rounded-full transition hover:scale-110"
+            style={{ backgroundColor: p.dot, boxShadow: sel ? `0 0 0 2px #fff, 0 0 0 4px ${p.dot}` : undefined }}
+          >
+            {sel ? <Check className="h-4 w-4 text-white" strokeWidth={3} /> : null}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -359,10 +408,11 @@ function NuevaSub({ madre, onCrear, onCancelar }: { madre: string; onCrear: (nom
   );
 }
 
-function EditarCategoria({ categoria, categorias, onClose, onGuardado }: { categoria: Categoria; categorias: Categoria[]; onClose: () => void; onGuardado: () => void }) {
+function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuardado }: { categoria: Categoria; categorias: Categoria[]; colorActual?: ColorCategoria; onClose: () => void; onGuardado: () => void }) {
   const [nombre, setNombre] = useState(categoria.nombre);
   const [codigo, setCodigo] = useState(categoria.codigo ?? "");
   const [padre, setPadre] = useState(categoria.parent_id ?? "");
+  const [color, setColor] = useState(categoria.color ?? colorActual?.dot ?? PALETA[0].dot);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Dos niveles: una categoría con subcategorías no puede quedar dentro de otra.
@@ -381,7 +431,7 @@ function EditarCategoria({ categoria, categorias, onClose, onGuardado }: { categ
     try {
       await apiFetch(`/api/inventario/categorias/${categoria.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ nombre: nombre.trim(), codigo: codigo.trim() || null, parent_id: padre || null }),
+        body: JSON.stringify({ nombre: nombre.trim(), codigo: codigo.trim() || null, parent_id: padre || null, color: padre ? null : color }),
       });
       onGuardado();
     } catch (err) {
@@ -414,6 +464,14 @@ function EditarCategoria({ categoria, categorias, onClose, onGuardado }: { categ
                 />
               )}
             </label>
+            {padre ? (
+              <p className="text-xs text-slate-500">Como subcategoría, usa el color de su categoría.</p>
+            ) : (
+              <div>
+                <span className={ET}>Color</span>
+                <SelectorColor valor={color} onChange={setColor} />
+              </div>
+            )}
             <label className="block">
               <span className={ET}>Código <span className="font-normal text-slate-400">(opcional)</span></span>
               <input value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Ej: BEB" className={INPUT} />
