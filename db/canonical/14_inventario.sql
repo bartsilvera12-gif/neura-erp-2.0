@@ -336,3 +336,25 @@ end;
 $fn$;
 
 grant execute on function :"schema".registrar_movimiento_stock(uuid, text, numeric, numeric, text, text) to authenticated, service_role;
+
+-- ── Subcategorías (categorias_productos.parent_id) ─────────────────────────────
+-- El producto apunta a la hoja: la subcategoría si tiene, si no la categoría.
+-- categoria_ruta: "Bebidas › Gaseosas" para mostrar en reportes.
+-- categoria_coincide: filtrar por una categoría incluye también sus subcategorías.
+create or replace function :"schema".categoria_ruta(p_id uuid)
+returns text language sql stable security invoker set search_path = :"schema", public as $$
+  select case when pa.id is null then c.nombre else pa.nombre || ' › ' || c.nombre end
+    from categorias_productos c
+    left join categorias_productos pa on pa.id = c.parent_id
+   where c.id = p_id
+$$;
+
+create or replace function :"schema".categoria_coincide(p_cat uuid, p_filtro text)
+returns boolean language sql stable security invoker set search_path = :"schema", public as $$
+  select p_cat is not null and (
+    p_cat::text = p_filtro
+    or exists (select 1 from categorias_productos c where c.id = p_cat and c.parent_id::text = p_filtro))
+$$;
+
+grant execute on function :"schema".categoria_ruta(uuid) to authenticated, service_role;
+grant execute on function :"schema".categoria_coincide(uuid, text) to authenticated, service_role;

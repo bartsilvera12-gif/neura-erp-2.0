@@ -18,7 +18,7 @@ begin
     select p.id, p.nombre, p.sku, p.codigo_barras, p.unidad_medida, p.stock_actual, p.stock_minimo,
            p.stock_minimo - p.stock_actual as faltante,
            coalesce(p.costo_promedio, 0) as costo,
-           p.categoria_principal_id, c.nombre as categoria_nombre, p.imagen_url
+           p.categoria_principal_id, categoria_ruta(p.categoria_principal_id) as categoria_nombre, p.imagen_url
       from productos p
       left join categorias_productos c on c.id = p.categoria_principal_id
      where p.empresa_id = empresa_actual()
@@ -27,7 +27,7 @@ begin
        and coalesce(p.stock_actual, 0) < p.stock_minimo
        and (p_categoria is null
             or (p_categoria = '__sin__' and p.categoria_principal_id is null)
-            or p.categoria_principal_id::text = p_categoria)
+            or categoria_coincide(p.categoria_principal_id, p_categoria))
   ),
   vendido as (
     select vi.producto_id, sum(vi.cantidad) as unidades

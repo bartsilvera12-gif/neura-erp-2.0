@@ -20,8 +20,9 @@ export const GET = withTenant(
     try {
       r = await resumenProductos(ctx.db, f);
       if (f.categoria && f.categoria !== "__sin__") {
-        const c = await ctx.db.select("categorias_productos", "nombre").eq("id", f.categoria).limit(1);
-        nombreCat = (c.data?.[0] as { nombre?: string } | undefined)?.nombre ?? null;
+        // "Bebidas › Gaseosas" si es subcategoría
+        const c = await ctx.db.rpc<string>("categoria_ruta", { p_id: f.categoria });
+        nombreCat = c.data ?? null;
       }
       if (f.producto) {
         const p = await ctx.db.select("productos", "nombre").eq("id", f.producto).limit(1);

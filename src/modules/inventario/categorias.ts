@@ -31,3 +31,31 @@ export function colorCategoria(nombre: string) {
   for (let i = 0; i < nombre.length; i++) h = (h * 31 + nombre.charCodeAt(i)) >>> 0;
   return PALETA[h % PALETA.length];
 }
+
+/**
+ * Subcategorías: el producto apunta a la hoja (subcategoría si tiene, si no la categoría).
+ * Devuelve la categoría madre y la subcategoría de un id.
+ */
+export function partesCategoria(id: string | null | undefined, porId: Map<string, Categoria>) {
+  const c = id ? porId.get(id) : undefined;
+  if (!c) return { madre: undefined, sub: undefined };
+  const madre = c.parent_id ? porId.get(c.parent_id) : undefined;
+  return madre ? { madre, sub: c } : { madre: c, sub: undefined };
+}
+
+/** "Bebidas › Gaseosas" (o solo "Bebidas" si no tiene subcategoría). */
+export function rutaCategoria(id: string | null | undefined, porId: Map<string, Categoria>) {
+  const { madre, sub } = partesCategoria(id, porId);
+  if (!madre) return undefined;
+  return sub ? `${madre.nombre} › ${sub.nombre}` : madre.nombre;
+}
+
+/** Opciones de filtro: cada categoría seguida de sus subcategorías ("Bebidas › Gaseosas").
+ *  Filtrar por la categoría incluye también a sus subcategorías. */
+export function opcionesFiltroCategoria(categorias: Categoria[]): [string, string][] {
+  const orden = [...categorias].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  return orden.filter((c) => !c.parent_id).flatMap((m): [string, string][] => [
+    [m.id, m.nombre],
+    ...orden.filter((c) => c.parent_id === m.id).map((c): [string, string] => [c.id, `${m.nombre} › ${c.nombre}`]),
+  ]);
+}

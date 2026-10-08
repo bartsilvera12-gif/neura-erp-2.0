@@ -28,7 +28,11 @@ export const GET = withTenant(async (ctx, req) => {
     let query = ctx.db.select("productos", COLS, { count: "exact" });
     if (sp.get("inactivos") !== "1") query = query.eq("activo", true);
     if (categoria === "__sin__") query = query.is("categoria_principal_id", null);
-    else if (/^[0-9a-f-]{36}$/i.test(categoria)) query = query.eq("categoria_principal_id", categoria);
+    else if (/^[0-9a-f-]{36}$/i.test(categoria)) {
+      // Una categoría incluye a los productos de sus subcategorías.
+      const { data: hijas } = await ctx.db.select("categorias_productos", "id").eq("parent_id", categoria);
+      query = query.in("categoria_principal_id", [categoria, ...((hijas ?? []) as unknown as { id: string }[]).map((h) => h.id)]);
+    }
     // Cada palabra tiene que aparecer en el nombre, el SKU o el código de barras.
     for (const t of q.split(/\s+/).filter(Boolean).slice(0, 5)) {
       query = query.or(`nombre.ilike."*${t}*",sku.ilike."*${t}*",codigo_barras.ilike."*${t}*"`);

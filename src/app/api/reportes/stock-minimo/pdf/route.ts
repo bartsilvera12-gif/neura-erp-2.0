@@ -23,8 +23,9 @@ export const GET = withTenant(
     try {
       r = await reporteStockMinimo(ctx.db, categoria, soloSinStock);
       if (categoria && categoria !== "__sin__") {
-        const c = await ctx.db.select("categorias_productos", "nombre").eq("id", categoria).limit(1);
-        nombreCat = (c.data?.[0] as { nombre?: string } | undefined)?.nombre ?? null;
+        // "Bebidas › Gaseosas" si es subcategoría
+        const c = await ctx.db.rpc<string>("categoria_ruta", { p_id: categoria });
+        nombreCat = c.data ?? null;
       }
     } catch {
       return ERR.server();

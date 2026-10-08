@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { History, ImagePlus, Loader2, Wand2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
@@ -11,7 +11,7 @@ import MontoInput from "@/components/ui/MontoInput";
 import { subirImagenProducto } from "@/modules/caja/upload-imagen";
 import type { TipoIva } from "@/modules/caja/lib";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
-import type { Categoria } from "@/modules/inventario/categorias";
+import { partesCategoria, type Categoria } from "@/modules/inventario/categorias";
 
 const BRAND = clienteConfig.color;
 const INPUT =
@@ -85,6 +85,13 @@ export function ProductoForm({
       setGenerando("");
     }
   }
+
+  // Categoría → subcategoría: el producto guarda la hoja (la sub si se eligió, si no la categoría).
+  const porId = useMemo(() => new Map(categorias.map((c) => [c.id, c])), [categorias]);
+  const cat = partesCategoria(f.categoria_principal_id, porId);
+  const visible = (c: Categoria) => c.activo || c.id === cat.madre?.id || c.id === cat.sub?.id;
+  const madres = categorias.filter((c) => !c.parent_id && visible(c));
+  const subs = cat.madre ? categorias.filter((c) => c.parent_id === cat.madre!.id && visible(c)) : [];
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const num = (v: string) => (v === "" ? undefined : Number(v));
@@ -227,15 +234,30 @@ export function ProductoForm({
                   : "Si el producto no trae código, generá uno para imprimir etiquetas."}
               </p>
             </div>
-            <label className="mt-3 block">
-              <span className={ET}>Categoría</span>
-              <Select
-                value={f.categoria_principal_id}
-                onChange={(v) => set("categoria_principal_id", v)}
-                block
-                options={[["", "— Sin categoría —"], ...categorias.filter((c) => c.activo || c.id === f.categoria_principal_id).map((c): [string, string] => [c.id, c.nombre])]}
-              />
-            </label>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className={ET}>Categoría</span>
+                <Select
+                  value={cat.madre?.id ?? ""}
+                  onChange={(v) => set("categoria_principal_id", v)}
+                  block
+                  options={[["", "— Sin categoría —"], ...madres.map((c): [string, string] => [c.id, c.nombre])]}
+                />
+              </label>
+              <label className="block">
+                <span className={ET}>Subcategoría <span className="font-normal text-slate-400">(opcional)</span></span>
+                <Select
+                  value={cat.sub?.id ?? ""}
+                  onChange={(v) => set("categoria_principal_id", v || cat.madre?.id || "")}
+                  block
+                  disabled={!cat.madre || subs.length === 0}
+                  options={[[
+                    "",
+                    !cat.madre ? "Elegí primero la categoría" : subs.length === 0 ? "No tiene subcategorías" : "— Sin subcategoría —",
+                  ], ...subs.map((c): [string, string] => [c.id, c.nombre])]}
+                />
+              </label>
+            </div>
           </Bloque>
 
           {/* ── Precios ──────────────────────────────────────────────────── */}

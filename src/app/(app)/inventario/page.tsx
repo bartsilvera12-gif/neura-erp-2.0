@@ -19,7 +19,7 @@ import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { ProductoForm } from "@/modules/inventario/ProductoForm";
 import { ExcelImportWizard } from "@/modules/inventario/ExcelImportWizard";
-import { colorCategoria, type Categoria } from "@/modules/inventario/categorias";
+import { colorCategoria, opcionesFiltroCategoria, partesCategoria, rutaCategoria, type Categoria } from "@/modules/inventario/categorias";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 
 const TEAL = clienteConfig.color;
@@ -89,7 +89,7 @@ export default function InventarioPage() {
   const paginaSegura = Math.min(pagina, totalPaginas);
   const desdeIdx = total === 0 ? 0 : (paginaSegura - 1) * porPagina + 1;
   const hastaIdx = Math.min(paginaSegura * porPagina, total);
-  const categoriaPorId = useMemo(() => new Map(categorias.map((c) => [c.id, c.nombre])), [categorias]);
+  const categoriaPorId = useMemo(() => new Map(categorias.map((c) => [c.id, c])), [categorias]);
   const hayFiltros = !!busqueda || !!categoriaId;
 
   async function toggleActivo(p: ProductoInventario) {
@@ -126,7 +126,7 @@ export default function InventarioPage() {
   const opcionesCategoria: [string, string][] = [
     ["", "Todas las categorías"],
     ["__sin__", "— Sin categoría —"],
-    ...categorias.map((c): [string, string] => [c.id, c.nombre]),
+    ...opcionesFiltroCategoria(categorias),
   ];
 
   return (
@@ -215,7 +215,7 @@ export default function InventarioPage() {
               {busqueda ? <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>Búsqueda: &quot;{busqueda}&quot;</span> : null}
               {categoriaId ? (
                 <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>
-                  {categoriaId === "__sin__" ? "Sin categoría" : categoriaPorId.get(categoriaId) ?? "Categoría"}
+                  {categoriaId === "__sin__" ? "Sin categoría" : rutaCategoria(categoriaId, categoriaPorId) ?? "Categoría"}
                 </span>
               ) : null}
               <button onClick={limpiarFiltros} className="ml-auto rounded text-slate-400 underline-offset-2 hover:text-slate-700 hover:underline">Limpiar</button>
@@ -262,7 +262,7 @@ export default function InventarioPage() {
                   const stockBajo = Number(p.stock_minimo) > 0 && Number(p.stock_actual) < Number(p.stock_minimo);
                   const margen = margenVenta(costo, Number(p.precio_venta));
                   const sinControl = p.controla_stock === false;
-                  const catNombre = p.categoria_principal_id ? categoriaPorId.get(p.categoria_principal_id) : undefined;
+                  const { madre: catMadre, sub: catSub } = partesCategoria(p.categoria_principal_id, categoriaPorId);
                   const inactivo = p.activo === false;
                   return (
                     <tr key={p.id} className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
@@ -287,13 +287,17 @@ export default function InventarioPage() {
                       </td>
                       <td className="hidden px-3 py-3 font-mono text-xs text-slate-600 lg:table-cell">{p.sku}</td>
                       <td className="hidden px-3 py-3 text-xs text-slate-600 md:table-cell">
-                        {catNombre ? (
+                        {catMadre ? (
                           (() => {
-                            const c = colorCategoria(catNombre);
+                            const c = colorCategoria(catMadre.nombre);
+                            const ruta = catSub ? `${catMadre.nombre} › ${catSub.nombre}` : catMadre.nombre;
                             return (
-                              <span className="inline-flex max-w-full items-center gap-1.5 truncate whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)]" title={catNombre}>
+                              <span className="inline-flex max-w-full items-center gap-1.5 truncate whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)]" title={ruta}>
                                 <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: c.dot, boxShadow: `0 0 0 3px ${c.bg}` }} />
-                                <span className="truncate">{catNombre}</span>
+                                <span className="truncate">
+                                  {catMadre.nombre}
+                                  {catSub ? <span className="font-medium text-slate-500"> › {catSub.nombre}</span> : null}
+                                </span>
                               </span>
                             );
                           })()

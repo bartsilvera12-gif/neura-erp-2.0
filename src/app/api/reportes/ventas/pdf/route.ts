@@ -29,8 +29,9 @@ export const GET = withTenant(
         nombres.cajero = (u.data?.[0] as { nombre?: string } | undefined)?.nombre ?? null;
       }
       if (f.categoria && f.categoria !== "__sin__") {
-        const c = await ctx.db.select("categorias_productos", "nombre").eq("id", f.categoria).limit(1);
-        nombres.categoria = (c.data?.[0] as { nombre?: string } | undefined)?.nombre ?? null;
+        // "Bebidas › Gaseosas" si es subcategoría
+        const c = await ctx.db.rpc<string>("categoria_ruta", { p_id: f.categoria });
+        nombres.categoria = c.data ?? null;
       }
     } catch {
       return ERR.server();

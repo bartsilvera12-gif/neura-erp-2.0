@@ -17,6 +17,7 @@ export function Select({
   options,
   minWidth,
   block = false,
+  disabled = false,
   className = "",
 }: {
   value: string;
@@ -26,6 +27,8 @@ export function Select({
   minWidth?: number;
   /** ocupa todo el ancho (campos de formulario) */
   block?: boolean;
+  /** gris y sin abrir (ej. subcategoría sin categoría elegida) */
+  disabled?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -60,18 +63,19 @@ export function Select({
     <div ref={ref} className={`relative ${block ? "w-full" : ""} ${className}`} style={minWidth ? { minWidth } : undefined}>
       <button
         type="button"
+        disabled={disabled}
         onClick={() => setOpen((v) => { const n = !v; if (n) setHi(Math.max(0, options.findIndex((o) => o[0] === value))); return n; })}
         onKeyDown={onTriggerKey}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-2 rounded-xl border bg-white py-2.5 pl-3.5 pr-3 text-sm font-medium text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:shadow-[0_0_0_4px_var(--brand-100)]"
+        className="flex w-full items-center justify-between gap-2 rounded-xl border bg-white py-2.5 pl-3.5 pr-3 text-sm font-medium text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:shadow-[0_0_0_4px_var(--brand-100)] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200"
         style={{ borderColor: open ? BRAND : "#e2e8f0", boxShadow: open ? `0 0 0 4px var(--brand-100)` : undefined }}
       >
         <span className="truncate">{current?.[1]}</span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
 
-      {open ? (
+      {open && !disabled ? (
         <div
           className="absolute left-0 right-0 z-30 mt-1.5 origin-top rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_-8px_rgba(2,48,71,0.25)]"
           style={{ animation: "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)" }}

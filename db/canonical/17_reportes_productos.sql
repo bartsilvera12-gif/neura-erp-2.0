@@ -31,7 +31,7 @@ begin
        and (p_producto is null or vi.producto_id = p_producto)
        and (p_categoria is null
             or (p_categoria = '__sin__' and p.categoria_principal_id is null)
-            or p.categoria_principal_id::text = p_categoria)
+            or categoria_coincide(p.categoria_principal_id, p_categoria))
   ),
   vendidos as (
     select producto_id, max(producto_nombre) nombre, max(sku) sku, sum(cantidad) unidades,
@@ -46,7 +46,7 @@ begin
        and (p_producto is null or p.id = p_producto)
        and (p_categoria is null
             or (p_categoria = '__sin__' and p.categoria_principal_id is null)
-            or p.categoria_principal_id::text = p_categoria)
+            or categoria_coincide(p.categoria_principal_id, p_categoria))
        and not exists (select 1 from vendidos x where x.producto_id = p.id)
   ),
   todos as (
@@ -57,7 +57,7 @@ begin
   select jsonb_build_object(
     'items', coalesce(jsonb_agg(jsonb_build_object(
         'producto_id', t.producto_id, 'nombre', coalesce(p.nombre, t.nombre), 'sku', coalesce(p.sku, t.sku),
-        'categoria', c.nombre, 'unidad_medida', p.unidad_medida, 'imagen_url', p.imagen_url,
+        'categoria', categoria_ruta(p.categoria_principal_id), 'unidad_medida', p.unidad_medida, 'imagen_url', p.imagen_url,
         'unidades', t.unidades, 'ventas', t.ventas, 'total', t.total, 'costo', t.costo,
         'ganancia', t.total - t.costo, 'sin_costo', t.sin_costo,
         'precio_promedio', case when t.unidades > 0 then round(t.total / t.unidades) else 0 end,
@@ -104,7 +104,7 @@ begin
        and (p_producto is null or vi.producto_id = p_producto)
        and (p_categoria is null
             or (p_categoria = '__sin__' and p.categoria_principal_id is null)
-            or p.categoria_principal_id::text = p_categoria)
+            or categoria_coincide(p.categoria_principal_id, p_categoria))
   ),
   pag as (
     select * from lineas order by fecha desc, id desc

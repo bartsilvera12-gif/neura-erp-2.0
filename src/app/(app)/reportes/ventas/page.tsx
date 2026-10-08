@@ -15,7 +15,7 @@ import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
 import { CorregirCostos } from "@/modules/reportes/CorregirCostos";
-import type { Categoria } from "@/modules/inventario/categorias";
+import { opcionesFiltroCategoria, type Categoria } from "@/modules/inventario/categorias";
 import type { ResumenVentas, VentaDetalle as FilaVenta } from "@/modules/reportes/server/ventas";
 
 const TEAL = clienteConfig.color;
@@ -190,7 +190,7 @@ export default function ReporteVentasPage() {
           <Select value={cajero} onChange={setCajero} minWidth={170} options={[["", "Todos los cajeros"], ...cajeros.map((c): [string, string] => [c.id, c.nombre])]} />
           <Select value={tipo} onChange={setTipo} minWidth={150} options={[["", "Contado y crédito"], ["CONTADO", "Solo contado"], ["CREDITO", "Solo crédito"]]} />
           <Select value={medio} onChange={setMedio} minWidth={170} options={[["", "Todos los medios"], ...Object.entries(MEDIO).map(([v, l]): [string, string] => [v, l])]} />
-          <Select value={categoria} onChange={setCategoria} minWidth={190} options={[["", "Todas las categorías"], ["__sin__", "— Sin categoría —"], ...categorias.map((c): [string, string] => [c.id, c.nombre])]} />
+          <Select value={categoria} onChange={setCategoria} minWidth={190} options={[["", "Todas las categorías"], ["__sin__", "— Sin categoría —"], ...opcionesFiltroCategoria(categorias)]} />
           {hayFiltrosExtra ? (
             <button onClick={() => { setCajero(""); setTipo(""); setMedio(""); setCategoria(""); }} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800">
               <X className="h-3.5 w-3.5" /> Limpiar filtros

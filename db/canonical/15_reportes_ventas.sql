@@ -48,7 +48,7 @@ language sql stable security invoker set search_path = :"schema", public as $$
             select 1 from ventas_items vi left join productos p on p.id = vi.producto_id
              where vi.venta_id = v.id
                and (case when p_categoria = '__sin__' then p.categoria_principal_id is null
-                         else p.categoria_principal_id::text = p_categoria end)))
+                         else categoria_coincide(p.categoria_principal_id, p_categoria) end)))
 $$;
 
 create or replace function :"schema".reporte_ventas_resumen(
@@ -74,7 +74,7 @@ begin
       left join productos p on p.id = vi.producto_id
      where p_categoria is null
         or (case when p_categoria = '__sin__' then p.categoria_principal_id is null
-                 else p.categoria_principal_id::text = p_categoria end)
+                 else categoria_coincide(p.categoria_principal_id, p_categoria) end)
   ),
   pagos as (
     select v.id, categoria_pago(d.metodo_pago) as medio, d.monto
@@ -135,7 +135,7 @@ begin
                 from items group by producto_id order by sum(total_linea) desc limit 200) x
     ), '[]'::jsonb),
     'por_categoria', coalesce((
-      select jsonb_agg(jsonb_build_object('categoria_id', categoria_principal_id, 'nombre', coalesce(c.nombre, 'Sin categoría'),
+      select jsonb_agg(jsonb_build_object('categoria_id', categoria_principal_id, 'nombre', coalesce(categoria_ruta(x.categoria_principal_id), 'Sin categoría'),
                                           'unidades', u, 'monto', t, 'ganancia', g) order by t desc)
         from (select categoria_principal_id, sum(cantidad) u, sum(total_linea) t, sum(ganancia) g
                 from items group by categoria_principal_id) x

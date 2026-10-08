@@ -14,7 +14,7 @@ import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { ProductoForm } from "@/modules/inventario/ProductoForm";
-import type { Categoria } from "@/modules/inventario/categorias";
+import { opcionesFiltroCategoria, type Categoria } from "@/modules/inventario/categorias";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 import type { ReporteStockMinimo } from "@/modules/reportes/server/stock";
 
@@ -124,7 +124,7 @@ export default function ReporteStockMinimoPage() {
             <button onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100"><X className="h-3.5 w-3.5" /></button>
           ) : null}
         </div>
-        <Select value={categoria} onChange={setCategoria} minWidth={190} options={[["", "Todas las categorías"], ["__sin__", "— Sin categoría —"], ...categorias.map((c): [string, string] => [c.id, c.nombre])]} />
+        <Select value={categoria} onChange={setCategoria} minWidth={190} options={[["", "Todas las categorías"], ["__sin__", "— Sin categoría —"], ...opcionesFiltroCategoria(categorias)]} />
         <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600">
           <input type="checkbox" checked={soloSinStock} onChange={(e) => setSoloSinStock(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
           Solo sin stock
