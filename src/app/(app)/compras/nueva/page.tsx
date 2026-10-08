@@ -19,8 +19,10 @@ import MontoInput from "@/components/ui/MontoInput";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
 import { Variacion, type HistorialCostosData } from "@/modules/inventario/HistorialCostos";
+import { traerProductosLote } from "@/modules/inventario/lote";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
-import type { Proveedor } from "@/modules/proveedores/tipos";
+import type { ProveedorMin } from "@/modules/proveedores/tipos";
+import { cargarProveedores } from "@/modules/proveedores/cache";
 import type { OrdenCompra } from "@/modules/compras/ordenes";
 import { BuscadorProductos, ET, Fila, gs, INPUT, ivaDe, Segmentado, sumarDias, Tarjeta, usd } from "@/modules/compras/partes";
 
@@ -50,7 +52,7 @@ export default function NuevaCompraPage() {
 function NuevaCompra() {
   const ocId = useSearchParams().get("oc");
   const [orden, setOrden] = useState<OrdenCompra | null>(null);
-  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [proveedores, setProveedores] = useState<ProveedorMin[]>([]);
   const [proveedorId, setProveedorId] = useState<string | null>(null);
   const [factura, setFactura] = useState("");
   const [timbrado, setTimbrado] = useState("");
@@ -66,7 +68,8 @@ function NuevaCompra() {
   const [hecha, setHecha] = useState<{ numero: string; total: number } | null>(null);
 
   useEffect(() => {
-    apiFetch<{ proveedores: Proveedor[] }>("/api/proveedores").then((r) => setProveedores(r.proveedores)).catch(() => {});
+    // Misma lista (y misma llamada) que usa el SelectorProveedor.
+    void cargarProveedores().then(setProveedores);
   }, []);
 
   // Recibir una orden de compra: proveedor, condición y moneda de la orden, y sus
@@ -85,30 +88,28 @@ function NuevaCompra() {
         setMoneda(o.moneda);
         if (o.moneda === "USD") setCambio(Number(o.tipo_cambio) || 0);
         const pendientes = (o.items ?? []).filter((i) => Number(i.cantidad) > Number(i.cantidad_recibida));
-        const prods = await Promise.all(pendientes.map((i) => apiFetch<ProductoInventario>(`/api/productos/${i.producto_id}`).catch(() => null)));
+        // Los productos y la última compra de cada uno (para comparar el costo) en un
+        // solo request, en vez de 2 por producto.
+        const { productos: prods, costos: historiales } = await traerProductosLote<ProductoInventario>(
+          pendientes.map((i) => i.producto_id),
+          { costos: true, costosLimite: 1 },
+        );
         if (!vivo) return;
-        setLineas(pendientes.flatMap((i, n) => {
-          const prod = prods[n];
+        setLineas(pendientes.flatMap((i) => {
+          const prod = prods.get(i.producto_id);
           if (!prod) return [];
+          const u = historiales.get(i.producto_id)?.compras[0];
           return [{
             key: i.id,
             prod,
             cantidad: String(Number(i.cantidad) - Number(i.cantidad_recibida)),
             costo: Number(i.costo_unitario_original) || 0,
             precioNuevo: 0,
-            ultima: null,
+            ultima: u ? { costo: Number(u.costo), fecha: u.fecha, proveedor: u.proveedor } : null,
             ocItemId: i.id,
             pedido: Number(i.cantidad),
             recibidoAntes: Number(i.cantidad_recibida),
           }];
-        }));
-        // La última compra de cada producto, para comparar el costo.
-        const historiales = await Promise.all(pendientes.map((i) => apiFetch<HistorialCostosData>(`/api/productos/${i.producto_id}/costos`).catch(() => null)));
-        if (!vivo) return;
-        setLineas((ls) => ls.map((l) => {
-          const h = historiales[pendientes.findIndex((i) => i.id === l.ocItemId)];
-          const u = h?.compras[0];
-          return u ? { ...l, ultima: { costo: Number(u.costo), fecha: u.fecha, proveedor: u.proveedor } } : l;
         }));
       } catch (e) {
         if (vivo) setError((e as Error).message);
@@ -122,8 +123,8 @@ function NuevaCompra() {
     setProveedorId(id);
     const p = proveedores.find((x) => x.id === id);
     if (!p) {
-      // recién creado desde el selector: recargo la lista
-      if (id) apiFetch<{ proveedores: Proveedor[] }>("/api/proveedores").then((r) => setProveedores(r.proveedores)).catch(() => {});
+      // recién creado desde el selector: él ya recargó la lista compartida (sale del cache)
+      if (id) void cargarProveedores().then(setProveedores);
       return;
     }
     setTipoPago(p.condicion_pago);

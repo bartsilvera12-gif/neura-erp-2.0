@@ -3,6 +3,8 @@
  *
  *   GET /api/ventas?pagina=1&por_pagina=25&q=&tipo=&iva=&estado=&producto=&desde=&hasta=&caja=
  *     → { rows, total, total_general }
+ *     caja=<id> | caja=abierta (la abierta si hay, si no todas); contar=0 → sin contar
+ *     (total y total_general en null: el navegador ya los tiene para esos filtros)
  *
  * Antes se bajaban TODAS las ventas con sus ítems y se filtraba en el navegador: con
  * miles de ventas eran MB y segundos por cada apertura de la pantalla. Ahora la base
@@ -29,7 +31,6 @@ export const GET = withTenant(async (ctx, req) => {
   const sp = new URL(req.url).searchParams;
   const porPagina = Math.min(200, Math.max(10, Number(sp.get("por_pagina")) || 25));
   const pagina = Math.max(1, Number(sp.get("pagina")) || 1);
-  const cajaId = sp.get("caja");
   const tipo = sp.get("tipo") ?? "";
   const estado = sp.get("estado") ?? "";
   const iva = sp.get("iva") ?? "";
@@ -37,7 +38,22 @@ export const GET = withTenant(async (ctx, req) => {
   const desde = sp.get("desde") ?? "";
   const hasta = sp.get("hasta") ?? "";
   const qCruda = (sp.get("q") ?? "").trim();
-  const grupos = await variantesBusqueda(ctx.db, qCruda);
+  // contar=0 → el navegador ya tiene los totales de estos mismos filtros (solo cambió de
+  // página): no se vuelve a contar todo. Viajan total/total_general en null.
+  const contar = sp.get("contar") !== "0";
+  // caja=abierta → la caja abierta, si hay (si no, todas): así la pantalla no tiene que
+  // esperar a saber cuál es la caja antes de pedir las ventas.
+  const [grupos, cajaId] = await Promise.all([
+    variantesBusqueda(ctx.db, qCruda),
+    sp.get("caja") === "abierta"
+      ? ctx.db
+          .select("cajas", "id")
+          .eq("estado", "abierta")
+          .order("fecha_apertura", { ascending: false })
+          .limit(1)
+          .then((r) => ((r.data?.[0] as unknown as { id: string } | undefined)?.id ?? null))
+      : Promise.resolve(sp.get("caja")),
+  ]);
   // Totales escritos tal cual ("12.000" o "12000") se comparan exactos.
   const numeros = qCruda.split(/\s+/).map((t) => t.replace(/\./g, "")).filter((n) => /^\d{1,15}$/.test(n));
 
@@ -46,7 +62,7 @@ export const GET = withTenant(async (ctx, req) => {
   if (IVAS.includes(iva)) cols += ", fi:ventas_items!inner(id)";
   if (producto) cols += ", fp:ventas_items!inner(id)";
 
-  let query = ctx.db.select("ventas", cols, { count: "exact" });
+  let query = ctx.db.select("ventas", cols, contar ? { count: "exact" } : undefined);
   if (cajaId) query = query.eq("caja_id", cajaId);
   if (TIPOS.includes(tipo)) query = query.eq("tipo_venta", tipo);
   if (ESTADOS.includes(estado)) query = query.eq("estado", estado);
@@ -60,6 +76,12 @@ export const GET = withTenant(async (ctx, req) => {
   }
 
   const desdeFila = (pagina - 1) * porPagina;
+  // El total general (sin filtros) solo hace falta contarlo aparte si HAY filtros: sin
+  // ninguno es el mismo número que el total de la consulta.
+  const hayFiltros =
+    TIPOS.includes(tipo) || ESTADOS.includes(estado) || IVAS.includes(iva) || !!producto ||
+    RE_FECHA.test(desde) || RE_FECHA.test(hasta) || grupos.length > 0;
+  // (el builder no sale a la base hasta que se lo espera)
   let general = ctx.db.select("ventas", "id", { count: "exact", head: true });
   if (cajaId) general = general.eq("caja_id", cajaId);
 
@@ -68,7 +90,7 @@ export const GET = withTenant(async (ctx, req) => {
       .order("fecha", { ascending: false })
       .order("id", { ascending: false }) // orden estable entre páginas
       .range(desdeFila, desdeFila + porPagina - 1),
-    general,
+    contar && hayFiltros ? general : null,
   ]);
   // Página fuera de rango (p. ej. tras filtrar) → PostgREST da 416: se devuelve vacía.
   if (res.error && (res.error as { code?: string }).code !== "PGRST103") return ERR.server();
@@ -80,5 +102,9 @@ export const GET = withTenant(async (ctx, req) => {
     void fp;
     return resto;
   });
-  return ok({ rows, total: res.count ?? 0, total_general: gen.count ?? 0 });
+  if (!contar) return ok({ rows, total: null, total_general: null });
+  const total = res.count ?? 0;
+  // Sin filtros, el general es el mismo total (salvo página fuera de rango: ahí no vino).
+  const totalGeneral = gen ? (gen.count ?? 0) : res.error ? ((await general).count ?? 0) : total;
+  return ok({ rows, total, total_general: totalGeneral });
 });

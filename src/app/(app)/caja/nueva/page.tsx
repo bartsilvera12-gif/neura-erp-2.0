@@ -9,10 +9,10 @@
  */
 
 import Link from "next/link";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, Package, Search, Trash2 } from "lucide-react";
-import { buscar } from "@/lib/busqueda";
+import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { browserClient } from "@/lib/supabase/browser";
 import CajaControlPanel from "@/components/caja/CajaControlPanel";
@@ -178,9 +178,12 @@ function CajaPageContenido() {
   }>({} as never);
 
   // ── Carga inicial ────────────────────────────────────────────────────────
+  // Catálogo liviano para la caja (?pos=1: solo lo que usa el POS, sin costos, y COMPLETO
+  // aunque pase de 1000). Clientes: solo unos pocos para las sugerencias; al escribir se
+  // busca en la base.
   useEffect(() => {
-    apiFetch<Producto[]>("/api/productos").then(setProductos).catch(() => {});
-    apiFetch<Cliente[]>("/api/clientes").then(setClientes).catch(() => {});
+    apiFetch<Producto[]>("/api/productos?pos=1").then(setProductos).catch(() => {});
+    apiFetch<Cliente[]>("/api/clientes?limit=20").then(setClientes).catch(() => {});
   }, []);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
@@ -272,13 +275,14 @@ function CajaPageContenido() {
   }, []);
 
   // ── Derivados ──────────────────────────────────────────────────────────────
-  const vendibles = useMemo(() => productos.filter((p) => !p.controla_stock || true), [productos]);
   // Búsqueda inteligente: nombre, SKU y código de barras (lector), sin tildes, en cualquier
   // orden y con errores de tipeo; un código exacto va primero (Enter lo agrega).
-  const hits = useMemo(() => {
-    if (!q.trim()) return [];
-    return buscar(vendibles, q, (p) => ({ principal: p.nombre, codigos: [p.sku, p.codigo_barras] })).slice(0, 8);
-  }, [vendibles, q]);
+  // El catálogo se normaliza UNA vez (índice) y la lista se calcula con la consulta
+  // "diferida": tipear no se traba aunque el catálogo sea grande.
+  const indice = useMemo(() => indexar(productos, (p) => ({ principal: p.nombre, codigos: [p.sku, p.codigo_barras] })), [productos]);
+  const qDiferida = useDeferredValue(q);
+  const hitsDiferidos = useMemo(() => (qDiferida.trim() ? buscarEnIndice(indice, qDiferida, 8) : []), [indice, qDiferida]);
+  const hits = q.trim() ? hitsDiferidos : [];
 
   const tierDe = useCallback((l: CartLine): TipoPrecio => (l.tier_manual ? l.tipo_precio : tierPorCantidad(l.cantidad)), []);
   const precioEfectivo = useCallback((l: CartLine) => precioSegunLista(l.producto, tierDe(l)), [tierDe]);
@@ -303,13 +307,17 @@ function CajaPageContenido() {
   const idsSinStock = useMemo(() => new Set(sinStock.map((l) => l.producto.id)), [sinStock]);
 
   // Cliente seleccionado / filtrado.
-  const clienteSel = clientes.find((c) => c.id === clienteId) ?? null;
+  const clienteSel = useMemo(() => clientes.find((c) => c.id === clienteId) ?? null, [clientes, clienteId]);
   // Con texto, busca en la base (todos los clientes, no solo los cargados) y mientras
   // llega la respuesta usa los que ya están en pantalla con la misma lógica.
-  const clientesFiltrados = (clienteQuery.trim() === ""
-    ? clientes
-    : clientesBuscados ?? buscar(clientes, clienteQuery, (c) => ({ principal: c.razon_social || c.nombre, otros: [c.nombre, c.telefono], codigos: [c.documento, c.ruc] }))
-  ).slice(0, 50);
+  const clientesFiltrados = useMemo(
+    () =>
+      (clienteQuery.trim() === ""
+        ? clientes
+        : clientesBuscados ?? buscar(clientes, clienteQuery, (c) => ({ principal: c.razon_social || c.nombre, otros: [c.nombre, c.telefono], codigos: [c.documento, c.ruc] }))
+      ).slice(0, 50),
+    [clientes, clienteQuery, clientesBuscados],
+  );
 
   const clienteObligatorio = tipoDocumento === "factura" || tipoVenta === "CREDITO";
   const plazoDiasNum = parseInt(plazoDias) || 0;
@@ -376,7 +384,11 @@ function CajaPageContenido() {
     else if (e.key === "ArrowUp") { e.preventDefault(); setHitsHighlight((h) => Math.max(h - 1, 0)); }
     else if (e.key === "Enter") {
       e.preventDefault();
-      const pick = hitsHighlight >= 0 ? hits[hitsHighlight] : hits[0];
+      // El lector de códigos tipea rápido y aprieta Enter: si la lista todavía es la de una
+      // consulta vieja (diferida), se busca YA con lo escrito para no agregar otro producto.
+      const alDia = qDiferida === q;
+      const lista = alDia ? hits : q.trim() ? buscarEnIndice(indice, q, 8) : [];
+      const pick = alDia && hitsHighlight >= 0 ? lista[hitsHighlight] : lista[0];
       if (pick) addToCart(pick);
     }
   }
@@ -459,6 +471,11 @@ function CajaPageContenido() {
         }),
       });
       idempotencyKeyRef.current = null;
+      // Stock: se descuenta en pantalla lo recién vendido (antes se volvía a bajar TODO el
+      // catálogo después de cada venta). La base igual valida el stock al vender.
+      const vendido = new Map<string, number>();
+      for (const l of cart) if (l.producto.controla_stock) vendido.set(l.producto.id, (vendido.get(l.producto.id) ?? 0) + l.cantidad);
+      if (vendido.size) setProductos((prev) => prev.map((p) => (vendido.has(p.id) ? { ...p, stock_actual: Number(p.stock_actual) - (vendido.get(p.id) ?? 0) } : p)));
       // Ticket imprimible (SIFEN inactivo → por ahora siempre ticket). La auth del
       // 2.0 es por Bearer, así que una pestaña nueva no lleva el token: traemos el
       // HTML con el token y lo abrimos como blob (el auto-print corre igual).
@@ -470,8 +487,7 @@ function CajaPageContenido() {
       setClienteQuery("");
       setTipoVenta("CONTADO");
       setPlazoDias("");
-      // refrescar stock + resumen de caja (el turno acaba de cobrar)
-      apiFetch<Producto[]>("/api/productos").then(setProductos).catch(() => {});
+      // refrescar el resumen de caja (el turno acaba de cobrar)
       setRefreshCaja((t) => t + 1);
       setTimeout(() => setVentaOk(null), 6000);
     } catch (e) {
@@ -624,7 +640,7 @@ function CajaPageContenido() {
                 ))}
               </ul>
             )}
-            {q.trim().length >= 2 && hits.length === 0 && (
+            {q.trim().length >= 2 && qDiferida === q && hits.length === 0 && (
               <div className="mt-2 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-sm">
                 <p className="font-medium text-amber-900">Ningún producto con «{q.trim()}».</p>
               </div>

@@ -15,12 +15,13 @@ import {
   Search,
 } from "lucide-react";
 import { browserClient } from "@/lib/supabase/browser";
-import { apiFetch } from "@/lib/api/client-fetch";
+import { apiFetchCache, limpiarCache } from "@/lib/api/cache-cliente";
+import { ProveedorUsuario, type Usuario } from "@/lib/sesion/ContextoUsuario";
 import { modulosActivos } from "@/modules/registry";
 import { iconoModulo } from "@/modules/icons";
 import type { Modulo } from "@/modules/types";
 
-type Me = { rol: string; email: string | null };
+type Me = Usuario;
 const ACCENT = "#7dcfd2";
 
 function rolLabel(rol?: string) {
@@ -33,7 +34,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [me, setMe] = useState<Me | null>(null);
+  // Sesión conocida (getSession es local, sin red). Con eso ya se montan las páginas:
+  // /api/me llega en paralelo y se reparte por contexto (useUsuario).
   const [ready, setReady] = useState(false);
+  const [emailSesion, setEmailSesion] = useState<string | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [q, setQ] = useState("");
   const [abiertos, setAbiertos] = useState<Record<string, boolean>>({});
@@ -60,22 +64,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [collapsed]);
 
   useEffect(() => {
+    let vivo = true;
     (async () => {
       const { data } = await browserClient().auth.getSession();
+      if (!vivo) return;
       if (!data.session) {
         router.replace("/login");
         return;
       }
-      try {
-        setMe(await apiFetch<Me>("/api/me"));
-      } catch {
-        setMe({ rol: "", email: data.session.user.email ?? null });
-      }
+      setEmailSesion(data.session.user.email ?? null);
       setReady(true);
+      try {
+        const m = await apiFetchCache<Me>("/api/me");
+        if (vivo) setMe(m);
+      } catch {
+        if (vivo) setMe({ rol: "", email: data.session.user.email ?? null });
+      }
     })();
+    return () => {
+      vivo = false;
+    };
   }, [router]);
 
-  const modulos = modulosActivos(me?.rol);
+  // Los módulos visibles dependen del rol: hasta que llega /api/me no se lista ninguno
+  // (si no, aparecerían módulos que el rol no ve y después desaparecerían).
+  const rol = me?.rol;
+  const modulos = useMemo(() => (rol === undefined ? [] : modulosActivos(rol)), [rol]);
 
   const familias = useMemo(() => {
     // Búsqueda inteligente: sin tildes, errores de tipeo; también por la familia ("finanzas").
@@ -114,8 +128,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <Link href="/" className="flex items-center justify-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src="/brand/zentra-logo-official.png"
+              src="/brand/zentra-logo-360.webp"
               alt="ZENTRA"
+              width={360}
+              height={185}
+              decoding="async"
+              fetchPriority="high"
               className={`object-contain ${collapsed ? "h-8 w-8" : "h-16 w-full max-w-[180px]"}`}
             />
           </Link>
@@ -147,6 +165,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Navegación con etiquetas de sección */}
         <nav className="min-h-0 flex-1 overflow-y-auto px-2.5 py-3">
           <NavItem href="/" label="Inicio" Icon={LayoutDashboard} active={pathname === "/"} collapsed={collapsed} />
+          {me === null ? (
+            <div className="mt-4 space-y-2 px-1" aria-hidden>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className={`h-8 animate-pulse rounded-lg bg-white/[0.05] ${collapsed ? "mx-auto w-8" : ""}`} />
+              ))}
+            </div>
+          ) : null}
           {familias.map(([fam, items]) => (
             <div key={fam} className="mt-4">
               {!collapsed ? (
@@ -216,9 +241,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* Contenido */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <Header me={me} onLogout={async () => { await browserClient().auth.signOut(); router.replace("/login"); }} />
+        <Header
+          me={me ?? { rol: "", email: emailSesion }}
+          onLogout={async () => { await browserClient().auth.signOut(); limpiarCache(); router.replace("/login"); }}
+        />
         <main className="min-w-0 flex-1 overflow-y-auto bg-[#f6f8fa] p-6">
-          <div className="animate-in mx-auto max-w-[1400px]">{children}</div>
+          <ProveedorUsuario value={me}>
+            <div className="animate-in mx-auto max-w-[1400px]">{children}</div>
+          </ProveedorUsuario>
         </main>
       </div>
     </div>
@@ -238,7 +268,7 @@ function NavItem({
 }: {
   href: string;
   label: string;
-  Icon: React.ComponentType<{ className?: string }>;
+  Icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>;
   active: boolean;
   collapsed: boolean;
   badge?: string;

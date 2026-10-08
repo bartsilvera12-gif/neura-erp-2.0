@@ -1,34 +1,40 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Boxes, CircleDollarSign, TriangleAlert, Users } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { modulosActivos } from "@/modules/registry";
 import { iconoModulo } from "@/modules/icons";
 import { clienteConfig } from "@/cliente.config";
-import { formatGs, type Producto } from "@/modules/caja/lib";
+import { formatGs } from "@/modules/caja/lib";
 
 const BRAND = clienteConfig.color;
 
 type CajaAbierta = { numero_caja: number; monto_apertura: number } | null;
+type Resumen = { caja: CajaAbierta; productos: number; sin_stock: number; clientes: number };
 
 export default function Dashboard() {
-  const modulos = modulosActivos();
+  const modulos = useMemo(() => modulosActivos(), []);
   const [caja, setCaja] = useState<CajaAbierta>(null);
-  const [productos, setProductos] = useState<Producto[] | null>(null);
+  const [totalProd, setTotalProd] = useState<number | null>(null);
+  const [stockBajo, setStockBajo] = useState<number | null>(null);
   const [clientes, setClientes] = useState<number | null>(null);
 
+  // Un solo pedido con los conteos (antes: catálogo entero + 500 clientes para un .length).
   useEffect(() => {
-    apiFetch<{ caja: CajaAbierta }>("/api/caja").then((r) => setCaja(r.caja)).catch(() => {});
-    apiFetch<Producto[]>("/api/productos").then(setProductos).catch(() => setProductos([]));
-    apiFetch<unknown[]>("/api/clientes").then((c) => setClientes(c.length)).catch(() => {});
+    apiFetch<Resumen>("/api/dashboard")
+      .then((r) => {
+        setCaja(r.caja);
+        setTotalProd(r.productos);
+        setStockBajo(r.sin_stock);
+        setClientes(r.clientes);
+      })
+      .catch(() => {
+        setTotalProd(0);
+        setStockBajo(0);
+      });
   }, []);
-
-  const totalProd = productos?.length ?? null;
-  const stockBajo = productos
-    ? productos.filter((p) => p.controla_stock && p.stock_actual <= 0).length
-    : null;
 
   const hora = new Date().getHours();
   const saludo = hora < 12 ? "Buen día" : hora < 19 ? "Buenas tardes" : "Buenas noches";

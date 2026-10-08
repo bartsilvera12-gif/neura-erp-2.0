@@ -16,8 +16,10 @@ import { clienteConfig } from "@/cliente.config";
 import MontoInput from "@/components/ui/MontoInput";
 import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
 import type { HistorialCostosData } from "@/modules/inventario/HistorialCostos";
+import { traerProductosLote } from "@/modules/inventario/lote";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
-import type { Proveedor } from "@/modules/proveedores/tipos";
+import type { ProveedorMin } from "@/modules/proveedores/tipos";
+import { cargarProveedores } from "@/modules/proveedores/cache";
 import type { OrdenCompra } from "@/modules/compras/ordenes";
 import { BuscadorProductos, ET, Fila, gs, INPUT, Segmentado, Tarjeta, usd } from "@/modules/compras/partes";
 
@@ -35,7 +37,7 @@ export default function NuevaOrdenPage() {
 
 function NuevaOrden() {
   const editarId = useSearchParams().get("editar");
-  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [proveedores, setProveedores] = useState<ProveedorMin[]>([]);
   const [proveedorId, setProveedorId] = useState<string | null>(null);
   const [entrega, setEntrega] = useState("");
   const [tipoPago, setTipoPago] = useState<"contado" | "credito">("contado");
@@ -50,7 +52,8 @@ function NuevaOrden() {
   const [numeroEditando, setNumeroEditando] = useState<string | null>(null);
 
   useEffect(() => {
-    apiFetch<{ proveedores: Proveedor[] }>("/api/proveedores").then((r) => setProveedores(r.proveedores)).catch(() => {});
+    // Misma lista (y misma llamada) que usa el SelectorProveedor.
+    void cargarProveedores().then(setProveedores);
   }, []);
 
   // Editar: carga la orden.
@@ -60,7 +63,9 @@ function NuevaOrden() {
     (async () => {
       try {
         const o = await apiFetch<OrdenCompra>(`/api/ordenes-compra/${editarId}`);
-        const prods = await Promise.all((o.items ?? []).map((i) => apiFetch<ProductoInventario>(`/api/productos/${i.producto_id}`).catch(() => null)));
+        // Todos los productos de la orden en un solo request (no uno por producto).
+        const { productos } = await traerProductosLote<ProductoInventario>((o.items ?? []).map((i) => i.producto_id));
+        const prods = (o.items ?? []).map((i) => productos.get(i.producto_id) ?? null);
         if (!vivo) return;
         setNumeroEditando(o.numero_oc);
         setProveedorId(o.proveedor_id);
@@ -82,7 +87,7 @@ function NuevaOrden() {
     setProveedorId(id);
     const p = proveedores.find((x) => x.id === id);
     if (!p) {
-      if (id) apiFetch<{ proveedores: Proveedor[] }>("/api/proveedores").then((r) => setProveedores(r.proveedores)).catch(() => {});
+      if (id) void cargarProveedores().then(setProveedores);
       return;
     }
     setTipoPago(p.condicion_pago);

@@ -14,27 +14,29 @@ import { ok, ERR } from "@/lib/api/responses";
 const esEfvo = (m: string | null) => (m ?? "").trim().toLowerCase() === "efectivo";
 
 export const GET = withTenant(async (ctx) => {
-  const cajaQ = await ctx.db
-    .select("cajas", "id, numero_caja, estado, fecha_apertura, monto_apertura")
-    .eq("estado", "abierta")
-    .order("fecha_apertura", { ascending: false })
-    .limit(1);
-  if (cajaQ.error) return ERR.server();
-  const caja = cajaQ.data?.[0] as unknown as
-    | { id: string; numero_caja: number; fecha_apertura: string; monto_apertura: number }
-    | undefined;
-  if (!caja) return ok({ caja: null, resumen: null });
-
   // TODO sale de caja_movimientos (fuente de verdad del cajón). Las ventas de
   // contado escriben un movimiento por MEDIO (pago mixto → varios), así el
   // desglose por medio y el arqueo cuadran aun con pagos combinados.
-  const mQ = await ctx.db
-    .select("caja_movimientos", "id, tipo, concepto, monto, medio_pago, venta_id, cobro_id, observacion, created_at")
-    .eq("caja_id", caja.id)
-    .is("anulado_at", null)
-    .order("created_at", { ascending: true });
-  if (mQ.error) return ERR.server();
-  const movRaw = (mQ.data ?? []) as unknown as Record<string, unknown>[];
+  // Caja abierta + sus movimientos en UNA consulta (embebido): corre al abrir la caja
+  // y después de cada venta, así que se ahorra un viaje a la base.
+  const cajaQ = await ctx.db
+    .select(
+      "cajas",
+      "id, numero_caja, estado, fecha_apertura, monto_apertura, " +
+        "movs:caja_movimientos(id, tipo, concepto, monto, medio_pago, venta_id, cobro_id, observacion, created_at)",
+    )
+    .eq("estado", "abierta")
+    .is("movs.anulado_at", null)
+    .order("fecha_apertura", { ascending: false })
+    .order("created_at", { referencedTable: "movs", ascending: true })
+    .limit(1);
+  if (cajaQ.error) return ERR.server();
+  const caja = cajaQ.data?.[0] as unknown as
+    | { id: string; numero_caja: number; fecha_apertura: string; monto_apertura: number; movs: Record<string, unknown>[] | null }
+    | undefined;
+  if (!caja) return ok({ caja: null, resumen: null });
+
+  const movRaw = caja.movs ?? [];
   const all = movRaw.map((m) => ({
     id: String(m.id),
     tipo: String(m.tipo),

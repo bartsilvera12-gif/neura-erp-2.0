@@ -30,15 +30,19 @@ const abrirSchema = z.object({
 export const POST = withTenant(
   async (ctx, _req, input) => {
     // No puede haber dos cajas abiertas: una venta no sabría a cuál imputarse.
-    const abierta = await ctx.db.select("cajas", "numero_caja").eq("estado", "abierta").limit(1);
+    // Las dos consultas son independientes → en paralelo (próximo número de caja de la empresa).
+    const [abierta, ultima] = await Promise.all([
+      ctx.db.select("cajas", "numero_caja").eq("estado", "abierta").limit(1),
+      ctx.db.select("cajas", "numero_caja").order("numero_caja", { ascending: false }).limit(1),
+    ]);
     if (abierta.error) return ERR.server();
-    if (abierta.data?.length) {
-      return fail(`Ya hay una caja abierta (N° ${abierta.data[0].numero_caja}). Cerrala antes de abrir otra.`, 409);
+    const yaAbierta = abierta.data?.[0] as unknown as { numero_caja: number } | undefined;
+    if (yaAbierta) {
+      return fail(`Ya hay una caja abierta (N° ${yaAbierta.numero_caja}). Cerrala antes de abrir otra.`, 409);
     }
 
-    // Próximo número de caja de la empresa.
-    const ultima = await ctx.db.select("cajas", "numero_caja").order("numero_caja", { ascending: false }).limit(1);
-    const numero = (Number(ultima.data?.[0]?.numero_caja) || 0) + 1;
+    const ultimaFila = ultima.data?.[0] as unknown as { numero_caja: number } | undefined;
+    const numero = (Number(ultimaFila?.numero_caja) || 0) + 1;
 
     const { data, error } = await ctx.db.insert("cajas", {
       estado: "abierta",

@@ -14,6 +14,8 @@ import { createPortal, flushSync } from "react-dom";
 import { Ban, CheckCircle2, ChevronRight, Loader2, MoreHorizontal, Palette, Pencil, Plus, Search, Tags, X } from "lucide-react";
 import { coincide } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { invalidar } from "@/lib/api/cache-cliente";
+import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { ColorPicker } from "@/components/ColorPicker";
@@ -43,7 +45,7 @@ export default function CategoriasPage() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [conteo, setConteo] = useState<Record<string, number>>({});
   const [cargando, setCargando] = useState(true);
-  const [esAdmin, setEsAdmin] = useState(false);
+  const esAdmin = useUsuario()?.rol === "ADMIN";
   const [nombre, setNombre] = useState("");
   const [padre, setPadre] = useState("");
   const [colorNuevo, setColorNuevo] = useState<string | null>(null); // null = el libre que propone el sistema
@@ -100,7 +102,10 @@ export default function CategoriasPage() {
     return () => { cancelAnimationFrame(frame); sc.removeEventListener("scroll", alScroll); sc.removeEventListener("scrollend", recortar); };
   }, []);
 
+  // Siempre fresco (esta pantalla es la que las cambia); de paso se olvida el cache
+  // compartido de categorías para que Inventario y Reportes vean los cambios.
   const cargar = useCallback(async () => {
+    invalidar("/api/inventario/categorias");
     try {
       const r = await apiFetch<{ categorias: Categoria[]; conteo?: Record<string, number> }>("/api/inventario/categorias?todas=1&conteo=1");
       setCategorias(r.categorias);
@@ -112,7 +117,6 @@ export default function CategoriasPage() {
 
   useEffect(() => {
     void cargar();
-    apiFetch<{ rol: string }>("/api/me").then((m) => setEsAdmin(m.rol === "ADMIN")).catch(() => {});
   }, [cargar]);
 
   async function crearCategoria(nombreNuevo: string, parentId: string | null, color: string | null = null) {

@@ -27,6 +27,18 @@ export type Proveedor = {
 export const COLS_PROVEEDOR =
   "id, nombre, nombre_comercial, ruc, telefono, email, direccion, ciudad, contacto, contacto_telefono, condicion_pago, plazo_pago_dias, moneda, observaciones, activo, created_at";
 
+/**
+ * Versión liviana (GET /api/proveedores?min=1): lo que necesitan el selector, los
+ * filtros por proveedor y las condiciones que se proponen al cargar una compra/orden.
+ * Sin rubros ni compras (evita el agregado compras_por_proveedor).
+ */
+export type ProveedorMin = Pick<
+  Proveedor,
+  "id" | "nombre" | "nombre_comercial" | "ruc" | "contacto" | "activo" | "condicion_pago" | "plazo_pago_dias" | "moneda"
+>;
+
+export const COLS_PROVEEDOR_MIN = "id, nombre, nombre_comercial, ruc, contacto, activo, condicion_pago, plazo_pago_dias, moneda";
+
 /** Nombre para mostrar: el comercial si lo tiene, si no la razón social. */
 export const nombreProveedor = (p: Pick<Proveedor, "nombre" | "nombre_comercial">) => p.nombre_comercial?.trim() || p.nombre;
 

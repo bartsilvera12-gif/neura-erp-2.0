@@ -9,21 +9,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Plus, Truck, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { buscar } from "@/lib/busqueda";
-import { nombreProveedor, type Proveedor } from "@/modules/proveedores/tipos";
-
-type ProvMin = Pick<Proveedor, "id" | "nombre" | "nombre_comercial" | "ruc" | "contacto" | "activo">;
-
-// Una sola carga por pantalla aunque haya varios selectores.
-let cache: Promise<ProvMin[]> | null = null;
-function cargarProveedores(forzar = false) {
-  if (!cache || forzar) {
-    cache = apiFetch<{ proveedores: ProvMin[] }>("/api/proveedores").then((r) => r.proveedores).catch(() => {
-      cache = null;
-      return [];
-    });
-  }
-  return cache;
-}
+import { nombreProveedor, type ProveedorMin as ProvMin } from "@/modules/proveedores/tipos";
+// Una sola carga por pantalla aunque haya varios selectores (cache compartido con las
+// pantallas de Compras: /api/proveedores?min=1).
+import { cargarProveedores } from "@/modules/proveedores/cache";
 
 export function SelectorProveedor({
   value,

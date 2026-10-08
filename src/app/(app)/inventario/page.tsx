@@ -7,13 +7,15 @@
  * Crear y editar siguen en el panel lateral del 2.0 (el listado queda visible atrás).
  */
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, Eye, EyeOff, Loader2,
   Package, Pencil, Plus, RotateCcw, Search, Trash2, Upload, X,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
+import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
@@ -31,7 +33,7 @@ const margenColor = (m: number) => (m >= 40 ? "text-green-600" : m >= 20 ? "text
 const formatStock = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
 
 export default function InventarioPage() {
-  const [esAdmin, setEsAdmin] = useState(false);
+  const esAdmin = useUsuario()?.rol === "ADMIN";
   const [productos, setProductos] = useState<ProductoInventario[]>([]);
   const [total, setTotal] = useState(0);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
@@ -53,9 +55,13 @@ export default function InventarioPage() {
   const [eliminando, setEliminando] = useState<ProductoInventario | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
+  // Categorías: frescas al entrar (otras pantallas, como la importación inicial, pueden
+  // haber creado nuevas); en las recargas tras cada edición salen del cache compartido.
+  const primeraCarga = useRef(true);
   useEffect(() => {
-    apiFetch<{ rol: string }>("/api/me").then((m) => setEsAdmin(m.rol === "ADMIN")).catch(() => {});
-    apiFetch<{ categorias: Categoria[] }>("/api/inventario/categorias")
+    const fresco = primeraCarga.current;
+    primeraCarga.current = false;
+    apiFetchCache<{ categorias: Categoria[] }>("/api/inventario/categorias", { fresco })
       .then((r) => setCategorias([...r.categorias].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))))
       .catch(() => {});
   }, [recarga]);
@@ -384,7 +390,7 @@ export default function InventarioPage() {
           templateUrl="/api/inventario/productos/import/template"
           permiteCrearFaltantes
           onClose={() => setImportando(false)}
-          onCompleted={refrescar}
+          onCompleted={() => { invalidar("/api/inventario/categorias"); refrescar(); }}
         />
       ) : null}
 

@@ -49,29 +49,42 @@ async function safeJson(req: NextRequest): Promise<unknown> {
 }
 
 // ── Cache de verificación del token ─────────────────────────────────────────
-// Cada request validaba el token contra el servidor de auth (un viaje de red, ~70 ms
-// desde fuera de la VPS). Se recuerda el resultado por token unos segundos: nunca más
-// allá de su vencimiento (exp del JWT). Un logout/revocación tarda a lo sumo TOKEN_TTL_MS
-// en surtir efecto en la API; la RLS de la base sigue validando el token en cada query.
-const TOKEN_TTL_MS = 30_000;
+// Cada request validaba el token contra el servidor de auth (un viaje de red: 70-450 ms
+// desde fuera de la VPS). Se recuerda el resultado por token 5 min: nunca más allá de su
+// vencimiento (exp del JWT). Un logout/revocación tarda a lo sumo TOKEN_TTL_MS en surtir
+// efecto en la API; la base (PostgREST) igual acepta el token hasta su exp y la RLS lo
+// valida en cada query, así que no se pierde seguridad real.
+const TOKEN_TTL_MS = 5 * 60_000;
 const TOKEN_CACHE_MAX = 1000;
 const tokenCache = new Map<string, { user: User; hasta: number }>();
+// Verificaciones en curso: los pedidos en paralelo de una pantalla nueva (mismo token)
+// comparten UN getUser en vez de salir cada uno al servidor de auth.
+const tokenEnCurso = new Map<string, Promise<User | null>>();
 
-function expDelJwt(token: string): number | null {
+/** Payload del JWT SIN verificar. Sólo para pistas (exp, sub); nunca para autorizar. */
+function payloadDelJwt(token: string): { exp?: unknown; sub?: unknown } | null {
   try {
-    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
-    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+    return JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString("utf8"));
   } catch {
     return null;
   }
 }
 
-async function usuarioDelToken(token: string): Promise<User | null> {
-  const ahora = Date.now();
-  const hit = tokenCache.get(token);
-  if (hit && hit.hasta > ahora) return hit.user;
-  if (hit) tokenCache.delete(token);
+function expDelJwt(token: string): number | null {
+  const exp = payloadDelJwt(token)?.exp;
+  return typeof exp === "number" ? exp * 1000 : null;
+}
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** `sub` del JWT sin verificar (o null si no parece un id de usuario). */
+function subDelJwt(token: string): string | null {
+  const sub = payloadDelJwt(token)?.sub;
+  return typeof sub === "string" && UUID_RE.test(sub) ? sub : null;
+}
+
+async function verificarToken(token: string): Promise<User | null> {
+  const ahora = Date.now();
   const { data, error } = await authOnlyClient().auth.getUser(token);
   if (error || !data.user?.id) return null;
 
@@ -84,16 +97,35 @@ async function usuarioDelToken(token: string): Promise<User | null> {
   return data.user;
 }
 
+async function usuarioDelToken(token: string): Promise<User | null> {
+  const hit = tokenCache.get(token);
+  if (hit && hit.hasta > Date.now()) return hit.user;
+  if (hit) tokenCache.delete(token);
+
+  const enCurso = tokenEnCurso.get(token);
+  if (enCurso) return enCurso;
+  const promesa = verificarToken(token).finally(() => tokenEnCurso.delete(token));
+  tokenEnCurso.set(token, promesa);
+  return promesa;
+}
+
 export function withTenant<B = unknown>(handler: Handler<B>, opts: Options<B> = {}) {
   return async (req: NextRequest): Promise<Response> => {
     try {
       const bearer = extractBearer(req);
       if (!bearer) return ERR.unauth();
 
-      const user = await usuarioDelToken(bearer);
+      // En paralelo: verificar el token (servidor de auth) y buscar empresa/rol del `sub`
+      // que dice el token. El `sub` sin verificar sólo adelanta la consulta: su resultado
+      // se usa ÚNICAMENTE si getUser validó el token y devolvió ese mismo usuario.
+      const sub = subDelJwt(bearer);
+      const [user, sessionAnticipada] = await Promise.all([
+        usuarioDelToken(bearer),
+        sub ? resolveTenantSession(sub).catch(() => null) : Promise.resolve(null),
+      ]);
       if (!user) return ERR.unauth();
 
-      const session = await resolveTenantSession(user.id);
+      const session = sub === user.id && sessionAnticipada ? sessionAnticipada : await resolveTenantSession(user.id);
       if (!session) return ERR.forbidden();
 
       if (opts.roles && !opts.roles.includes(session.rol)) return ERR.forbidden();

@@ -6,7 +6,7 @@
  * días de atraso de lo más viejo y último pago. Excel y PDF (lista para salir a cobrar).
  */
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, FileSpreadsheet, FileText, HandCoins, Loader2, Search } from "lucide-react";
 import { filtrar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -53,7 +53,13 @@ export default function ReporteDeudoresPage() {
     }
   }
 
-  const filas = filtrar(data?.rows ?? [], busqueda, (f) => ({ principal: f.razon_social || f.nombre, otros: [f.nombre, f.ciudad], codigos: [f.documento, f.telefono] }));
+  // El filtro corre con el texto "diferido": el input responde al instante y la lista se
+  // recalcula solo cuando cambian los datos o la búsqueda (no en cada render).
+  const busquedaDiferida = useDeferredValue(busqueda);
+  const filas = useMemo(
+    () => filtrar(data?.rows ?? [], busquedaDiferida, (f) => ({ principal: f.razon_social || f.nombre, otros: [f.nombre, f.ciudad], codigos: [f.documento, f.telefono] })),
+    [data, busquedaDiferida],
+  );
   const t = data?.totales;
   const tramos: [string, number, string][] = t ? [
     ["Por vencer", t.por_vencer, "text-slate-900"], ["1 a 30 días", t.d1_30, "text-amber-600"], ["31 a 60 días", t.d31_60, "text-orange-600"],

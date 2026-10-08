@@ -32,25 +32,21 @@ export const GET = withTenant(async (ctx, req) => {
   const widthMm = sp.get("w") === "58" ? 58 : 80;
   const fontPx = widthMm === 58 ? 11 : 12;
 
+  // Venta + ítems + cliente en UNA consulta (embebidos): el ticket sale después de cada venta.
   const vq = await ctx.db
-    .select("ventas", "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, metodo_pago, cliente_id, usuario_nombre")
+    .select(
+      "ventas",
+      "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, metodo_pago, cliente_id, usuario_nombre, " +
+        "ventas_items(producto_nombre, sku, cantidad, precio_venta, tipo_iva, monto_iva, total_linea), " +
+        "cliente:clientes!cliente_id(nombre)",
+    )
     .eq("id", id)
     .limit(1);
   if (vq.error) return ERR.server();
   if (!vq.data?.length) return ERR.notFound();
   const v = vq.data[0] as unknown as Record<string, unknown>;
-
-  const itemsQ = await ctx.db
-    .select("ventas_items", "producto_nombre, sku, cantidad, precio_venta, tipo_iva, monto_iva, total_linea")
-    .eq("venta_id", id);
-  const items = (itemsQ.data ?? []) as unknown as Record<string, unknown>[];
-
-  let clienteNombre = "Consumidor final";
-  if (v.cliente_id) {
-    const c = await ctx.db.select("clientes", "nombre").eq("id", v.cliente_id as string).limit(1);
-    const row = c.data?.[0] as unknown as { nombre?: string } | undefined;
-    if (row?.nombre) clienteNombre = row.nombre;
-  }
+  const items = (v.ventas_items ?? []) as Record<string, unknown>[];
+  const clienteNombre = (v.cliente as { nombre?: string | null } | null)?.nombre || "Consumidor final";
 
   const fecha = v.fecha ? new Date(v.fecha as string).toLocaleString("es-PY", { timeZone: TZ_PY, dateStyle: "short", timeStyle: "short" }) : "";
   const metodo = v.tipo_venta === "CREDITO" ? `Crédito${v.plazo_dias ? ` (${v.plazo_dias} días)` : ""}` : metodoLabel(String(v.metodo_pago ?? "efectivo"));

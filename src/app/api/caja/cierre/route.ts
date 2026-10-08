@@ -23,21 +23,35 @@ const etiquetaMedio = (m: string) =>
     (m ? m[0].toUpperCase() + m.slice(1) : "Sin registrar"));
 
 export const GET = withTenant(async (ctx) => {
+  // Caja abierta + sus movimientos + su crédito en UNA consulta (embebidos), en vez de
+  // tres seguidas que solo dependían del id de la caja.
+  // Crédito del turno: no entra al cajón pero es parte de lo vendido. Va informado aparte.
+  // (Antes era "desde la medianoche", que en UTC arrancaba a las 21:00 de Paraguay.)
   const cajaQ = await ctx.db
-    .select("cajas", "id, numero_caja, estado, fecha_apertura, monto_apertura")
+    .select(
+      "cajas",
+      "id, numero_caja, estado, fecha_apertura, monto_apertura, movs:caja_movimientos(tipo, monto, medio_pago), cred:ventas(total)",
+    )
     .eq("estado", "abierta")
+    .is("movs.anulado_at", null)
+    .eq("cred.tipo_venta", "CREDITO")
+    .neq("cred.estado", "anulada")
     .order("fecha_apertura", { ascending: false })
     .limit(1);
   if (cajaQ.error) return ERR.server();
-  const caja = cajaQ.data?.[0];
+  const caja = cajaQ.data?.[0] as unknown as
+    | {
+        id: string;
+        numero_caja: number;
+        fecha_apertura: string;
+        monto_apertura: number;
+        movs: { tipo: string; monto: number | string; medio_pago: string | null }[] | null;
+        cred: { total: number | string }[] | null;
+      }
+    | undefined;
   if (!caja) return ok({ arqueo: null });
 
-  const movQ = await ctx.db
-    .select("caja_movimientos", "tipo, monto, medio_pago")
-    .eq("caja_id", caja.id)
-    .is("anulado_at", null);
-  if (movQ.error) return ERR.server();
-  const movs: Mov[] = (movQ.data ?? []).map((m) => ({ ...m, monto: Number(m.monto) }));
+  const movs: Mov[] = (caja.movs ?? []).map((m) => ({ ...m, monto: Number(m.monto) }));
 
   const sum = (pred: (m: Mov) => boolean) => movs.filter(pred).reduce((a, m) => a + m.monto, 0);
   const ingresos = movs.filter((m) => m.tipo === "ingreso");
@@ -60,14 +74,7 @@ export const GET = withTenant(async (ctx) => {
     porMedio.set(medio, acc);
   }
 
-  // Crédito del turno: no entra al cajón pero es parte de lo vendido. Va informado aparte.
-  // (Antes era "desde la medianoche", que en UTC arrancaba a las 21:00 de Paraguay.)
-  const credQ = await ctx.db
-    .select("ventas", "total")
-    .eq("caja_id", caja.id)
-    .eq("tipo_venta", "CREDITO")
-    .neq("estado", "anulada");
-  const credVentas = credQ.data ?? [];
+  const credVentas = caja.cred ?? [];
 
   return ok({
     arqueo: {
@@ -97,7 +104,7 @@ export const POST = withTenant(
   async (ctx, _req, input) => {
     const abierta = await ctx.db.select("cajas", "id").eq("estado", "abierta").limit(1);
     if (abierta.error) return ERR.server();
-    const caja = abierta.data?.[0];
+    const caja = abierta.data?.[0] as unknown as { id: string } | undefined;
     if (!caja) return fail("No hay una caja abierta para cerrar.", 409);
 
     const { data, error } = await ctx.db.rpc<{

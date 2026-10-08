@@ -10,6 +10,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, Loader2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
@@ -76,7 +77,7 @@ export default function ReporteVentasPage() {
 
   const [ventas, setVentas] = useState<FilaVenta[]>([]);
   const [totalVentas, setTotalVentas] = useState(0);
-  const [pagina, setPagina] = useState(1);
+  const [pag, setPag] = useState<{ filtros: string; n: number }>({ filtros: "", n: 1 });
   const [cargandoDet, setCargandoDet] = useState(true);
   const [verTodosProd, setVerTodosProd] = useState(false);
   const [viendo, setViendo] = useState<string | null>(null);
@@ -86,7 +87,7 @@ export default function ReporteVentasPage() {
   const [aviso, setAviso] = useState<string | null>(null);
 
   useEffect(() => {
-    apiFetch<{ categorias: Categoria[] }>("/api/inventario/categorias").then((r) => setCategorias(r.categorias)).catch(() => {});
+    apiFetchCache<{ categorias: Categoria[] }>("/api/inventario/categorias").then((r) => setCategorias(r.categorias)).catch(() => {});
   }, []);
 
   const filtros = useMemo(() => {
@@ -98,7 +99,10 @@ export default function ReporteVentasPage() {
     return sp.toString();
   }, [desde, hasta, cajero, tipo, medio, categoria]);
 
-  useEffect(() => { setPagina(1); }, [filtros]);
+  // La página es de ESTOS filtros: si cambian, vuelve a 1 en el mismo render (antes un
+  // efecto la reseteaba después y el detalle se pedía dos veces, con la página vieja y la 1).
+  const pagina = pag.filtros === filtros ? pag.n : 1;
+  const setPagina = (f: (p: number) => number) => setPag({ filtros, n: f(pagina) });
 
   useEffect(() => {
     let cancel = false;

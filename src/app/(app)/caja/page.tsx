@@ -29,6 +29,7 @@ const TEAL = clienteConfig.color;
 type Caja = { id: string; numero_caja: number; fecha_apertura: string; monto_apertura: number };
 type PorMedio = { medio: string; label: string; cantidad: number; total: number };
 type Arqueo = {
+  caja: { id: string; numero_caja: number; fecha_apertura: string };
   monto_apertura: number;
   ingresos: { total: number; por_medio: PorMedio[] };
   efectivo_esperado: number;
@@ -51,20 +52,14 @@ const medioTotal = (a: Arqueo | null, m: string) => a?.ingresos.por_medio.find((
 export default function CajaDashboard() {
   const [caja, setCaja] = useState<Caja | null>(null);
   const [arqueo, setArqueo] = useState<Arqueo | null>(null);
-  const [cargando, setCargando] = useState(true);
 
   const cargar = useCallback(async () => {
-    try {
-      // Caja y arqueo en paralelo (el arqueo ya devuelve null si no hay caja abierta).
-      const [r, a] = await Promise.all([
-        apiFetch<{ caja: Caja | null }>("/api/caja"),
-        apiFetch<{ arqueo: Arqueo | null }>("/api/caja/cierre").catch(() => ({ arqueo: null })),
-      ]);
-      setCaja(r.caja);
-      setArqueo(r.caja ? a.arqueo : null);
-    } finally {
-      setCargando(false);
-    }
+    // El arqueo ya trae la caja abierta (o null si no hay): un solo pedido, no dos que
+    // buscaban la misma caja.
+    const a = await apiFetch<{ arqueo: Arqueo | null }>("/api/caja/cierre").catch(() => null);
+    if (!a) return;
+    setArqueo(a.arqueo);
+    setCaja(a.arqueo ? { ...a.arqueo.caja, monto_apertura: a.arqueo.monto_apertura } : null);
   }, []);
 
   useEffect(() => {
@@ -94,8 +89,8 @@ export default function CajaDashboard() {
         </section>
       ) : null}
 
-      {/* Órdenes de venta */}
-      <Ordenes caja={caja} listo={!cargando} />
+      {/* Órdenes de venta: arrancan junto con la caja (piden las de la caja abierta). */}
+      <Ordenes />
     </div>
   );
 }
@@ -241,7 +236,7 @@ function MovimientoModal({ onClose, onListo }: { onClose: () => void; onListo: (
 
 // ── Órdenes de venta ──────────────────────────────────────────────────────────
 
-function Ordenes({ caja, listo }: { caja: Caja | null; listo: boolean }) {
+function Ordenes() {
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [total, setTotal] = useState(0); // ventas que cumplen los filtros
   const [totalGeneral, setTotalGeneral] = useState(0); // ventas sin filtrar
@@ -261,20 +256,26 @@ function Ordenes({ caja, listo }: { caja: Caja | null; listo: boolean }) {
   const [porPagina, setPorPagina] = useState(25);
   const [pagina, setPagina] = useState(1);
   const pedido = useRef(0); // descarta respuestas viejas si el usuario sigue tipeando/filtrando
+  // Filtros de la última respuesta con totales: si solo cambia la página, no se recuenta.
+  const contados = useRef<string | null>(null);
+
+  // Al cambiar lo que se filtra o el tamaño de página se vuelve a la primera EN EL MISMO
+  // cambio de estado (antes un efecto aparte lo hacía después → dos pedidos al servidor).
+  const conPagina1 = <T,>(set: (v: T) => void) => (v: T) => { set(v); setPagina(1); };
 
   // Debounce de la búsqueda: no pegarle al servidor en cada tecla.
   useEffect(() => {
-    const t = setTimeout(() => setQ(busqueda.trim()), 300);
+    const t = setTimeout(() => {
+      const nueva = busqueda.trim();
+      if (nueva !== q) { setQ(nueva); setPagina(1); }
+    }, 300);
     return () => clearTimeout(t);
-  }, [busqueda]);
+  }, [busqueda, q]);
 
-  // Si cambia lo que se filtra o el tamaño de página, volver a la primera.
-  useEffect(() => { setPagina(1); }, [q, tipo, iva, estado, producto, desde, hasta, porPagina, caja?.id]);
-
-  const cargar = useCallback(() => {
-    if (!listo) return; // esperar a saber si hay caja abierta (evita bajar todo y después lo de la caja)
-    const sp = new URLSearchParams({ pagina: String(pagina), por_pagina: String(porPagina) });
-    if (caja) sp.set("caja", caja.id);
+  const cargar = useCallback((recontar = false) => {
+    // caja=abierta: el servidor usa la caja abierta si hay (si no, todas), así no se espera
+    // a saber cuál es la caja antes de pedir las ventas.
+    const sp = new URLSearchParams({ pagina: String(pagina), por_pagina: String(porPagina), caja: "abierta" });
     if (q) sp.set("q", q);
     if (tipo) sp.set("tipo", tipo);
     if (iva) sp.set("iva", iva);
@@ -282,26 +283,32 @@ function Ordenes({ caja, listo }: { caja: Caja | null; listo: boolean }) {
     if (producto) sp.set("producto", producto);
     if (desde) sp.set("desde", desde);
     if (hasta) sp.set("hasta", hasta);
+    const firma = JSON.stringify([porPagina, q, tipo, iva, estado, producto, desde, hasta]);
+    if (!recontar && contados.current === firma) sp.set("contar", "0");
     const n = ++pedido.current;
     setBuscando(true);
-    apiFetch<{ rows: Venta[]; total: number; total_general: number }>(`/api/ventas?${sp}`)
+    apiFetch<{ rows: Venta[]; total: number | null; total_general: number | null }>(`/api/ventas?${sp}`)
       .then((r) => {
         if (n !== pedido.current) return;
         setVentas(r.rows);
-        setTotal(r.total);
-        setTotalGeneral(r.total_general);
+        if (r.total != null) {
+          setTotal(r.total);
+          setTotalGeneral(r.total_general ?? r.total);
+          contados.current = firma;
+        }
       })
-      .catch(() => { if (n === pedido.current) { setVentas([]); setTotal(0); } })
+      .catch(() => { if (n === pedido.current) { setVentas([]); setTotal(0); contados.current = null; } })
       .finally(() => { if (n === pedido.current) setBuscando(false); });
-  }, [listo, caja, pagina, porPagina, q, tipo, iva, estado, producto, desde, hasta]);
+  }, [pagina, porPagina, q, tipo, iva, estado, producto, desde, hasta]);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
 
-  // Opciones del filtro por producto: el catálogo (ya no se deducen de lo cargado).
+  // Opciones del filtro por producto: el catálogo (ya no se deducen de lo cargado). Solo
+  // los nombres (antes se bajaba el catálogo entero con costos y stock para esto).
   useEffect(() => {
-    apiFetch<{ nombre: string }[]>("/api/productos")
+    apiFetch<{ nombre: string }[]>("/api/productos?pos=1&campos=nombre")
       .then((ps) => setProductosOpts([["", "Todos los productos"], ...[...new Set(ps.map((p) => p.nombre))].sort().map((n): [string, string] => [n, n])]))
       .catch(() => {});
   }, []);
@@ -351,29 +358,29 @@ function Ordenes({ caja, listo }: { caja: Caja | null; listo: boolean }) {
           </button>
           <div className="flex shrink-0 items-center gap-2">
             <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Filas</span>
-            <Select value={String(porPagina)} onChange={(v) => setPorPagina(Number(v))} options={[["25", "25"], ["50", "50"], ["100", "100"]]} minWidth={84} />
+            <Select value={String(porPagina)} onChange={conPagina1((v: string) => setPorPagina(Number(v)))} options={[["25", "25"], ["50", "50"], ["100", "100"]]} minWidth={84} />
           </div>
           <span className={`ml-auto text-sm text-slate-400 transition-opacity ${buscando ? "opacity-50" : ""}`}>{total.toLocaleString("es-PY")} de {totalGeneral.toLocaleString("es-PY")} ventas</span>
         </div>
 
         {filtrosAbiertos ? (
           <div className="mt-3 flex flex-wrap items-end gap-2.5 rounded-xl bg-slate-50 p-3" style={{ animation: "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)" }}>
-            <Select value={tipo} onChange={setTipo} options={[["", "Todos los tipos"], ["CONTADO", "Contado"], ["CREDITO", "Crédito"]]} minWidth={150} />
-            <Select value={iva} onChange={setIva} options={[["", "Todos los IVA"], ["10%", "IVA 10%"], ["5%", "IVA 5%"], ["EXENTA", "Exenta"]]} minWidth={140} />
-            <Select value={estado} onChange={setEstado} options={[["", "Todos los estados"], ["completada", "Completada"], ["anulada", "Anulada"]]} minWidth={160} />
-            <Select value={producto} onChange={setProducto} options={productosOpts} minWidth={190} />
+            <Select value={tipo} onChange={conPagina1(setTipo)} options={[["", "Todos los tipos"], ["CONTADO", "Contado"], ["CREDITO", "Crédito"]]} minWidth={150} />
+            <Select value={iva} onChange={conPagina1(setIva)} options={[["", "Todos los IVA"], ["10%", "IVA 10%"], ["5%", "IVA 5%"], ["EXENTA", "Exenta"]]} minWidth={140} />
+            <Select value={estado} onChange={conPagina1(setEstado)} options={[["", "Todos los estados"], ["completada", "Completada"], ["anulada", "Anulada"]]} minWidth={160} />
+            <Select value={producto} onChange={conPagina1(setProducto)} options={productosOpts} minWidth={190} />
             <label className="flex flex-col gap-1">
               <span className="px-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Desde</span>
-              <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
+              <input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
             </label>
             <label className="flex flex-col gap-1">
               <span className="px-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Hasta</span>
-              <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
+              <input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
             </label>
             {filtrosActivos ? (
               <button
                 type="button"
-                onClick={() => { setTipo(""); setIva(""); setEstado(""); setProducto(""); setDesde(""); setHasta(""); }}
+                onClick={() => { setTipo(""); setIva(""); setEstado(""); setProducto(""); setDesde(""); setHasta(""); setPagina(1); }}
                 className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:text-rose-600"
               >
                 <X className="h-3.5 w-3.5" /> Limpiar
@@ -477,7 +484,7 @@ function Ordenes({ caja, listo }: { caja: Caja | null; listo: boolean }) {
       ) : null}
 
       {viendo ? (
-        <VentaDetalle ventaId={viendo} onClose={() => setViendo(null)} onAnulada={() => { setViendo(null); cargar(); }} />
+        <VentaDetalle ventaId={viendo} onClose={() => setViendo(null)} onAnulada={() => { setViendo(null); cargar(true); }} />
       ) : null}
     </section>
   );

@@ -1,6 +1,6 @@
 /** Proveedores — lado servidor: lista completa con rubros y compras. Solo servidor. */
 import type { TenantDb } from "@/lib/api/tenant-db";
-import { COLS_PROVEEDOR, type CategoriaProveedor, type Proveedor } from "@/modules/proveedores/tipos";
+import { COLS_PROVEEDOR, COLS_PROVEEDOR_MIN, type CategoriaProveedor, type Proveedor, type ProveedorMin } from "@/modules/proveedores/tipos";
 
 type Fila = Omit<Proveedor, "categorias" | "compras" | "ultima_compra">;
 
@@ -26,6 +26,16 @@ export async function listarProveedores(db: TenantDb): Promise<Proveedor[]> {
     compras: Number(compras.get(f.id)?.compras ?? 0),
     ultima_compra: compras.get(f.id)?.ultima ?? null,
   }));
+}
+
+/**
+ * Lista liviana (selector y filtros): una sola consulta, sin rubros ni el agregado de
+ * compras. Mismo orden y tope que la completa.
+ */
+export async function listarProveedoresMin(db: TenantDb): Promise<ProveedorMin[]> {
+  const { data, error } = await db.select("proveedores", COLS_PROVEEDOR_MIN).order("nombre", { ascending: true }).limit(5000);
+  if (error) throw new Error("db");
+  return (data ?? []) as unknown as ProveedorMin[];
 }
 
 /**

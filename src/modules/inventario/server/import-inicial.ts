@@ -13,7 +13,7 @@ import {
   type FilaNormalizada, type Fuente, type ProductoConsolidado, type ResumenConsolidacion,
 } from "@/lib/imports/consolidacion-productos";
 import { parseReporte, type DiagnosticoParser } from "@/lib/imports/parsers-reportes-xls";
-import { aplicarEnTandas, generadorSku, leerMatriz, MAX_BYTES_INICIAL, traerCatalogo, type FilaRpc } from "./excel-io";
+import { aplicarEnTandas, generadorSku, leerMatriz, MAX_BYTES_INICIAL, traerCatalogo, type FilaRpc, type ProductoExistente } from "./excel-io";
 
 /** Campo del form-data por reporte. Los tres son opcionales por separado. */
 export const CAMPOS_REPORTE: { campo: string; fuente: Fuente }[] = [
@@ -51,8 +51,15 @@ const sinAcentos = (s: string | null) =>
   String(s ?? "").normalize("NFD").replace(/\p{M}/gu, "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 const up = (s: string | null) => String(s ?? "").trim().toUpperCase();
 
-/** Consolida y marca los que ya existen: código interno (SKU) → barras → fábrica → descripción. */
-export async function previewInicial(db: TenantDb, archivos: ArchivoEntrada[]): Promise<PreviewConsolidado> {
+/**
+ * Consolida y marca los que ya existen: código interno (SKU) → barras → fábrica → descripción.
+ * `catalogo`: si quien llama ya lo trajo (commitInicial), se reusa en vez de leerlo de nuevo.
+ */
+export async function previewInicial(
+  db: TenantDb,
+  archivos: ArchivoEntrada[],
+  catalogoPrevio?: ProductoExistente[],
+): Promise<PreviewConsolidado> {
   const todas: FilaNormalizada[] = [];
   const diagnosticos: DiagnosticoArchivo[] = [];
   for (const a of archivos) {
@@ -64,7 +71,7 @@ export async function previewInicial(db: TenantDb, archivos: ArchivoEntrada[]): 
   // El código de barras tiene que ser único: se anulan los repetidos del origen.
   nullificarBarrasDuplicados(items);
 
-  const catalogo = await traerCatalogo(db);
+  const catalogo = catalogoPrevio ?? (await traerCatalogo(db));
   const porSku = new Map<string, string>();
   const porBarras = new Map<string, string>();
   const porFabrica = new Map<string, string>();
@@ -105,8 +112,9 @@ export async function commitInicial(
   archivos: ArchivoEntrada[],
   opts: { actualizarExistentes: boolean; crearCategorias: boolean },
 ): Promise<ResultadoInicial> {
-  const { items } = await previewInicial(db, archivos);
+  // El catálogo entero se lee UNA vez: sirve para marcar existentes y para generar SKUs.
   const catalogo = await traerCatalogo(db);
+  const { items } = await previewInicial(db, archivos, catalogo);
   const nuevoSku = generadorSku(catalogo);
 
   let omitidos = 0;

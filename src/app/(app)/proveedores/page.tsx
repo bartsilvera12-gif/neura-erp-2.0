@@ -10,6 +10,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Ban, CheckCircle2, Download, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Truck, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
+import { invalidarProveedores } from "@/modules/proveedores/cache";
+import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { buscar } from "@/lib/busqueda";
 import { clienteConfig } from "@/cliente.config";
@@ -27,7 +30,7 @@ export default function ProveedoresPage() {
   const [categorias, setCategorias] = useState<CategoriaProveedor[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [esAdmin, setEsAdmin] = useState(false);
+  const esAdmin = useUsuario()?.rol === "ADMIN";
   const [busqueda, setBusqueda] = useState("");
   const [rubro, setRubro] = useState("");
   const [verInactivos, setVerInactivos] = useState(false);
@@ -39,7 +42,7 @@ export default function ProveedoresPage() {
     try {
       const [p, c] = await Promise.all([
         apiFetch<{ proveedores: Proveedor[] }>("/api/proveedores"),
-        apiFetch<{ categorias: CategoriaProveedor[] }>("/api/proveedores/categorias"),
+        apiFetchCache<{ categorias: CategoriaProveedor[] }>("/api/proveedores/categorias"),
       ]);
       setLista(p.proveedores);
       setCategorias(c.categorias);
@@ -52,13 +55,13 @@ export default function ProveedoresPage() {
 
   useEffect(() => {
     void cargar();
-    apiFetch<{ rol: string }>("/api/me").then((m) => setEsAdmin(m.rol === "ADMIN")).catch(() => {});
   }, [cargar]);
 
   async function cambiarEstado(p: Proveedor) {
     setError(null);
     try {
       await apiFetch(`/api/proveedores/${p.id}`, { method: "PATCH", body: JSON.stringify({ activo: !p.activo }) });
+      invalidarProveedores();
       await cargar();
     } catch (e) {
       setError((e as Error).message);
@@ -239,7 +242,7 @@ export default function ProveedoresPage() {
           proveedor={form.prov}
           categorias={categorias}
           onClose={() => setForm({ open: false, prov: null })}
-          onSaved={() => { setForm({ open: false, prov: null }); void cargar(); }}
+          onSaved={() => { setForm({ open: false, prov: null }); invalidar("/api/proveedores/categorias"); void cargar(); }}
         />
       ) : null}
 
@@ -249,6 +252,7 @@ export default function ProveedoresPage() {
           onCancelar={() => setBorrando(null)}
           onConfirmar={async () => {
             await apiFetch(`/api/proveedores/${borrando.id}`, { method: "DELETE" });
+            invalidarProveedores();
             setBorrando(null);
             await cargar();
           }}

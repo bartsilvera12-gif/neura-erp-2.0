@@ -6,6 +6,7 @@
  * faltantes, duplicados evitados) → Paso 3: confirmar e importar.
  */
 import Link from "next/link";
+import { invalidar } from "@/lib/api/cache-cliente";
 import { useMemo, useState } from "react";
 import { apiForm } from "@/lib/api/client-fetch";
 
@@ -107,6 +108,7 @@ export function ImportInicialWizard() {
       fd.append("actualizar_existentes", actualizarExistentes ? "1" : "0");
       fd.append("crear_categorias", crearCategorias ? "1" : "0");
       setResultado(await apiForm<Record<string, unknown>>("/api/inventario/productos/import-inicial/commit", fd));
+      invalidar("/api/inventario/categorias");
       setPreview(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo importar.");

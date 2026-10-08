@@ -15,7 +15,8 @@ import { Select } from "@/components/Select";
 import { Drawer } from "@/components/Drawer";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 import type { Compra } from "@/modules/compras/tipos";
-import { nombreProveedor, type Proveedor } from "@/modules/proveedores/tipos";
+import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos";
+import { cargarProveedores } from "@/modules/proveedores/cache";
 
 const TEAL = clienteConfig.color;
 const POR_PAGINA = 25;
@@ -36,12 +37,13 @@ export default function ComprasPage() {
   const [proveedor, setProveedor] = useState("");
   const [tipoPago, setTipoPago] = useState("");
   const [estado, setEstado] = useState("");
-  const [proveedores, setProveedores] = useState<Proveedor[]>([]);
+  const [proveedores, setProveedores] = useState<ProveedorMin[]>([]);
   const [viendo, setViendo] = useState<string | null>(null);
   const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
-    apiFetch<{ proveedores: Proveedor[] }>("/api/proveedores").then((r) => setProveedores(r.proveedores)).catch(() => {});
+    // Solo para el filtro: la lista liviana compartida (sin rubros ni compras).
+    void cargarProveedores().then(setProveedores);
   }, []);
   useEffect(() => {
     const t = setTimeout(() => { setQ(borrador.trim()); setPagina(1); }, 350);

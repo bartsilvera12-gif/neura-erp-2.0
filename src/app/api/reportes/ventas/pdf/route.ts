@@ -23,16 +23,16 @@ export const GET = withTenant(
     let r;
     const nombres: { cajero?: string | null; categoria?: string | null } = {};
     try {
-      r = await resumenVentas(ctx.db, f);
-      if (f.cajero) {
-        const u = await ctx.db.select("usuarios", "nombre").eq("auth_user_id", f.cajero).limit(1);
-        nombres.cajero = (u.data?.[0] as { nombre?: string } | undefined)?.nombre ?? null;
-      }
-      if (f.categoria && f.categoria !== "__sin__") {
+      // El resumen y los nombres de los filtros son independientes: van en paralelo.
+      const [res, u, c] = await Promise.all([
+        resumenVentas(ctx.db, f),
+        f.cajero ? ctx.db.select("usuarios", "nombre").eq("auth_user_id", f.cajero).limit(1) : null,
         // "Bebidas › Gaseosas" si es subcategoría
-        const c = await ctx.db.rpc<string>("categoria_ruta", { p_id: f.categoria });
-        nombres.categoria = c.data ?? null;
-      }
+        f.categoria && f.categoria !== "__sin__" ? ctx.db.rpc<string>("categoria_ruta", { p_id: f.categoria }) : null,
+      ]);
+      r = res;
+      if (u) nombres.cajero = (u.data?.[0] as { nombre?: string } | undefined)?.nombre ?? null;
+      if (c) nombres.categoria = c.data ?? null;
     } catch {
       return ERR.server();
     }

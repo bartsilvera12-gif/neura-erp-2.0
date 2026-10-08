@@ -7,7 +7,7 @@
  * panel lateral para ajustar mínimo o stock sin salir del reporte.
  */
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, FileSpreadsheet, FileText, Loader2, PackageMinus, RefreshCw, Search, X } from "lucide-react";
 import { filtrar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -78,7 +78,12 @@ export default function ReporteStockMinimoPage() {
   }
 
   // Búsqueda inteligente (sin tildes, cualquier orden, errores de tipeo); respeta el orden del reporte.
-  const items = filtrar(data?.items ?? [], busqueda, (i) => ({ principal: i.nombre, otros: [i.categoria], codigos: [i.sku, i.codigo_barras] }));
+  // Con el texto diferido: el input no espera al filtro y solo se recalcula si cambia algo.
+  const busquedaDiferida = useDeferredValue(busqueda);
+  const items = useMemo(
+    () => filtrar(data?.items ?? [], busquedaDiferida, (i) => ({ principal: i.nombre, otros: [i.categoria], codigos: [i.sku, i.codigo_barras] })),
+    [data, busquedaDiferida],
+  );
   const t = data?.totales;
 
   return (

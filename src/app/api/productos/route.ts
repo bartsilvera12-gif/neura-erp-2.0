@@ -1,6 +1,7 @@
 /**
  * Productos — catálogo que vende la caja y que gestiona Inventario.
- *   GET  /api/productos                → vendibles y activos (POS) — lista completa
+ *   GET  /api/productos                → vendibles y activos — columnas completas (tope 1000)
+ *   GET  /api/productos?pos=1[&campos=nombre] → catálogo liviano de la caja, completo (por lotes)
  *   GET  /api/productos?scope=inventario → todos los activos — lista completa
  *   GET  /api/productos?paginado=1&pagina&por_pagina&q&categoria&inactivos=1
  *        → { rows, total } paginado EN EL SERVIDOR (pantalla de Inventario). Con q, búsqueda
@@ -15,6 +16,11 @@ import { registrarMovimiento } from "@/modules/inventario/server/kardex";
 
 const COLS =
   "id, nombre, sku, codigo_barras, categoria_principal_id, proveedor_principal_id, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, es_vendible, activo, imagen_url";
+// Lo que lee la caja (POS) de cada producto: ni costos, ni categoría, ni proveedor.
+const COLS_POS =
+  "id, nombre, sku, codigo_barras, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, unidad_medida, tipo_iva, controla_stock, imagen_url";
+// Tope de filas por respuesta de PostgREST (max-rows).
+const LOTE = 1000;
 
 export const GET = withTenant(async (ctx, req) => {
   const sp = new URL(req.url).searchParams;
@@ -53,6 +59,35 @@ export const GET = withTenant(async (ctx, req) => {
       .range(desde, desde + porPagina - 1);
     if (error && (error as { code?: string }).code !== "PGRST103") return ERR.server();
     return ok({ rows: data ?? [], total: count ?? 0 });
+  }
+
+  // ?pos=1 → catálogo LIVIANO de la caja: solo vendibles activos, solo las columnas que usa
+  // el POS (sin costos) y COMPLETO: PostgREST corta en 1000 filas, así que se pide de a
+  // lotes (el primero trae el total; el resto en paralelo). &campos=nombre → solo nombres.
+  if (sp.get("pos") === "1") {
+    const cols = sp.get("campos") === "nombre" ? "nombre" : COLS_POS;
+    const lote = (desde: number, hasta: number, conTotal: boolean) =>
+      ctx.db
+        .select("productos", cols, conTotal ? { count: "exact" } : undefined)
+        .eq("activo", true)
+        .eq("es_vendible", true)
+        .order("nombre", { ascending: true })
+        .order("id", { ascending: true }) // orden estable entre lotes
+        .range(desde, hasta);
+    const primero = await lote(0, LOTE - 1, true);
+    if (primero.error) return ERR.server();
+    const filas = (primero.data ?? []) as unknown as Record<string, unknown>[];
+    const total = primero.count ?? filas.length;
+    // El paso es lo que de verdad devolvió el servidor (por si su tope es menor a LOTE).
+    const paso = filas.length;
+    if (paso > 0 && total > paso) {
+      const pedidos = [];
+      for (let d = paso; d < total; d += paso) pedidos.push(lote(d, d + paso - 1, false));
+      const resto = await Promise.all(pedidos);
+      if (resto.some((r) => r.error)) return ERR.server();
+      for (const r of resto) filas.push(...((r.data ?? []) as unknown as Record<string, unknown>[]));
+    }
+    return ok(filas);
   }
 
   // scope=inventario → todos los activos; por defecto → solo vendibles (lo que ofrece la caja/POS).

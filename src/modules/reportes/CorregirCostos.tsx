@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Loader2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { traerProductosLote } from "@/modules/inventario/lote";
 import { clienteConfig } from "@/cliente.config";
 import MontoInput from "@/components/ui/MontoInput";
 
@@ -34,14 +35,17 @@ export function CorregirCostos({
   // Costo actual de cada producto (puede que ya lo tenga y solo falten las ventas viejas).
   useEffect(() => {
     const conId = productos.filter((p): p is typeof p & { producto_id: string } => !!p.producto_id);
-    Promise.all(
-      conId.map((p) =>
-        apiFetch<{ costo_promedio: number | null }>(`/api/productos/${p.producto_id}`)
-          .then((d) => Number(d.costo_promedio) || 0)
-          .catch(() => 0)
-          .then((c) => ({ producto_id: p.producto_id, nombre: p.nombre, sku: p.sku, monto: p.monto, costoActual: c, costo: c })),
-      ),
-    ).then(setItems);
+    // Todos en un solo request (no uno por producto); si falla, quedan en 0 como antes.
+    type Costo = { id: string; costo_promedio: number | null };
+    traerProductosLote<Costo>(conId.map((p) => p.producto_id))
+      .then((r) => r.productos)
+      .catch(() => new Map<string, Costo>())
+      .then((porId) =>
+        setItems(conId.map((p) => {
+          const c = Number(porId.get(p.producto_id)?.costo_promedio) || 0;
+          return { producto_id: p.producto_id, nombre: p.nombre, sku: p.sku, monto: p.monto, costoActual: c, costo: c };
+        })),
+      );
   }, [productos]);
 
   useEffect(() => {

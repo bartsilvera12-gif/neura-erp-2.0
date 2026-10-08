@@ -23,23 +23,26 @@ export const GET = withTenant(async (ctx, req) => {
   const id = clienteId(req);
   if (!id) return ERR.invalid("Falta el id del cliente");
 
-  const cli = await ctx.db.select("clientes", DETALLE).eq("id", id).is("deleted_at", null).limit(1);
+  // Las 5 lecturas son independientes: van juntas (1 viaje en vez de 5 seguidos). Si el
+  // cliente no existe, las demás vuelven vacías y se responde 404 igual que antes.
+  const [cli, saldo, resumen, ventas, contactos] = await Promise.all([
+    ctx.db.select("clientes", DETALLE).eq("id", id).is("deleted_at", null).limit(1),
+    ctx.db.rpc<number>("cliente_saldo", { p_cliente_id: id }),
+    ctx.db.rpc("resumen_cliente", { p_cliente: id }),
+    ctx.db
+      .select("ventas", "id, numero_control, fecha, total, tipo_venta, estado")
+      .eq("cliente_id", id)
+      .order("fecha", { ascending: false })
+      .limit(50),
+    ctx.db
+      .select("cliente_contactos", "id, nombre, cargo, telefono, email, notas")
+      .eq("cliente_id", id)
+      .order("created_at", { ascending: true }),
+  ]);
   if (cli.error) return ERR.server();
   if (!cli.data?.length) return ERR.notFound();
 
-  const saldo = await ctx.db.rpc<number>("cliente_saldo", { p_cliente_id: id });
-  const resumen = await ctx.db.rpc("resumen_cliente", { p_cliente: id });
-  const ventas = await ctx.db
-    .select("ventas", "id, numero_control, fecha, total, tipo_venta, estado")
-    .eq("cliente_id", id)
-    .order("fecha", { ascending: false })
-    .limit(50);
-  const contactos = await ctx.db
-    .select("cliente_contactos", "id, nombre, cargo, telefono, email, notas")
-    .eq("cliente_id", id)
-    .order("created_at", { ascending: true });
-
-  const cliente = cli.data[0];
+  const cliente = cli.data[0] as unknown as Record<string, unknown> & { limite_credito: number | null };
   const saldoNum = Number(saldo.data ?? 0);
   const limite = Number(cliente.limite_credito ?? 0);
   return ok({

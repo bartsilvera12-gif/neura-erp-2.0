@@ -14,6 +14,7 @@ import {
   Download, History, Loader2, Package, Plus, Search, X,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
@@ -62,13 +63,9 @@ function Movimientos() {
   const [producto, setProducto] = useState<ProductoFiltro | null>(null);
   const [cargando, setCargando] = useState(true);
   const [exportando, setExportando] = useState(false);
-  const [esAdmin, setEsAdmin] = useState(false);
+  const esAdmin = useUsuario()?.rol === "ADMIN";
   const [nuevo, setNuevo] = useState(false);
   const [recarga, setRecarga] = useState(0);
-
-  useEffect(() => {
-    apiFetch<{ rol: string }>("/api/me").then((m) => setEsAdmin(m.rol === "ADMIN")).catch(() => {});
-  }, []);
 
   const [busqueda, setBusqueda] = useState("");
   const [q, setQ] = useState("");

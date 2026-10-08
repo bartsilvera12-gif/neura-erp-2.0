@@ -18,16 +18,16 @@ export const GET = withTenant(
     let nombreCat: string | null = null;
     let nombreProd: string | null = null;
     try {
-      r = await resumenProductos(ctx.db, f);
-      if (f.categoria && f.categoria !== "__sin__") {
+      // El resumen y los nombres de los filtros son independientes: van en paralelo.
+      const [res, c, p] = await Promise.all([
+        resumenProductos(ctx.db, f),
         // "Bebidas › Gaseosas" si es subcategoría
-        const c = await ctx.db.rpc<string>("categoria_ruta", { p_id: f.categoria });
-        nombreCat = c.data ?? null;
-      }
-      if (f.producto) {
-        const p = await ctx.db.select("productos", "nombre").eq("id", f.producto).limit(1);
-        nombreProd = (p.data?.[0] as { nombre?: string } | undefined)?.nombre ?? null;
-      }
+        f.categoria && f.categoria !== "__sin__" ? ctx.db.rpc<string>("categoria_ruta", { p_id: f.categoria }) : null,
+        f.producto ? ctx.db.select("productos", "nombre").eq("id", f.producto).limit(1) : null,
+      ]);
+      r = res;
+      if (c) nombreCat = c.data ?? null;
+      if (p) nombreProd = (p.data?.[0] as { nombre?: string } | undefined)?.nombre ?? null;
     } catch {
       return ERR.server();
     }

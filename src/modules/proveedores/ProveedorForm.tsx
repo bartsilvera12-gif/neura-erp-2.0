@@ -11,6 +11,7 @@ import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Drawer } from "@/components/Drawer";
 import type { CategoriaProveedor, Proveedor } from "@/modules/proveedores/tipos";
+import { invalidarProveedores } from "@/modules/proveedores/cache";
 
 const BRAND = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
@@ -80,6 +81,7 @@ export function ProveedorForm({
       const r = editando
         ? await apiFetch<{ id: string }>(`/api/proveedores/${proveedor!.id}`, { method: "PATCH", body })
         : await apiFetch<{ id: string }>("/api/proveedores", { method: "POST", body });
+      invalidarProveedores(); // el selector y los filtros de Compras vuelven a cargar
       onSaved(r.id);
     } catch (err) {
       setError((err as Error).message);

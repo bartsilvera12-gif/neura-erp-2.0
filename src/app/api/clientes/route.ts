@@ -6,6 +6,8 @@
  *   GET  /api/clientes?q=   → lista sin borrados. Con q, búsqueda inteligente (buscar_clientes:
  *                             nombre, razón social, CI/RUC con o sin puntos, teléfono, email,
  *                             ciudad; sin tildes, errores de tipeo, por relevancia)
+ *        &limit=N (o limite=N) → cuántos traer: sin q 1..500 (por defecto 500, por nombre);
+ *                             con q 1..200 (por defecto 50)
  *   POST /api/clientes      → alta con anti-duplicados (candado en DB + chequeo amable)
  */
 import { z } from "zod";
@@ -13,7 +15,8 @@ import { withTenant } from "@/lib/api/with-tenant";
 import { ok, created, fail, ERR } from "@/lib/api/responses";
 import { documentoRepetido } from "@/modules/clientes/server";
 
-export const COLS =
+// Sin export: un route file solo puede exportar handlers/config (si no, falla el build).
+const COLS =
   "id, nombre, razon_social, tipo_cliente, documento, ruc, telefono, email, ciudad, direccion, condicion_pago, limite_credito, origen, activo, vendedor_usuario_id, creado_at";
 
 export const GET = withTenant(async (ctx, req) => {
@@ -38,12 +41,14 @@ export const GET = withTenant(async (ctx, req) => {
   }
   const q = sp.get("q")?.trim().slice(0, 200);
   if (q) {
-    const limite = Math.min(200, Math.max(1, Number(sp.get("limite")) || 50));
+    const limite = Math.min(200, Math.max(1, Number(sp.get("limite") ?? sp.get("limit")) || 50));
     const r = await ctx.db.rpc<{ rows: unknown[]; total: number }>("buscar_clientes", { p_q: q, p_limit: limite });
     if (r.error || !r.data) return ERR.server();
     return ok(r.data.rows ?? []);
   }
-  const { data, error } = await ctx.db.select("clientes", COLS).is("deleted_at", null).order("nombre", { ascending: true }).limit(500);
+  // Por defecto 500 (lo que esperan los que ya la usan); ?limit=20 para listas cortas (POS).
+  const tope = Math.min(500, Math.max(1, Number(sp.get("limit") ?? sp.get("limite")) || 500));
+  const { data, error } = await ctx.db.select("clientes", COLS).is("deleted_at", null).order("nombre", { ascending: true }).limit(tope);
   if (error) return ERR.server();
   return ok(data ?? []);
 });

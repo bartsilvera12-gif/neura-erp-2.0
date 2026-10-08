@@ -11,6 +11,7 @@ import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, fail, ERR } from "@/lib/api/responses";
 import { registrarMovimiento } from "@/modules/inventario/server/kardex";
+import { COLS_PRODUCTO_DETALLE } from "@/modules/inventario/server/productos-lote";
 
 function prodId(req: { url: string }): string | null {
   const segs = new URL(req.url).pathname.split("/").filter(Boolean);
@@ -18,8 +19,8 @@ function prodId(req: { url: string }): string | null {
   return i >= 0 ? (segs[i + 1] ?? null) : null;
 }
 
-const DETALLE =
-  "id, nombre, sku, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, es_vendible, activo, imagen_url, descripcion, codigo_barras, categoria_principal_id, proveedor_principal_id";
+// Mismas columnas que /api/productos/lote (compartidas para que no se desfasen).
+const DETALLE = COLS_PRODUCTO_DETALLE;
 
 export const GET = withTenant(async (ctx, req) => {
   const id = prodId(req);
