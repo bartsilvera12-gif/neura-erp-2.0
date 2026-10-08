@@ -3,19 +3,21 @@
 /**
  * /inventario/categorias — Categorías de productos en LISTA LIMPIA: una fila por categoría
  * con su color, sus subcategorías como etiquetas (del mismo color) y la cantidad de
- * productos. Las acciones viven en el menú ⋯ (y en cada etiqueta), así la pantalla no se
+ * productos. Al tocar la categoría se despliega su árbol (subcategorías → productos).
+ * Las acciones viven en el menú ⋯ (y en cada etiqueta), así la pantalla no se
  * llena de botones repetidos. Dos niveles: Bebidas › Gaseosas.
  * No hay borrado (como Ferretería): una categoría con productos se desactiva.
  */
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Ban, CheckCircle2, Loader2, MoreHorizontal, Palette, Pencil, Plus, Search, Tags, X } from "lucide-react";
+import { Ban, CheckCircle2, ChevronRight, Loader2, MoreHorizontal, Palette, Pencil, Plus, Search, Tags, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { ColorPicker } from "@/components/ColorPicker";
 import { MenuAcciones, type ItemMenu } from "@/components/MenuAcciones";
+import { ArbolCategoria } from "@/modules/inventario/ArbolCategoria";
 import { colorLibre, coloresPorCategoria, tonosDe, type Categoria } from "@/modules/inventario/categorias";
 
 const TEAL = clienteConfig.color;
@@ -38,6 +40,8 @@ export default function CategoriasPage() {
   const [editando, setEditando] = useState<Categoria | null>(null);
   const [busqueda, setBusqueda] = useState("");
   const [agregandoEn, setAgregandoEn] = useState<string | null>(null);
+  const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
+  const alternar = (id: string) => setAbiertas((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
 
   const cargar = useCallback(async () => {
     try {
@@ -200,6 +204,7 @@ export default function CategoriasPage() {
             {visibles.map(({ cat, hijas }) => {
               const hex = hexDe(cat.id);
               const tono = tonosDe(hex);
+              const abierta = abiertas.has(cat.id);
               const total = (conteo[cat.id] ?? 0) + hijas.reduce((a, h) => a + (conteo[h.id] ?? 0), 0);
               const menu: ItemMenu[] = [
                 ...(cat.activo && !cat.parent_id ? [{ etiqueta: "Agregar subcategoría", icono: <Plus className="h-4 w-4" />, onClick: () => setAgregandoEn(cat.id) }] : []),
@@ -210,9 +215,17 @@ export default function CategoriasPage() {
                   : { etiqueta: "Activar", icono: <CheckCircle2 className="h-4 w-4" />, onClick: () => toggle(cat), tono: "exito" as const },
               ];
               return (
-                <li key={cat.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5 transition-colors hover:bg-slate-50/70">
-                  {/* Nombre y cantidad */}
-                  <div className={`flex w-full min-w-0 items-center gap-3 sm:w-56 ${cat.activo ? "" : "opacity-50"}`}>
+                <li key={cat.id}>
+                  <div className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5 transition-colors hover:bg-slate-50/70 ${abierta ? "bg-slate-50/70" : ""}`}>
+                  {/* Nombre y cantidad: al tocarlo se despliega el árbol de la categoría */}
+                  <button
+                    type="button"
+                    onClick={() => alternar(cat.id)}
+                    aria-expanded={abierta}
+                    title={abierta ? "Ocultar productos" : "Ver subcategorías y productos"}
+                    className={`group flex w-full min-w-0 items-center gap-3 text-left sm:w-56 ${cat.activo ? "" : "opacity-50"}`}
+                  >
+                    <ChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-hover:text-slate-700 ${abierta ? "rotate-90" : ""}`} />
                     <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: hex, boxShadow: `0 0 0 4px ${tono.fondo}` }} />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-900">
@@ -221,7 +234,7 @@ export default function CategoriasPage() {
                       </p>
                       <p className="text-xs text-slate-500">{nProductos(total)}</p>
                     </div>
-                  </div>
+                  </button>
 
                   {/* Subcategorías como etiquetas del color de la categoría */}
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
@@ -265,6 +278,12 @@ export default function CategoriasPage() {
                     >
                       <MoreHorizontal className="h-5 w-5" />
                     </MenuAcciones>
+                  ) : null}
+                  </div>
+                  {abierta ? (
+                    <div className="border-t border-slate-100 bg-slate-50/60 sm:pl-10">
+                      <ArbolCategoria categoria={cat} hijas={hijas} tono={tono} />
+                    </div>
                   ) : null}
                 </li>
               );
