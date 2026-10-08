@@ -3,7 +3,7 @@
 /**
  * /inventario/categorias — Categorías de productos en LISTA LIMPIA: una fila por categoría
  * con su color, sus subcategorías como etiquetas (del mismo color) y la cantidad de
- * productos. Al tocar la categoría se despliega su árbol (subcategorías → productos).
+ * productos. Al tocar la categoría se despliega su árbol (subcategorías y cuántos productos tienen).
  * Las acciones viven en el menú ⋯ (y en cada etiqueta), así la pantalla no se
  * llena de botones repetidos. Dos niveles: Bebidas › Gaseosas.
  * No hay borrado (como Ferretería): una categoría con productos se desactiva.
@@ -271,7 +271,7 @@ export default function CategoriasPage() {
                     type="button"
                     onClick={(e) => alternar(cat.id, e.currentTarget)}
                     aria-expanded={abierta}
-                    title={abierta ? "Ocultar productos" : "Ver subcategorías y productos"}
+                    title={abierta ? "Ocultar subcategorías" : "Ver subcategorías"}
                     className={`group flex w-full min-w-0 items-center gap-3 text-left sm:w-56 ${cat.activo ? "" : "opacity-50"}`}
                   >
                     <ChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-hover:text-slate-700 ${abierta ? "rotate-90" : ""}`} />
@@ -331,7 +331,7 @@ export default function CategoriasPage() {
                   </div>
                   {abierta ? (
                     <div className="border-t border-slate-100 bg-slate-50/60 sm:pl-10">
-                      <ArbolCategoria categoria={cat} hijas={hijas} tono={tono} />
+                      <ArbolCategoria categoria={cat} hijas={hijas} conteo={conteo} tono={tono} />
                     </div>
                   ) : null}
                 </li>
