@@ -10,7 +10,7 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { createPortal, flushSync } from "react-dom";
 import { Ban, CheckCircle2, ChevronRight, Loader2, MoreHorizontal, Palette, Pencil, Plus, Search, Tags, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
@@ -23,6 +23,17 @@ import { colorLibre, coloresPorCategoria, tonosDe, type Categoria } from "@/modu
 const TEAL = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 const ET = "mb-1 block text-xs font-medium text-slate-600";
+
+/** El contenedor que scrollea (en el layout es el <main>, no la ventana). */
+function contenedorScroll(el: HTMLElement): HTMLElement {
+  let e: HTMLElement | null = el.parentElement;
+  while (e) {
+    const o = getComputedStyle(e).overflowY;
+    if (o === "auto" || o === "scroll") return e;
+    e = e.parentElement;
+  }
+  return (document.scrollingElement as HTMLElement) ?? document.documentElement;
+}
 
 const sinTildes = (t: string) => t.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 const nProductos = (n: number) => (n === 1 ? "1 producto" : `${n} productos`);
@@ -41,7 +52,45 @@ export default function CategoriasPage() {
   const [busqueda, setBusqueda] = useState("");
   const [agregandoEn, setAgregandoEn] = useState<string | null>(null);
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
-  const alternar = (id: string) => setAbiertas((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const relleno = useRef<HTMLDivElement>(null);
+
+  // Al CERRAR un árbol la página se achica y el navegador sube la vista sola (la fila
+  // tocada salta). Para que no pase: se mide la fila antes y después y, si se movió, se
+  // agrega espacio abajo y se corrige el scroll, así queda exactamente donde estaba.
+  function alternar(id: string, fila?: HTMLElement) {
+    const cerrando = abiertas.has(id);
+    const cambiar = () => setAbiertas((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+    const sc = fila ? contenedorScroll(fila) : null;
+    if (!cerrando || !fila || !sc || !relleno.current) { cambiar(); return; }
+    const antes = fila.getBoundingClientRect().top;
+    flushSync(cambiar);
+    const corrimiento = fila.getBoundingClientRect().top - antes;
+    if (corrimiento > 0.5) {
+      relleno.current.style.height = `${relleno.current.offsetHeight + corrimiento}px`;
+      sc.scrollTop += corrimiento;
+    }
+  }
+
+  // El espacio extra se va solo a medida que el usuario sube: se saca solo lo que sobra
+  // por encima del scroll actual, así sacarlo nunca mueve la vista.
+  useEffect(() => {
+    const el = relleno.current;
+    const sc = el ? contenedorScroll(el) : null;
+    if (!el || !sc) return;
+    const recortar = () => {
+      const h = el.offsetHeight;
+      if (!h) return;
+      // Arriba de todo no hay nada que mover; si no, solo lo que queda debajo del scroll.
+      if (sc.scrollTop <= 0) { el.style.height = "0px"; return; }
+      const sobra = sc.scrollHeight - sc.clientHeight - sc.scrollTop;
+      if (sobra > 0) el.style.height = `${Math.max(0, h - sobra)}px`;
+    };
+    let frame = 0;
+    const alScroll = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(recortar); };
+    sc.addEventListener("scroll", alScroll, { passive: true });
+    sc.addEventListener("scrollend", recortar);
+    return () => { cancelAnimationFrame(frame); sc.removeEventListener("scroll", alScroll); sc.removeEventListener("scrollend", recortar); };
+  }, []);
 
   const cargar = useCallback(async () => {
     try {
@@ -220,7 +269,7 @@ export default function CategoriasPage() {
                   {/* Nombre y cantidad: al tocarlo se despliega el árbol de la categoría */}
                   <button
                     type="button"
-                    onClick={() => alternar(cat.id)}
+                    onClick={(e) => alternar(cat.id, e.currentTarget)}
                     aria-expanded={abierta}
                     title={abierta ? "Ocultar productos" : "Ver subcategorías y productos"}
                     className={`group flex w-full min-w-0 items-center gap-3 text-left sm:w-56 ${cat.activo ? "" : "opacity-50"}`}
@@ -291,6 +340,8 @@ export default function CategoriasPage() {
           </ul>
         )}
       </section>
+
+      <div ref={relleno} aria-hidden style={{ height: 0 }} />
 
       {editando ? (
         <EditarCategoria
