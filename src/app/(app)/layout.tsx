@@ -155,7 +155,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <div className="mx-auto mb-2 h-px w-6 bg-white/10" />
               )}
               {items.map((m) => {
-                const active = pathname === m.href || pathname.startsWith(`${m.href}/`);
+                // Activo también si se está en una sub-pantalla con otra ruta (Compras › Proveedores).
+                const enRuta = (h: string) => { const base = h.split("?")[0]; return pathname === base || pathname.startsWith(`${base}/`); };
+                const active = enRuta(m.href) || (m.children ?? []).some((c) => enRuta(c.href));
                 const tieneHijos = !!m.children?.length;
                 // Buscando, se despliegan solos para que se vea la sub-pantalla encontrada.
                 const abierto = (q.trim() ? true : (abiertos[m.id] ?? active)) && !collapsed;

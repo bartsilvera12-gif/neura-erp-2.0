@@ -9,12 +9,12 @@ import { moduloClientes } from "@/modules/clientes/module";
 import { moduloCaja } from "@/modules/caja/module";
 import { moduloInventario } from "@/modules/inventario/module";
 import { moduloReportes } from "@/modules/reportes/module";
-import { moduloProveedores } from "@/modules/proveedores/module";
+import { moduloCompras } from "@/modules/compras/module";
 
 const TODOS: Modulo[] = [
   moduloCaja,
   moduloInventario,
-  moduloProveedores,
+  moduloCompras,
   moduloClientes,
   moduloReportes,
   // moduloFacturacion,

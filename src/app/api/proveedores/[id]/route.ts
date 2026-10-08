@@ -45,9 +45,12 @@ export const DELETE = withTenant(
   async (ctx, req) => {
     const id = idDe(req);
     if (!id) return ERR.invalid("Falta el id del proveedor");
-    const usos = await ctx.db.select("movimientos_inventario", "id", { count: "exact", head: true }).eq("proveedor_id", id);
-    if (usos.error) return ERR.server();
-    if ((usos.count ?? 0) > 0) {
+    const [usos, facturas] = await Promise.all([
+      ctx.db.select("movimientos_inventario", "id", { count: "exact", head: true }).eq("proveedor_id", id),
+      ctx.db.select("compras", "id", { count: "exact", head: true }).eq("proveedor_id", id),
+    ]);
+    if (usos.error || facturas.error) return ERR.server();
+    if ((usos.count ?? 0) + (facturas.count ?? 0) > 0) {
       return fail("Este proveedor ya tiene compras registradas: desactivalo en vez de borrarlo, así no se pierde el historial.", 409);
     }
     const { data, error } = await ctx.db.delete("proveedores").eq("id", id).select("id");

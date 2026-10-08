@@ -33,6 +33,7 @@ const ORIGEN_BADGE: Record<OrigenMovimiento, string> = {
   compra: "bg-sky-50 text-sky-700 border border-sky-200",
   venta: "bg-violet-50 text-violet-700 border border-violet-200",
   anulacion_venta: "bg-rose-50 text-rose-700 border border-rose-200",
+  anulacion_compra: "bg-rose-50 text-rose-700 border border-rose-200",
   ajuste_manual: "bg-slate-100 text-slate-600 border border-slate-200",
   inventario_inicial: "bg-orange-50 text-orange-700 border border-orange-200",
 };

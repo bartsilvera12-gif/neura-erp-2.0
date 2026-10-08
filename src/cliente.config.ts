@@ -8,5 +8,5 @@ export const clienteConfig: ClienteConfig = {
   nombre: "Empresa Demo",
   dominio: "demo.neura.com.py",
   color: "#3F8E91",
-  modulos: ["caja", "inventario", "proveedores", "clientes", "reportes"], // ids de módulos activos
+  modulos: ["caja", "inventario", "compras", "clientes", "reportes"], // ids de módulos activos
 };
