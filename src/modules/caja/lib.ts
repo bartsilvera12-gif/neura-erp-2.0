@@ -39,6 +39,7 @@ export type Cliente = {
   direccion?: string | null;
   ciudad?: string | null;
   condicion_pago?: string;
+  plazo_dias?: number | null;
   limite_credito?: number;
   origen?: string;
   notas?: string | null;

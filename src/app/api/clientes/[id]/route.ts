@@ -7,6 +7,7 @@
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, noContent, fail, ERR } from "@/lib/api/responses";
+import { documentoRepetido } from "@/modules/clientes/server";
 
 /** Saca el id de /api/clientes/<id>[/...]. withTenant no reenvía los params de Next. */
 function clienteId(req: { url: string }): string | null {
@@ -16,7 +17,7 @@ function clienteId(req: { url: string }): string | null {
 }
 
 const DETALLE =
-  "id, nombre, razon_social, tipo_cliente, documento, ruc, telefono, email, direccion, ciudad, condicion_pago, limite_credito, origen, notas, activo, vendedor_usuario_id, creado_at, updated_at";
+  "id, nombre, razon_social, tipo_cliente, documento, ruc, telefono, email, direccion, ciudad, condicion_pago, plazo_dias, limite_credito, origen, notas, activo, vendedor_usuario_id, creado_at, updated_at";
 
 export const GET = withTenant(async (ctx, req) => {
   const id = clienteId(req);
@@ -27,6 +28,7 @@ export const GET = withTenant(async (ctx, req) => {
   if (!cli.data?.length) return ERR.notFound();
 
   const saldo = await ctx.db.rpc<number>("cliente_saldo", { p_cliente_id: id });
+  const resumen = await ctx.db.rpc("resumen_cliente", { p_cliente: id });
   const ventas = await ctx.db
     .select("ventas", "id, numero_control, fecha, total, tipo_venta, estado")
     .eq("cliente_id", id)
@@ -49,6 +51,7 @@ export const GET = withTenant(async (ctx, req) => {
     },
     ventas: ventas.data ?? [],
     contactos: contactos.data ?? [],
+    resumen: resumen.data ?? null,
   });
 });
 
@@ -62,7 +65,8 @@ const editarCliente = z.object({
   email: z.string().trim().email("Email inválido").max(120).nullish().or(z.literal("")),
   direccion: z.string().trim().max(200).nullish(),
   ciudad: z.string().trim().max(80).nullish(),
-  condicion_pago: z.string().trim().max(40).optional(),
+  condicion_pago: z.enum(["CONTADO", "CREDITO"]).optional(),
+  plazo_dias: z.coerce.number().int().min(0).max(3650).nullish(),
   limite_credito: z.coerce.number().min(0).optional(),
   origen: z.enum(["MANUAL", "VENTA", "CRM"]).optional(),
   notas: z.string().trim().max(1000).nullish(),
@@ -76,6 +80,12 @@ export const PATCH = withTenant(
     if (!id) return ERR.invalid("Falta el id del cliente");
     const patch: Record<string, unknown> = { ...input, updated_at: new Date().toISOString() };
     if ("email" in patch) patch.email = (input.email as string) || null;
+    if (input.condicion_pago === "CONTADO") patch.plazo_dias = null;
+    const doc = input.documento?.trim();
+    if (doc) {
+      const dup = await documentoRepetido(ctx.db, doc, id);
+      if (dup) return fail(`Ya existe un cliente con el documento ${doc} (${dup}).`, 409);
+    }
     const { error } = await ctx.db.update("clientes", patch).eq("id", id);
     if (error) {
       if (/duplicate key|unique/i.test(error.message)) return fail("Ya existe un cliente con ese documento.", 409);
