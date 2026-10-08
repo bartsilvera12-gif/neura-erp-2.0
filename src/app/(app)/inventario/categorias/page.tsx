@@ -54,11 +54,18 @@ export default function CategoriasPage() {
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
   const relleno = useRef<HTMLDivElement>(null);
 
+  // "+ Subcategoría": abre el árbol de la categoría y suma una rama para escribir la nueva.
+  function agregarSub(id: string) {
+    setAgregandoEn(id);
+    setAbiertas((s) => new Set(s).add(id));
+  }
+
   // Al CERRAR un árbol la página se achica y el navegador sube la vista sola (la fila
   // tocada salta). Para que no pase: se mide la fila antes y después y, si se movió, se
   // agrega espacio abajo y se corrige el scroll, así queda exactamente donde estaba.
   function alternar(id: string, fila?: HTMLElement) {
     const cerrando = abiertas.has(id);
+    if (cerrando && agregandoEn === id) setAgregandoEn(null);
     const cambiar = () => setAbiertas((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
     const sc = fila ? contenedorScroll(fila) : null;
     if (!cerrando || !fila || !sc || !relleno.current) { cambiar(); return; }
@@ -256,7 +263,7 @@ export default function CategoriasPage() {
               const abierta = abiertas.has(cat.id);
               const total = (conteo[cat.id] ?? 0) + hijas.reduce((a, h) => a + (conteo[h.id] ?? 0), 0);
               const menu: ItemMenu[] = [
-                ...(cat.activo && !cat.parent_id ? [{ etiqueta: "Agregar subcategoría", icono: <Plus className="h-4 w-4" />, onClick: () => setAgregandoEn(cat.id) }] : []),
+                ...(cat.activo && !cat.parent_id ? [{ etiqueta: "Agregar subcategoría", icono: <Plus className="h-4 w-4" />, onClick: () => agregarSub(cat.id) }] : []),
                 { etiqueta: "Editar", icono: <Pencil className="h-4 w-4" />, onClick: () => setEditando(cat) },
                 ...(!cat.parent_id ? [{ etiqueta: "Cambiar color", icono: <Palette className="h-4 w-4" />, onClick: () => setEditando(cat) }] : []),
                 cat.activo
@@ -285,53 +292,73 @@ export default function CategoriasPage() {
                     </div>
                   </button>
 
-                  {/* Subcategorías como etiquetas del color de la categoría */}
+                  {/* Cerrada: las subcategorías como etiquetas. Abierta: se ven en el árbol de abajo. */}
                   <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
-                    {hijas.map((h) => (
-                      <EtiquetaSub
-                        key={h.id}
-                        sub={h}
-                        tono={tono}
-                        cantidad={conteo[h.id] ?? 0}
-                        q={q}
-                        esAdmin={esAdmin}
-                        onEditar={() => setEditando(h)}
-                        onToggle={() => toggle(h)}
-                      />
-                    ))}
-                    {esAdmin && cat.activo && !cat.parent_id ? (
-                      agregandoEn === cat.id ? (
-                        <NuevaSub
-                          madre={cat.nombre}
-                          onCancelar={() => setAgregandoEn(null)}
-                          onCrear={async (n) => { await crearCategoria(n, cat.id); setAgregandoEn(null); }}
+                    {abierta ? null : hijas.length ? (
+                      hijas.map((h) => (
+                        <EtiquetaSub
+                          key={h.id}
+                          sub={h}
+                          tono={tono}
+                          cantidad={conteo[h.id] ?? 0}
+                          q={q}
+                          esAdmin={esAdmin}
+                          onEditar={() => setEditando(h)}
+                          onToggle={() => toggle(h)}
                         />
-                      ) : (
-                        <button
-                          onClick={() => setAgregandoEn(cat.id)}
-                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
-                        >
-                          <Plus className="h-3 w-3" /> {hijas.length ? "Agregar" : "Agregar subcategoría"}
-                        </button>
-                      )
-                    ) : hijas.length === 0 ? (
+                      ))
+                    ) : (
                       <span className="text-xs text-slate-400">Sin subcategorías</span>
-                    ) : null}
+                    )}
                   </div>
 
                   {esAdmin ? (
-                    <MenuAcciones
-                      items={menu}
-                      etiqueta={`Acciones de ${cat.nombre}`}
-                      className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                    >
-                      <MoreHorizontal className="h-5 w-5" />
-                    </MenuAcciones>
+                    <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                      {cat.activo && !cat.parent_id ? (
+                        <button
+                          onClick={() => agregarSub(cat.id)}
+                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                        >
+                          <Plus className="h-3 w-3" /> Subcategoría
+                        </button>
+                      ) : null}
+                      <MenuAcciones
+                        items={menu}
+                        etiqueta={`Acciones de ${cat.nombre}`}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                      >
+                        <MoreHorizontal className="h-5 w-5" />
+                      </MenuAcciones>
+                    </div>
                   ) : null}
                   </div>
                   {abierta ? (
                     <div className="border-t border-slate-100 bg-slate-50/60 sm:pl-10">
-                      <ArbolCategoria categoria={cat} hijas={hijas} conteo={conteo} tono={tono} />
+                      <ArbolCategoria
+                        categoria={cat}
+                        hijas={hijas}
+                        conteo={conteo}
+                        tono={tono}
+                        renderSub={(h) => (
+                          <EtiquetaSub
+                            sub={h}
+                            tono={tono}
+                            q={q}
+                            esAdmin={esAdmin}
+                            onEditar={() => setEditando(h)}
+                            onToggle={() => toggle(h)}
+                          />
+                        )}
+                        extra={
+                          agregandoEn === cat.id ? (
+                            <NuevaSub
+                              madre={cat.nombre}
+                              onCancelar={() => setAgregandoEn(null)}
+                              onCrear={async (n) => { await crearCategoria(n, cat.id); setAgregandoEn(null); }}
+                            />
+                          ) : undefined
+                        }
+                      />
                     </div>
                   ) : null}
                 </li>
@@ -360,7 +387,7 @@ export default function CategoriasPage() {
 function EtiquetaSub({ sub, tono, cantidad, q, esAdmin, onEditar, onToggle }: {
   sub: Categoria;
   tono: ReturnType<typeof tonosDe>;
-  cantidad: number;
+  cantidad?: number;
   q: string;
   esAdmin: boolean;
   onEditar: () => void;
@@ -370,7 +397,7 @@ function EtiquetaSub({ sub, tono, cantidad, q, esAdmin, onEditar, onToggle }: {
   const contenido = (
     <>
       <Resaltado texto={sub.nombre} q={q} />
-      <span className="font-normal opacity-70">· {cantidad}</span>
+      {cantidad !== undefined ? <span className="font-normal opacity-70">· {cantidad}</span> : null}
       {!sub.activo ? <span className="font-normal opacity-70">(inactiva)</span> : null}
     </>
   );
