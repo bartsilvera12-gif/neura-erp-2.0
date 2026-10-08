@@ -24,11 +24,23 @@ export const PATCH = withTenant(
   async (ctx, req, input) => {
     const id = catId(req.url);
     if (!id) return ERR.invalid("Falta el id de la categoría");
-    if (input.parent_id === id) return fail("Una categoría no puede ser su propia categoría padre.", 400);
+    if (input.parent_id === id) return fail("Una categoría no puede estar dentro de sí misma.", 400);
+    // Dos niveles: la madre tiene que ser una categoría principal, y una categoría con
+    // subcategorías no puede pasar a ser subcategoría de otra.
+    if (input.parent_id) {
+      const [pa, hijas] = await Promise.all([
+        ctx.db.select("categorias_productos", "parent_id").eq("id", input.parent_id).limit(1),
+        ctx.db.select("categorias_productos", "id").eq("parent_id", id).limit(1),
+      ]);
+      const fila = pa.data?.[0] as { parent_id: string | null } | undefined;
+      if (!fila) return fail("La categoría elegida no existe.", 400);
+      if (fila.parent_id) return fail("Las subcategorías no pueden tener otras subcategorías adentro.", 400);
+      if (hijas.data?.length) return fail("Esta categoría tiene subcategorías: no puede quedar dentro de otra.", 400);
+    }
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-    if (input.nombre !== undefined) patch.nombre = input.nombre.toUpperCase();
+    if (input.nombre !== undefined) patch.nombre = input.nombre;
     if (input.codigo !== undefined) patch.codigo = input.codigo ? input.codigo.toUpperCase() : null;
-    if (input.descripcion !== undefined) patch.descripcion = input.descripcion ? input.descripcion.toUpperCase() : null;
+    if (input.descripcion !== undefined) patch.descripcion = input.descripcion || null;
     if (input.parent_id !== undefined) patch.parent_id = input.parent_id ?? null;
     if (input.activo !== undefined) patch.activo = input.activo;
     const { data, error } = await ctx.db.update("categorias_productos", patch).eq("id", id).select("id");

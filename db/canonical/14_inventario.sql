@@ -358,3 +358,15 @@ $$;
 
 grant execute on function :"schema".categoria_ruta(uuid) to authenticated, service_role;
 grant execute on function :"schema".categoria_coincide(uuid, text) to authenticated, service_role;
+
+-- Productos activos por categoría (pantalla de Categorías en árbol). La madre suma la de
+-- sus subcategorías en la pantalla, no acá.
+create or replace function :"schema".conteo_productos_por_categoria()
+returns table (categoria_id uuid, productos bigint)
+language sql stable security invoker set search_path = :"schema", public as $$
+  select categoria_principal_id, count(*)
+    from productos
+   where empresa_id = empresa_actual() and activo and categoria_principal_id is not null
+   group by categoria_principal_id
+$$;
+grant execute on function :"schema".conteo_productos_por_categoria() to authenticated, service_role;
