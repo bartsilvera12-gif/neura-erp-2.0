@@ -7,6 +7,7 @@ export type ProductoInventario = {
   sku: string;
   codigo_barras: string | null;
   categoria_principal_id: string | null;
+  proveedor_principal_id?: string | null;
   costo_promedio: number | null;
   precio_venta: number;
   precio_mayorista: number | null;

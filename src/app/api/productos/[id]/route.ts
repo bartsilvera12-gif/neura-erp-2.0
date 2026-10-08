@@ -19,7 +19,7 @@ function prodId(req: { url: string }): string | null {
 }
 
 const DETALLE =
-  "id, nombre, sku, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, es_vendible, activo, imagen_url, descripcion, codigo_barras, categoria_principal_id";
+  "id, nombre, sku, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, es_vendible, activo, imagen_url, descripcion, codigo_barras, categoria_principal_id, proveedor_principal_id";
 
 export const GET = withTenant(async (ctx, req) => {
   const id = prodId(req);
@@ -35,6 +35,7 @@ const editar = z.object({
   sku: z.string().trim().min(1).optional(),
   codigo_barras: z.string().trim().max(60).nullish(),
   categoria_principal_id: z.string().uuid().nullish(),
+  proveedor_principal_id: z.string().uuid().nullish(),
   costo_promedio: z.coerce.number().min(0).optional(),
   precio_venta: z.coerce.number().min(0).optional(),
   precio_mayorista: z.coerce.number().min(0).nullish(),

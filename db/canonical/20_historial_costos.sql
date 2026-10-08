@@ -9,6 +9,7 @@
 -- =============================================================================
 alter table :"schema".movimientos_inventario add column if not exists proveedor text;
 alter table :"schema".movimientos_inventario add column if not exists numero_factura text;
+alter table :"schema".movimientos_inventario add column if not exists proveedor_id uuid;
 
 drop function if exists :"schema".registrar_movimiento_stock(uuid, text, numeric, numeric, text, text);
 create or replace function :"schema".registrar_movimiento_stock(
@@ -97,7 +98,7 @@ create or replace function :"schema".historial_costos_producto(p_producto_id uui
 returns jsonb
 language sql stable security invoker set search_path = :"schema", public as $$
   with c as (
-    select m.id, m.fecha, m.cantidad, m.costo_unitario as costo, m.proveedor, m.numero_factura, m.origen,
+    select m.id, m.fecha, m.cantidad, m.costo_unitario as costo, m.proveedor, m.proveedor_id, m.numero_factura, m.origen,
            m.referencia, m.usuario_nombre,
            lag(m.costo_unitario) over (order by m.fecha, m.id) as anterior
       from movimientos_inventario m
@@ -111,7 +112,7 @@ language sql stable security invoker set search_path = :"schema", public as $$
     'compras', coalesce((
       select jsonb_agg(jsonb_build_object(
                'id', x.id, 'fecha', x.fecha, 'cantidad', x.cantidad, 'costo', x.costo,
-               'proveedor', x.proveedor, 'factura', x.numero_factura, 'origen', x.origen,
+               'proveedor', x.proveedor, 'proveedor_id', x.proveedor_id, 'factura', x.numero_factura, 'origen', x.origen,
                'referencia', x.referencia, 'usuario', x.usuario_nombre,
                'variacion_pct', case when x.anterior > 0 then round((x.costo - x.anterior) / x.anterior * 100, 1) end
              ) order by x.fecha desc, x.id desc)

@@ -13,6 +13,7 @@ import type { TipoIva } from "@/modules/caja/lib";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 import { partesCategoria, type Categoria } from "@/modules/inventario/categorias";
 import { HistorialCostos } from "@/modules/inventario/HistorialCostos";
+import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
 
 const BRAND = clienteConfig.color;
 const INPUT =
@@ -47,6 +48,7 @@ export function ProductoForm({
     sku: producto?.sku ?? "",
     codigo_barras: producto?.codigo_barras ?? "",
     categoria_principal_id: producto?.categoria_principal_id ?? "",
+    proveedor_principal_id: producto?.proveedor_principal_id ?? null,
     unidad_medida: producto?.unidad_medida ?? "Unidad",
     tipo_iva: (producto?.tipo_iva ?? "10%") as TipoIva,
     costo_promedio: Number(producto?.costo_promedio ?? 0),
@@ -129,6 +131,7 @@ export function ProductoForm({
       sku: f.sku.trim(),
       codigo_barras: f.codigo_barras.trim() || null,
       categoria_principal_id: f.categoria_principal_id || null,
+      proveedor_principal_id: f.proveedor_principal_id || null,
       unidad_medida: f.unidad_medida.trim() || "Unidad",
       tipo_iva: f.tipo_iva,
       costo_promedio: f.costo_promedio || 0,
@@ -258,6 +261,11 @@ export function ProductoForm({
                   ], ...subs.map((c): [string, string] => [c.id, c.nombre])]}
                 />
               </label>
+            </div>
+            <div className="mt-3">
+              <span className={ET}>Proveedor principal <span className="font-normal text-slate-400">(opcional)</span></span>
+              <SelectorProveedor value={f.proveedor_principal_id} onChange={(id) => set("proveedor_principal_id", id)} />
+              <p className="mt-1 text-[11px] text-slate-400">A quién se le compra normalmente. Se propone al cargar una compra.</p>
             </div>
           </Bloque>
 

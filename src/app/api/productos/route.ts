@@ -14,7 +14,7 @@ import { ok, created, fail, ERR } from "@/lib/api/responses";
 import { registrarMovimiento } from "@/modules/inventario/server/kardex";
 
 const COLS =
-  "id, nombre, sku, codigo_barras, categoria_principal_id, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, es_vendible, activo, imagen_url";
+  "id, nombre, sku, codigo_barras, categoria_principal_id, proveedor_principal_id, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, es_vendible, activo, imagen_url";
 
 export const GET = withTenant(async (ctx, req) => {
   const sp = new URL(req.url).searchParams;
@@ -68,6 +68,7 @@ const crearProducto = z.object({
   sku: z.string().trim().min(1, "El SKU es obligatorio"),
   codigo_barras: z.string().trim().max(60).nullish(),
   categoria_principal_id: z.string().uuid().nullish(),
+  proveedor_principal_id: z.string().uuid().nullish(),
   costo_promedio: z.coerce.number().min(0).default(0),
   precio_venta: z.coerce.number().min(0).default(0),
   precio_mayorista: z.coerce.number().min(0).nullish(),

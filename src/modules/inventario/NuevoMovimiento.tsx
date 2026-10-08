@@ -15,12 +15,13 @@ import { Select } from "@/components/Select";
 import MontoInput from "@/components/ui/MontoInput";
 import { parseNumero } from "@/lib/imports/consolidacion-productos";
 import { Variacion, type HistorialCostosData } from "@/modules/inventario/HistorialCostos";
+import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
 
 const BRAND = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 const ET = "mb-1 block text-xs font-medium text-slate-600";
 
-type Prod = { id: string; nombre: string; sku: string; stock_actual: number; costo_promedio: number | null; unidad_medida: string; controla_stock: boolean; imagen_url: string | null };
+type Prod = { id: string; nombre: string; sku: string; stock_actual: number; costo_promedio: number | null; unidad_medida: string; controla_stock: boolean; imagen_url: string | null; proveedor_principal_id?: string | null };
 type Tipo = "ENTRADA" | "SALIDA" | "AJUSTE";
 
 const fmt = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
@@ -43,18 +44,12 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
   const [cantidad, setCantidad] = useState("");
   const [costo, setCosto] = useState(0);
   const [referencia, setReferencia] = useState("");
-  const [proveedor, setProveedor] = useState("");
+  const [proveedorId, setProveedorId] = useState<string | null>(null);
   const [factura, setFactura] = useState("");
-  const [proveedores, setProveedores] = useState<string[]>([]);
   const [ultimaCompra, setUltimaCompra] = useState<HistorialCostosData["compras"][number] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const buscarRef = useRef<HTMLInputElement>(null);
-
-  // Proveedores ya cargados, para sugerirlos.
-  useEffect(() => {
-    apiFetch<string[]>("/api/inventario/proveedores").then(setProveedores).catch(() => {});
-  }, []);
 
   // Última compra del producto elegido: se muestra al cargar el costo y se propone
   // el mismo proveedor.
@@ -67,7 +62,9 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
         if (!vivo) return;
         const u = r.compras.find((c) => c.origen === "compra") ?? r.compras[0] ?? null;
         setUltimaCompra(u);
-        if (u?.proveedor) setProveedor((p) => p || u.proveedor!);
+        // Propone el proveedor de la última compra o, si no hay, el principal del producto.
+        const sugerido = (u as { proveedor_id?: string | null } | null)?.proveedor_id ?? prod.proveedor_principal_id ?? null;
+        if (sugerido) setProveedorId((p) => p ?? sugerido);
       })
       .catch(() => {});
     return () => { vivo = false; };
@@ -139,7 +136,7 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
           costo_unitario: tipo === "ENTRADA" ? costo : 0,
           origen,
           referencia: referencia.trim() || null,
-          proveedor: esCompra ? proveedor.trim() || null : null,
+          proveedor_id: esCompra ? proveedorId : null,
           numero_factura: esCompra ? factura.trim() || null : null,
         }),
       });
@@ -269,13 +266,10 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
 
         {esCompra ? (
           <div className="grid grid-cols-2 gap-3">
-            <label className="block">
+            <div>
               <span className={ET}>Proveedor <span className="font-normal text-slate-400">(opcional)</span></span>
-              <input value={proveedor} onChange={(e) => setProveedor(e.target.value)} list="proveedores-usados" maxLength={120} placeholder="Ej: Distribuidora Paresa" className={INPUT} />
-              <datalist id="proveedores-usados">
-                {proveedores.map((p) => <option key={p} value={p} />)}
-              </datalist>
-            </label>
+              <SelectorProveedor value={proveedorId} onChange={(id) => setProveedorId(id)} />
+            </div>
             <label className="block">
               <span className={ET}>Nº de factura <span className="font-normal text-slate-400">(opcional)</span></span>
               <input value={factura} onChange={(e) => setFactura(e.target.value)} maxLength={60} placeholder="Ej: 001-001-0000123" className={`${INPUT} font-mono`} />
