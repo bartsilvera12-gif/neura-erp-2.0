@@ -258,7 +258,8 @@ export default function InventarioPage() {
               ) : (
                 productos.map((p) => {
                   const costo = Number(p.costo_promedio) || 0;
-                  const stockBajo = Number(p.stock_actual) <= Number(p.stock_minimo);
+                  // Misma regla que el reporte de Stock mínimo: mínimo cargado y stock por debajo.
+                  const stockBajo = Number(p.stock_minimo) > 0 && Number(p.stock_actual) < Number(p.stock_minimo);
                   const margen = margenVenta(costo, Number(p.precio_venta));
                   const sinControl = p.controla_stock === false;
                   const catNombre = p.categoria_principal_id ? categoriaPorId.get(p.categoria_principal_id) : undefined;

@@ -1,4 +1,4 @@
-import { Lock, ShoppingCart, type LucideIcon } from "lucide-react";
+import { Lock, PackageMinus, ShoppingCart, type LucideIcon } from "lucide-react";
 
 /**
  * Catálogo de reportes: alimenta la pantalla /reportes (una tarjeta por reporte).
@@ -26,5 +26,12 @@ export const REPORTES: Reporte[] = [
     subtitulo: "Arqueo de turnos",
     descripcion: "Turnos de caja por rango de fechas: apertura, cierre, efectivo esperado vs. contado y diferencias. Arqueo de cada turno en PDF.",
     icono: Lock,
+  },
+  {
+    href: "/reportes/stock-minimo",
+    titulo: "Stock mínimo",
+    subtitulo: "Productos por reponer",
+    descripcion: "Productos cuyo stock quedó por debajo del mínimo definido, con lo vendido en 30 días y el costo de reponer. Lista de reposición en PDF y Excel.",
+    icono: PackageMinus,
   },
 ];
