@@ -56,3 +56,8 @@ body {
   from { opacity: 0; transform: translateY(-4px) scaleY(0.96); }
   to { opacity: 1; transform: translateY(0) scaleY(1); }
 }
+
+/* Selector de color (react-colorful) a todo el ancho del panel */
+.selector-color .react-colorful { width: 100%; height: 160px; }
+.selector-color .react-colorful__saturation { border-radius: 12px 12px 0 0; }
+.selector-color .react-colorful__last-control { border-radius: 0 0 12px 12px; }

@@ -1,19 +1,22 @@
 "use client";
 
 /**
- * /inventario/categorias — Categorías de productos en ÁRBOL: cada categoría con sus
- * subcategorías debajo (dos niveles: Bebidas › Gaseosas), plegables, con la cantidad de
- * productos y un "+ Subcategoría" en la misma fila para crearla ahí mismo.
+ * /inventario/categorias — Categorías de productos en LISTA LIMPIA: una fila por categoría
+ * con su color, sus subcategorías como etiquetas (del mismo color) y la cantidad de
+ * productos. Las acciones viven en el menú ⋯ (y en cada etiqueta), así la pantalla no se
+ * llena de botones repetidos. Dos niveles: Bebidas › Gaseosas.
  * No hay borrado (como Ferretería): una categoría con productos se desactiva.
  */
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown, ChevronRight, CornerDownRight, Loader2, Pencil, Plus, Search, Tags, X } from "lucide-react";
+import { Ban, CheckCircle2, Loader2, MoreHorizontal, Palette, Pencil, Plus, Search, Tags, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
-import { colorCategoria, colorLibre, coloresPorCategoria, PALETA, type Categoria, type ColorCategoria } from "@/modules/inventario/categorias";
+import { ColorPicker } from "@/components/ColorPicker";
+import { MenuAcciones, type ItemMenu } from "@/components/MenuAcciones";
+import { colorLibre, coloresPorCategoria, tonosDe, type Categoria } from "@/modules/inventario/categorias";
 
 const TEAL = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
@@ -33,8 +36,6 @@ export default function CategoriasPage() {
   const [creando, setCreando] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [editando, setEditando] = useState<Categoria | null>(null);
-  const [toggling, setToggling] = useState<string | null>(null);
-  const [cerradas, setCerradas] = useState<Set<string>>(new Set());
   const [busqueda, setBusqueda] = useState("");
   const [agregandoEn, setAgregandoEn] = useState<string | null>(null);
 
@@ -53,15 +54,11 @@ export default function CategoriasPage() {
     apiFetch<{ rol: string }>("/api/me").then((m) => setEsAdmin(m.rol === "ADMIN")).catch(() => {});
   }, [cargar]);
 
-  const abrir = (id: string) => setCerradas((s) => { const n = new Set(s); n.delete(id); return n; });
-  const alternar = (id: string) => setCerradas((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-
   async function crearCategoria(nombreNuevo: string, parentId: string | null, color: string | null = null) {
     await apiFetch("/api/inventario/categorias", {
       method: "POST",
       body: JSON.stringify({ nombre: nombreNuevo.trim(), parent_id: parentId, color: parentId ? null : color }),
     });
-    if (parentId) abrir(parentId);
     await cargar();
   }
 
@@ -82,20 +79,17 @@ export default function CategoriasPage() {
   }
 
   async function toggle(c: Categoria) {
-    setToggling(c.id);
     setError(null);
     try {
       await apiFetch(`/api/inventario/categorias/${c.id}`, { method: "PATCH", body: JSON.stringify({ activo: !c.activo }) });
       await cargar();
     } catch (err) {
       setError((err as Error).message);
-    } finally {
-      setToggling(null);
     }
   }
 
-  // Árbol: principales ordenadas y, debajo, sus subcategorías. Una sub cuya madre no está
-  // (datos viejos) se muestra como principal para que no desaparezca.
+  // Principales ordenadas con sus subcategorías. Una sub cuya madre no está (datos viejos)
+  // se muestra como principal para que no desaparezca.
   const arbol = useMemo(() => {
     const ids = new Set(categorias.map((c) => c.id));
     const orden = [...categorias].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
@@ -107,20 +101,14 @@ export default function CategoriasPage() {
   const q = sinTildes(busqueda.trim());
   const visibles = useMemo(() => {
     if (!q) return arbol;
-    return arbol
-      .map(({ cat, hijas }) => {
-        const madreCoincide = sinTildes(cat.nombre).includes(q);
-        return { cat, hijas: madreCoincide ? hijas : hijas.filter((h) => sinTildes(h.nombre).includes(q)), madreCoincide };
-      })
-      .filter((g) => g.madreCoincide || g.hijas.length > 0);
+    return arbol.filter(({ cat, hijas }) => sinTildes(cat.nombre).includes(q) || hijas.some((h) => sinTildes(h.nombre).includes(q)));
   }, [arbol, q]);
 
   const principalesActivas = categorias.filter((c) => !c.parent_id && c.activo);
   const padreElegido = principalesActivas.find((c) => c.id === padre);
   const colorElegido = colorNuevo ?? colorLibre(categorias);
   const totalSubs = categorias.filter((c) => c.parent_id).length;
-  const conHijas = arbol.filter((g) => g.hijas.length > 0).map((g) => g.cat.id);
-  const todoAbierto = conHijas.every((id) => !cerradas.has(id));
+  const hexDe = (id: string) => colores.get(id)?.dot ?? "#94a3b8";
 
   return (
     <div className="space-y-6 pb-10">
@@ -144,7 +132,7 @@ export default function CategoriasPage() {
             <span className="block h-5 w-1 rounded-full" style={{ backgroundColor: TEAL }} />
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Nueva categoría</h2>
           </div>
-          <form onSubmit={crear} className="grid gap-3 sm:grid-cols-[2fr_1.5fr_auto] sm:items-end">
+          <form onSubmit={crear} className="grid gap-3 sm:grid-cols-[2fr_1.5fr_1fr_auto] sm:items-end">
             <label className="block">
               <span className={ET}>Nombre</span>
               <input value={nombre} onChange={(e) => setNombre(e.target.value)} required placeholder={padreElegido ? "Ej: Gaseosas" : "Ej: Bebidas"} className={INPUT} />
@@ -158,29 +146,25 @@ export default function CategoriasPage() {
                 options={[["", "Es una categoría principal"], ...principalesActivas.map((c): [string, string] => [c.id, `Dentro de ${c.nombre}`])]}
               />
             </label>
+            <div>
+              <span className={ET}>Color</span>
+              {padreElegido ? (
+                <p className="flex h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs text-slate-500" title="Las subcategorías usan el color de su categoría">
+                  <span className="h-4 w-4 shrink-0 rounded-md" style={{ backgroundColor: hexDe(padreElegido.id) }} />
+                  El de {padreElegido.nombre}
+                </p>
+              ) : (
+                <ColorPicker value={colorElegido} onChange={setColorNuevo} block />
+              )}
+            </div>
             <button type="submit" disabled={creando || !nombre.trim()} className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
               {creando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               {creando ? "Creando..." : padreElegido ? "Crear subcategoría" : "Crear categoría"}
             </button>
-            <div className="sm:col-span-3">
-              <span className={ET}>Color</span>
-              {padreElegido ? (
-                <p className="flex items-center gap-2 py-1 text-xs text-slate-500">
-                  <Punto col={colores.get(padreElegido.id) ?? colorCategoria(padreElegido.nombre)} />
-                  Usa el color de {padreElegido.nombre}
-                </p>
-              ) : (
-                <SelectorColor valor={colorElegido} onChange={setColorNuevo} />
-              )}
-            </div>
           </form>
-          <p className="mt-2 text-[11px] text-slate-400">
-            {padreElegido && nombre.trim() ? (
-              <>Va a quedar como <strong className="font-semibold text-slate-600">{padreElegido.nombre} › {nombre.trim()}</strong></>
-            ) : (
-              <>También podés tocar <strong className="font-semibold text-slate-600">+ Subcategoría</strong> en cualquier categoría de la lista.</>
-            )}
-          </p>
+          {padreElegido && nombre.trim() ? (
+            <p className="mt-2 text-[11px] text-slate-400">Va a quedar como <strong className="font-semibold text-slate-600">{padreElegido.nombre} › {nombre.trim()}</strong></p>
+          ) : null}
         </section>
       ) : null}
 
@@ -191,7 +175,7 @@ export default function CategoriasPage() {
         </div>
       ) : null}
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-3">
           <div className="relative min-w-[220px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -200,14 +184,6 @@ export default function CategoriasPage() {
           <p className="text-xs text-slate-500">
             {arbol.length} {arbol.length === 1 ? "categoría" : "categorías"} · {totalSubs} {totalSubs === 1 ? "subcategoría" : "subcategorías"}
           </p>
-          {conHijas.length > 0 && !q ? (
-            <button
-              onClick={() => setCerradas(todoAbierto ? new Set(conHijas) : new Set())}
-              className="rounded-lg px-2 py-1 text-xs font-semibold text-[var(--brand)] transition hover:bg-[var(--brand-50)]"
-            >
-              {todoAbierto ? "Cerrar todas" : "Abrir todas"}
-            </button>
-          ) : null}
         </div>
 
         {cargando ? (
@@ -222,77 +198,73 @@ export default function CategoriasPage() {
         ) : (
           <ul className="divide-y divide-slate-100">
             {visibles.map(({ cat, hijas }) => {
-              const col = colores.get(cat.id) ?? colorCategoria(cat.nombre);
-              const abierta = !!q || !cerradas.has(cat.id);
+              const hex = hexDe(cat.id);
+              const tono = tonosDe(hex);
               const total = (conteo[cat.id] ?? 0) + hijas.reduce((a, h) => a + (conteo[h.id] ?? 0), 0);
-              const tieneHijas = hijas.length > 0;
+              const menu: ItemMenu[] = [
+                ...(cat.activo && !cat.parent_id ? [{ etiqueta: "Agregar subcategoría", icono: <Plus className="h-4 w-4" />, onClick: () => setAgregandoEn(cat.id) }] : []),
+                { etiqueta: "Editar", icono: <Pencil className="h-4 w-4" />, onClick: () => setEditando(cat) },
+                ...(!cat.parent_id ? [{ etiqueta: "Cambiar color", icono: <Palette className="h-4 w-4" />, onClick: () => setEditando(cat) }] : []),
+                cat.activo
+                  ? { etiqueta: "Desactivar", icono: <Ban className="h-4 w-4" />, onClick: () => toggle(cat), tono: "peligro" as const }
+                  : { etiqueta: "Activar", icono: <CheckCircle2 className="h-4 w-4" />, onClick: () => toggle(cat), tono: "exito" as const },
+              ];
               return (
-                <li key={cat.id}>
-                  {/* Categoría principal */}
-                  <div className={`flex items-center gap-2 px-3 py-2.5 transition-colors hover:bg-[var(--brand-50)] sm:px-5 ${cat.activo ? "" : "opacity-60"}`}>
-                    <button
-                      onClick={() => tieneHijas && alternar(cat.id)}
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-slate-400 transition ${tieneHijas ? "hover:bg-white hover:text-slate-700" : "invisible"}`}
-                      aria-label={abierta ? `Cerrar ${cat.nombre}` : `Abrir ${cat.nombre}`}
-                    >
-                      {abierta ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-                    </button>
-                    {esAdmin ? (
-                      <button onClick={() => setEditando(cat)} title="Cambiar color" className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full transition hover:scale-125">
-                        <Punto col={col} />
-                      </button>
-                    ) : (
-                      <Punto col={col} />
-                    )}
-                    <button onClick={() => tieneHijas && alternar(cat.id)} className={`min-w-0 flex-1 text-left ${tieneHijas ? "cursor-pointer" : "cursor-default"}`}>
-                      <p className="truncate text-sm font-bold text-slate-900">
+                <li key={cat.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5 transition-colors hover:bg-slate-50/70">
+                  {/* Nombre y cantidad */}
+                  <div className={`flex w-full min-w-0 items-center gap-3 sm:w-56 ${cat.activo ? "" : "opacity-50"}`}>
+                    <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: hex, boxShadow: `0 0 0 4px ${tono.fondo}` }} />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">
                         <Resaltado texto={cat.nombre} q={q} />
                         {!cat.activo ? <EtiquetaInactiva /> : null}
                       </p>
-                      <p className="text-[11px] text-slate-500">
-                        {nProductos(total)}
-                        {tieneHijas ? ` · ${hijas.length} ${hijas.length === 1 ? "subcategoría" : "subcategorías"}` : ""}
-                      </p>
-                    </button>
-                    {esAdmin ? (
-                      <div className="flex shrink-0 items-center gap-1">
-                        {cat.activo && !cat.parent_id ? (
-                          <button
-                            onClick={() => { setAgregandoEn(cat.id); abrir(cat.id); }}
-                            className="inline-flex items-center gap-1 rounded-lg border border-[var(--brand)] px-2.5 py-1 text-xs font-semibold text-[var(--brand)] transition hover:bg-white"
-                          >
-                            <Plus className="h-3.5 w-3.5" /> Subcategoría
-                          </button>
-                        ) : null}
-                        <Acciones c={cat} toggling={toggling === cat.id} onEditar={() => setEditando(cat)} onToggle={() => toggle(cat)} />
-                      </div>
-                    ) : null}
+                      <p className="text-xs text-slate-500">{nProductos(total)}</p>
+                    </div>
                   </div>
 
-                  {/* Subcategorías */}
-                  {abierta && (tieneHijas || agregandoEn === cat.id) ? (
-                    <ul className="pb-2">
-                      {hijas.map((h) => (
-                        <li key={h.id} className={`flex items-center gap-2 py-2 pl-12 pr-3 transition-colors hover:bg-[var(--brand-50)] sm:pl-16 sm:pr-5 ${h.activo ? "" : "opacity-60"}`}>
-                          <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-slate-300" />
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-sm font-medium text-slate-700">
-                              <Resaltado texto={h.nombre} q={q} />
-                              {!h.activo ? <EtiquetaInactiva /> : null}
-                            </p>
-                            <p className="text-[11px] text-slate-500">{nProductos(conteo[h.id] ?? 0)}</p>
-                          </div>
-                          {esAdmin ? <Acciones c={h} toggling={toggling === h.id} onEditar={() => setEditando(h)} onToggle={() => toggle(h)} /> : null}
-                        </li>
-                      ))}
-                      {agregandoEn === cat.id ? (
+                  {/* Subcategorías como etiquetas del color de la categoría */}
+                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                    {hijas.map((h) => (
+                      <EtiquetaSub
+                        key={h.id}
+                        sub={h}
+                        tono={tono}
+                        cantidad={conteo[h.id] ?? 0}
+                        q={q}
+                        esAdmin={esAdmin}
+                        onEditar={() => setEditando(h)}
+                        onToggle={() => toggle(h)}
+                      />
+                    ))}
+                    {esAdmin && cat.activo && !cat.parent_id ? (
+                      agregandoEn === cat.id ? (
                         <NuevaSub
                           madre={cat.nombre}
                           onCancelar={() => setAgregandoEn(null)}
                           onCrear={async (n) => { await crearCategoria(n, cat.id); setAgregandoEn(null); }}
                         />
-                      ) : null}
-                    </ul>
+                      ) : (
+                        <button
+                          onClick={() => setAgregandoEn(cat.id)}
+                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                        >
+                          <Plus className="h-3 w-3" /> {hijas.length ? "Agregar" : "Agregar subcategoría"}
+                        </button>
+                      )
+                    ) : hijas.length === 0 ? (
+                      <span className="text-xs text-slate-400">Sin subcategorías</span>
+                    ) : null}
+                  </div>
+
+                  {esAdmin ? (
+                    <MenuAcciones
+                      items={menu}
+                      etiqueta={`Acciones de ${cat.nombre}`}
+                      className="ml-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                    >
+                      <MoreHorizontal className="h-5 w-5" />
+                    </MenuAcciones>
                   ) : null}
                 </li>
               );
@@ -301,49 +273,58 @@ export default function CategoriasPage() {
         )}
       </section>
 
-      {editando ? <EditarCategoria categoria={editando} categorias={categorias} colorActual={colores.get(editando.id)} onClose={() => setEditando(null)} onGuardado={() => { setEditando(null); void cargar(); }} /> : null}
+      {editando ? (
+        <EditarCategoria
+          categoria={editando}
+          categorias={categorias}
+          colorActual={colores.get(editando.id)?.dot}
+          onClose={() => setEditando(null)}
+          onGuardado={() => { setEditando(null); void cargar(); }}
+        />
+      ) : null}
     </div>
   );
 }
 
-function Acciones({ c, toggling, onEditar, onToggle }: { c: Categoria; toggling: boolean; onEditar: () => void; onToggle: () => void }) {
-  return (
-    <div className="flex shrink-0 items-center gap-1">
-      <button onClick={onEditar} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-500 transition hover:bg-white hover:text-[var(--brand)]">
-        <Pencil className="h-3.5 w-3.5" /> Editar
-      </button>
-      <button onClick={onToggle} disabled={toggling} className={`rounded-lg px-2 py-1 text-xs font-medium transition hover:bg-white disabled:opacity-40 ${c.activo ? "text-slate-500 hover:text-amber-600" : "text-emerald-600 hover:text-emerald-700"}`}>
-        {toggling ? "..." : c.activo ? "Desactivar" : "Activar"}
-      </button>
-    </div>
+/** Subcategoría como etiqueta del color de su categoría; al tocarla, sus acciones. */
+function EtiquetaSub({ sub, tono, cantidad, q, esAdmin, onEditar, onToggle }: {
+  sub: Categoria;
+  tono: ReturnType<typeof tonosDe>;
+  cantidad: number;
+  q: string;
+  esAdmin: boolean;
+  onEditar: () => void;
+  onToggle: () => void;
+}) {
+  const coincide = !!q && sinTildes(sub.nombre).includes(q);
+  const contenido = (
+    <>
+      <Resaltado texto={sub.nombre} q={q} />
+      <span className="font-normal opacity-70">· {cantidad}</span>
+      {!sub.activo ? <span className="font-normal opacity-70">(inactiva)</span> : null}
+    </>
   );
-}
-
-function Punto({ col }: { col: ColorCategoria }) {
-  return <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: col.dot, boxShadow: `0 0 0 3px ${col.bg}` }} />;
-}
-
-/** Fila de colores para elegir con un toque; el elegido lleva un check. */
-function SelectorColor({ valor, onChange }: { valor: string; onChange: (hex: string) => void }) {
+  const estilo = {
+    backgroundColor: sub.activo ? tono.fondo : "transparent",
+    borderColor: coincide ? tono.dot : tono.borde,
+    color: tono.texto,
+  };
+  const clase = `inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${sub.activo ? "" : "border-dashed opacity-60"}`;
+  if (!esAdmin) return <span className={clase} style={estilo}>{contenido}</span>;
   return (
-    <div className="flex flex-wrap gap-2 py-1" role="radiogroup" aria-label="Color de la categoría">
-      {PALETA.map((p) => {
-        const sel = p.dot.toLowerCase() === valor.toLowerCase();
-        return (
-          <button
-            key={p.dot}
-            type="button"
-            role="radio"
-            aria-checked={sel}
-            onClick={() => onChange(p.dot)}
-            className="flex h-8 w-8 items-center justify-center rounded-full transition hover:scale-110"
-            style={{ backgroundColor: p.dot, boxShadow: sel ? `0 0 0 2px #fff, 0 0 0 4px ${p.dot}` : undefined }}
-          >
-            {sel ? <Check className="h-4 w-4 text-white" strokeWidth={3} /> : null}
-          </button>
-        );
-      })}
-    </div>
+    <MenuAcciones
+      etiqueta={`Acciones de ${sub.nombre}`}
+      className={`${clase} hover:brightness-95`}
+      style={estilo}
+      items={[
+        { etiqueta: "Editar", icono: <Pencil className="h-4 w-4" />, onClick: onEditar },
+        sub.activo
+          ? { etiqueta: "Desactivar", icono: <Ban className="h-4 w-4" />, onClick: onToggle, tono: "peligro" }
+          : { etiqueta: "Activar", icono: <CheckCircle2 className="h-4 w-4" />, onClick: onToggle, tono: "exito" },
+      ]}
+    >
+      {contenido}
+    </MenuAcciones>
   );
 }
 
@@ -365,7 +346,7 @@ function Resaltado({ texto, q }: { texto: string; q: string }) {
   );
 }
 
-/** Fila para crear una subcategoría ahí mismo, debajo de su categoría. Enter crea, Esc cancela. */
+/** Campo para crear una subcategoría ahí mismo, en la fila. Enter crea, Esc cancela. */
 function NuevaSub({ madre, onCrear, onCancelar }: { madre: string; onCrear: (nombre: string) => Promise<void>; onCancelar: () => void }) {
   const [nombre, setNombre] = useState("");
   const [busy, setBusy] = useState(false);
@@ -387,32 +368,35 @@ function NuevaSub({ madre, onCrear, onCancelar }: { madre: string; onCrear: (nom
   }
 
   return (
-    <li className="py-2 pl-12 pr-3 sm:pl-16 sm:pr-5">
-      <form onSubmit={enviar} className="flex flex-wrap items-center gap-2">
-        <CornerDownRight className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
-        <input
-          ref={ref}
-          value={nombre}
-          onChange={(e) => setNombre(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Escape") onCancelar(); }}
-          placeholder={`Nueva subcategoría de ${madre}`}
-          className={`${INPUT} min-w-[200px] flex-1 py-2`}
-        />
-        <button type="submit" disabled={busy || !nombre.trim()} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Agregar
-        </button>
-        <button type="button" onClick={onCancelar} className="rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
-      </form>
-      {error ? <p className="mt-1.5 pl-6 text-xs text-rose-600">{error}</p> : null}
-    </li>
+    <form onSubmit={enviar} className="flex flex-wrap items-center gap-1.5">
+      <input
+        ref={ref}
+        value={nombre}
+        onChange={(e) => setNombre(e.target.value)}
+        onKeyDown={(e) => { if (e.key === "Escape") onCancelar(); }}
+        placeholder={`Nueva en ${madre}`}
+        className="w-48 rounded-full border border-[var(--brand)] px-3 py-1 text-xs outline-none focus:ring-4 focus:ring-[var(--brand-100)]"
+      />
+      <button type="submit" disabled={busy || !nombre.trim()} className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
+        {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />} Agregar
+      </button>
+      <button type="button" onClick={onCancelar} className="rounded-full px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>
+      {error ? <span className="w-full text-xs text-rose-600">{error}</span> : null}
+    </form>
   );
 }
 
-function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuardado }: { categoria: Categoria; categorias: Categoria[]; colorActual?: ColorCategoria; onClose: () => void; onGuardado: () => void }) {
+function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuardado }: {
+  categoria: Categoria;
+  categorias: Categoria[];
+  colorActual?: string;
+  onClose: () => void;
+  onGuardado: () => void;
+}) {
   const [nombre, setNombre] = useState(categoria.nombre);
   const [codigo, setCodigo] = useState(categoria.codigo ?? "");
   const [padre, setPadre] = useState(categoria.parent_id ?? "");
-  const [color, setColor] = useState(categoria.color ?? colorActual?.dot ?? PALETA[0].dot);
+  const [color, setColor] = useState(categoria.color ?? colorActual ?? "#3b82f6");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Dos niveles: una categoría con subcategorías no puede quedar dentro de otra.
@@ -469,7 +453,7 @@ function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuarda
             ) : (
               <div>
                 <span className={ET}>Color</span>
-                <SelectorColor valor={color} onChange={setColor} />
+                <ColorPicker value={color} onChange={setColor} block />
               </div>
             )}
             <label className="block">

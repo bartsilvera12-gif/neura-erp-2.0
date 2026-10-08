@@ -24,10 +24,10 @@ export function slugCodigo(nombre: string): string {
  * y el ojo agrupa rápido la columna. Paleta de Ferretería.
  */
 export const PALETA = [
-  { dot: "#0ea5e9", bg: "#f0f9ff" }, { dot: "#10b981", bg: "#ecfdf5" }, { dot: "#f59e0b", bg: "#fffbeb" },
-  { dot: "#8b5cf6", bg: "#f5f3ff" }, { dot: "#ec4899", bg: "#fdf2f8" }, { dot: "#06b6d4", bg: "#ecfeff" },
-  { dot: "#ef4444", bg: "#fef2f2" }, { dot: "#14b8a6", bg: "#f0fdfa" }, { dot: "#a855f7", bg: "#faf5ff" },
-  { dot: "#f97316", bg: "#fff7ed" }, { dot: "#84cc16", bg: "#f7fee7" }, { dot: "#6366f1", bg: "#eef2ff" },
+  { dot: "#ef4444", bg: "#fef2f2" }, { dot: "#f97316", bg: "#fff7ed" }, { dot: "#eab308", bg: "#fefce8" },
+  { dot: "#22c55e", bg: "#f0fdf4" }, { dot: "#14b8a6", bg: "#f0fdfa" }, { dot: "#3b82f6", bg: "#eff6ff" },
+  { dot: "#8b5cf6", bg: "#f5f3ff" }, { dot: "#ec4899", bg: "#fdf2f8" }, { dot: "#0ea5e9", bg: "#f0f9ff" },
+  { dot: "#84cc16", bg: "#f7fee7" }, { dot: "#6366f1", bg: "#eef2ff" }, { dot: "#f59e0b", bg: "#fffbeb" },
 ];
 export function colorCategoria(nombre: string) {
   let h = 0;
@@ -95,4 +95,15 @@ export function coloresPorCategoria(categorias: Categoria[]) {
 export function colorLibre(categorias: Categoria[]): string {
   const enUso = new Set([...coloresPorCategoria(categorias).values()].map((c) => c.dot.toLowerCase()));
   return (PALETA.find((p) => !enUso.has(p.dot.toLowerCase())) ?? PALETA[0]).dot;
+}
+
+/** Tonos para pintar una etiqueta con el color de su categoría (cualquier hex):
+ *  fondo suave, borde y un texto bien oscuro del mismo color para que siempre se lea. */
+export function tonosDe(hex: string) {
+  const n = parseInt(hex.slice(1), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  const k = lum > 0.6 ? 0.38 : 0.55;
+  const osc = (v: number) => Math.round(v * k).toString(16).padStart(2, "0");
+  return { dot: hex, fondo: `${hex}1a`, borde: `${hex}55`, texto: `#${osc(r)}${osc(g)}${osc(b)}` };
 }
