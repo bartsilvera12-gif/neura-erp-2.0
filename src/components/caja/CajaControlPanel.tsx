@@ -296,7 +296,8 @@ function CerrarCajaModal({ caja, resumen, onClose, onDone }: { caja: CajaTurno; 
   const transf = resumen.total_transferencia;
   const tarjeta = resumen.total_tarjeta;
   const pos = resumen.total_pos;
-  const otrosMedios = transf + tarjeta + pos; // no entra al cajón físico
+  const cobrosEfvo = resumen.cobros_efectivo ?? 0;
+  const otrosMedios = transf + tarjeta + pos + (resumen.cobros_otros ?? 0); // no entra al cajón físico
   const efectivoEsperado = resumen.efectivo_esperado;
   const manualNet = resumen.ingresos_efectivo - resumen.egresos_efectivo - resumen.retiros_efectivo + resumen.ajustes_efectivo;
 
@@ -329,6 +330,7 @@ function CerrarCajaModal({ caja, resumen, onClose, onDone }: { caja: CajaTurno; 
         <div className="space-y-1.5 text-sm">
           <Row label="Monto de apertura" value={formatGs(apertura)} />
           <Row label="Ventas en efectivo" value={`+ ${formatGs(resumen.total_efectivo)}`} />
+          {cobrosEfvo > 0 && <Row label={`Cobros a clientes en efectivo (${resumen.cantidad_cobros ?? 0})`} value={`+ ${formatGs(cobrosEfvo)}`} />}
           {manualNet !== 0 && <Row label="Entradas y salidas manuales" value={`${manualNet > 0 ? "+" : "−"} ${formatGs(Math.abs(manualNet))}`} />}
         </div>
         <div className="mt-2.5 flex items-baseline justify-between border-t border-sky-200 pt-2.5">

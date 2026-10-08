@@ -34,6 +34,10 @@ export type CajaResumen = {
   egresos_efectivo: number;
   retiros_efectivo: number;
   ajustes_efectivo: number;
+  /** cobros a clientes (cuenta corriente) que entraron a esta caja */
+  cobros_efectivo?: number;
+  cobros_otros?: number;
+  cantidad_cobros?: number;
   movimientos: MovimientoCaja[];
 };
 

@@ -9,11 +9,14 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Ban, CheckCircle2, Loader2, Mail, MapPin, Pencil, Phone, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, Ban, CheckCircle2, FileText, HandCoins, Loader2, Mail, MapPin, Pencil, Phone, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 import { ClienteForm, type ClienteFicha } from "@/modules/clientes/ClienteForm";
+import { CuentaCorriente } from "@/modules/clientes/CuentaCorriente";
+import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
+import { descargarArchivo } from "@/lib/api/client-blob";
 
 const BRAND = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
@@ -30,7 +33,7 @@ type Detalle = {
   contactos: Contacto[];
   resumen: Resumen | null;
 };
-type Tab = "resumen" | "compras" | "contactos" | "notas";
+type Tab = "resumen" | "cuenta" | "compras" | "contactos" | "notas";
 
 export default function ClienteDetallePage() {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +43,9 @@ export default function ClienteDetallePage() {
   const [tab, setTab] = useState<Tab>("resumen");
   const [editando, setEditando] = useState(false);
   const [cambiando, setCambiando] = useState(false);
+  const [cobrando, setCobrando] = useState(false);
+  const [recargaCuenta, setRecargaCuenta] = useState(0);
+  const [bajandoEc, setBajandoEc] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -75,6 +81,7 @@ export default function ClienteDetallePage() {
   const { limite_credito, disponible } = data.estado_cuenta;
   const tabs: { id: Tab; label: string }[] = [
     { id: "resumen", label: "Resumen" },
+    { id: "cuenta", label: "Cuenta corriente" },
     { id: "compras", label: `Compras (${r?.compras ?? data.ventas.length})` },
     { id: "contactos", label: `Contactos (${data.contactos.length})` },
     { id: "notas", label: "Notas" },
@@ -104,6 +111,19 @@ export default function ClienteDetallePage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {(r?.deuda ?? 0) > 0 ? (
+            <button onClick={() => setCobrando(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
+              <HandCoins className="h-4 w-4" /> Registrar cobro
+            </button>
+          ) : null}
+          {credito || (r?.deuda ?? 0) > 0 ? (
+            <button
+              onClick={async () => { setBajandoEc(true); try { await descargarArchivo(`/api/clientes/${c.id}/estado-cuenta/pdf`, "estado-cuenta.pdf"); } catch { /* best-effort */ } finally { setBajandoEc(false); } }}
+              disabled={bajandoEc}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+              {bajandoEc ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} Estado de cuenta
+            </button>
+          ) : null}
           <button onClick={cambiarEstado} disabled={cambiando} className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 ${c.activo === false ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
             {c.activo === false ? <><CheckCircle2 className="h-4 w-4" /> Activar</> : <><Ban className="h-4 w-4" /> Desactivar</>}
           </button>
@@ -116,7 +136,7 @@ export default function ClienteDetallePage() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi titulo="Total comprado" valor={gs(r?.total_comprado ?? 0)} sub={r?.ultima_compra ? `última ${fecha(r.ultima_compra)}` : "todavía no compró"} />
         <Kpi titulo="Compras" valor={String(r?.compras ?? 0)} sub={r?.compras ? `ticket promedio ${gs(r.ticket_promedio)}` : undefined} />
-        <Kpi titulo="Deuda" valor={gs(r?.deuda ?? 0)} sub={(r?.vencido ?? 0) > 0 ? `vencido ${gs(r!.vencido)}` : (r?.deuda ?? 0) > 0 ? "al día" : "no debe nada"} tono={(r?.vencido ?? 0) > 0 ? "rojo" : undefined} />
+        <Kpi titulo="Debe" valor={gs(r?.deuda ?? 0)} sub={(r?.vencido ?? 0) > 0 ? `vencido ${gs(r!.vencido)}` : (r?.deuda ?? 0) > 0 ? "al día" : "no debe nada"} tono={(r?.vencido ?? 0) > 0 ? "rojo" : undefined} />
         <Kpi titulo="Crédito disponible" valor={!credito ? "Contado" : limite_credito > 0 ? gs(disponible ?? 0) : "Sin límite"}
           sub={credito ? (limite_credito > 0 ? `de ${gs(limite_credito)}` : `${c.plazo_dias ?? 30} días de plazo`) : "no compra a crédito"} />
       </div>
@@ -133,10 +153,15 @@ export default function ClienteDetallePage() {
       </div>
 
       {tab === "resumen" ? <TabResumen c={c} /> : null}
+      {tab === "cuenta" ? <CuentaCorriente clienteId={c.id} recarga={recargaCuenta} onCambio={cargar} /> : null}
       {tab === "compras" ? <TabCompras ventas={data.ventas} /> : null}
       {tab === "contactos" ? <TabContactos clienteId={c.id} contactos={data.contactos} onChange={cargar} /> : null}
       {tab === "notas" ? <TabNotas clienteId={c.id} notas={c.notas ?? ""} onSaved={cargar} /> : null}
 
+      {cobrando ? (
+        <RegistrarCobro clienteId={c.id} clienteNombre={c.razon_social || c.nombre} onClose={() => setCobrando(false)}
+          onHecho={() => { void cargar(); setRecargaCuenta((k) => k + 1); setTab("cuenta"); }} />
+      ) : null}
       {editando ? <ClienteForm cliente={c} onClose={() => setEditando(false)} onSaved={() => { setEditando(false); void cargar(); }} /> : null}
     </div>
   );
