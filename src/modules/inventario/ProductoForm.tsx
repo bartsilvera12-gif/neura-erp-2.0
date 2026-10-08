@@ -199,22 +199,26 @@ export function ProductoForm({
                   <span className={ET}>Nombre *</span>
                   <input autoFocus value={f.nombre} onChange={(e) => set("nombre", e.target.value)} className={INPUT} placeholder="Ej. Coca-Cola 2L" />
                 </label>
-                <div className="col-span-1">
+                <div className="col-span-3">
                   <span className={ET}>SKU *</span>
-                  <div className="relative">
-                    <input value={f.sku} onChange={(e) => set("sku", e.target.value)} className={`${INPUT} pr-9 font-mono`} placeholder="COCA2L" aria-label="SKU" />
-                    <BotonGenerar onClick={() => generar("sku")} cargando={generando === "sku"} titulo="Generar SKU (sigue la numeración del catálogo)" />
+                  <div className="flex gap-2">
+                    <input value={f.sku} onChange={(e) => set("sku", e.target.value)} className={`${INPUT} font-mono`} placeholder="Escribilo o tocá Generar" aria-label="SKU" />
+                    <BotonGenerar onClick={() => generar("sku")} cargando={generando === "sku"} />
                   </div>
-                </div>
-                <div className="col-span-2">
-                  <span className={ET}>Código de barras</span>
-                  <div className="relative">
-                    <input value={f.codigo_barras} onChange={(e) => set("codigo_barras", e.target.value)} className={`${INPUT} pr-9 font-mono`} placeholder="Escaneá o generá uno" aria-label="Código de barras" />
-                    <BotonGenerar onClick={() => generar("barras")} cargando={generando === "barras"} titulo="Generar código de barras interno (EAN-13)" />
-                  </div>
-                  {/^2\d{12}$/.test(f.codigo_barras) ? <p className="mt-1 text-[11px] text-slate-400">Código interno del local (EAN-13, prefijo 20): escaneable e imprimible en etiquetas.</p> : null}
                 </div>
               </div>
+            </div>
+            <div className="mt-3">
+              <span className={ET}>Código de barras <span className="font-normal text-slate-400">(opcional)</span></span>
+              <div className="flex gap-2">
+                <input value={f.codigo_barras} onChange={(e) => set("codigo_barras", e.target.value)} className={`${INPUT} font-mono`} placeholder="Escaneá el código o tocá Generar" aria-label="Código de barras" />
+                <BotonGenerar onClick={() => generar("barras")} cargando={generando === "barras"} />
+              </div>
+              <p className="mt-1 text-[11px] text-slate-400">
+                {/^2\d{12}$/.test(f.codigo_barras)
+                  ? "Código propio del local: se puede escanear e imprimir en etiquetas."
+                  : "Si el producto no trae código, generá uno para imprimir etiquetas."}
+              </p>
             </div>
             <label className="mt-3 block">
               <span className={ET}>Categoría</span>
@@ -325,11 +329,13 @@ export function ProductoForm({
   );
 }
 
-function BotonGenerar({ onClick, cargando, titulo }: { onClick: () => void; cargando: boolean; titulo: string }) {
+/** Botón "Generar" pegado al campo, con texto: el usuario ve qué hace sin adivinar. */
+function BotonGenerar({ onClick, cargando }: { onClick: () => void; cargando: boolean }) {
   return (
-    <button type="button" onClick={onClick} disabled={cargando} title={titulo} aria-label={titulo}
-      className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)] disabled:opacity-60">
+    <button type="button" onClick={onClick} disabled={cargando}
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[var(--brand)] px-3.5 text-sm font-semibold text-[var(--brand)] transition hover:bg-[var(--brand-50)] disabled:opacity-60">
       {cargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+      Generar
     </button>
   );
 }
