@@ -1,4 +1,4 @@
-import { Lock, PackageMinus, ShoppingCart, type LucideIcon } from "lucide-react";
+import { Boxes, Lock, PackageMinus, ShoppingCart, type LucideIcon } from "lucide-react";
 
 /**
  * Catálogo de reportes: alimenta la pantalla /reportes (una tarjeta por reporte).
@@ -33,5 +33,12 @@ export const REPORTES: Reporte[] = [
     subtitulo: "Productos por reponer",
     descripcion: "Productos cuyo stock quedó por debajo del mínimo definido, con lo vendido en 30 días y el costo de reponer. Lista de reposición en PDF y Excel.",
     icono: PackageMinus,
+  },
+  {
+    href: "/reportes/productos-vendidos",
+    titulo: "Productos vendidos",
+    subtitulo: "Cuánto se vendió de cada uno",
+    descripcion: "Unidades, total, precio promedio, ganancia y margen por producto (resumido) o cada venta con cliente y cajero (detallado). Muestra también lo que no se vendió.",
+    icono: Boxes,
   },
 ];
