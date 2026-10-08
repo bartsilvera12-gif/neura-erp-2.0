@@ -102,6 +102,14 @@ function NuevaCompra() {
             recibidoAntes: Number(i.cantidad_recibida),
           }];
         }));
+        // La última compra de cada producto, para comparar el costo.
+        const historiales = await Promise.all(pendientes.map((i) => apiFetch<HistorialCostosData>(`/api/productos/${i.producto_id}/costos`).catch(() => null)));
+        if (!vivo) return;
+        setLineas((ls) => ls.map((l) => {
+          const h = historiales[pendientes.findIndex((i) => i.id === l.ocItemId)];
+          const u = h?.compras[0];
+          return u ? { ...l, ultima: { costo: Number(u.costo), fecha: u.fecha, proveedor: u.proveedor } } : l;
+        }));
       } catch (e) {
         if (vivo) setError((e as Error).message);
       }
