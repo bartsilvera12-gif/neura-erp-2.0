@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { History, ImagePlus, Loader2, X } from "lucide-react";
+import { History, ImagePlus, Loader2, Wand2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Drawer } from "@/components/Drawer";
@@ -62,7 +62,22 @@ export function ProductoForm({
   const [subiendo, setSubiendo] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [generando, setGenerando] = useState<"" | "sku" | "barras">("");
   const fileRef = useRef<HTMLInputElement>(null);
+
+  /** Opcional: pide a la base el próximo SKU (siguiendo el patrón del cliente) o un EAN-13 interno. */
+  async function generar(tipo: "sku" | "barras") {
+    setGenerando(tipo);
+    setError(null);
+    try {
+      const r = await apiFetch<{ codigo: string }>("/api/productos/generar-codigo", { method: "POST", body: JSON.stringify({ tipo }) });
+      set(tipo === "sku" ? "sku" : "codigo_barras", r.codigo);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGenerando("");
+    }
+  }
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const num = (v: string) => (v === "" ? undefined : Number(v));
@@ -184,14 +199,21 @@ export function ProductoForm({
                   <span className={ET}>Nombre *</span>
                   <input autoFocus value={f.nombre} onChange={(e) => set("nombre", e.target.value)} className={INPUT} placeholder="Ej. Coca-Cola 2L" />
                 </label>
-                <label className="col-span-1 block">
+                <div className="col-span-1">
                   <span className={ET}>SKU *</span>
-                  <input value={f.sku} onChange={(e) => set("sku", e.target.value)} className={`${INPUT} font-mono`} placeholder="COCA2L" />
-                </label>
-                <label className="col-span-2 block">
+                  <div className="relative">
+                    <input value={f.sku} onChange={(e) => set("sku", e.target.value)} className={`${INPUT} pr-9 font-mono`} placeholder="COCA2L" aria-label="SKU" />
+                    <BotonGenerar onClick={() => generar("sku")} cargando={generando === "sku"} titulo="Generar SKU (sigue la numeración del catálogo)" />
+                  </div>
+                </div>
+                <div className="col-span-2">
                   <span className={ET}>Código de barras</span>
-                  <input value={f.codigo_barras} onChange={(e) => set("codigo_barras", e.target.value)} className={`${INPUT} font-mono`} placeholder="7840000000000" />
-                </label>
+                  <div className="relative">
+                    <input value={f.codigo_barras} onChange={(e) => set("codigo_barras", e.target.value)} className={`${INPUT} pr-9 font-mono`} placeholder="Escaneá o generá uno" aria-label="Código de barras" />
+                    <BotonGenerar onClick={() => generar("barras")} cargando={generando === "barras"} titulo="Generar código de barras interno (EAN-13)" />
+                  </div>
+                  {/^2\d{12}$/.test(f.codigo_barras) ? <p className="mt-1 text-[11px] text-slate-400">Código interno del local (EAN-13, prefijo 20): escaneable e imprimible en etiquetas.</p> : null}
+                </div>
               </div>
             </div>
             <label className="mt-3 block">
@@ -300,6 +322,15 @@ export function ProductoForm({
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
       </form>
     </Drawer>
+  );
+}
+
+function BotonGenerar({ onClick, cargando, titulo }: { onClick: () => void; cargando: boolean; titulo: string }) {
+  return (
+    <button type="button" onClick={onClick} disabled={cargando} title={titulo} aria-label={titulo}
+      className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)] disabled:opacity-60">
+      {cargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
+    </button>
   );
 }
 
