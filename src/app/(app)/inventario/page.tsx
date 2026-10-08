@@ -228,7 +228,6 @@ export default function InventarioPage() {
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead>
               <tr className="border-b-2 text-[11px] font-bold uppercase tracking-wider" style={{ borderColor: `${TEAL}26`, backgroundColor: `${TEAL}0d`, color: TEAL }}>
-                <th className="w-px px-5 py-3 text-center">Acción</th>
                 <th className="px-5 py-3">Producto</th>
                 <th className="hidden px-3 py-3 lg:table-cell">SKU</th>
                 <th className="hidden px-3 py-3 md:table-cell">Categoría</th>
@@ -237,6 +236,7 @@ export default function InventarioPage() {
                 <th className="px-3 py-3 text-center">Stock</th>
                 <th className="hidden px-3 py-3 text-right lg:table-cell">Margen</th>
                 <th className="hidden px-3 py-3 text-center lg:table-cell">Valuación</th>
+                <th className="w-px px-5 py-3 text-center">Acción</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -266,20 +266,6 @@ export default function InventarioPage() {
                   const inactivo = p.activo === false;
                   return (
                     <tr key={p.id} className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => setForm({ open: true, prod: p })} title={inactivo ? "Ver producto (inactivo)" : "Editar producto"} aria-label={`${inactivo ? "Ver" : "Editar"} ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)]">
-                            {inactivo ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                          </button>
-                          <button onClick={() => toggleActivo(p)} disabled={togglingId === p.id} title={inactivo ? "Reactivar producto" : "Desactivar producto (reversible)"} aria-label={`${inactivo ? "Reactivar" : "Desactivar"} ${p.nombre}`}
-                            className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition disabled:opacity-40 ${inactivo ? "text-emerald-600 hover:bg-emerald-50" : "text-slate-500 hover:bg-amber-50 hover:text-amber-600"}`}>
-                            {togglingId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : inactivo ? <RotateCcw className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                          </button>
-                          <button onClick={() => setEliminando(p)} title="Eliminar producto (permanente)" aria-label={`Eliminar ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-red-50 hover:text-red-600">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
                       <td className="px-5 py-3">
                         <div className="flex items-center gap-3">
                           <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
@@ -331,6 +317,20 @@ export default function InventarioPage() {
                       <td className="hidden px-3 py-3 text-center lg:table-cell">
                         {/* El 2.0 valúa a costo promedio ponderado. */}
                         <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[10px] font-bold tracking-wider text-blue-700" title="Costo promedio ponderado">CPP</span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex items-center justify-center gap-1">
+                          <button onClick={() => setForm({ open: true, prod: p })} title={inactivo ? "Ver producto (inactivo)" : "Editar producto"} aria-label={`${inactivo ? "Ver" : "Editar"} ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)]">
+                            {inactivo ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+                          </button>
+                          <button onClick={() => toggleActivo(p)} disabled={togglingId === p.id} title={inactivo ? "Reactivar producto" : "Desactivar producto (reversible)"} aria-label={`${inactivo ? "Reactivar" : "Desactivar"} ${p.nombre}`}
+                            className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition disabled:opacity-40 ${inactivo ? "text-emerald-600 hover:bg-emerald-50" : "text-slate-500 hover:bg-amber-50 hover:text-amber-600"}`}>
+                            {togglingId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : inactivo ? <RotateCcw className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                          </button>
+                          <button onClick={() => setEliminando(p)} title="Eliminar producto (permanente)" aria-label={`Eliminar ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-red-50 hover:text-red-600">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
