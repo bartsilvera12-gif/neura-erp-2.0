@@ -65,12 +65,19 @@ export function ProductoForm({
   const [generando, setGenerando] = useState<"" | "sku" | "barras">("");
   const fileRef = useRef<HTMLInputElement>(null);
 
-  /** Opcional: pide a la base el próximo SKU (siguiendo el patrón del cliente) o un EAN-13 interno. */
+  /** Botón "Generar": SKU armado desde el nombre (COC-COL-2L) o un EAN-13 interno. */
   async function generar(tipo: "sku" | "barras") {
-    setGenerando(tipo);
     setError(null);
+    if (tipo === "sku" && !f.nombre.trim()) {
+      setError("Escribí primero el nombre del producto: el SKU se arma a partir de él.");
+      return;
+    }
+    setGenerando(tipo);
     try {
-      const r = await apiFetch<{ codigo: string }>("/api/productos/generar-codigo", { method: "POST", body: JSON.stringify({ tipo }) });
+      const r = await apiFetch<{ codigo: string }>("/api/productos/generar-codigo", {
+        method: "POST",
+        body: JSON.stringify({ tipo, nombre: f.nombre.trim() }),
+      });
       set(tipo === "sku" ? "sku" : "codigo_barras", r.codigo);
     } catch (e) {
       setError((e as Error).message);
