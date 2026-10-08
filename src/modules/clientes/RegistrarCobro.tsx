@@ -4,10 +4,12 @@
  * Registrar un cobro (panel lateral). Arriba lo que debe y lo vencido; el monto se
  * propone con toda la deuda (o solo lo vencido, con un toque). Uno o varios medios de
  * pago. Se aplica solo a lo más viejo primero, o a las ventas que elijas. Se ve en vivo
- * cómo queda cada venta. Al terminar: el recibo para descargar.
+ * cómo queda cada venta. Lo que se cobra de más (o sin deuda) queda A FAVOR del cliente
+ * (anticipo); si ya tiene saldo a favor, se puede pagar la deuda con ese saldo.
+ * Al terminar: el recibo para descargar.
  */
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Download, Loader2, Plus, Trash2 } from "lucide-react";
+import { CheckCircle2, Download, Loader2, PiggyBank, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
@@ -35,12 +37,12 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho }: {
   const [observacion, setObservacion] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hecho, setHecho] = useState<{ id: string; numero: string; total: number } | null>(null);
+  const [hecho, setHecho] = useState<{ id: string; numero: string; total: number; aFavor: number } | null>(null);
 
   useEffect(() => {
     apiFetch<EstadoCuenta>(`/api/clientes/${clienteId}/estado-cuenta`).then((r) => {
       setEc(r);
-      setTotal(Number(r.deuda));
+      setTotal(Number(r.deuda) || 0);
     }).catch((e) => setError((e as Error).message));
   }, [clienteId]);
 
@@ -74,9 +76,10 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho }: {
 
   const deuda = Number(ec?.deuda ?? 0);
   const vencido = Number(ec?.vencido ?? 0);
+  const saldoFavor = Number(ec?.saldo_favor ?? 0);
+  const aFavor = Math.max(total - deuda, 0);
   const faltan = [
     !(total > 0) && "el monto",
-    total > deuda && "que el monto no supere la deuda",
     diferencia !== 0 && (diferencia > 0 ? `asignar ${gs(diferencia)} a un medio de pago` : `bajar ${gs(-diferencia)} de los medios de pago`),
     modo === "elegir" && aplicacion.sobrante > 0 && "elegir ventas que cubran el monto",
   ].filter(Boolean) as string[];
@@ -86,7 +89,7 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho }: {
     setBusy(true);
     setError(null);
     try {
-      const r = await apiFetch<{ id: string; numero_recibo: string; total: number }>("/api/cobros", {
+      const r = await apiFetch<{ id: string; numero_recibo: string; total: number; a_favor?: number }>("/api/cobros", {
         method: "POST",
         body: JSON.stringify({
           cliente_id: clienteId,
@@ -95,7 +98,21 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho }: {
           observacion: observacion.trim() || null,
         }),
       });
-      setHecho({ id: r.id, numero: r.numero_recibo, total: r.total });
+      setHecho({ id: r.id, numero: r.numero_recibo, total: r.total, aFavor: Number(r.a_favor ?? 0) });
+      onHecho();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function usarSaldo() {
+    setBusy(true);
+    setError(null);
+    try {
+      const r = await apiFetch<{ id: string; numero_recibo: string; total: number }>(`/api/clientes/${clienteId}/usar-saldo`, { method: "POST" });
+      setHecho({ id: r.id, numero: r.numero_recibo, total: r.total, aFavor: 0 });
       onHecho();
     } catch (e) {
       setError((e as Error).message);
@@ -110,7 +127,8 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho }: {
         <div className="py-10 text-center">
           <CheckCircle2 className="mx-auto h-14 w-14 text-emerald-500" />
           <p className="mt-4 text-lg font-semibold text-slate-900">Recibo {hecho.numero}</p>
-          <p className="mt-1 text-sm text-slate-500">Por {gs(hecho.total)}. Ya entró a la caja y se descontó de la deuda.</p>
+          <p className="mt-1 text-sm text-slate-500">Por {gs(hecho.total)}. Ya se descontó de la deuda.</p>
+          {hecho.aFavor > 0 ? <p className="mt-2 inline-block rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{gs(hecho.aFavor)} quedaron a favor del cliente</p> : null}
           <div className="mt-6 flex justify-center gap-2">
             <button onClick={() => descargarArchivo(`/api/cobros/${hecho.id}/pdf`, `recibo-${hecho.numero}.pdf`).catch(() => {})}
               className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: BRAND }}>
@@ -133,17 +151,29 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho }: {
           <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
           <button onClick={registrar} disabled={!!faltan.length || busy || !ec} className="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: BRAND }}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-            {busy ? "Registrando…" : `Cobrar ${gs(total)}`}
+            {busy ? "Registrando…" : deuda <= 0 ? `Registrar anticipo ${gs(total)}` : `Cobrar ${gs(total)}`}
           </button>
         </>
       }
     >
       {!ec ? (
         error ? <p className="text-sm text-rose-600">{error}</p> : <p className="flex items-center gap-2 text-sm text-slate-400"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</p>
-      ) : deuda <= 0 ? (
-        <p className="rounded-xl bg-emerald-50 px-4 py-6 text-center text-sm font-medium text-emerald-700">Este cliente no debe nada.</p>
       ) : (
         <div className="space-y-6">
+          {deuda <= 0 ? (
+            <p className="rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+              <strong className="font-semibold">Este cliente no debe nada.</strong> Lo que cobres queda <strong className="font-semibold">a favor</strong> del cliente (anticipo): cuando compre a crédito, lo usás para pagar desde «Registrar cobro».
+            </p>
+          ) : null}
+          {saldoFavor > 0 && deuda > 0 ? (
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
+              <PiggyBank className="h-5 w-5 text-emerald-600" />
+              <p className="min-w-0 flex-1 text-sm text-emerald-800">Tiene <strong className="font-semibold">{gs(saldoFavor)} a favor</strong>. Podés usarlo para pagar {saldoFavor >= deuda ? "toda la deuda" : "parte de la deuda"}.</p>
+              <button onClick={usarSaldo} disabled={busy} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+                Pagar {gs(Math.min(saldoFavor, deuda))} con el saldo
+              </button>
+            </div>
+          ) : null}
           <div className="grid grid-cols-2 gap-3">
             <div className="rounded-xl bg-slate-50 px-4 py-3">
               <p className="text-[11px] text-slate-500">Debe en total</p>
@@ -159,10 +189,11 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho }: {
             <span className={ET}>¿Cuánto te paga?</span>
             <MontoInput value={total || ""} onChange={setTotal} decimals={false} className={`${INPUT} text-right text-lg font-bold tabular-nums`} />
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              <Chip on={total === deuda} onClick={() => setTotal(deuda)}>Todo · {gs(deuda)}</Chip>
+              {deuda > 0 ? <Chip on={total === deuda} onClick={() => setTotal(deuda)}>Todo · {gs(deuda)}</Chip> : null}
               {vencido > 0 && vencido < deuda ? <Chip on={total === vencido} onClick={() => setTotal(vencido)}>Solo lo vencido · {gs(vencido)}</Chip> : null}
             </div>
             {total > 0 && total < deuda ? <p className="mt-1 text-[11px] text-slate-500">Le va a quedar debiendo {gs(deuda - total)}.</p> : null}
+            {aFavor > 0 ? <p className="mt-1 text-[11px] font-semibold text-emerald-700">{deuda > 0 ? `Paga ${gs(aFavor)} de más: ` : ""}{gs(aFavor)} quedan a favor del cliente.</p> : null}
           </div>
 
           <div>
@@ -197,6 +228,7 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho }: {
             ) : null}
           </div>
 
+          {abiertas.length ? (
           <div>
             <span className={ET}>A qué ventas se aplica</span>
             <div className="flex rounded-xl bg-slate-100 p-1">
@@ -236,6 +268,7 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho }: {
               })}
             </ul>
           </div>
+          ) : null}
 
           <label className="block">
             <span className={ET}>Observación <span className="font-normal text-slate-400">(opcional)</span></span>

@@ -1,4 +1,4 @@
-import { Boxes, Lock, PackageMinus, ShoppingCart, type LucideIcon } from "lucide-react";
+import { Boxes, HandCoins, Lock, PackageMinus, ShoppingCart, type LucideIcon } from "lucide-react";
 
 /**
  * Catálogo de reportes: alimenta la pantalla /reportes (una tarjeta por reporte).
@@ -19,6 +19,13 @@ export const REPORTES: Reporte[] = [
     subtitulo: "Ventas, ganancia e IVA",
     descripcion: "Cuánto se vendió y se ganó, ticket promedio, IVA a declarar, cobros por medio de pago, ventas por cajero, productos y categorías más vendidos. Excel y PDF.",
     icono: ShoppingCart,
+  },
+  {
+    href: "/reportes/deudores",
+    titulo: "Deudores",
+    subtitulo: "Quién te debe y cuánto",
+    descripcion: "Clientes con deuda, lo vencido primero: cuánto debe cada uno, días de atraso, tramos de 30/60/90 días y último pago. Excel y PDF para salir a cobrar.",
+    icono: HandCoins,
   },
   {
     href: "/reportes/cajas",

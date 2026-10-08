@@ -2,7 +2,8 @@
  * Cobros a clientes (cuenta corriente).
  *   POST /api/cobros { cliente_id, pagos: [{ metodo, monto, referencia? }],
  *                      aplicaciones?: [{ cxc_id, monto }], observacion? }
- *        → { id, numero_recibo, total }. Sin aplicaciones paga lo más viejo primero.
+ *        → { id, numero_recibo, total, a_favor }. Sin aplicaciones paga lo más viejo primero.
+ *        Lo cobrado de más (o sin deuda) queda como saldo a favor del cliente (anticipo).
  *        Todo lo cobrado entra a la caja abierta (el efectivo la necesita abierta).
  */
 import { z } from "zod";
@@ -13,7 +14,7 @@ const cuerpo = z.object({
   cliente_id: z.string().uuid(),
   pagos: z
     .array(z.object({
-      metodo: z.enum(["efectivo", "transferencia", "tarjeta", "pos", "cheque", "otro"]),
+      metodo: z.enum(["efectivo", "transferencia", "tarjeta", "pos", "cheque", "otro", "saldo_favor"]),
       monto: z.coerce.number().positive("Hay un monto en cero"),
       referencia: z.string().trim().max(120).nullish(),
     }))

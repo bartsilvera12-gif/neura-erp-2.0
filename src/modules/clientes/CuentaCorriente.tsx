@@ -64,6 +64,13 @@ export function CuentaCorriente({ clienteId, recarga, onCambio }: { clienteId: s
         </div>
       ) : null}
 
+      {Number(ec.saldo_favor) > 0 ? (
+        <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Tiene <strong className="font-semibold">{gs(ec.saldo_favor)} a favor</strong> (anticipos o pagos de más).
+          {Number(ec.deuda) > 0 ? " Usalo desde «Registrar cobro» para pagar su deuda." : " Cuando compre a crédito, usalo desde «Registrar cobro»."}
+        </p>
+      ) : null}
+
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
         <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3">
           <p className="text-sm font-semibold text-slate-800">Ventas a crédito</p>

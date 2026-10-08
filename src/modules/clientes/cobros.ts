@@ -9,7 +9,7 @@ export const METODOS_COBRO: { v: MetodoCobro; l: string }[] = [
   { v: "cheque", l: "Cheque" },
   { v: "otro", l: "Otro" },
 ];
-export const nombreMetodo = (m: string) => METODOS_COBRO.find((x) => x.v === m)?.l ?? m;
+export const nombreMetodo = (m: string) => (m === "saldo_favor" ? "Saldo a favor" : METODOS_COBRO.find((x) => x.v === m)?.l ?? m);
 
 export type CuentaCobrar = {
   id: string;
@@ -40,4 +40,4 @@ export type Cobro = {
   aplicado_a: { numero: string; monto: number }[] | null;
 };
 
-export type EstadoCuenta = { cuentas: CuentaCobrar[]; cobros: Cobro[]; deuda: number; vencido: number };
+export type EstadoCuenta = { cuentas: CuentaCobrar[]; cobros: Cobro[]; deuda: number; vencido: number; saldo_favor: number };

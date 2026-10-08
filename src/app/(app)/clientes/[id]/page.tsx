@@ -25,7 +25,7 @@ const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZ
 
 type Contacto = { id: string; nombre: string; cargo: string | null; telefono: string | null; email: string | null; notas: string | null };
 type Venta = { id: string; numero_control: string; fecha: string; total: number; tipo_venta: string; estado: string };
-type Resumen = { total_comprado: number; compras: number; ultima_compra: string | null; deuda: number; vencido: number; ticket_promedio: number };
+type Resumen = { total_comprado: number; compras: number; ultima_compra: string | null; deuda: number; vencido: number; ticket_promedio: number; saldo_favor?: number };
 type Detalle = {
   cliente: ClienteFicha;
   estado_cuenta: { saldo: number; limite_credito: number; disponible: number | null };
@@ -111,11 +111,9 @@ export default function ClienteDetallePage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {(r?.deuda ?? 0) > 0 ? (
-            <button onClick={() => setCobrando(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
-              <HandCoins className="h-4 w-4" /> Registrar cobro
-            </button>
-          ) : null}
+          <button onClick={() => setCobrando(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
+            <HandCoins className="h-4 w-4" /> {(r?.deuda ?? 0) > 0 ? "Registrar cobro" : "Cargar anticipo"}
+          </button>
           {credito || (r?.deuda ?? 0) > 0 ? (
             <button
               onClick={async () => { setBajandoEc(true); try { await descargarArchivo(`/api/clientes/${c.id}/estado-cuenta/pdf`, "estado-cuenta.pdf"); } catch { /* best-effort */ } finally { setBajandoEc(false); } }}
@@ -136,7 +134,9 @@ export default function ClienteDetallePage() {
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi titulo="Total comprado" valor={gs(r?.total_comprado ?? 0)} sub={r?.ultima_compra ? `última ${fecha(r.ultima_compra)}` : "todavía no compró"} />
         <Kpi titulo="Compras" valor={String(r?.compras ?? 0)} sub={r?.compras ? `ticket promedio ${gs(r.ticket_promedio)}` : undefined} />
-        <Kpi titulo="Debe" valor={gs(r?.deuda ?? 0)} sub={(r?.vencido ?? 0) > 0 ? `vencido ${gs(r!.vencido)}` : (r?.deuda ?? 0) > 0 ? "al día" : "no debe nada"} tono={(r?.vencido ?? 0) > 0 ? "rojo" : undefined} />
+        <Kpi titulo="Debe" valor={gs(r?.deuda ?? 0)}
+          sub={[(r?.vencido ?? 0) > 0 ? `vencido ${gs(r!.vencido)}` : (r?.deuda ?? 0) > 0 ? "al día" : "no debe nada", (r?.saldo_favor ?? 0) > 0 ? `a favor ${gs(r!.saldo_favor!)}` : null].filter(Boolean).join(" · ")}
+          tono={(r?.vencido ?? 0) > 0 ? "rojo" : undefined} />
         <Kpi titulo="Crédito disponible" valor={!credito ? "Contado" : limite_credito > 0 ? gs(disponible ?? 0) : "Sin límite"}
           sub={credito ? (limite_credito > 0 ? `de ${gs(limite_credito)}` : `${c.plazo_dias ?? 30} días de plazo`) : "no compra a crédito"} />
       </div>
