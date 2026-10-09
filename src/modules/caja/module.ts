@@ -9,8 +9,7 @@ export const moduloCaja: Modulo = {
   familia: "Finanzas",
   roles: ["ADMIN", "CAJERO", "VENDEDOR"],
   children: [
-    { label: "Órdenes de venta", href: "/caja" },
     { label: "Nueva venta", href: "/caja/nueva" },
-    { label: "Arqueo / Cierre", href: "/caja/nueva?cerrar=1" },
+    { label: "Órdenes de venta", href: "/caja" },
   ],
 };
