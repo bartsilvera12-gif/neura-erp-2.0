@@ -26,8 +26,10 @@ const dia = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 
 type Pago = { key: number; metodo: MetodoCobro; monto: number; referencia: string };
 
-export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho }: {
+export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxcInicial }: {
   clienteId: string; clienteNombre: string; onClose: () => void; onHecho: () => void;
+  /** Cobrar una venta puntual (Gestión del Cliente → "Cobrar"): arranca con esa cuenta elegida y su saldo. */
+  cxcInicial?: string | null;
 }) {
   const [ec, setEc] = useState<EstadoCuenta | null>(null);
   const [total, setTotal] = useState(0);
@@ -42,9 +44,16 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho }: {
   useEffect(() => {
     apiFetch<EstadoCuenta>(`/api/clientes/${clienteId}/estado-cuenta`).then((r) => {
       setEc(r);
-      setTotal(Number(r.deuda) || 0);
+      const inicial = cxcInicial ? r.cuentas.find((c) => c.id === cxcInicial && Number(c.saldo) > 0) : undefined;
+      if (inicial) {
+        setModo("elegir");
+        setElegidas(new Set([inicial.id]));
+        setTotal(Number(inicial.saldo) || 0);
+      } else {
+        setTotal(Number(r.deuda) || 0);
+      }
     }).catch((e) => setError((e as Error).message));
-  }, [clienteId]);
+  }, [clienteId, cxcInicial]);
 
   const abiertas = useMemo(
     () => (ec?.cuentas ?? []).filter((c) => (c.estado === "pendiente" || c.estado === "parcial") && Number(c.saldo) > 0)

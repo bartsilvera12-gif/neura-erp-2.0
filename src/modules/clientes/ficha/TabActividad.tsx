@@ -29,6 +29,7 @@ const EVENTO_SUSC: Record<string, { label: string; color: string }> = {
   pausada: { label: "Suscripción pausada", color: "bg-amber-100 text-amber-700" },
   activa: { label: "Suscripción reactivada", color: "bg-emerald-100 text-emerald-700" },
   cancelada: { label: "Suscripción cancelada", color: "bg-rose-100 text-rose-700" },
+  cambio_vencimiento: { label: "Cambio de vencimiento", color: "bg-sky-100 text-sky-700" },
 };
 
 const MODO_PLAN: Record<string, string> = {
@@ -53,6 +54,8 @@ function textoSuscripcion(d: NonNullable<EventoHistorial["detalle"]>): string {
       return `Suscripción ${d.plan ?? ""} reactivada`.replace(/\s+/g, " ");
     case "cancelada":
       return `Suscripción ${d.plan ?? ""} cancelada`.replace(/\s+/g, " ");
+    case "cambio_vencimiento":
+      return `Vencimiento ${d.plan ?? ""}: día ${d.antes ?? "—"} → día ${d.despues ?? "—"}${d.cuota_movida ? " (también la cuota de este mes)" : ""}`.replace(/\s+/g, " ");
     default:
       return `Suscripción ${d.plan ?? ""}`.trim();
   }

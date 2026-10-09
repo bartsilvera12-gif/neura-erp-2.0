@@ -183,8 +183,26 @@ function CajaPageContenido() {
   // busca en la base.
   useEffect(() => {
     apiFetch<Producto[]>("/api/productos?pos=1").then(setProductos).catch(() => {});
-    apiFetch<Cliente[]>("/api/clientes?limit=20").then(setClientes).catch(() => {});
+    // Se suma a lo que ya haya (p. ej. el cliente que llega preelegido con ?cliente=).
+    apiFetch<Cliente[]>("/api/clientes?limit=20")
+      .then((r) => setClientes((prev) => [...prev.filter((p) => !r.some((x) => x.id === p.id)), ...r]))
+      .catch(() => {});
   }, []);
+
+  // ?cliente=<id> (desde Gestión del Cliente → "Facturar venta"): solo deja ese cliente elegido.
+  const clientePre = searchParams.get("cliente");
+  const clientePreHecho = useRef(false);
+  useEffect(() => {
+    if (!clientePre || clientePreHecho.current) return;
+    clientePreHecho.current = true;
+    apiFetch<{ cliente: Cliente }>(`/api/clientes/${encodeURIComponent(clientePre)}`)
+      .then(({ cliente: c }) => {
+        if (!c?.id) return;
+        setClientes((prev) => (prev.some((x) => x.id === c.id) ? prev : [c, ...prev]));
+        setClienteId(c.id);
+      })
+      .catch(() => {});
+  }, [clientePre]);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
 

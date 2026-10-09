@@ -10,6 +10,8 @@
  *                             ciudad; sin tildes, errores de tipeo, por relevancia)
  *        &limit=N (o limite=N) → cuántos traer: sin q 1..500 (por defecto 500, por nombre);
  *                             con q 1..200 (por defecto 50)
+ *   GET  /api/clientes?cartera=1 → { activos }: cuántos clientes activos hay (chip "N en cartera"
+ *                             de Gestión del Cliente; un conteo, sin traer filas)
  *   POST /api/clientes      → alta con anti-duplicados (candado en DB + chequeo amable)
  */
 import { z } from "zod";
@@ -22,10 +24,19 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 // Sin export: un route file solo puede exportar handlers/config (si no, falla el build).
 const COLS =
-  "id, nombre, razon_social, tipo_cliente, documento, ruc, telefono, email, ciudad, direccion, condicion_pago, limite_credito, origen, activo, vendedor_usuario_id, creado_at";
+  "id, codigo, nombre, razon_social, tipo_cliente, documento, ruc, telefono, email, ciudad, direccion, condicion_pago, limite_credito, origen, activo, vendedor_usuario_id, creado_at";
 
 export const GET = withTenant(async (ctx, req) => {
   const sp = new URL(req.url).searchParams;
+  if (sp.get("cartera") === "1") {
+    const r = await ctx.db
+      .select("clientes", "id", { count: "exact", head: true })
+      .is("deleted_at", null)
+      .is("baja_at", null)
+      .eq("activo", true);
+    if (r.error) return ERR.server();
+    return ok({ activos: r.count ?? 0 });
+  }
   if (sp.get("paginado") === "1") {
     const porPagina = Math.min(200, Math.max(10, Number(sp.get("por_pagina")) || 25));
     const pagina = Math.max(1, Number(sp.get("pagina")) || 1);

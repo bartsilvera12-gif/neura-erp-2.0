@@ -22,7 +22,7 @@ export type EventoHistorial = {
     motivo?: string | null;
     origen?: string | null;
     // Suscripciones (accion = "suscripcion")
-    evento?: "alta" | "cuota" | "cambio_plan" | "pausada" | "activa" | "cancelada" | string;
+    evento?: "alta" | "cuota" | "cambio_plan" | "pausada" | "activa" | "cancelada" | "cambio_vencimiento" | string;
     plan?: string | null;
     precio?: number | null;
     moneda?: string | null;
@@ -32,6 +32,10 @@ export type EventoHistorial = {
     modo?: string | null;
     plan_anterior?: string | null;
     plan_nuevo?: string | null;
+    // Cambio de vencimiento (evento = "cambio_vencimiento")
+    antes?: number | string | null;
+    despues?: number | string | null;
+    cuota_movida?: boolean | null;
   } | null;
   usuario_nombre: string | null;
   created_at: string;

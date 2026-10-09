@@ -9,6 +9,7 @@ export const moduloClientes: Modulo = {
   familia: "Comercial",
   children: [
     { label: "Clientes", href: "/clientes" },
+    { label: "Gestión de clientes", href: "/clientes/gestion" },
     { label: "Suscripciones", href: "/clientes/suscripciones" },
     { label: "Cuentas a cobrar", href: "/clientes/cobrar" },
   ],

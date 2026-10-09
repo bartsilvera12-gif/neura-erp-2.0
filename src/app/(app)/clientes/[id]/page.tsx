@@ -227,6 +227,10 @@ export default function ClienteDetallePage() {
               className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
               Registrar pago
             </button>
+            <Link href={`/clientes/gestion?cliente=${encodeURIComponent(c.id)}`}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
+              Abrir en Gestión
+            </Link>
           </div>
         </div>
 

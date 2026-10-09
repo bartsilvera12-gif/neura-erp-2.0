@@ -2,6 +2,7 @@
  * Contactos de un cliente (personas de contacto: comprador, cobranzas, etc.).
  *   GET    /api/clientes/[id]/contactos               → lista
  *   POST   /api/clientes/[id]/contactos               → agrega { nombre, cargo?, telefono?, email?, notas? }
+ *   PATCH  /api/clientes/[id]/contactos?contacto_id=  → edita uno { nombre, cargo?, telefono?, email?, notas? }
  *   DELETE /api/clientes/[id]/contactos?contacto_id=  → quita uno
  */
 import { z } from "zod";
@@ -44,6 +45,29 @@ export const POST = withTenant(
     });
     if (error || !data?.[0]) return ERR.server();
     return created(data[0]);
+  },
+  { roles: ["ADMIN", "VENDEDOR"], body: crearContacto },
+);
+
+export const PATCH = withTenant(
+  async (ctx, req, input) => {
+    const id = clienteId(req);
+    const contactoId = new URL(req.url).searchParams.get("contacto_id");
+    if (!id || !contactoId) return ERR.invalid("Falta contacto_id");
+    const { data, error } = await ctx.db
+      .update("cliente_contactos", {
+        nombre: input.nombre,
+        cargo: input.cargo || null,
+        telefono: input.telefono || null,
+        email: input.email || null,
+        notas: input.notas || null,
+      })
+      .eq("id", contactoId)
+      .eq("cliente_id", id)
+      .select("id, nombre, cargo, telefono, email, notas");
+    if (error) return ERR.server();
+    if (!data?.length) return ERR.notFound("Contacto");
+    return ok(data[0]);
   },
   { roles: ["ADMIN", "VENDEDOR"], body: crearContacto },
 );
