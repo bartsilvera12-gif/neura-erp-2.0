@@ -1,13 +1,17 @@
 /**
- * Cliente — detalle, edición y baja lógica.
- *   GET    /api/clientes/[id]  → cliente + estado de cuenta (saldo/límite) + últimas ventas + contactos
- *   PATCH  /api/clientes/[id]  → edita campos
- *   DELETE /api/clientes/[id]  → baja lógica (soft delete), solo ADMIN
+ * Cliente — ficha, edición y eliminación.
+ *   GET    /api/clientes/[id]  → cliente (con código, categoría, vendedor, creado por, baja) +
+ *                                estado de cuenta (saldo/límite) + últimas ventas + contactos +
+ *                                resumen + cantidad de notas
+ *   PATCH  /api/clientes/[id]  → edita campos. activo: true también levanta una baja.
+ *   DELETE /api/clientes/[id]  → { motivo } eliminación lógica, solo ADMIN. Bloqueada si tiene
+ *                                ventas o deuda (en ese caso, dar de baja).
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, noContent, fail, ERR } from "@/lib/api/responses";
 import { documentoRepetido } from "@/modules/clientes/server";
+import { camposCliente, errorSifen, limpiarVacios } from "@/modules/clientes/esquema";
 
 /** Saca el id de /api/clientes/<id>[/...]. withTenant no reenvía los params de Next. */
 function clienteId(req: { url: string }): string | null {
@@ -17,15 +21,18 @@ function clienteId(req: { url: string }): string | null {
 }
 
 const DETALLE =
-  "id, nombre, razon_social, tipo_cliente, documento, ruc, telefono, email, direccion, ciudad, condicion_pago, plazo_dias, limite_credito, origen, notas, activo, vendedor_usuario_id, creado_at, updated_at";
+  "id, codigo, nombre, razon_social, tipo_cliente, documento, ruc, nombre_contacto, telefono, telefono_secundario, email, email_secundario, " +
+  "direccion, ciudad, pais, sitio_web, instagram, linkedin, categoria_id, valor_anual, moneda_preferida, condicion_pago, plazo_dias, " +
+  "limite_credito, origen, notas, activo, vendedor_usuario_id, vendedor_texto, created_by, creado_at, updated_at, baja_at, baja_por, " +
+  "baja_motivo, sifen_naturaleza, sifen_ti_ope, sifen_extranjero, sifen_pais_iso3, sifen_tipo_documento, sifen_num_id, sifen_direccion, sifen_numero_casa";
 
 export const GET = withTenant(async (ctx, req) => {
   const id = clienteId(req);
   if (!id) return ERR.invalid("Falta el id del cliente");
 
-  // Las 5 lecturas son independientes: van juntas (1 viaje en vez de 5 seguidos). Si el
-  // cliente no existe, las demás vuelven vacías y se responde 404 igual que antes.
-  const [cli, saldo, resumen, ventas, contactos] = await Promise.all([
+  // Lecturas independientes: van juntas (1 viaje). Usuarios y categorías son listas cortas
+  // de la empresa: se resuelven los nombres acá en vez de pedir joins.
+  const [cli, saldo, resumen, ventas, contactos, usuarios, categorias, notas] = await Promise.all([
     ctx.db.select("clientes", DETALLE).eq("id", id).is("deleted_at", null).limit(1),
     ctx.db.rpc<number>("cliente_saldo", { p_cliente_id: id }),
     ctx.db.rpc("resumen_cliente", { p_cliente: id }),
@@ -38,13 +45,29 @@ export const GET = withTenant(async (ctx, req) => {
       .select("cliente_contactos", "id, nombre, cargo, telefono, email, notas")
       .eq("cliente_id", id)
       .order("created_at", { ascending: true }),
+    ctx.db.select("usuarios", "id, nombre"),
+    ctx.db.select("cliente_categorias", "id, nombre, color"),
+    ctx.db.select("cliente_notas", "id", { count: "exact", head: true }).eq("cliente_id", id),
   ]);
   if (cli.error) return ERR.server();
   if (!cli.data?.length) return ERR.notFound();
 
-  const cliente = cli.data[0] as unknown as Record<string, unknown> & { limite_credito: number | null };
+  const c = cli.data[0] as unknown as Record<string, unknown> & {
+    limite_credito: number | null; vendedor_usuario_id: string | null; vendedor_texto: string | null;
+    created_by: string | null; baja_por: string | null; categoria_id: string | null;
+  };
+  const nombreUsuario = new Map(((usuarios.data ?? []) as unknown as { id: string; nombre: string }[]).map((u) => [u.id, u.nombre]));
+  const cat = ((categorias.data ?? []) as unknown as { id: string; nombre: string; color: string | null }[]).find((x) => x.id === c.categoria_id);
+  const cliente = {
+    ...c,
+    categoria_nombre: cat?.nombre ?? null,
+    categoria_color: cat?.color ?? null,
+    vendedor_nombre: (c.vendedor_usuario_id ? nombreUsuario.get(c.vendedor_usuario_id) : null) ?? c.vendedor_texto ?? null,
+    creado_por_nombre: c.created_by ? nombreUsuario.get(c.created_by) ?? null : null,
+    baja_por_nombre: c.baja_por ? nombreUsuario.get(c.baja_por) ?? null : null,
+  };
   const saldoNum = Number(saldo.data ?? 0);
-  const limite = Number(cliente.limite_credito ?? 0);
+  const limite = Number(c.limite_credito ?? 0);
   return ok({
     cliente,
     estado_cuenta: {
@@ -55,59 +78,65 @@ export const GET = withTenant(async (ctx, req) => {
     ventas: ventas.data ?? [],
     contactos: contactos.data ?? [],
     resumen: resumen.data ?? null,
+    notas_count: notas.count ?? 0,
   });
 });
 
-const editarCliente = z.object({
-  nombre: z.string().trim().min(1).optional(),
-  tipo_cliente: z.enum(["empresa", "persona"]).optional(),
-  razon_social: z.string().trim().max(200).nullish(),
-  documento: z.string().trim().max(40).nullish(),
-  ruc: z.string().trim().max(40).nullish(),
-  telefono: z.string().trim().max(40).nullish(),
-  email: z.string().trim().email("Email inválido").max(120).nullish().or(z.literal("")),
-  direccion: z.string().trim().max(200).nullish(),
-  ciudad: z.string().trim().max(80).nullish(),
-  condicion_pago: z.enum(["CONTADO", "CREDITO"]).optional(),
-  plazo_dias: z.coerce.number().int().min(0).max(3650).nullish(),
-  limite_credito: z.coerce.number().min(0).optional(),
-  origen: z.enum(["MANUAL", "VENTA", "CRM"]).optional(),
-  notas: z.string().trim().max(1000).nullish(),
-  activo: z.boolean().optional(),
-  vendedor_usuario_id: z.string().uuid().nullish(),
-});
+const editarCliente = z.object({ ...camposCliente, activo: z.boolean().optional() });
 
 export const PATCH = withTenant(
   async (ctx, req, input) => {
     const id = clienteId(req);
     if (!id) return ERR.invalid("Falta el id del cliente");
-    const patch: Record<string, unknown> = { ...input, updated_at: new Date().toISOString() };
-    if ("email" in patch) patch.email = (input.email as string) || null;
+    const sifen = errorSifen(input);
+    if (sifen) return ERR.invalid(sifen);
+
+    const patch: Record<string, unknown> = { ...limpiarVacios(input), updated_at: new Date().toISOString() };
     if (input.condicion_pago === "CONTADO") patch.plazo_dias = null;
+    if (input.sifen_extranjero === false) patch.sifen_pais_iso3 = "PRY";
+    // Reactivar levanta también una baja (vuelve a ser cliente).
+    if (input.activo === true) Object.assign(patch, { baja_at: null, baja_por: null, baja_motivo: null });
     const doc = input.documento?.trim();
     if (doc) {
       const dup = await documentoRepetido(ctx.db, doc, id);
       if (dup) return fail(`Ya existe un cliente con el documento ${doc} (${dup}).`, 409);
     }
-    const { error } = await ctx.db.update("clientes", patch).eq("id", id);
+    const { data, error } = await ctx.db.update("clientes", patch).eq("id", id).is("deleted_at", null).select("id");
     if (error) {
       if (/duplicate key|unique/i.test(error.message)) return fail("Ya existe un cliente con ese documento.", 409);
+      if (/foreign key/i.test(error.message)) return ERR.invalid("La categoría o el vendedor elegido ya no existe.");
       return ERR.server();
     }
+    if (!data?.length) return ERR.notFound("Cliente");
     return ok({ id });
   },
   { roles: ["ADMIN", "VENDEDOR"], body: editarCliente },
 );
 
+const eliminar = z.object({ motivo: z.string().trim().min(3, "Escribí el motivo").max(500) });
+
 export const DELETE = withTenant(
-  async (ctx, req) => {
+  async (ctx, req, input) => {
     const id = clienteId(req);
     if (!id) return ERR.invalid("Falta el id del cliente");
-    const { error } = await ctx.db
-      .update("clientes", { deleted_at: new Date().toISOString(), activo: false })
-      .eq("id", id);
+    const pre = await ctx.db.rpc<{ ventas: number; deuda: number }>("cliente_eliminar_preview", { p_cliente: id });
+    if (pre.error || !pre.data) return ERR.server();
+    if (Number(pre.data.ventas) > 0 || Number(pre.data.deuda) > 0) {
+      return fail("No se puede eliminar: tiene ventas o deuda. Dalo de baja: deja de ser cliente y se conserva su historial.", 409);
+    }
+    const { data, error } = await ctx.db
+      .update("clientes", {
+        deleted_at: new Date().toISOString(),
+        deleted_by: ctx.usuarioId,
+        deleted_motivo: input.motivo,
+        activo: false,
+      })
+      .eq("id", id)
+      .is("deleted_at", null)
+      .select("id");
     if (error) return ERR.server();
+    if (!data?.length) return ERR.notFound("Cliente");
     return noContent();
   },
-  { roles: ["ADMIN"] },
+  { roles: ["ADMIN"], body: eliminar },
 );

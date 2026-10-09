@@ -1,55 +1,58 @@
 "use client";
 
 /**
- * /clientes/[id] — ficha del cliente (Fase 1). Arriba: total comprado, compras y ticket
- * promedio, deuda (y vencido) y crédito disponible. Pestañas: Resumen (datos y crédito),
- * Compras (sus ventas), Contactos y Notas. Editar abre el panel lateral; también se puede
- * desactivar (no se borra: tiene historial).
+ * /clientes/[id] — ficha del cliente (copia del sistema actual, con datos genéricos).
+ * Encabezado: avatar, nombre, código CL-…, estado, "Cliente desde", Dar de baja / Reactivar
+ * y Eliminar (administrador); acciones Nueva suscripción (próximamente), Venta al contado y
+ * Registrar pago; franja de datos (origen, categoría, condición, suscripción, moneda,
+ * vendedor, creado por). Pestañas: Información (edición), Estado de cuenta, Compras,
+ * Contactos, Actividad (historial automático) y Notas.
  */
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { ArrowLeft, Ban, CheckCircle2, FileText, HandCoins, Loader2, Mail, MapPin, Pencil, Phone, Plus, Trash2 } from "lucide-react";
+import { FileText, Loader2, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
-import { clienteConfig } from "@/cliente.config";
+import { descargarArchivo } from "@/lib/api/client-blob";
+import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { TZ_PY } from "@/lib/fecha/paraguay";
-import { ClienteForm, type ClienteFicha } from "@/modules/clientes/ClienteForm";
 import { CuentaCorriente } from "@/modules/clientes/CuentaCorriente";
 import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
-import { descargarArchivo } from "@/lib/api/client-blob";
+import type { Contacto, Detalle, Venta } from "@/modules/clientes/ficha/tipos";
+import { TabInformacion } from "@/modules/clientes/ficha/TabInformacion";
+import { TabActividad } from "@/modules/clientes/ficha/TabActividad";
+import { TabNotas } from "@/modules/clientes/ficha/TabNotas";
+import { ModalEliminar, PanelBaja } from "@/modules/clientes/ficha/Modales";
+import { Avatar, BadgeEstado, CategoriaChip, CodigoChip, TEAL, codigoCliente, estadoDe, fechaCorta, gs } from "@/modules/clientes/ui";
 
-const BRAND = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
-const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
 const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric" });
 
-type Contacto = { id: string; nombre: string; cargo: string | null; telefono: string | null; email: string | null; notas: string | null };
-type Venta = { id: string; numero_control: string; fecha: string; total: number; tipo_venta: string; estado: string };
-type Resumen = { total_comprado: number; compras: number; ultima_compra: string | null; deuda: number; vencido: number; ticket_promedio: number; saldo_favor?: number };
-type Detalle = {
-  cliente: ClienteFicha;
-  estado_cuenta: { saldo: number; limite_credito: number; disponible: number | null };
-  ventas: Venta[];
-  contactos: Contacto[];
-  resumen: Resumen | null;
-};
-type Tab = "resumen" | "cuenta" | "compras" | "contactos" | "notas";
+type Tab = "informacion" | "estado_cuenta" | "compras" | "contactos" | "actividad" | "notas";
 
 export default function ClienteDetallePage() {
   const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const me = useUsuario();
+  const esAdmin = me?.rol === "ADMIN";
   const [data, setData] = useState<Detalle | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>("resumen");
-  const [editando, setEditando] = useState(false);
-  const [cambiando, setCambiando] = useState(false);
+  const [tab, setTab] = useState<Tab>("informacion");
   const [cobrando, setCobrando] = useState(false);
   const [recargaCuenta, setRecargaCuenta] = useState(0);
-  const [bajandoEc, setBajandoEc] = useState(false);
+  const [recargaHist, setRecargaHist] = useState(0);
+  const [bajando, setBajando] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
+  const [cambiando, setCambiando] = useState(false);
+  const [notasCount, setNotasCount] = useState(0);
 
   const cargar = useCallback(async () => {
     try {
-      setData(await apiFetch<Detalle>(`/api/clientes/${id}`));
+      const d = await apiFetch<Detalle>(`/api/clientes/${id}`);
+      setData(d);
+      setNotasCount(d.notas_count ?? 0);
+      setRecargaHist((k) => k + 1);
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -58,11 +61,11 @@ export default function ClienteDetallePage() {
   }, [id]);
   useEffect(() => { void cargar(); }, [cargar]);
 
-  async function cambiarEstado() {
-    if (!data) return;
+  async function cambiarActivo(activo: boolean) {
     setCambiando(true);
+    setError(null);
     try {
-      await apiFetch(`/api/clientes/${id}`, { method: "PATCH", body: JSON.stringify({ activo: data.cliente.activo === false }) });
+      await apiFetch(`/api/clientes/${id}`, { method: "PATCH", body: JSON.stringify({ activo }) });
       await cargar();
     } catch (e) {
       setError((e as Error).message);
@@ -71,99 +74,190 @@ export default function ClienteDetallePage() {
     }
   }
 
-  if (loading) return <p className="flex items-center gap-2 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</p>;
-  if (error && !data) return <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>;
+  if (loading) return <FichaSkeleton />;
+  if (error && !data) {
+    return (
+      <div className="space-y-4">
+        <Link href="/clientes" className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600">← Clientes</Link>
+        <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p>
+      </div>
+    );
+  }
   if (!data) return null;
 
   const c = data.cliente;
   const r = data.resumen;
+  const estado = estadoDe(c);
   const credito = c.condicion_pago === "CREDITO";
   const { limite_credito, disponible } = data.estado_cuenta;
-  const tabs: { id: Tab; label: string }[] = [
-    { id: "resumen", label: "Resumen" },
-    { id: "cuenta", label: "Cuenta corriente" },
-    { id: "compras", label: `Compras (${r?.compras ?? data.ventas.length})` },
-    { id: "contactos", label: `Contactos (${data.contactos.length})` },
-    { id: "notas", label: "Notas" },
+  const tabs: { id: Tab; label: string; badge?: number }[] = [
+    { id: "informacion", label: "Información" },
+    { id: "estado_cuenta", label: "Estado de cuenta" },
+    { id: "compras", label: "Compras", badge: r?.compras ?? data.ventas.length },
+    { id: "contactos", label: "Contactos", badge: data.contactos.length },
+    { id: "actividad", label: "Actividad" },
+    { id: "notas", label: "Notas", badge: notasCount },
+  ];
+  const datos: { label: string; value: React.ReactNode }[] = [
+    { label: "Origen", value: c.origen ?? "MANUAL" },
+    { label: "Categoría", value: c.categoria_nombre ? <CategoriaChip nombre={c.categoria_nombre} color={c.categoria_color} /> : "—" },
+    { label: "Condición", value: credito ? `Crédito${c.plazo_dias ? ` ${c.plazo_dias} días` : ""}` : "Contado" },
+    { label: "Suscripción activa", value: "—" },
+    { label: "Moneda", value: c.moneda_preferida ?? "GS" },
+    { label: "Vendedor", value: c.vendedor_nombre || <span className="text-slate-400">Sin asignar</span> },
+    { label: "Creado por", value: c.creado_por_nombre || "—" },
   ];
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 pb-10">
-      <Link href="/clientes" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700">
-        <ArrowLeft className="h-4 w-4" /> Clientes
-      </Link>
+    <div className="max-w-7xl space-y-6 pb-10">
+      <Link href="/clientes" className="flex w-fit items-center gap-1 text-xs text-slate-400 hover:text-slate-600">← Clientes</Link>
 
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-4">
-          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-lg font-bold" style={{ backgroundColor: `${BRAND}1a`, color: BRAND }}>
-            {c.nombre.charAt(0).toUpperCase()}
+      {/* Panel resumen */}
+      <div className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: `${TEAL}73` }}>
+        <div className="px-6 py-5" style={{ backgroundImage: `linear-gradient(to bottom right, #fff, #fff, ${TEAL}14)` }}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex min-w-0 items-center gap-4">
+              <Avatar nombre={c.nombre} size="lg" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: TEAL }} />
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Cliente</p>
+                </div>
+                <h1 className="mt-1 truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{c.nombre}</h1>
+                <div className="mt-2 flex flex-wrap items-center gap-2">
+                  <CodigoChip codigo={codigoCliente(c)} fondo="bg-white" />
+                  {c.ruc || (c.tipo_cliente === "empresa" && c.documento) ? (
+                    <span className="text-[11px] text-slate-500"><span className="font-medium text-slate-400">RUC:</span> {c.ruc || c.documento}</span>
+                  ) : c.documento ? (
+                    <span className="text-[11px] text-slate-500"><span className="font-medium text-slate-400">CI:</span> {c.documento}</span>
+                  ) : null}
+                  <BadgeEstado estado={estado} />
+                  <span className="text-[11px] text-slate-500">
+                    Cliente desde <span className="font-medium text-slate-700">{fechaCorta(c.creado_at)}</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {estado === "activo" ? (
+                esAdmin ? (
+                  <button type="button" onClick={() => { setBajando(true); setEliminando(false); }}
+                    className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 shadow-sm transition-colors hover:bg-amber-100">
+                    Dar de baja
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => void cambiarActivo(false)} disabled={cambiando}
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50">
+                    Desactivar
+                  </button>
+                )
+              ) : (
+                <button type="button" onClick={() => void cambiarActivo(true)} disabled={cambiando}
+                  className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700 shadow-sm transition-colors hover:bg-emerald-100 disabled:opacity-50">
+                  {cambiando ? "Reactivando…" : "Reactivar"}
+                </button>
+              )}
+              {esAdmin ? (
+                <button type="button" onClick={() => setEliminando(true)} title="Eliminar cliente"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3 py-1.5 text-xs font-semibold text-rose-600 shadow-sm transition-colors hover:bg-rose-50">
+                  <Trash2 className="h-3.5 w-3.5" /> Eliminar
+                </button>
+              ) : null}
+            </div>
           </div>
-          <div className="min-w-0">
-            <h1 className="truncate text-2xl font-semibold tracking-tight text-slate-900">
-              {c.nombre}
-              {c.activo === false ? <span className="ml-2 rounded-full bg-slate-100 px-2 py-0.5 align-middle text-xs font-semibold text-slate-500">Inactivo</span> : null}
-            </h1>
-            <p className="mt-0.5 text-sm text-slate-500">
-              {c.tipo_cliente === "empresa" ? "Empresa" : "Persona"}
-              {c.razon_social ? ` · ${c.razon_social}` : ""}
-              {c.documento ? <> · <span className="font-mono">{c.documento}</span></> : " · sin documento"}
-            </p>
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => setCobrando(true)} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700">
-            <HandCoins className="h-4 w-4" /> {(r?.deuda ?? 0) > 0 ? "Registrar cobro" : "Cargar anticipo"}
-          </button>
-          {credito || (r?.deuda ?? 0) > 0 ? (
-            <button
-              onClick={async () => { setBajandoEc(true); try { await descargarArchivo(`/api/clientes/${c.id}/estado-cuenta/pdf`, "estado-cuenta.pdf"); } catch { /* best-effort */ } finally { setBajandoEc(false); } }}
-              disabled={bajandoEc}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
-              {bajandoEc ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} Estado de cuenta
+          <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-200/70 pt-4">
+            <span title="Próximamente">
+              <button type="button" disabled aria-disabled
+                className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-white opacity-50 shadow-sm"
+                style={{ backgroundColor: TEAL }}>
+                <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Nueva suscripción
+              </button>
+            </span>
+            <Link href="/caja/nueva"
+              className="rounded-xl border px-3 py-1.5 text-xs font-semibold transition hover:brightness-95"
+              style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}14`, color: TEAL }}>
+              Venta al contado
+            </Link>
+            <button type="button" onClick={() => setCobrando(true)}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
+              Registrar pago
             </button>
-          ) : null}
-          <button onClick={cambiarEstado} disabled={cambiando} className={`inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-medium transition disabled:opacity-50 ${c.activo === false ? "border-emerald-200 text-emerald-700 hover:bg-emerald-50" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
-            {c.activo === false ? <><CheckCircle2 className="h-4 w-4" /> Activar</> : <><Ban className="h-4 w-4" /> Desactivar</>}
-          </button>
-          <button onClick={() => setEditando(true)} className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95" style={{ backgroundColor: BRAND }}>
-            <Pencil className="h-4 w-4" /> Editar
-          </button>
+          </div>
         </div>
-      </header>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi titulo="Total comprado" valor={gs(r?.total_comprado ?? 0)} sub={r?.ultima_compra ? `última ${fecha(r.ultima_compra)}` : "todavía no compró"} />
-        <Kpi titulo="Compras" valor={String(r?.compras ?? 0)} sub={r?.compras ? `ticket promedio ${gs(r.ticket_promedio)}` : undefined} />
-        <Kpi titulo="Debe" valor={gs(r?.deuda ?? 0)}
-          sub={[(r?.vencido ?? 0) > 0 ? `vencido ${gs(r!.vencido)}` : (r?.deuda ?? 0) > 0 ? "al día" : "no debe nada", (r?.saldo_favor ?? 0) > 0 ? `a favor ${gs(r!.saldo_favor!)}` : null].filter(Boolean).join(" · ")}
-          tono={(r?.vencido ?? 0) > 0 ? "rojo" : undefined} />
-        <Kpi titulo="Crédito disponible" valor={!credito ? "Contado" : limite_credito > 0 ? gs(disponible ?? 0) : "Sin límite"}
-          sub={credito ? (limite_credito > 0 ? `de ${gs(limite_credito)}` : `${c.plazo_dias ?? 30} días de plazo`) : "no compra a crédito"} />
+        {/* Datos rápidos */}
+        <div className="grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 bg-slate-50/40 sm:grid-cols-4 xl:grid-cols-7">
+          {datos.map((d) => (
+            <div key={d.label} className="px-5 py-3.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{d.label}</p>
+              <div className="mt-1 truncate text-sm font-semibold text-slate-900">{d.value}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
+      {bajando ? (
+        <PanelBaja clienteId={c.id} onCancel={() => setBajando(false)} onHecho={() => router.push("/clientes?baja_ok=1")} />
+      ) : null}
       {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
 
-      <div className="flex gap-1 border-b border-slate-200">
-        {tabs.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)} className="-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition-colors"
-            style={tab === t.id ? { borderColor: BRAND, color: BRAND } : { borderColor: "transparent", color: "#64748b" }}>
-            {t.label}
-          </button>
-        ))}
+      {/* Pestañas */}
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex overflow-x-auto border-b border-slate-200">
+          {tabs.map((t) => (
+            <button key={t.id} type="button" onClick={() => setTab(t.id)}
+              className={`whitespace-nowrap border-b-2 px-5 py-3.5 text-sm font-medium transition-colors ${tab === t.id ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"}`}>
+              {t.label}
+              {t.badge ? <span className="ml-1.5 rounded-full bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600">{t.badge}</span> : null}
+            </button>
+          ))}
+        </div>
+        <div className="min-h-[220px] p-6">
+          {tab === "informacion" ? <TabInformacion cliente={c} esAdmin={esAdmin} onGuardado={() => void cargar()} /> : null}
+          {tab === "estado_cuenta" ? (
+            <div className="space-y-6">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="grid flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
+                  <Kpi titulo="Total comprado" valor={gs(r?.total_comprado ?? 0)} sub={r?.ultima_compra ? `última ${fecha(r.ultima_compra)}` : "todavía no compró"} />
+                  <Kpi titulo="Compras" valor={String(r?.compras ?? 0)} sub={r?.compras ? `ticket promedio ${gs(r.ticket_promedio)}` : undefined} />
+                  <Kpi titulo="Debe" valor={gs(r?.deuda ?? 0)}
+                    sub={[(r?.vencido ?? 0) > 0 ? `vencido ${gs(r!.vencido)}` : (r?.deuda ?? 0) > 0 ? "al día" : "no debe nada", (r?.saldo_favor ?? 0) > 0 ? `a favor ${gs(r!.saldo_favor!)}` : null].filter(Boolean).join(" · ")}
+                    tono={(r?.vencido ?? 0) > 0 ? "rojo" : undefined} />
+                  <Kpi titulo="Crédito disponible" valor={!credito ? "Contado" : limite_credito > 0 ? gs(disponible ?? 0) : "Sin límite"}
+                    sub={credito ? (limite_credito > 0 ? `de ${gs(limite_credito)}` : `${c.plazo_dias ?? 30} días de plazo`) : "no compra a crédito"} />
+                </div>
+                <BotonPdf clienteId={c.id} />
+              </div>
+              <CuentaCorriente clienteId={c.id} recarga={recargaCuenta} onCambio={() => void cargar()} />
+            </div>
+          ) : null}
+          {tab === "compras" ? <TabCompras ventas={data.ventas} /> : null}
+          {tab === "contactos" ? <TabContactos clienteId={c.id} contactos={data.contactos} onChange={() => void cargar()} /> : null}
+          {tab === "actividad" ? <TabActividad clienteId={c.id} recarga={recargaHist} /> : null}
+          {tab === "notas" ? <TabNotas clienteId={c.id} notaAnterior={c.notas} onCambio={setNotasCount} /> : null}
+        </div>
       </div>
-
-      {tab === "resumen" ? <TabResumen c={c} /> : null}
-      {tab === "cuenta" ? <CuentaCorriente clienteId={c.id} recarga={recargaCuenta} onCambio={cargar} /> : null}
-      {tab === "compras" ? <TabCompras ventas={data.ventas} /> : null}
-      {tab === "contactos" ? <TabContactos clienteId={c.id} contactos={data.contactos} onChange={cargar} /> : null}
-      {tab === "notas" ? <TabNotas clienteId={c.id} notas={c.notas ?? ""} onSaved={cargar} /> : null}
 
       {cobrando ? (
         <RegistrarCobro clienteId={c.id} clienteNombre={c.razon_social || c.nombre} onClose={() => setCobrando(false)}
-          onHecho={() => { void cargar(); setRecargaCuenta((k) => k + 1); setTab("cuenta"); }} />
+          onHecho={() => { void cargar(); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); }} />
       ) : null}
-      {editando ? <ClienteForm cliente={c} onClose={() => setEditando(false)} onSaved={() => { setEditando(false); void cargar(); }} /> : null}
+      {eliminando ? (
+        <ModalEliminar clienteId={c.id} onClose={() => setEliminando(false)} onEliminado={() => router.push("/clientes")}
+          onDarDeBaja={estado === "activo" ? () => { setEliminando(false); setBajando(true); } : undefined} />
+      ) : null}
     </div>
+  );
+}
+
+function BotonPdf({ clienteId }: { clienteId: string }) {
+  const [bajando, setBajando] = useState(false);
+  return (
+    <button type="button" disabled={bajando}
+      onClick={async () => { setBajando(true); try { await descargarArchivo(`/api/clientes/${clienteId}/estado-cuenta/pdf`, "estado-cuenta.pdf"); } catch { /* best-effort */ } finally { setBajando(false); } }}
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
+      {bajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} Estado de cuenta PDF
+    </button>
   );
 }
 
@@ -177,55 +271,17 @@ function Kpi({ titulo, valor, sub, tono }: { titulo: string; valor: string; sub?
   );
 }
 
-function TabResumen({ c }: { c: ClienteFicha }) {
-  const filas: [React.ReactNode, string, string | null | undefined][] = [
-    [<Phone key="t" className="h-4 w-4" />, "Teléfono", c.telefono],
-    [<Mail key="e" className="h-4 w-4" />, "Email", c.email],
-    [<MapPin key="d" className="h-4 w-4" />, "Dirección", [c.direccion, c.ciudad].filter(Boolean).join(", ") || null],
-  ];
-  return (
-    <div className="grid gap-4 md:grid-cols-2">
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Contacto</p>
-        <ul className="space-y-3">
-          {filas.map(([icono, l, v]) => (
-            <li key={l} className="flex items-start gap-3 text-sm">
-              <span className="mt-0.5 text-slate-400">{icono}</span>
-              <span>
-                <span className="block text-[11px] text-slate-500">{l}</span>
-                <span className={v ? "font-medium text-slate-800" : "text-slate-400"}>{v || "Sin cargar"}</span>
-              </span>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <section className="rounded-2xl border border-slate-200 bg-white p-5">
-        <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Cómo te paga</p>
-        {c.condicion_pago === "CREDITO" ? (
-          <dl className="space-y-2 text-sm">
-            <div className="flex justify-between"><dt className="text-slate-500">Condición</dt><dd className="font-semibold text-amber-700">A crédito</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">Plazo</dt><dd className="font-medium text-slate-800">{c.plazo_dias ?? 30} días</dd></div>
-            <div className="flex justify-between"><dt className="text-slate-500">Límite de crédito</dt><dd className="font-medium text-slate-800">{Number(c.limite_credito) > 0 ? gs(Number(c.limite_credito)) : "Sin límite"}</dd></div>
-          </dl>
-        ) : (
-          <p className="text-sm text-slate-600">Al contado. Si querés venderle a cuenta corriente, tocá <strong className="font-semibold">Editar</strong> y elegí "A crédito".</p>
-        )}
-      </section>
-    </div>
-  );
-}
-
 function TabCompras({ ventas }: { ventas: Venta[] }) {
-  if (!ventas.length) return <p className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-12 text-center text-sm text-slate-400">Este cliente todavía no compró.</p>;
+  if (!ventas.length) return <p className="py-10 text-center text-sm italic text-slate-400">Este cliente todavía no compró.</p>;
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
       <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b-2 text-left text-[11px] font-bold uppercase tracking-wider" style={{ borderColor: `${BRAND}26`, backgroundColor: `${BRAND}0d`, color: BRAND }}>
-            <th className="px-4 py-3">Número</th>
-            <th className="px-4 py-3">Fecha</th>
-            <th className="px-4 py-3">Condición</th>
-            <th className="px-4 py-3 text-right">Total</th>
+        <thead className="border-b border-slate-200 bg-slate-50/80">
+          <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
+            <th className="px-4 py-2">Número</th>
+            <th className="px-4 py-2">Fecha</th>
+            <th className="px-4 py-2">Condición</th>
+            <th className="px-4 py-2 text-right">Total</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -257,11 +313,13 @@ function TabContactos({ clienteId, contactos, onChange }: { clienteId: string; c
   const [cargo, setCargo] = useState("");
   const [telefono, setTelefono] = useState("");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function agregar(e: React.FormEvent) {
     e.preventDefault();
     if (!nombre.trim()) return;
     setBusy(true);
+    setError(null);
     try {
       await apiFetch(`/api/clientes/${clienteId}/contactos`, {
         method: "POST",
@@ -269,19 +327,25 @@ function TabContactos({ clienteId, contactos, onChange }: { clienteId: string; c
       });
       setNombre(""); setCargo(""); setTelefono("");
       onChange();
+    } catch (err) {
+      setError((err as Error).message);
     } finally {
       setBusy(false);
     }
   }
 
   async function quitar(cid: string) {
-    await apiFetch(`/api/clientes/${clienteId}/contactos?contacto_id=${cid}`, { method: "DELETE" });
-    onChange();
+    try {
+      await apiFetch(`/api/clientes/${clienteId}/contactos?contacto_id=${cid}`, { method: "DELETE" });
+      onChange();
+    } catch (err) {
+      setError((err as Error).message);
+    }
   }
 
   return (
-    <div className="space-y-4">
-      <form onSubmit={agregar} className="flex flex-wrap items-end gap-2 rounded-2xl border border-slate-200 bg-white p-4">
+    <div className="max-w-3xl space-y-4">
+      <form onSubmit={agregar} className="flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
         <label className="min-w-[8rem] flex-1">
           <span className="mb-1 block text-xs font-medium text-slate-600">Nombre</span>
           <input className={INPUT} value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Juan, el encargado" />
@@ -294,22 +358,23 @@ function TabContactos({ clienteId, contactos, onChange }: { clienteId: string; c
           <span className="mb-1 block text-xs font-medium text-slate-600">Teléfono</span>
           <input className={INPUT} value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej: 0981 000 000" />
         </label>
-        <button type="submit" disabled={busy || !nombre.trim()} className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: BRAND }}>
+        <button type="submit" disabled={busy || !nombre.trim()} className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: TEAL }}>
           <Plus className="h-4 w-4" /> Agregar
         </button>
       </form>
+      {error ? <p className="text-xs text-rose-600">{error}</p> : null}
       {contactos.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-400">Sin contactos cargados. Sirve para empresas: con quién hablar para cobrar o tomar pedidos.</p>
+        <p className="py-6 text-center text-sm italic text-slate-400">Sin contactos cargados. Sirve para empresas: con quién hablar para cobrar o tomar pedidos.</p>
       ) : (
-        <ul className="divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+        <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
           {contactos.map((ct) => (
             <li key={ct.id} className="flex items-center gap-3 px-4 py-3">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-sm font-medium text-slate-800">{ct.nombre} {ct.cargo ? <span className="font-normal text-slate-400">· {ct.cargo}</span> : null}</div>
                 <div className="text-xs text-slate-500">{ct.telefono || ct.email || "—"}</div>
               </div>
-              <button onClick={() => quitar(ct.id)} className="rounded-lg p-1.5 text-slate-300 transition hover:bg-rose-50 hover:text-rose-500" aria-label={`Quitar ${ct.nombre}`}>
-                <Trash2 className="h-4 w-4" />
+              <button type="button" onClick={() => void quitar(ct.id)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-slate-400 transition hover:bg-rose-50 hover:text-rose-600">
+                <Trash2 className="h-3.5 w-3.5" /> Quitar
               </button>
             </li>
           ))}
@@ -319,35 +384,31 @@ function TabContactos({ clienteId, contactos, onChange }: { clienteId: string; c
   );
 }
 
-function TabNotas({ clienteId, notas, onSaved }: { clienteId: string; notas: string; onSaved: () => void }) {
-  const [texto, setTexto] = useState(notas);
-  const [busy, setBusy] = useState(false);
-  const [ok, setOk] = useState(false);
-  const cambio = texto.trim() !== notas.trim();
-
-  async function guardar() {
-    setBusy(true);
-    setOk(false);
-    try {
-      await apiFetch(`/api/clientes/${clienteId}`, { method: "PATCH", body: JSON.stringify({ notas: texto.trim() || null }) });
-      setOk(true);
-      onSaved();
-    } finally {
-      setBusy(false);
-    }
-  }
-
+function FichaSkeleton() {
+  const bar = "animate-pulse rounded-md bg-slate-200/90";
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5">
-      <p className="mb-2 text-sm text-slate-600">Lo que conviene recordar de este cliente: horarios, preferencias, acuerdos.</p>
-      <textarea value={texto} onChange={(e) => { setTexto(e.target.value); setOk(false); }} rows={6} maxLength={1000}
-        onKeyDown={(e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && cambio) void guardar(); }}
-        placeholder="Ej: paga los viernes; prefiere que lo llamen después de las 14 h." className={INPUT} />
-      <div className="mt-3 flex items-center justify-end gap-3">
-        {ok && !cambio ? <span className="text-xs font-medium text-emerald-600">Guardado</span> : <span className="text-[11px] text-slate-400">Ctrl + Enter para guardar</span>}
-        <button onClick={guardar} disabled={busy || !cambio} className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: BRAND }}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar notas
-        </button>
+    <div className="max-w-7xl space-y-6">
+      <div className={`h-3 w-28 ${bar}`} aria-hidden />
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="h-40 animate-pulse bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200" aria-hidden />
+        <div className="grid grid-cols-2 divide-x divide-slate-100 border-t border-slate-100 sm:grid-cols-4 xl:grid-cols-7">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <div key={i} className="space-y-2 px-5 py-3">
+              <div className={`h-2.5 w-16 ${bar}`} />
+              <div className={`h-4 w-24 ${bar}`} />
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        <div className="flex gap-2 border-b border-slate-100 px-3 py-3">
+          {Array.from({ length: 6 }).map((_, i) => <div key={i} className={`h-8 max-w-[7rem] flex-1 ${bar}`} />)}
+        </div>
+        <div className="space-y-3 p-6">
+          <div className={`h-4 w-full max-w-md ${bar}`} />
+          <div className={`h-4 w-full max-w-sm ${bar}`} />
+          <div className={`h-32 w-full ${bar}`} />
+        </div>
       </div>
     </div>
   );

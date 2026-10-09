@@ -2,14 +2,18 @@
 
 /**
  * Panel lateral para crear o editar un cliente. Bloques: Datos (persona o empresa,
- * nombre, razón social, RUC o CI), Contacto y Condiciones (contado / crédito con plazo y
- * límite). Solo el nombre es obligatorio. El RUC o CI no se puede repetir.
+ * nombre, razón social, RUC o CI, categoría), Contacto (persona de contacto si es empresa)
+ * y Condiciones (contado / crédito con plazo y límite). Solo el nombre es obligatorio. El
+ * RUC o CI no se puede repetir. El resto de la ficha se completa en la pestaña Información.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Drawer } from "@/components/Drawer";
+import { Select } from "@/components/Select";
+import { apiFetchCache } from "@/lib/api/cache-cliente";
+import type { Categoria } from "@/modules/clientes/esquema";
 import MontoInput from "@/components/ui/MontoInput";
 import type { Cliente } from "@/modules/caja/lib";
 
@@ -18,7 +22,7 @@ const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm out
 const ET = "mb-1 block text-xs font-medium text-slate-600";
 const OPC = <span className="font-normal text-slate-400">(opcional)</span>;
 
-export type ClienteFicha = Cliente & { plazo_dias?: number | null; notas?: string | null; activo?: boolean };
+export type ClienteFicha = Cliente & { plazo_dias?: number | null; notas?: string | null; activo?: boolean; categoria_id?: string | null; nombre_contacto?: string | null };
 
 export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFicha | null; onClose: () => void; onSaved: (id: string) => void }) {
   const editando = !!cliente;
@@ -31,6 +35,8 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
     email: cliente?.email ?? "",
     direccion: cliente?.direccion ?? "",
     ciudad: cliente?.ciudad ?? "",
+    categoria_id: cliente?.categoria_id ?? "",
+    nombre_contacto: cliente?.nombre_contacto ?? "",
     condicion_pago: (cliente?.condicion_pago === "CREDITO" ? "CREDITO" : "CONTADO") as "CONTADO" | "CREDITO",
     plazo_dias: cliente?.plazo_dias ? String(cliente.plazo_dias) : "30",
     limite_credito: Number(cliente?.limite_credito ?? 0),
@@ -39,6 +45,10 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
   const [error, setError] = useState<string | null>(null);
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const empresa = f.tipo_cliente === "empresa";
+  const [categorias, setCategorias] = useState<Categoria[]>([]);
+  useEffect(() => {
+    apiFetchCache<Categoria[]>("/api/clientes/categorias").then(setCategorias).catch(() => {});
+  }, []);
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
@@ -47,13 +57,16 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
     setError(null);
     try {
       const doc = f.documento.trim();
+      const esRuc = /^\d{3,}-\d$/.test(doc);
       const body = JSON.stringify({
         tipo_cliente: f.tipo_cliente,
         nombre: f.nombre.trim(),
         razon_social: f.razon_social.trim() || null,
         documento: doc || null,
         // El RUC (con dígito verificador) también queda como RUC para facturar.
-        ruc: /^\d{3,}-\d$/.test(doc) ? doc : null,
+        ruc: esRuc ? doc : editando ? undefined : null,
+        categoria_id: f.categoria_id || null,
+        nombre_contacto: empresa ? f.nombre_contacto.trim() || null : undefined,
         telefono: f.telefono.trim() || null,
         email: f.email.trim() || null,
         direccion: f.direccion.trim() || null,
@@ -106,10 +119,23 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
               <input value={f.documento} onChange={(e) => set("documento", e.target.value)} maxLength={30} placeholder={empresa ? "Ej: 80011222-7" : "Ej: 3456789 o 3456789-0"} className={`${INPUT} font-mono`} />
             </label>
           </div>
+          {categorias.length > 0 ? (
+            <label className="block">
+              <span className={ET}>Categoría {OPC}</span>
+              <Select value={f.categoria_id} onChange={(v) => set("categoria_id", v)} block
+                options={[["", "— Ninguna —"], ...categorias.map((c) => [c.id, c.nombre] as [string, string])]} />
+            </label>
+          ) : null}
         </Bloque>
 
         <Bloque titulo="Contacto">
           <div className="grid grid-cols-2 gap-3">
+            {empresa ? (
+              <label className="col-span-2 block">
+                <span className={ET}>Persona de contacto {OPC}</span>
+                <input value={f.nombre_contacto} onChange={(e) => set("nombre_contacto", e.target.value)} maxLength={200} placeholder="Ej: Juan Pérez, encargado de compras" className={INPUT} />
+              </label>
+            ) : null}
             <label className="block">
               <span className={ET}>Teléfono {OPC}</span>
               <input value={f.telefono} onChange={(e) => set("telefono", e.target.value)} maxLength={40} placeholder="Ej: 0981 123 456" className={INPUT} />

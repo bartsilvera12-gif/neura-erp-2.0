@@ -1,8 +1,10 @@
 /**
  * Clientes — lista y alta. "Mejor versión" combinada:
- *   GET  /api/clientes?paginado=1&pagina&por_pagina&q&tipo&condicion&deuda&inactivos=1
- *        → { rows, total, kpis } (listar_clientes): cada cliente con total comprado, última
- *          compra, deuda y vencido; kpis = clientes, con deuda, a cobrar, vencido.
+ *   GET  /api/clientes?paginado=1&pagina&por_pagina&q&tipo&condicion&deuda&estado&origen&categoria
+ *        → { rows, total, kpis } (listar_clientes v3): cada cliente con código, categoría,
+ *          vendedor, creado por, total comprado, última compra, deuda y vencido;
+ *          estado = activos (por defecto) | inactivos | baja | todos;
+ *          kpis = clientes, activos, empresas, con deuda, a cobrar, vencido.
  *   GET  /api/clientes?q=   → lista sin borrados. Con q, búsqueda inteligente (buscar_clientes:
  *                             nombre, razón social, CI/RUC con o sin puntos, teléfono, email,
  *                             ciudad; sin tildes, errores de tipeo, por relevancia)
@@ -14,6 +16,9 @@ import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, created, fail, ERR } from "@/lib/api/responses";
 import { documentoRepetido } from "@/modules/clientes/server";
+import { camposCliente, errorSifen, limpiarVacios } from "@/modules/clientes/esquema";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 // Sin export: un route file solo puede exportar handlers/config (si no, falla el build).
 const COLS =
@@ -27,12 +32,18 @@ export const GET = withTenant(async (ctx, req) => {
     const tipo = sp.get("tipo");
     const condicion = sp.get("condicion");
     const deuda = sp.get("deuda");
+    const estado = sp.get("estado");
+    const origen = sp.get("origen");
+    const categoria = sp.get("categoria");
     const r = await ctx.db.rpc("listar_clientes", {
       p_q: sp.get("q")?.trim().slice(0, 200) || null,
       p_tipo: tipo === "empresa" || tipo === "persona" ? tipo : null,
       p_condicion: condicion === "CONTADO" || condicion === "CREDITO" ? condicion : null,
       p_deuda: deuda === "con_deuda" || deuda === "vencidos" ? deuda : null,
-      p_inactivos: sp.get("inactivos") === "1",
+      // Compatibilidad: ?inactivos=1 (lista vieja) = todos.
+      p_estado: estado === "inactivos" || estado === "baja" || estado === "todos" ? estado : sp.get("inactivos") === "1" ? "todos" : "activos",
+      p_origen: origen === "MANUAL" || origen === "VENTA" || origen === "CRM" ? origen : null,
+      p_categoria: categoria && UUID_RE.test(categoria) ? categoria : null,
       p_limit: porPagina,
       p_offset: (pagina - 1) * porPagina,
     });
@@ -54,21 +65,12 @@ export const GET = withTenant(async (ctx, req) => {
 });
 
 const crearCliente = z.object({
-  nombre: z.string().trim().min(1, "El nombre es obligatorio"),
+  ...camposCliente,
+  nombre: z.string().trim().min(1, "El nombre es obligatorio").max(200),
   tipo_cliente: z.enum(["empresa", "persona"]).default("persona"),
-  razon_social: z.string().trim().max(200).nullish(),
-  documento: z.string().trim().max(40).nullish(),
-  ruc: z.string().trim().max(40).nullish(),
-  telefono: z.string().trim().max(40).nullish(),
-  email: z.string().trim().email("Email inválido").max(120).nullish().or(z.literal("")),
-  direccion: z.string().trim().max(200).nullish(),
-  ciudad: z.string().trim().max(80).nullish(),
   condicion_pago: z.enum(["CONTADO", "CREDITO"]).default("CONTADO"),
-  plazo_dias: z.coerce.number().int().min(0).max(3650).nullish(),
   limite_credito: z.coerce.number().min(0).default(0),
   origen: z.enum(["MANUAL", "VENTA", "CRM"]).default("MANUAL"),
-  notas: z.string().trim().max(1000).nullish(),
-  vendedor_usuario_id: z.string().uuid().nullish(),
 });
 
 export const POST = withTenant(
@@ -82,10 +84,12 @@ export const POST = withTenant(
       if (dup) return fail(`Ya existe un cliente con el documento ${doc} (${dup}).`, 409);
     }
 
+    const sifen = errorSifen(input);
+    if (sifen) return ERR.invalid(sifen);
+
     const { data, error } = await ctx.db.insert("clientes", {
-      ...input,
+      ...limpiarVacios(input),
       plazo_dias: input.condicion_pago === "CREDITO" ? input.plazo_dias ?? null : null,
-      email: input.email || null,
       created_by: ctx.usuarioId,
     });
     if (error) {
