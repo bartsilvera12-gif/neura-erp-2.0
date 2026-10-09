@@ -6,7 +6,8 @@
  * CL-…, RUC/CI con o sin puntos, contacto, teléfono, email, ciudad) y filtros por estado
  * (activos por defecto / inactivos / de baja / todos), tipo, origen, categoría y deuda.
  * Contador "N de M clientes · activos · empresas" y columnas configurables (se recuerdan
- * en este navegador). Tocar una fila abre la ficha del cliente.
+ * en este navegador). Tocar una fila abre la ficha del cliente. La columna "Suscripción activa"
+ * muestra el/los plan(es) activo(s) de cada cliente.
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -23,7 +24,9 @@ import {
 } from "@/modules/clientes/ui";
 
 const POR_PAGINA = 25;
-const COLUMNAS_KEY = "erp2.clientes.columnas.v1";
+// v2: se sumó "Suscripción activa" (visible por defecto). Lo guardado en v1 se migra agregándola.
+const COLUMNAS_KEY = "erp2.clientes.columnas.v2";
+const COLUMNAS_KEY_V1 = "erp2.clientes.columnas.v1";
 
 type Fila = {
   id: string; codigo: string | null; nombre: string; razon_social: string | null; tipo_cliente: "empresa" | "persona";
@@ -31,16 +34,17 @@ type Fila = {
   ciudad: string | null; condicion_pago: string; activo: boolean; origen: string; creado_at: string; baja_at: string | null;
   categoria_id: string | null; categoria_nombre: string | null; categoria_color: string | null; vendedor_nombre: string | null;
   creado_por_nombre: string | null; total_comprado: number; compras: number; ultima_compra: string | null; deuda: number; vencido: number;
+  suscripcion_activa: string | null;
 };
 type Kpis = { clientes: number; activos: number; empresas: number; con_deuda: number; a_cobrar: number; vencido: number };
 
 // ── Columnas configurables ──────────────────────────────────────────────────
 type ColKey =
-  | "codigo" | "empresa_nombre" | "contacto" | "telefono" | "origen" | "categoria" | "estado" | "desde"
+  | "codigo" | "empresa_nombre" | "contacto" | "telefono" | "suscripcion" | "origen" | "categoria" | "estado" | "desde"
   | "creado_por" | "ruc_documento" | "email" | "vendedor" | "deuda" | "ultima_compra";
 type Col = { key: ColKey; label: string; required?: boolean; th?: string; td: string; render: (c: Fila) => ReactNode };
 
-const DEFAULT_COLS: ColKey[] = ["codigo", "empresa_nombre", "contacto", "telefono", "origen", "categoria", "estado", "desde", "deuda"];
+const DEFAULT_COLS: ColKey[] = ["codigo", "empresa_nombre", "contacto", "telefono", "suscripcion", "origen", "categoria", "estado", "desde", "deuda"];
 
 const TH = "whitespace-nowrap px-3 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500";
 const TD = "px-3 py-2.5";
@@ -67,6 +71,16 @@ const COLUMNAS: Col[] = [
   },
   { key: "contacto", label: "Contacto", td: `${TD} whitespace-nowrap text-sm text-slate-700`, render: (c) => (c.tipo_cliente === "empresa" ? c.nombre_contacto : c.ciudad) || "—" },
   { key: "telefono", label: "Teléfono", td: `${TD} whitespace-nowrap text-sm tabular-nums text-slate-600`, render: (c) => c.telefono || "—" },
+  {
+    key: "suscripcion", label: "Suscripción activa", td: TD,
+    render: (c) => c.suscripcion_activa ? (
+      <span className="inline-flex max-w-56 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold"
+        style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}1a`, color: TEAL }} title={c.suscripcion_activa}>
+        <span aria-hidden className="h-1 w-1 shrink-0 rounded-full" style={{ backgroundColor: TEAL }} />
+        <span className="truncate">{c.suscripcion_activa}</span>
+      </span>
+    ) : <span className="whitespace-nowrap text-xs italic text-slate-400">Sin suscripción</span>,
+  },
   { key: "origen", label: "Origen", td: TD, render: (c) => <BadgeOrigen origen={c.origen} /> },
   { key: "categoria", label: "Categoría", td: `${TD} whitespace-nowrap`, render: (c) => <CategoriaChip nombre={c.categoria_nombre} color={c.categoria_color} /> },
   { key: "estado", label: "Estado", td: TD, render: (c) => <BadgeEstado estado={estadoDe(c)} /> },
@@ -137,7 +151,17 @@ export default function ClientesPage() {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(COLUMNAS_KEY);
-      setVisibles(normalizarCols(raw ? JSON.parse(raw) : null));
+      if (raw) {
+        setVisibles(normalizarCols(JSON.parse(raw)));
+      } else {
+        const v1 = window.localStorage.getItem(COLUMNAS_KEY_V1);
+        const previas = v1 ? normalizarCols(JSON.parse(v1)) : null;
+        if (previas && !previas.includes("suscripcion")) {
+          const i = previas.indexOf("telefono");
+          previas.splice(i >= 0 ? i + 1 : previas.length, 0, "suscripcion");
+        }
+        setVisibles(previas ?? [...DEFAULT_COLS]);
+      }
     } catch {
       setVisibles([...DEFAULT_COLS]);
     } finally {

@@ -3,12 +3,14 @@
 /**
  * Pestaña "Actividad": historial de cambios del cliente (lo registra la base sola). Cada
  * evento con su etiqueta de color, quién y cuándo; en las ediciones, campo por campo
- * "antes → después"; en bajas y eliminaciones, el motivo.
+ * "antes → después"; en bajas y eliminaciones, el motivo. Las suscripciones dejan su rastro
+ * (alta, cuota emitida, cambio de plan, pausa, reactivación, cancelación) en una línea legible.
  */
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import type { EventoHistorial } from "@/modules/clientes/ficha/tipos";
 import { fechaHora } from "@/modules/clientes/ui";
+import { monto } from "@/modules/clientes/suscripciones/ui";
 
 const ACCION: Record<string, { label: string; color: string }> = {
   creado: { label: "Cliente creado", color: "bg-emerald-100 text-emerald-700" },
@@ -17,7 +19,44 @@ const ACCION: Record<string, { label: string; color: string }> = {
   reactivado: { label: "Reactivado", color: "bg-emerald-100 text-emerald-700" },
   baja: { label: "Dado de baja", color: "bg-amber-100 text-amber-700" },
   eliminado: { label: "Eliminado", color: "bg-rose-100 text-rose-700" },
+  suscripcion: { label: "Suscripción", color: "bg-violet-100 text-violet-700" },
 };
+
+const EVENTO_SUSC: Record<string, { label: string; color: string }> = {
+  alta: { label: "Nueva suscripción", color: "bg-violet-100 text-violet-700" },
+  cuota: { label: "Cuota emitida", color: "bg-sky-100 text-sky-700" },
+  cambio_plan: { label: "Cambio de plan", color: "bg-violet-100 text-violet-700" },
+  pausada: { label: "Suscripción pausada", color: "bg-amber-100 text-amber-700" },
+  activa: { label: "Suscripción reactivada", color: "bg-emerald-100 text-emerald-700" },
+  cancelada: { label: "Suscripción cancelada", color: "bg-rose-100 text-rose-700" },
+};
+
+const MODO_PLAN: Record<string, string> = {
+  proximo_mes: "desde el mes que viene",
+  inmediato: "desde este mes",
+  actualizar_cuota_pendiente: "desde este mes, con la cuota rehecha",
+};
+
+/** Línea legible de un evento de suscripción. */
+function textoSuscripcion(d: NonNullable<EventoHistorial["detalle"]>): string {
+  const plata = (v: number | null | undefined) => (v == null ? "" : monto(v, d.moneda ?? "GS"));
+  switch (d.evento) {
+    case "alta":
+      return ["Suscripción: alta", d.plan, plata(d.precio)].filter(Boolean).join(" ");
+    case "cuota":
+      return [`Cuota emitida ${d.periodo ?? ""}`.trim(), d.numero, plata(d.monto)].filter(Boolean).join(" · ");
+    case "cambio_plan":
+      return `Cambio de plan: ${d.plan_anterior ?? "—"} → ${d.plan_nuevo ?? "—"}${d.precio != null ? ` · ${plata(d.precio)}` : ""}${d.modo && MODO_PLAN[d.modo] ? ` (${MODO_PLAN[d.modo]})` : ""}`;
+    case "pausada":
+      return `Suscripción ${d.plan ?? ""} pausada`.replace(/\s+/g, " ");
+    case "activa":
+      return `Suscripción ${d.plan ?? ""} reactivada`.replace(/\s+/g, " ");
+    case "cancelada":
+      return `Suscripción ${d.plan ?? ""} cancelada`.replace(/\s+/g, " ");
+    default:
+      return `Suscripción ${d.plan ?? ""}`.trim();
+  }
+}
 
 const valor = (v: string | null | undefined) => (v == null || v === "" ? "—" : v === "true" ? "Sí" : v === "false" ? "No" : v);
 
@@ -57,7 +96,8 @@ export function TabActividad({ clienteId, recarga }: { clienteId: string; recarg
       ) : (
         <ol className="space-y-3">
           {historial.map((h) => {
-            const meta = ACCION[h.accion] ?? { label: h.accion, color: "bg-slate-100 text-slate-600" };
+            const esSusc = h.accion === "suscripcion" && !!h.detalle;
+            const meta = (esSusc ? EVENTO_SUSC[h.detalle!.evento ?? ""] : null) ?? ACCION[h.accion] ?? { label: h.accion, color: "bg-slate-100 text-slate-600" };
             const cambios = Array.isArray(h.detalle?.cambios) ? h.detalle!.cambios! : [];
             const motivo = typeof h.detalle?.motivo === "string" && h.detalle.motivo ? h.detalle.motivo : null;
             return (
@@ -66,6 +106,7 @@ export function TabActividad({ clienteId, recarga }: { clienteId: string; recarg
                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.color}`}>{meta.label}</span>
                   <span className="text-xs text-slate-400">{fechaHora(h.created_at)}</span>
                 </div>
+                {esSusc ? <p className="mt-1.5 text-sm text-slate-700">{textoSuscripcion(h.detalle!)}</p> : null}
                 {h.usuario_nombre ? <p className="mt-1 text-xs text-slate-500">por {h.usuario_nombre}</p> : null}
                 {h.accion === "creado" && h.detalle?.origen && h.detalle.origen !== "MANUAL" ? (
                   <p className="mt-1 text-xs text-slate-500">Origen: {h.detalle.origen === "VENTA" ? "desde una venta" : h.detalle.origen}</p>

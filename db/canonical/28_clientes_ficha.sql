@@ -257,6 +257,7 @@ begin
            c.creado_at, c.baja_at, c.moneda_preferida,
            c.categoria_id, cat.nombre as categoria_nombre, cat.color as categoria_color,
            coalesce(uv.nombre, c.vendedor_texto) as vendedor_nombre, uc.nombre as creado_por_nombre,
+           (select string_agg(s.plan_nombre, ', ' order by s.created_at) from suscripciones s where s.cliente_id = c.id and s.estado = 'activa') as suscripcion_activa,
            coalesce(f.total_comprado, 0) as total_comprado, coalesce(f.compras, 0) as compras, f.ultima_compra,
            coalesce(f.deuda, 0) as deuda, coalesce(f.vencido, 0) as vencido,
            c.busqueda_nombre as _n, c.busqueda as _t

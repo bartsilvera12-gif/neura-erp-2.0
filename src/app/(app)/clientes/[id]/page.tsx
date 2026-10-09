@@ -3,10 +3,11 @@
 /**
  * /clientes/[id] — ficha del cliente (copia del sistema actual, con datos genéricos).
  * Encabezado: avatar, nombre, código CL-…, estado, "Cliente desde", Dar de baja / Reactivar
- * y Eliminar (administrador); acciones Nueva suscripción (próximamente), Venta al contado y
- * Registrar pago; franja de datos (origen, categoría, condición, suscripción, moneda,
- * vendedor, creado por). Pestañas: Información (edición), Estado de cuenta, Compras,
- * Contactos, Actividad (historial automático) y Notas.
+ * y Eliminar (administrador); acciones Nueva suscripción, Venta al contado y Registrar pago;
+ * franja de datos (origen, categoría, condición, suscripción activa, moneda, vendedor,
+ * creado por). Pestañas: Información (edición), Estado de cuenta, Suscripciones (con su
+ * estado de facturación, cambio de plan, pausa y cancelación), Compras, Contactos,
+ * Actividad (historial automático) y Notas.
  */
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -23,12 +24,15 @@ import { TabInformacion } from "@/modules/clientes/ficha/TabInformacion";
 import { TabActividad } from "@/modules/clientes/ficha/TabActividad";
 import { TabNotas } from "@/modules/clientes/ficha/TabNotas";
 import { ModalEliminar, PanelBaja } from "@/modules/clientes/ficha/Modales";
+import { TabSuscripciones } from "@/modules/clientes/ficha/TabSuscripciones";
+import { ModalNuevaSuscripcion } from "@/modules/clientes/suscripciones/ModalNuevaSuscripcion";
+import type { SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos";
 import { Avatar, BadgeEstado, CategoriaChip, CodigoChip, TEAL, codigoCliente, estadoDe, fechaCorta, gs } from "@/modules/clientes/ui";
 
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric" });
 
-type Tab = "informacion" | "estado_cuenta" | "compras" | "contactos" | "actividad" | "notas";
+type Tab = "informacion" | "estado_cuenta" | "suscripciones" | "compras" | "contactos" | "actividad" | "notas";
 
 export default function ClienteDetallePage() {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +50,12 @@ export default function ClienteDetallePage() {
   const [eliminando, setEliminando] = useState(false);
   const [cambiando, setCambiando] = useState(false);
   const [notasCount, setNotasCount] = useState(0);
+  const [subs, setSubs] = useState<SuscripcionCliente[]>([]);
+  const [subsCargando, setSubsCargando] = useState(true);
+  const [subsError, setSubsError] = useState<string | null>(null);
+  const [nuevaSusc, setNuevaSusc] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const puedeSuscribir = me?.rol === "ADMIN" || me?.rol === "VENDEDOR";
 
   const cargar = useCallback(async () => {
     try {
@@ -60,6 +70,32 @@ export default function ClienteDetallePage() {
     }
   }, [id]);
   useEffect(() => { void cargar(); }, [cargar]);
+
+  const cargarSubs = useCallback(async () => {
+    setSubsCargando(true);
+    try {
+      setSubs(await apiFetch<SuscripcionCliente[]>(`/api/clientes/${id}/facturacion`));
+      setSubsError(null);
+    } catch (e) {
+      setSubsError((e as Error).message);
+    } finally {
+      setSubsCargando(false);
+    }
+  }, [id]);
+  useEffect(() => { void cargarSubs(); }, [cargarSubs]);
+
+  useEffect(() => {
+    if (!aviso) return;
+    const t = setTimeout(() => setAviso(null), 6000);
+    return () => clearTimeout(t);
+  }, [aviso]);
+
+  /** Algo cambió en las suscripciones: se emitió una cuota, cambió el plan o el estado. */
+  async function suscripcionesCambiaron(mensaje?: string) {
+    if (mensaje) setAviso(mensaje);
+    setRecargaCuenta((k) => k + 1);
+    await Promise.all([cargarSubs(), cargar()]);
+  }
 
   async function cambiarActivo(activo: boolean) {
     setCambiando(true);
@@ -90,9 +126,11 @@ export default function ClienteDetallePage() {
   const estado = estadoDe(c);
   const credito = c.condicion_pago === "CREDITO";
   const { limite_credito, disponible } = data.estado_cuenta;
+  const activas = subs.filter((s) => s.estado === "activa");
   const tabs: { id: Tab; label: string; badge?: number }[] = [
     { id: "informacion", label: "Información" },
     { id: "estado_cuenta", label: "Estado de cuenta" },
+    { id: "suscripciones", label: "Suscripciones", badge: subs.filter((s) => s.estado !== "cancelada").length },
     { id: "compras", label: "Compras", badge: r?.compras ?? data.ventas.length },
     { id: "contactos", label: "Contactos", badge: data.contactos.length },
     { id: "actividad", label: "Actividad" },
@@ -102,7 +140,14 @@ export default function ClienteDetallePage() {
     { label: "Origen", value: c.origen ?? "MANUAL" },
     { label: "Categoría", value: c.categoria_nombre ? <CategoriaChip nombre={c.categoria_nombre} color={c.categoria_color} /> : "—" },
     { label: "Condición", value: credito ? `Crédito${c.plazo_dias ? ` ${c.plazo_dias} días` : ""}` : "Contado" },
-    { label: "Suscripción activa", value: "—" },
+    {
+      label: "Suscripción activa",
+      value: subsCargando && subs.length === 0
+        ? <span className="inline-block h-4 w-28 max-w-full animate-pulse rounded-md bg-slate-200" aria-hidden />
+        : activas.length
+          ? <span title={activas.map((s) => `${s.plan} (${s.moneda})`).join(", ")}>{activas.map((s) => `${s.plan} (${s.moneda})`).join(", ")}</span>
+          : "—",
+    },
     { label: "Moneda", value: c.moneda_preferida ?? "GS" },
     { label: "Vendedor", value: c.vendedor_nombre || <span className="text-slate-400">Sin asignar</span> },
     { label: "Creado por", value: c.creado_por_nombre || "—" },
@@ -166,9 +211,9 @@ export default function ClienteDetallePage() {
             </div>
           </div>
           <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-200/70 pt-4">
-            <span title="Próximamente">
-              <button type="button" disabled aria-disabled
-                className="inline-flex cursor-not-allowed items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-white opacity-50 shadow-sm"
+            <span title={puedeSuscribir ? undefined : "Solo un administrador o vendedor puede crear suscripciones"}>
+              <button type="button" disabled={!puedeSuscribir} onClick={() => setNuevaSusc(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
                 style={{ backgroundColor: TEAL }}>
                 <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Nueva suscripción
               </button>
@@ -200,6 +245,12 @@ export default function ClienteDetallePage() {
         <PanelBaja clienteId={c.id} onCancel={() => setBajando(false)} onHecho={() => router.push("/clientes?baja_ok=1")} />
       ) : null}
       {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
+      {aviso ? (
+        <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-emerald-800">
+          <span className="text-lg">✓</span>
+          <p className="text-sm font-medium">{aviso}</p>
+        </div>
+      ) : null}
 
       {/* Pestañas */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -231,6 +282,10 @@ export default function ClienteDetallePage() {
               <CuentaCorriente clienteId={c.id} recarga={recargaCuenta} onCambio={() => void cargar()} />
             </div>
           ) : null}
+          {tab === "suscripciones" ? (
+            <TabSuscripciones clienteNombre={c.razon_social || c.nombre} suscripciones={subs} cargando={subsCargando} error={subsError}
+              rol={me?.rol} onNueva={() => setNuevaSusc(true)} onCambio={suscripcionesCambiaron} />
+          ) : null}
           {tab === "compras" ? <TabCompras ventas={data.ventas} /> : null}
           {tab === "contactos" ? <TabContactos clienteId={c.id} contactos={data.contactos} onChange={() => void cargar()} /> : null}
           {tab === "actividad" ? <TabActividad clienteId={c.id} recarga={recargaHist} /> : null}
@@ -240,7 +295,11 @@ export default function ClienteDetallePage() {
 
       {cobrando ? (
         <RegistrarCobro clienteId={c.id} clienteNombre={c.razon_social || c.nombre} onClose={() => setCobrando(false)}
-          onHecho={() => { void cargar(); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); }} />
+          onHecho={() => { void cargar(); void cargarSubs(); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); }} />
+      ) : null}
+      {nuevaSusc ? (
+        <ModalNuevaSuscripcion clienteId={c.id} suscripciones={subs} esAdmin={esAdmin} onClose={() => setNuevaSusc(false)}
+          onCreada={(m) => { setNuevaSusc(false); setTab("suscripciones"); void suscripcionesCambiaron(m); }} />
       ) : null}
       {eliminando ? (
         <ModalEliminar clienteId={c.id} onClose={() => setEliminando(false)} onEliminado={() => router.push("/clientes")}

@@ -69,6 +69,8 @@ drop policy if exists suscripciones_propias on :"schema".suscripciones;
 create policy suscripciones_propias on :"schema".suscripciones to authenticated
   using (empresa_id = :"schema".empresa_actual()) with check (empresa_id = :"schema".empresa_actual());
 grant select, insert, update, delete on :"schema".suscripciones to authenticated, service_role;
+alter table :"schema".suscripciones add column if not exists moneda_pendiente text;
+alter table :"schema".suscripciones add column if not exists tipo_iva_pendiente text;
 
 -- La cuota de cada mes es una venta: se marca de qué suscripción y qué mes es.
 alter table :"schema".ventas add column if not exists suscripcion_id uuid;
@@ -182,7 +184,9 @@ begin
   if s.plan_pendiente_id is not null and s.pendiente_desde is not null and v_periodo >= s.pendiente_desde then
     update suscripciones
        set plan_id = plan_pendiente_id, plan_nombre = plan_pendiente_nombre, precio = precio_pendiente,
+           moneda = coalesce(moneda_pendiente, moneda), tipo_iva = coalesce(tipo_iva_pendiente, tipo_iva),
            plan_pendiente_id = null, plan_pendiente_nombre = null, precio_pendiente = null, pendiente_desde = null,
+           moneda_pendiente = null, tipo_iva_pendiente = null,
            updated_at = now()
      where id = s.id
      returning * into s;
@@ -221,7 +225,7 @@ begin
 
   perform registrar_historial_cliente(s.cliente_id, 'suscripcion',
     jsonb_build_object('evento', 'cuota', 'plan', v_plan_nombre, 'periodo', nombre_mes(v_periodo),
-                       'numero', v_numero, 'monto', v_precio));
+                       'numero', v_numero, 'monto', v_precio, 'moneda', s.moneda));
   return jsonb_build_object('venta_id', v_venta, 'numero_control', v_numero, 'total', v_precio, 'vencimiento', v_venc);
 end;
 $$;
@@ -295,6 +299,7 @@ begin
 
   if p_modo = 'proximo_mes' then
     update suscripciones set plan_pendiente_id = v_plan.id, plan_pendiente_nombre = v_plan.nombre, precio_pendiente = v_precio,
+                             moneda_pendiente = v_plan.moneda, tipo_iva_pendiente = v_plan.tipo_iva,
                              pendiente_desde = (v_mes + interval '1 month')::date, updated_at = now()
      where id = s.id;
   elsif p_modo = 'inmediato' then
@@ -303,7 +308,8 @@ begin
     end if;
     update suscripciones set plan_id = v_plan.id, plan_nombre = v_plan.nombre, precio = v_precio, moneda = v_plan.moneda,
                              tipo_iva = v_plan.tipo_iva, plan_pendiente_id = null, plan_pendiente_nombre = null,
-                             precio_pendiente = null, pendiente_desde = null, updated_at = now()
+                             precio_pendiente = null, pendiente_desde = null, moneda_pendiente = null,
+                             tipo_iva_pendiente = null, updated_at = now()
      where id = s.id;
   elsif p_modo = 'actualizar_cuota_pendiente' then
     if v_cuota.id is null then raise exception 'No hay cuota emitida este mes: usá "inmediato"'; end if;
@@ -315,7 +321,8 @@ begin
      where id = v_cuota.id;
     update suscripciones set plan_id = v_plan.id, plan_nombre = v_plan.nombre, precio = v_precio, moneda = v_plan.moneda,
                              tipo_iva = v_plan.tipo_iva, plan_pendiente_id = null, plan_pendiente_nombre = null,
-                             precio_pendiente = null, pendiente_desde = null, updated_at = now()
+                             precio_pendiente = null, pendiente_desde = null, moneda_pendiente = null,
+                             tipo_iva_pendiente = null, updated_at = now()
      where id = s.id;
     v_res := emitir_cuota_suscripcion(s.id, v_mes);
   else
@@ -324,7 +331,7 @@ begin
 
   perform registrar_historial_cliente(s.cliente_id, 'suscripcion',
     jsonb_build_object('evento', 'cambio_plan', 'modo', p_modo, 'plan_anterior', s.plan_nombre,
-                       'plan_nuevo', v_plan.nombre, 'precio', v_precio));
+                       'plan_nuevo', v_plan.nombre, 'precio', v_precio, 'moneda', v_plan.moneda));
   return v_res || jsonb_build_object('ok', true);
 end;
 $$;
@@ -364,3 +371,71 @@ grant execute on function :"schema".nombre_mes(date), :"schema".dia_del_mes(date
   to authenticated, service_role;
 revoke execute on function :"schema".registrar_historial_cliente(uuid, text, jsonb) from public, anon;
 grant execute on function :"schema".registrar_historial_cliente(uuid, text, jsonb) to authenticated, service_role;
+
+-- ── Emitir de una vez las cuotas de un mes (botón "Emitir cuotas del mes") ──
+-- Solo suscripciones activas a las que les corresponde ese mes y todavía no la tienen.
+create or replace function :"schema".emitir_cuotas_mes(p_periodo date default null)
+returns jsonb language plpgsql security invoker set search_path = :"schema", public as $$
+declare
+  v_periodo date := date_trunc('month', coalesce(p_periodo, (now() at time zone 'America/Asuncion')::date))::date;
+  r record;
+  v_ok integer := 0;
+  v_total numeric := 0;
+  v_errores jsonb := '[]'::jsonb;
+  v_res jsonb;
+begin
+  for r in
+    select s.id, c.nombre as cliente from suscripciones s join clientes c on c.id = s.cliente_id
+     where s.empresa_id = empresa_actual() and s.estado = 'activa'
+       and date_trunc('month', s.fecha_inicio)::date <= v_periodo
+       and (s.duracion_meses is null or v_periodo < (date_trunc('month', s.fecha_inicio) + make_interval(months => s.duracion_meses))::date)
+       and not exists (select 1 from ventas v where v.suscripcion_id = s.id and v.periodo = v_periodo and v.estado <> 'anulada')
+     order by c.nombre
+  loop
+    begin
+      v_res := emitir_cuota_suscripcion(r.id, v_periodo);
+      v_ok := v_ok + 1;
+      v_total := v_total + (v_res->>'total')::numeric;
+    exception when others then
+      v_errores := v_errores || jsonb_build_object('cliente', r.cliente, 'error', sqlerrm);
+    end;
+  end loop;
+  return jsonb_build_object('periodo', v_periodo, 'emitidas', v_ok, 'total', v_total, 'errores', v_errores);
+end;
+$$;
+
+-- ── Listado de todas las suscripciones (pantalla Suscripciones) ─────────────
+create or replace function :"schema".listar_suscripciones(p_estado text default null, p_q text default null, p_periodo date default null)
+returns jsonb language sql stable security invoker set search_path = :"schema", public as $$
+  with par as (select date_trunc('month', coalesce(p_periodo, (now() at time zone 'America/Asuncion')::date))::date as mes,
+                      tokens_busqueda(p_q) as tk),
+  base as (
+    select s.*, c.nombre as cliente_nombre, c.codigo as cliente_codigo,
+           v.id as cuota_venta_id, v.numero_control as cuota_numero, x.estado as cuota_estado, x.saldo as cuota_saldo,
+           (s.estado = 'activa' and date_trunc('month', s.fecha_inicio)::date <= par.mes
+            and (s.duracion_meses is null or par.mes < (date_trunc('month', s.fecha_inicio) + make_interval(months => s.duracion_meses))::date)) as corresponde_mes
+      from suscripciones s
+      join clientes c on c.id = s.cliente_id
+      cross join par
+      left join ventas v on v.suscripcion_id = s.id and v.periodo = par.mes and v.estado <> 'anulada'
+      left join cuentas_por_cobrar x on x.venta_id = v.id
+     where s.empresa_id = empresa_actual()
+       and (p_estado is null or s.estado = p_estado)
+       and (cardinality(par.tk) = 0 or coincide_busqueda(c.busqueda || ' ' || norm(s.plan_nombre), par.tk))
+  )
+  select jsonb_build_object(
+    'periodo', (select mes from par),
+    'rows', coalesce((select jsonb_agg(to_jsonb(b) - 'tk' - 'mes' order by (b.estado = 'activa') desc, b.cliente_nombre) from base b), '[]'::jsonb),
+    'kpis', (select jsonb_build_object(
+        'activas', count(*) filter (where estado = 'activa'),
+        'pausadas', count(*) filter (where estado = 'pausada'),
+        'canceladas', count(*) filter (where estado = 'cancelada'),
+        'mensual_gs', coalesce(sum(precio) filter (where estado = 'activa' and moneda = 'GS'), 0),
+        'mensual_usd', coalesce(sum(precio) filter (where estado = 'activa' and moneda = 'USD'), 0),
+        'por_emitir', count(*) filter (where corresponde_mes and cuota_venta_id is null),
+        'emitidas_mes', count(*) filter (where cuota_venta_id is not null))
+      from base)
+  )
+$$;
+
+grant execute on function :"schema".emitir_cuotas_mes(date), :"schema".listar_suscripciones(text, text, date) to authenticated, service_role;

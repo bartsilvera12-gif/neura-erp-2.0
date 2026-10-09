@@ -17,7 +17,22 @@ export type Detalle = {
 export type EventoHistorial = {
   id: string;
   accion: string;
-  detalle: { cambios?: { campo: string; antes: string | null; despues: string | null }[]; motivo?: string | null; origen?: string | null } | null;
+  detalle: {
+    cambios?: { campo: string; antes: string | null; despues: string | null }[];
+    motivo?: string | null;
+    origen?: string | null;
+    // Suscripciones (accion = "suscripcion")
+    evento?: "alta" | "cuota" | "cambio_plan" | "pausada" | "activa" | "cancelada" | string;
+    plan?: string | null;
+    precio?: number | null;
+    moneda?: string | null;
+    periodo?: string | null;
+    numero?: string | null;
+    monto?: number | null;
+    modo?: string | null;
+    plan_anterior?: string | null;
+    plan_nuevo?: string | null;
+  } | null;
   usuario_nombre: string | null;
   created_at: string;
 };
