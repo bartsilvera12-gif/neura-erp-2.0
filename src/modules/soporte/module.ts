@@ -11,13 +11,11 @@ export const moduloSoporte: Modulo = {
   label: "Soporte",
   href: "/soporte",
   icon: "lifebuoy",
-  familia: "Comercial",
+  familia: "Soporte",
   children: [
     { label: "Dashboard", href: "/soporte" },
     { label: "Tickets", href: "/soporte/tickets" },
     { label: "Mis tickets", href: "/soporte/mis-tickets" },
-    { label: "Clientes", href: "/soporte/clientes" },
-    { label: "Reportes", href: "/soporte/reportes" },
     { label: "Configuración", href: "/soporte/configuracion" },
   ],
 };

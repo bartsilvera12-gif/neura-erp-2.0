@@ -7,6 +7,7 @@
  * responsable por defecto y horario laboral del SLA). Los cambios de las tablas se
  * guardan al salir de cada campo.
  */
+import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { Bell, Check, CircleDot, Flag, Plus, Settings2, SlidersHorizontal, Tags, Timer, Users, type LucideIcon } from "lucide-react";
@@ -475,7 +476,13 @@ function Contenido() {
 export default function SoporteConfiguracionPage() {
   return (
     <Pagina>
-      <Encabezado titulo="Configuración de Soporte" subtitulo="Parámetros y catálogos del módulo" icono={Settings2} tono="pizarra" />
+      <Encabezado
+        titulo="Configuración de Soporte"
+        subtitulo="Parámetros y catálogos del módulo"
+        icono={Settings2}
+        tono="pizarra"
+        acciones={<Link href="/clientes/tipificaciones" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><Tags className="h-4 w-4" /> Tipificaciones</Link>}
+      />
       <Suspense fallback={<Cargando />}>
         <Contenido />
       </Suspense>

@@ -91,11 +91,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const rol = me?.rol;
   const modulos = useMemo(() => (rol === undefined ? [] : modulosActivos(rol)), [rol]);
 
+  const itemActivo = useMemo(() => {
+    const largo = (h: string) => { const base = h.split("?")[0]; return pathname === base || pathname.startsWith(`${base}/`) ? base.length : -1; };
+    let mejor: { id: string; n: number } | null = null;
+    for (const m of modulos) {
+      const n = Math.max(largo(m.href), ...(m.children ?? []).map((c) => largo(c.href)));
+      if (n >= 0 && (!mejor || n > mejor.n)) mejor = { id: m.id, n };
+    }
+    return mejor?.id ?? null;
+  }, [modulos, pathname]);
+
   const familias = useMemo(() => {
     // Búsqueda inteligente: sin tildes, errores de tipeo; también por la familia ("finanzas").
     // Busca en el módulo, su familia y sus sub-pantallas ("arqueo" → Caja › Arqueo / Cierre).
     const visibles = filtrar(modulos, q, (m) => ({ principal: m.label, otros: [m.familia, ...(m.children ?? []).map((c) => c.label)] }));
-    const orden = ["Comercial", "Finanzas", "Operaciones", "Reportes", "Administración", "General"];
+    const orden = ["Comercial", "Finanzas", "Operaciones", "Soporte", "Administración", "General"];
     const map = new Map<string, Modulo[]>();
     for (const m of visibles) {
       const fam = m.familia ?? "General";
@@ -181,8 +191,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               )}
               {items.map((m) => {
                 // Activo también si se está en una sub-pantalla con otra ruta (Compras › Proveedores).
-                const enRuta = (h: string) => { const base = h.split("?")[0]; return pathname === base || pathname.startsWith(`${base}/`); };
-                const active = enRuta(m.href) || (m.children ?? []).some((c) => enRuta(c.href));
+                // Activo: el ítem cuya ruta (o la de un hijo) es el prefijo MÁS LARGO de la página
+                // actual, entre todos los del menú (/clientes/gestion marca "Gestión Clientes",
+                // no "Clientes"; /clientes/<id> marca "Clientes").
+                const active = m.id === itemActivo;
                 const tieneHijos = !!m.children?.length;
                 // Buscando, se despliegan solos para que se vea la sub-pantalla encontrada.
                 const abierto = (q.trim() ? true : (abiertos[m.id] ?? active)) && !collapsed;
