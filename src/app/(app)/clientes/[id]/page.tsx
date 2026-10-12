@@ -12,7 +12,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { FileText, Loader2, Plus, Trash2 } from "lucide-react";
+import { ClipboardPen, FileText, Loader2, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
@@ -227,6 +227,10 @@ export default function ClienteDetallePage() {
               className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
               Registrar pago
             </button>
+            <Link href={`/clientes/${encodeURIComponent(c.id)}/tipificacion`}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
+              <ClipboardPen className="h-3.5 w-3.5" /> Tipificación
+            </Link>
             <Link href={`/clientes/gestion?cliente=${encodeURIComponent(c.id)}`}
               className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
               Abrir en Gestión

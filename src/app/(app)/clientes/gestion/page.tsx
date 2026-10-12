@@ -372,7 +372,7 @@ function GestionClientes() {
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-3">
-                      <BotonOperativo label="Tipificación" icon={<ClipboardList className="h-3.5 w-3.5" />} title="Próximamente (Soporte)" />
+                      <BotonOperativo label="Tipificación" icon={<ClipboardList className="h-3.5 w-3.5" />} href={`/clientes/${encodeURIComponent(c.id)}/tipificacion`} />
                       <BotonOperativo label="Contactos" icon={<Users className="h-3.5 w-3.5" />} onClick={() => setModalContactos(true)} />
                       <BotonOperativo label="Facturación" icon={<Calendar className="h-3.5 w-3.5" />} onClick={() => sobreSuscripcion("facturacion")} />
                       <BotonOperativo label="Facturar venta" icon={<Receipt className="h-3.5 w-3.5" />} href={`/caja/nueva?cliente=${encodeURIComponent(c.id)}`} />

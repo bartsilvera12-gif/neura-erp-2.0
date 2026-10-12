@@ -5,7 +5,6 @@ import { filtrar } from "@/lib/busqueda";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Bell,
   ChevronDown,
   ChevronRight,
   ChevronsLeft,
@@ -20,6 +19,7 @@ import { ProveedorUsuario, type Usuario } from "@/lib/sesion/ContextoUsuario";
 import { modulosActivos } from "@/modules/registry";
 import { iconoModulo } from "@/modules/icons";
 import type { Modulo } from "@/modules/types";
+import { NotificacionesBell } from "@/modules/notificaciones/NotificacionesBell";
 
 type Me = Usuario;
 const ACCENT = "#7dcfd2";
@@ -321,9 +321,7 @@ function Header({ me, onLogout }: { me: Me | null; onLogout: () => void }) {
 
   return (
     <header className="z-40 flex h-16 shrink-0 items-center justify-end gap-2 border-b border-slate-200 bg-white px-4 sm:px-6">
-      <button className="rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700" aria-label="Notificaciones">
-        <Bell className="h-5 w-5" />
-      </button>
+      <NotificacionesBell />
       <div className="relative" ref={ref}>
         <button
           type="button"

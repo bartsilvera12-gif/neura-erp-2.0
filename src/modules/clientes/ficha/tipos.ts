@@ -36,6 +36,12 @@ export type EventoHistorial = {
     antes?: number | string | null;
     despues?: number | string | null;
     cuota_movida?: boolean | null;
+    // Tipificación (accion = "tipificacion"): Estado / Sub-estado, ticket de Soporte (#0001) si se escaló.
+    tipo_gestion?: string | null;
+    resultado?: string | null;
+    ticket?: number | null;
+    capacitacion?: boolean | null;
+    observacion?: string | null;
   } | null;
   usuario_nombre: string | null;
   created_at: string;

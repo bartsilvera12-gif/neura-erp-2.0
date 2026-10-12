@@ -10,12 +10,14 @@ import { moduloCaja } from "@/modules/caja/module";
 import { moduloInventario } from "@/modules/inventario/module";
 import { moduloReportes } from "@/modules/reportes/module";
 import { moduloCompras } from "@/modules/compras/module";
+import { moduloSoporte } from "@/modules/soporte/module";
 
 const TODOS: Modulo[] = [
   moduloCaja,
   moduloInventario,
   moduloCompras,
   moduloClientes,
+  moduloSoporte,
   moduloReportes,
   // moduloFacturacion,
   // moduloChat,
@@ -27,6 +29,11 @@ export function modulosActivos(rol?: string): Modulo[] {
     (m) =>
       clienteConfig.modulos.includes(m.id) &&
       (!m.roles || !rol || m.roles.includes(rol)),
+  ).map((m) =>
+    // Sub-pantallas con roles (ej. Clientes › Tipificaciones, sólo ADMIN).
+    m.children?.some((c) => c.roles)
+      ? { ...m, children: m.children.filter((c) => !c.roles || (!!rol && c.roles.includes(rol))) }
+      : m,
   );
 }
 

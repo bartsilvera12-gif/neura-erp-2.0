@@ -15,7 +15,7 @@ export type Modulo = {
   /** roles que pueden verlo (vacío = todos los autenticados) */
   roles?: string[];
   /** sub-pantallas del módulo, para navegar directo desde el sidebar */
-  children?: { label: string; href: string }[];
+  children?: { label: string; href: string; /** roles que ven esta sub-pantalla (vacío = todos) */ roles?: string[] }[];
 };
 
 /** Config por cliente: lo ÚNICO que cambia entre clones (lo escribe setup.mjs). */

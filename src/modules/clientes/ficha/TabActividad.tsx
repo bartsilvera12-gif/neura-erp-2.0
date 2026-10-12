@@ -20,6 +20,7 @@ const ACCION: Record<string, { label: string; color: string }> = {
   baja: { label: "Dado de baja", color: "bg-amber-100 text-amber-700" },
   eliminado: { label: "Eliminado", color: "bg-rose-100 text-rose-700" },
   suscripcion: { label: "Suscripción", color: "bg-violet-100 text-violet-700" },
+  tipificacion: { label: "Tipificación", color: "bg-teal-100 text-teal-700" },
 };
 
 const EVENTO_SUSC: Record<string, { label: string; color: string }> = {
@@ -59,6 +60,15 @@ function textoSuscripcion(d: NonNullable<EventoHistorial["detalle"]>): string {
     default:
       return `Suscripción ${d.plan ?? ""}`.trim();
   }
+}
+
+/** "Tipificación: Error · Ticket #0001" (o "· Capacitación agendada"). */
+function textoTipificacion(d: NonNullable<EventoHistorial["detalle"]>): string {
+  const partes = [`Tipificación: ${d.tipo_gestion ?? "—"}`];
+  if (d.resultado) partes.push(d.resultado);
+  if (d.ticket != null && Number(d.ticket) > 0) partes.push(`Ticket #${String(Math.trunc(Number(d.ticket))).padStart(4, "0")}`);
+  if (d.capacitacion) partes.push("Capacitación agendada");
+  return partes.join(" · ");
 }
 
 const valor = (v: string | null | undefined) => (v == null || v === "" ? "—" : v === "true" ? "Sí" : v === "false" ? "No" : v);
@@ -110,6 +120,12 @@ export function TabActividad({ clienteId, recarga }: { clienteId: string; recarg
                   <span className="text-xs text-slate-400">{fechaHora(h.created_at)}</span>
                 </div>
                 {esSusc ? <p className="mt-1.5 text-sm text-slate-700">{textoSuscripcion(h.detalle!)}</p> : null}
+                {h.accion === "tipificacion" && h.detalle ? (
+                  <>
+                    <p className="mt-1.5 text-sm text-slate-700">{textoTipificacion(h.detalle)}</p>
+                    {h.detalle.observacion ? <p className="mt-1 whitespace-pre-line text-xs text-slate-500">{h.detalle.observacion}</p> : null}
+                  </>
+                ) : null}
                 {h.usuario_nombre ? <p className="mt-1 text-xs text-slate-500">por {h.usuario_nombre}</p> : null}
                 {h.accion === "creado" && h.detalle?.origen && h.detalle.origen !== "MANUAL" ? (
                   <p className="mt-1 text-xs text-slate-500">Origen: {h.detalle.origen === "VENTA" ? "desde una venta" : h.detalle.origen}</p>

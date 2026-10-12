@@ -453,3 +453,8 @@ $$;
 grant execute on function :"schema".soporte_crear_ticket_desde_tipificacion(jsonb, jsonb) to authenticated, service_role;
 
 drop function if exists :"schema".soporte_politica(text);
+
+-- Campanita en tiempo real: la tabla de notificaciones va en la publicación de Realtime.
+do $$ begin
+  execute format('alter publication supabase_realtime add table %I.usuario_notificaciones', current_schema());
+exception when duplicate_object then null; when undefined_object then null; end $$;

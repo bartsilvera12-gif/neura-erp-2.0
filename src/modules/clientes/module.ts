@@ -12,5 +12,7 @@ export const moduloClientes: Modulo = {
     { label: "Gestión de clientes", href: "/clientes/gestion" },
     { label: "Suscripciones", href: "/clientes/suscripciones" },
     { label: "Cuentas a cobrar", href: "/clientes/cobrar" },
+    { label: "Agenda de capacitaciones", href: "/clientes/agenda" },
+    { label: "Tipificaciones", href: "/clientes/tipificaciones", roles: ["ADMIN"] },
   ],
 };
