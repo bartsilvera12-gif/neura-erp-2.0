@@ -402,3 +402,140 @@ export function categoriaArchivo(nombre: string, mime: string | null | undefined
   if (["zip", "rar", "7z", "tar", "gz"].includes(ext) || m.includes("zip") || m.includes("compressed")) return "comprimido";
   return "otro";
 }
+
+// ── Tareas del equipo · Dashboard Ejecutivo · Dashboard PM ──────────────────
+/** Parámetros de seguimiento (proyecto_config). */
+export type ProyectoConfig = { wip_por_tecnico: number; vence_pronto_dias: number; sin_movimiento_horas: number };
+export const CONFIG_DEFECTO: ProyectoConfig = { wip_por_tecnico: 4, vence_pronto_dias: 3, sin_movimiento_horas: 9 };
+
+/** Semáforo del SLA del estado: <70% verde, 70-90% amarillo, 90-100% naranja, >100% rojo. */
+export type Semaforo = "verde" | "amarillo" | "naranja" | "rojo" | "sin_sla";
+export const SEMAFORO_TONO: Record<Semaforo, string> = {
+  verde: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  amarillo: "border-amber-200 bg-amber-50 text-amber-700",
+  naranja: "border-orange-200 bg-orange-50 text-orange-700",
+  rojo: "border-rose-200 bg-rose-50 text-rose-700",
+  sin_sla: "border-slate-200 bg-slate-50 text-slate-500",
+};
+export const SEMAFORO_PUNTO: Record<Semaforo, string> = {
+  verde: "bg-emerald-500",
+  amarillo: "bg-amber-400",
+  naranja: "bg-orange-500",
+  rojo: "bg-rose-500",
+  sin_sla: "bg-slate-300",
+};
+
+/** Misma regla que proyectos_abiertos_metricas() (para recalcular en vivo). */
+export function semaforoDe(horas: number, tipoSla: string | null | undefined, objetivo: number | null | undefined): { semaforo: Semaforo; pct: number | null } {
+  const obj = objetivo == null ? 0 : Number(objetivo);
+  if (tipoSla !== "interno" || !(obj > 0)) return { semaforo: "sin_sla", pct: null };
+  const pct = Math.round((1000 * horas) / obj) / 10;
+  const semaforo: Semaforo = horas > obj ? "rojo" : horas >= 0.9 * obj ? "naranja" : horas >= 0.7 * obj ? "amarillo" : "verde";
+  return { semaforo, pct };
+}
+
+/** Una fila de proyectos_abiertos_metricas() (proyecto abierto con sus métricas vivas). */
+export type Metrica = {
+  id: string;
+  numero: string;
+  titulo: string;
+  prioridad: Prioridad;
+  cliente_id: string | null;
+  cliente_nombre: string | null;
+  estado_id: string;
+  estado_nombre: string;
+  estado_color: string;
+  tipo_sla: TipoSla;
+  rol: RolEstado;
+  sla_horas_objetivo: number | null;
+  estado_desde: string;
+  horas_en_estado: number;
+  sla_pct: number | null;
+  semaforo: Semaforo;
+  fecha_prometida: string | null;
+  vencido: boolean;
+  vence_pronto: boolean;
+  sin_fecha: boolean;
+  bloqueado: boolean;
+  bloqueo_tipo: BloqueoTipo | null;
+  bloqueo_motivo: string | null;
+  sin_movimiento: boolean;
+  ultimo_movimiento_at: string;
+  responsable_tecnico_id: string | null;
+  tecnico_nombre: string | null;
+  project_manager_id: string | null;
+  pm_nombre: string | null;
+  responsable_comercial_id: string | null;
+  comercial_nombre: string | null;
+  monto_vendido: number;
+  moneda: "GS" | "USD";
+  tareas_total: number;
+  tareas_hechas: number;
+};
+
+export type TecnicoEquipo = {
+  id: string;
+  nombre: string;
+  activos: number;
+  en_espera: number;
+  vencidos: number;
+  sla_rojo: number;
+  sobre_wip: boolean;
+  entregados_mes: number;
+  proyectos: Metrica[];
+};
+
+/** GET /api/proyectos/equipo. `generado_at` = cuándo se calcularon las horas (corren desde ahí). */
+export type EquipoResp = { wip: number; tecnicos: TecnicoEquipo[]; sin_tecnico: Metrica[]; horario: HorarioLaboral; generado_at: string };
+
+export type KpisEjecutivo = {
+  activos: number; en_curso: number; esperando_cliente: number; pausados: number; vencidos: number; vencen_pronto: number;
+  sin_fecha: number; bloqueados: number; sin_movimiento: number; sla_rojo: number; ingresados: number; entregados: number;
+  entregados_a_tiempo: number; entregados_con_fecha: number; monto_entregado_gs: number; monto_ingresado_gs: number;
+  dias_promedio_entrega: number | null;
+};
+
+export type EstadoEjecutivo = {
+  estado_id: string; nombre: string; color: string; tipo_sla: TipoSla; objetivo: number | null; cantidad: number; rojos: number;
+  horas_promedio_actual: number | null; horas_promedio_periodo: number | null; pasaron_periodo: number;
+};
+export type TecnicoEjecutivo = { id: string | null; nombre: string; activos: number; en_espera: number; vencidos: number; sla_rojo: number; entregados: number; a_tiempo: number };
+export type PmEjecutivo = { id: string | null; nombre: string; activos: number; vencidos: number; bloqueados: number; esperando_cliente: number; entregados: number };
+
+/** GET /api/proyectos/dashboard/ejecutivo?desde&hasta */
+export type EjecutivoResp = {
+  periodo: { desde: string; hasta: string };
+  kpis: KpisEjecutivo;
+  por_estado: EstadoEjecutivo[];
+  por_tecnico: TecnicoEjecutivo[];
+  por_pm: PmEjecutivo[];
+  atencion: Metrica[];
+};
+
+export type KpisPm = {
+  activos: number; vencidos: number; vencen_pronto: number; sin_fecha: number; bloqueados: number;
+  esperando_cliente: number; sin_movimiento: number; sla_rojo: number; entregados_mes: number;
+};
+
+export const SECCIONES_PM = ["vencidos", "vencen_pronto", "bloqueados", "esperando_cliente", "sin_movimiento", "sin_fecha"] as const;
+export type SeccionPm = (typeof SECCIONES_PM)[number];
+
+/** GET /api/proyectos/dashboard/pm?pm= */
+export type PmResp = {
+  pm: { id: string; nombre: string } | null;
+  kpis: KpisPm;
+  todos: Metrica[];
+  /** Solo para ADMIN: los PM con proyectos abiertos (para el selector). */
+  pms: { id: string; nombre: string }[];
+} & Record<SeccionPm, Metrica[]>;
+
+/** Motivos de atención de un proyecto abierto (el orden es el de gravedad). */
+export function motivosAtencion(m: Pick<Metrica, "vencido" | "semaforo" | "bloqueado" | "sin_movimiento" | "vence_pronto">): { codigo: string; texto: string; tono: string }[] {
+  const r: { codigo: string; texto: string; tono: string }[] = [];
+  if (m.vencido) r.push({ codigo: "vencido", texto: "Vencido", tono: "bg-rose-50 text-rose-700" });
+  if (m.semaforo === "rojo") r.push({ codigo: "sla_rojo", texto: "SLA vencido", tono: "bg-rose-50 text-rose-700" });
+  if (m.bloqueado) r.push({ codigo: "bloqueado", texto: "Bloqueado", tono: "bg-slate-100 text-slate-700" });
+  if (m.sin_movimiento) r.push({ codigo: "sin_movimiento", texto: "Sin movimiento", tono: "bg-orange-50 text-orange-700" });
+  if (m.vence_pronto) r.push({ codigo: "vence_pronto", texto: "Vence pronto", tono: "bg-amber-50 text-amber-700" });
+  return r;
+}

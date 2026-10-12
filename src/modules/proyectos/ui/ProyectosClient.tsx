@@ -15,12 +15,17 @@
  *   · SLA del estado actual en cada tarjeta, corriendo cada 60 s en el navegador (sin refetch)
  *   · vista Lista (tabla paginada en el servidor), la vista elegida se recuerda
  *   · "Nuevo proyecto", detalle en modal (pestañas cargadas a demanda) y, para ADMIN,
- *     "Configurar estados".
+ *     "Configurar estados" (incluye los parámetros de seguimiento: WIP, vence pronto, sin movimiento).
+ *   · Pestañas en el encabezado (sin ítems nuevos de menú), por URL ?vista=:
+ *     Tablero (Kanban / Lista) · equipo = Tareas del equipo · ejecutivo = Dashboard Ejecutivo
+ *     (ADMIN) · pm = Dashboard PM (ADMIN o PM de algún proyecto). Desde cualquiera, un
+ *     proyecto se abre en el mismo detalle.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
-  AlarmClock, Archive, CalendarClock, CalendarX2, Flame, FolderKanban, LayoutGrid, List, Lock, Plus, Search, Settings2, Timer, Trophy,
+  AlarmClock, Archive, BarChart3, CalendarClock, CalendarX2, ClipboardCheck, Flame, FolderKanban, LayoutGrid, List, Lock, Plus, Search,
+  Settings2, Timer, Trophy, Users,
 } from "lucide-react";
 import { Select } from "@/components/Select";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -29,9 +34,12 @@ import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { KanbanScroller } from "@/modules/crm/ui/Kanban";
 import { ClienteSelect, type ClienteOpcion } from "@/modules/agenda/ui/components/ClienteSelect";
 import {
-  HORARIO_DEFECTO, PRIORIDADES, PRIORIDAD_LABEL, filtrosQuery, inicioMesPY, pideMotivo,
-  type Columna, type Estado, type Filtros, type Kpis, type Proyecto, type Tablero, type Tarjeta,
+  CONFIG_DEFECTO, HORARIO_DEFECTO, PRIORIDADES, PRIORIDAD_LABEL, filtrosQuery, inicioMesPY, pideMotivo,
+  type Columna, type Estado, type Filtros, type Kpis, type Proyecto, type ProyectoConfig, type Tablero, type Tarjeta,
 } from "@/modules/proyectos/tipos";
+import { TareasEquipo } from "./TareasEquipo";
+import { DashboardEjecutivo } from "./DashboardEjecutivo";
+import { DashboardPm } from "./DashboardPm";
 import { ColumnaKanban, type AccionesTarjeta } from "./Kanban";
 import { ProyectosLista } from "./Lista";
 import { ProyectoDetalle, type MovidoResp } from "./ProyectoDetalle";
@@ -209,6 +217,32 @@ export default function ProyectosClient() {
   const usuarios = useUsuarios();
   const { nodo: avisoNodo, avisar } = useAvisos();
 
+  // ── Parámetros de seguimiento + ¿soy PM de algo? (habilita el Dashboard PM) ──
+  const [config, setConfig] = useState<ProyectoConfig>(CONFIG_DEFECTO);
+  const [soyPm, setSoyPm] = useState(false);
+  const cargarConfig = useCallback(() => {
+    apiFetch<ProyectoConfig & { soy_pm: boolean }>("/api/proyectos/config")
+      .then(({ soy_pm, ...c }) => { setConfig(c); setSoyPm(soy_pm); })
+      .catch(() => {});
+  }, []);
+  useEffect(() => { cargarConfig(); }, [cargarConfig]);
+
+  // ── Pantalla (pestañas del encabezado, por URL ?vista=) ──
+  const pedida = searchParams.get("vista");
+  const pantallas = useMemo(() => [
+    { id: "tablero", label: "Tablero", icon: LayoutGrid, ver: true },
+    { id: "equipo", label: "Tareas del equipo", icon: Users, ver: true },
+    { id: "ejecutivo", label: "Dashboard Ejecutivo", icon: BarChart3, ver: esAdmin },
+    { id: "pm", label: "Dashboard PM", icon: ClipboardCheck, ver: esAdmin || soyPm },
+  ] as const, [esAdmin, soyPm]);
+  type Pantalla = (typeof pantallas)[number]["id"];
+  const pantalla: Pantalla = (pantallas.find((p) => p.id === pedida && p.ver)?.id ?? "tablero") as Pantalla;
+  /** URL de /proyectos conservando la pestaña (y opcionalmente otra). */
+  const urlProyectos = useCallback((vista: string | null) => (vista && vista !== "tablero" ? `/proyectos?vista=${vista}` : "/proyectos"), []);
+  const irPantalla = (id: Pantalla) => router.push(urlProyectos(id), { scroll: false });
+  /** Sube al cerrar un detalle abierto desde un tablero: que se refresque con lo que cambió. */
+  const [dashVersion, setDashVersion] = useState(0);
+
   // ── Vista (se recuerda en este navegador) ──
   const [vista, setVista] = useState<"kanban" | "lista">("kanban");
   useEffect(() => {
@@ -283,9 +317,11 @@ export default function ProyectosClient() {
     }
   }, []);
 
+  // El tablero se pide solo en su pestaña (al volver se refresca; mientras, se ve el anterior).
+  const enTableroPantalla = pantalla === "tablero";
   useEffect(() => {
-    if (listo) void cargarTablero();
-  }, [listo, filtros, cargarTablero]);
+    if (listo && enTableroPantalla) void cargarTablero();
+  }, [listo, filtros, cargarTablero, enTableroPantalla]);
 
   const cargarMas = useCallback(async (colId: string) => {
     const col = tabRef.current?.columnas.find((c) => c.id === colId);
@@ -432,8 +468,9 @@ export default function ProyectosClient() {
     if (t) setTablero((tab) => tab && quitarTarjeta(tab, t));
     setQuitados((prev) => new Set(prev).add(id));
     avisar({ texto: "Proyecto eliminado." });
-    if (searchParams.get("p")) router.replace("/proyectos");
-  }, [avisar, router, searchParams]);
+    setDashVersion((v) => v + 1);
+    if (searchParams.get("p")) router.replace(urlProyectos(searchParams.get("vista")));
+  }, [avisar, router, searchParams, urlProyectos]);
 
   const alCrear = useCallback((t: Tarjeta, avisos: string[]) => {
     setNuevoOpen(false);
@@ -445,8 +482,9 @@ export default function ProyectosClient() {
 
   const cerrarDetalle = useCallback(() => {
     setDetalleId(null);
-    if (searchParams.get("p")) router.replace("/proyectos");
-  }, [router, searchParams]);
+    if (!enTableroPantalla) setDashVersion((v) => v + 1);
+    if (searchParams.get("p")) router.replace(urlProyectos(searchParams.get("vista")));
+  }, [router, searchParams, urlProyectos, enTableroPantalla]);
 
   const limpiar = () => {
     setBusqueda("");
@@ -469,42 +507,72 @@ export default function ProyectosClient() {
   ];
   const preview = detalleId ? enTablero(detalleId) : null;
 
+  const cabecera: Record<Pantalla, { ojo: string; titulo: string; sub: React.ReactNode }> = {
+    tablero: { ojo: "Tablero", titulo: "Proyectos", sub: <>{archivados ? "Archivados" : "Seguimiento por estado"} · {total.toLocaleString("es-PY")} proyecto{total === 1 ? "" : "s"}</> },
+    equipo: { ojo: "Equipo", titulo: "Tareas del equipo", sub: "Proyectos abiertos por técnico, divididos por estado, con las horas laborales en el estado actual y el SLA." },
+    ejecutivo: { ojo: "Directorio", titulo: "Dashboard Ejecutivo", sub: "Cómo está funcionando la cartera: riesgos de hoy, entregas del período, estados, técnicos y PM." },
+    pm: { ojo: "Cartera", titulo: "Dashboard PM", sub: "Tus proyectos por situación: qué está vencido, qué vence pronto y qué está trabado." },
+  };
+  const cab = cabecera[pantalla];
+
   return (
     <div className="flex h-full flex-col gap-4">
-      {/* Encabezado */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--brand)] shadow-[0_0_0_3px_var(--brand-100)]" />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand)]">Tablero</p>
+      {/* Encabezado + pestañas */}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--brand)] shadow-[0_0_0_3px_var(--brand-100)]" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand)]">{cab.ojo}</p>
+            </div>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{cab.titulo}</h1>
+            <p className="mt-1 text-sm text-slate-500">{cab.sub}</p>
           </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Proyectos</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {archivados ? "Archivados" : "Seguimiento por estado"} · {total.toLocaleString("es-PY")} proyecto{total === 1 ? "" : "s"}
-          </p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {esAdmin ? (
-            <button type="button" onClick={() => setEstadosOpen(true)} title="Configurar los estados (columnas) del tablero"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)]">
-              <Settings2 className="h-3.5 w-3.5" /> Configurar estados
-            </button>
-          ) : null}
-          <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100/80 p-0.5">
-            {([["kanban", "Kanban", LayoutGrid], ["lista", "Lista", List]] as const).map(([v, t, I]) => (
-              <button key={v} type="button" onClick={() => cambiarVista(v)} aria-pressed={vista === v}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${vista === v ? "bg-white text-[var(--brand-600)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                <I className="h-3.5 w-3.5" /> {t}
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {esAdmin ? (
+              <button type="button" onClick={() => setEstadosOpen(true)} title="Configurar los estados (columnas) del tablero y los parámetros de seguimiento"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)]">
+                <Settings2 className="h-3.5 w-3.5" /> Configurar estados
               </button>
-            ))}
+            ) : null}
+            {pantalla === "tablero" ? (
+              <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100/80 p-0.5">
+                {([["kanban", "Kanban", LayoutGrid], ["lista", "Lista", List]] as const).map(([v, t, I]) => (
+                  <button key={v} type="button" onClick={() => cambiarVista(v)} aria-pressed={vista === v}
+                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${vista === v ? "bg-white text-[var(--brand-600)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                    <I className="h-3.5 w-3.5" /> {t}
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            <button type="button" onClick={() => setNuevoOpen(true)}
+              className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-600)]">
+              <Plus className="h-4 w-4" /> Nuevo proyecto
+            </button>
           </div>
-          <button type="button" onClick={() => setNuevoOpen(true)}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-600)]">
-            <Plus className="h-4 w-4" /> Nuevo proyecto
-          </button>
         </div>
+        <nav aria-label="Pantallas de Proyectos" className="-mb-1 flex items-center gap-1 overflow-x-auto border-b border-slate-200">
+          {pantallas.filter((p) => p.ver).map((p) => {
+            const activa = pantalla === p.id;
+            const I = p.icon;
+            return (
+              <button key={p.id} type="button" onClick={() => irPantalla(p.id)} aria-current={activa ? "page" : undefined}
+                className={`-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-[13px] font-semibold transition-colors ${activa ? "border-[var(--brand)] text-[var(--brand-700)]" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"}`}>
+                <I className="h-3.5 w-3.5" /> {p.label}
+              </button>
+            );
+          })}
+        </nav>
       </div>
 
+      {pantalla === "equipo" ? (
+        <TareasEquipo yo={yo} esAdmin={esAdmin} version={dashVersion} onAbrir={acciones.onAbrir} avisar={avisar} />
+      ) : pantalla === "ejecutivo" ? (
+        <DashboardEjecutivo config={config} version={dashVersion} onAbrir={acciones.onAbrir} avisar={avisar} />
+      ) : pantalla === "pm" ? (
+        <DashboardPm esAdmin={esAdmin} config={config} version={dashVersion} onAbrir={acciones.onAbrir} />
+      ) : (
+      <>
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 2xl:grid-cols-8">
         <MetricCard label="Activos" value={k?.activos ?? "—"} sub="en curso" icon={<FolderKanban className="h-3.5 w-3.5" />} accent="featured" />
@@ -611,6 +679,8 @@ export default function ProyectosClient() {
           onMover={acciones.onMover}
         />
       ) : null}
+      </>
+      )}
 
       {/* Modales */}
       {nuevoOpen ? (
@@ -659,9 +729,11 @@ export default function ProyectosClient() {
           onGuardado={() => {
             setEstadosOpen(false);
             invalidar("/api/proyectos/estados");
-            avisar({ texto: "Estados guardados." });
-            void cargarTablero();
+            avisar({ texto: "Configuración guardada." });
+            cargarConfig();
+            if (enTableroPantalla) void cargarTablero();
             setVersion((v) => v + 1);
+            setDashVersion((v) => v + 1);
           }}
         />
       ) : null}

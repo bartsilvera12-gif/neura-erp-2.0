@@ -10,7 +10,7 @@
 import { fail } from "@/lib/api/responses";
 import type { TenantContext } from "@/lib/api/with-tenant";
 import { notificar } from "@/modules/notificaciones/server";
-import type { Permisos, Tarjeta } from "@/modules/proyectos/tipos";
+import type { Metrica, Permisos, Tarjeta } from "@/modules/proyectos/tipos";
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const esUuid = (v: unknown): v is string => typeof v === "string" && UUID_RE.test(v);
@@ -298,4 +298,38 @@ export async function clienteValido(ctx: TenantContext, id: string): Promise<boo
   if (!UUID_RE.test(id)) return false;
   const { data } = await ctx.db.select("clientes", "id").eq("id", id).is("deleted_at", null).limit(1);
   return !!data?.length;
+}
+
+// ── Tareas del equipo / dashboards ───────────────────────────────────────────
+const num = (v: unknown) => (v == null || v === "" ? 0 : Number(v) || 0);
+const numONull = (v: unknown) => (v == null || v === "" ? null : Number.isFinite(Number(v)) ? Number(v) : null);
+
+/** Filas de proyectos_abiertos_metricas() con los numéricos de Postgres pasados a number. */
+export function normalizarMetricas(v: unknown): Metrica[] {
+  if (!Array.isArray(v)) return [];
+  return (v as Record<string, unknown>[]).map((m) => ({
+    ...(m as unknown as Metrica),
+    sla_horas_objetivo: numONull(m.sla_horas_objetivo),
+    horas_en_estado: num(m.horas_en_estado),
+    sla_pct: numONull(m.sla_pct),
+    monto_vendido: num(m.monto_vendido),
+    tareas_total: num(m.tareas_total),
+    tareas_hechas: num(m.tareas_hechas),
+    vencido: !!m.vencido,
+    vence_pronto: !!m.vence_pronto,
+    sin_fecha: !!m.sin_fecha,
+    bloqueado: !!m.bloqueado,
+    sin_movimiento: !!m.sin_movimiento,
+  }));
+}
+
+/** Pasa a number cada campo numérico de un objeto plano (KPIs y filas de resumen). */
+export function numeros<T>(o: unknown, nulos: string[] = []): T {
+  const r: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries((o ?? {}) as Record<string, unknown>)) {
+    if (typeof v === "number" || (typeof v === "string" && v !== "" && /^-?\d+(\.\d+)?$/.test(v))) r[k] = Number(v);
+    else if (v == null && nulos.includes(k)) r[k] = null;
+    else r[k] = v;
+  }
+  return r as T;
 }
