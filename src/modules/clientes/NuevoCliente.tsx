@@ -12,11 +12,20 @@ const INPUT =
   "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 
 /** Alta rápida de cliente. Se usa desde la página de Clientes y desde la caja. */
-export function NuevoCliente({ onClose, onCreado }: { onClose: () => void; onCreado: (c: Cliente) => void }) {
-  const [nombre, setNombre] = useState("");
+export function NuevoCliente({
+  onClose,
+  onCreado,
+  inicial,
+}: {
+  onClose: () => void;
+  onCreado: (c: Cliente) => void;
+  /** Datos precargados (ej. desde la ficha de un chat: nombre y teléfono del contacto). */
+  inicial?: { nombre?: string; telefono?: string };
+}) {
+  const [nombre, setNombre] = useState(inicial?.nombre ?? "");
   const [tipo, setTipo] = useState<"persona" | "empresa">("persona");
   const [documento, setDocumento] = useState("");
-  const [telefono, setTelefono] = useState("");
+  const [telefono, setTelefono] = useState(inicial?.telefono ?? "");
   const [condicion, setCondicion] = useState<"CONTADO" | "CREDITO">("CONTADO");
   const [limite, setLimite] = useState("");
   const [busy, setBusy] = useState(false);

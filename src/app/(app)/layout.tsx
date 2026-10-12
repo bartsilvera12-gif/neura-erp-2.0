@@ -105,7 +105,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // Búsqueda inteligente: sin tildes, errores de tipeo; también por la familia ("finanzas").
     // Busca en el módulo, su familia y sus sub-pantallas ("arqueo" → Caja › Arqueo / Cierre).
     const visibles = filtrar(modulos, q, (m) => ({ principal: m.label, otros: [m.familia, ...(m.children ?? []).map((c) => c.label)] }));
-    const orden = ["Comercial", "Finanzas", "Operaciones", "Soporte", "Administración", "General"];
+    const orden = ["Comercial", "Finanzas", "Operaciones", "Omnicanal", "Soporte", "Administración", "General"];
     const map = new Map<string, Modulo[]>();
     for (const m of visibles) {
       const fam = m.familia ?? "General";
