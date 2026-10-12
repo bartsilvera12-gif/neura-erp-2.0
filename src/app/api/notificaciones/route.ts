@@ -5,6 +5,8 @@
  *
  *   GET   /api/notificaciones[?solo_no_leidas=1]
  *         → { notificaciones (últimas 50), no_leidas: { general, soporte, total }, usuario_id, schema }
+ *         Arriba de todo van los recordatorios de reunión de la Agenda (60 y 30 min antes),
+ *         calculados al leer: `derivada: true`, sin fila, no se pueden marcar leídos.
  *   POST  /api/notificaciones { ids: [...] } | { todas: true, bandeja?: "general"|"soporte" }
  *         → { marcadas }   (marca leídas; PATCH hace lo mismo)
  */
@@ -12,6 +14,7 @@ import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, ERR, fail } from "@/lib/api/responses";
 import type { TenantContext } from "@/lib/api/with-tenant";
+import { avisosAgendaDe } from "@/modules/agenda/avisos";
 
 const COLS = "id, tipo, bandeja, titulo, cuerpo, url, leida_at, created_at";
 
@@ -19,16 +22,20 @@ export const GET = withTenant(async (ctx, req) => {
   const soloNoLeidas = new URL(req.url).searchParams.get("solo_no_leidas") === "1";
   let lista = ctx.db.select("usuario_notificaciones", COLS).eq("usuario_id", ctx.usuarioId);
   if (soloNoLeidas) lista = lista.is("leida_at", null);
-  const [items, gen, sop] = await Promise.all([
+  const [items, gen, sop, reuniones] = await Promise.all([
     lista.order("created_at", { ascending: false }).limit(50),
     ctx.db.select("usuario_notificaciones", "id", { count: "exact", head: true }).eq("usuario_id", ctx.usuarioId).is("leida_at", null).neq("bandeja", "soporte"),
     ctx.db.select("usuario_notificaciones", "id", { count: "exact", head: true }).eq("usuario_id", ctx.usuarioId).is("leida_at", null).eq("bandeja", "soporte"),
+    // Recordatorios de reunión (60 y 30 min antes): calculados en vivo, sin fila
+    // (ver modules/agenda/avisos.ts). No se marcan leídos: se apagan solos.
+    avisosAgendaDe(ctx.db, ctx.usuarioId).catch(() => []),
   ]);
   if (items.error) return ERR.server();
-  const general = gen.count ?? 0;
+  // Las reuniones van primero de todo y suman al contador de General.
+  const general = (gen.count ?? 0) + reuniones.length;
   const soporte = sop.count ?? 0;
   return ok({
-    notificaciones: items.data ?? [],
+    notificaciones: [...reuniones, ...(items.data ?? [])],
     no_leidas: { general, soporte, total: general + soporte },
     usuario_id: ctx.usuarioId,
     schema: ctx.schema,

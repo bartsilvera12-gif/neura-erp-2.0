@@ -266,7 +266,7 @@ export const POST = withTenant(async (ctx, req) => {
         bandeja: "general",
         titulo: `Capacitación agendada · ${cliente.nombre}`,
         cuerpo: ini ? `${ini.slice(8, 10)}/${ini.slice(5, 7)} a las ${ini.slice(11, 16)} · por ${usuarioNombre}` : `Por ${usuarioNombre}`,
-        url: "/clientes/agenda",
+        url: `/clientes/agenda?cita=${citaId}`,
       });
     }
   }

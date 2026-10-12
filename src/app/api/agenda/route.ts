@@ -1,47 +1,129 @@
 /**
- * Agenda de capacitaciones (las que se agendan desde una tipificación).
- *   GET /api/agenda?vista=proximas|pasadas|todas&responsable=<id|yo>&estado=<codigo>
- *       → { citas: [{ …, cliente_nombre, responsable_nombre }], equipo }
+ * Agenda (portado de app/api/agenda del sistema actual).
+ *
+ *   GET  /api/agenda?desde&hasta&estado&responsable_id&cliente_id&q
+ *        → citas enriquecidas (cliente, responsables con el principal primero, creado_por,
+ *          puede_editar) ordenadas por inicio. `responsable_id` = principal O entre los
+ *          responsables; `q` busca en título y nombre del contacto.
+ *   POST /api/agenda { titulo, responsable_id, responsable_ids?, tipo?, estado?, inicio_at,
+ *        fin_at, cliente_id?, contacto_nombre?, contacto_telefono?, ubicacion?,
+ *        observaciones?, metadata? }
+ *        → cita creada. Anti-doble-reserva del responsable principal (409). Avisa en la
+ *          campanita a cada responsable que no sea quien la cargó.
  */
 import { withTenant } from "@/lib/api/with-tenant";
-import { ok, ERR } from "@/lib/api/responses";
-import { UUID_RE } from "@/modules/tipificacion/server";
-import { ESTADOS_CITA } from "@/modules/tipificacion/dominio";
+import { created, fail, ok, ERR } from "@/lib/api/responses";
+import { isAgendaEstado, type AgendaCitaRow } from "@/modules/agenda/dominio";
+import {
+  UUID_RE, avisarResponsables, buscarConflictoHorario, citaIdsDeUsuario, clienteExiste, enrichAgendaRows,
+  guardarResponsables, mensajeConflicto, usuariosValidos,
+} from "@/modules/agenda/server";
 
-const COLS = "id, cliente_id, responsable_id, titulo, tipo, estado, inicio_at, fin_at, ubicacion, observaciones, cancelada_motivo, metadata, created_at";
+function parseIso(v: unknown): string | null {
+  if (typeof v !== "string" || !v.trim()) return null;
+  const ms = Date.parse(v);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
+}
+
+function optStr(v: unknown, max = 2000): string | null {
+  return typeof v === "string" && v.trim() ? v.trim().slice(0, max) : null;
+}
 
 export const GET = withTenant(async (ctx, req) => {
   const sp = new URL(req.url).searchParams;
-  const vista = sp.get("vista") ?? "proximas";
-  const resp = sp.get("responsable");
+  const desde = parseIso(sp.get("desde"));
+  const hasta = parseIso(sp.get("hasta"));
   const estado = sp.get("estado");
-  const ahora = new Date().toISOString();
+  const responsableId = sp.get("responsable_id");
+  const clienteId = sp.get("cliente_id");
+  // Sin los caracteres que arman la sintaxis de `or` de PostgREST.
+  const q = (sp.get("q") ?? "").replace(/[,()*%\\]/g, " ").trim().slice(0, 100);
 
-  let q = ctx.db.select("agenda_citas", COLS);
-  if (vista === "proximas") q = q.gte("fin_at", ahora).order("inicio_at", { ascending: true });
-  else if (vista === "pasadas") q = q.lt("fin_at", ahora).order("inicio_at", { ascending: false });
-  else q = q.order("inicio_at", { ascending: false });
-  if (resp === "yo") q = q.eq("responsable_id", ctx.usuarioId);
-  else if (resp && UUID_RE.test(resp)) q = q.eq("responsable_id", resp);
-  if (estado && ESTADOS_CITA.some((e) => e.codigo === estado)) q = q.eq("estado", estado);
+  try {
+    let qq = ctx.db.select("agenda_citas", "*");
+    if (desde) qq = qq.gte("inicio_at", desde);
+    if (hasta) qq = qq.lte("inicio_at", hasta);
+    if (estado && isAgendaEstado(estado)) qq = qq.eq("estado", estado);
+    if (responsableId && UUID_RE.test(responsableId)) {
+      // Una cita es "de" alguien si es su responsable principal O si figura entre los responsables.
+      const ids = await citaIdsDeUsuario(ctx.db, responsableId);
+      qq = ids.length ? qq.or(`responsable_id.eq.${responsableId},id.in.(${ids.join(",")})`) : qq.eq("responsable_id", responsableId);
+    }
+    if (clienteId && UUID_RE.test(clienteId)) qq = qq.eq("cliente_id", clienteId);
+    if (q) qq = qq.or(`titulo.ilike.%${q}%,contacto_nombre.ilike.%${q}%`);
 
-  const [citas, usuarios] = await Promise.all([q.limit(300), ctx.db.select("usuarios", "id, nombre, activo").order("nombre")]);
-  if (citas.error) return ERR.server();
-  const filas = (citas.data ?? []) as unknown as { cliente_id: string | null; responsable_id: string | null }[];
-  const cliIds = [...new Set(filas.map((c) => c.cliente_id).filter(Boolean))] as string[];
-  const { data: clis } = cliIds.length
-    ? await ctx.db.select("clientes", "id, nombre").in("id", cliIds)
-    : { data: [] as unknown[] };
-  const nomCli = new Map(((clis ?? []) as { id: string; nombre: string }[]).map((c) => [c.id, c.nombre]));
-  const us = (usuarios.data ?? []) as unknown as { id: string; nombre: string; activo: boolean }[];
-  const nomUs = new Map(us.map((u) => [u.id, u.nombre]));
+    const { data, error } = await qq.order("inicio_at", { ascending: true }).limit(2000);
+    if (error) return fail(error.message);
+    const rows = (data ?? []) as unknown as AgendaCitaRow[];
+    return ok(await enrichAgendaRows(ctx.db, rows, ctx));
+  } catch (e) {
+    console.error("[agenda] GET", (e as Error).message);
+    return ERR.server();
+  }
+});
 
-  return ok({
-    citas: filas.map((c) => ({
-      ...c,
-      cliente_nombre: c.cliente_id ? nomCli.get(c.cliente_id) ?? null : null,
-      responsable_nombre: c.responsable_id ? nomUs.get(c.responsable_id) ?? null : null,
-    })),
-    equipo: us.filter((u) => u.activo !== false).map((u) => ({ id: u.id, nombre: u.nombre })),
-  });
+export const POST = withTenant(async (ctx, req) => {
+  let body: Record<string, unknown> | null = null;
+  try {
+    body = (await req.json()) as Record<string, unknown>;
+  } catch {
+    body = null;
+  }
+  if (!body || typeof body !== "object") return fail("Datos inválidos");
+
+  const titulo = typeof body.titulo === "string" ? body.titulo.trim().slice(0, 200) : "";
+  const responsableId = optStr(body.responsable_id);
+  const inicioIso = parseIso(body.inicio_at);
+  const finIso = parseIso(body.fin_at);
+  if (!titulo) return fail("El título es obligatorio.");
+  if (!responsableId) return fail("Elegí al menos un responsable.");
+  if (!inicioIso || !finIso) return fail("Indicá fecha, hora de inicio y fin.");
+  if (Date.parse(finIso) <= Date.parse(inicioIso)) return fail("El fin debe ser posterior al inicio.");
+
+  try {
+    // `responsable_ids` es la lista completa; `responsable_id` sigue siendo el principal
+    // (el que usan disponibilidad y anti-doble-reserva).
+    const pedidos = Array.isArray(body.responsable_ids) ? body.responsable_ids.filter((v): v is string => typeof v === "string") : [];
+    const validos = await usuariosValidos(ctx.db, [responsableId, ...pedidos]);
+    if (!validos.includes(responsableId)) return fail("El responsable no es un usuario activo de la empresa.");
+
+    const clienteId = optStr(body.cliente_id);
+    if (clienteId && !(await clienteExiste(ctx.db, clienteId))) return fail("El cliente no existe.");
+
+    const estadoRaw = typeof body.estado === "string" ? body.estado : "pendiente";
+    const estado = isAgendaEstado(estadoRaw) ? estadoRaw : "pendiente";
+
+    const conflicto = await buscarConflictoHorario(ctx.db, { responsableId, inicioIso, finIso });
+    if (conflicto) return fail(mensajeConflicto(conflicto), 409, "conflicto_horario");
+
+    const metadata =
+      body.metadata && typeof body.metadata === "object" && !Array.isArray(body.metadata) ? (body.metadata as Record<string, unknown>) : {};
+
+    const { data, error } = await ctx.db.insert("agenda_citas", {
+      cliente_id: clienteId,
+      responsable_id: responsableId,
+      contacto_nombre: clienteId ? null : optStr(body.contacto_nombre, 200),
+      contacto_telefono: clienteId ? null : optStr(body.contacto_telefono, 60),
+      titulo,
+      tipo: optStr(body.tipo, 60) ?? "reunion",
+      estado,
+      inicio_at: inicioIso,
+      fin_at: finIso,
+      ubicacion: optStr(body.ubicacion, 500),
+      observaciones: optStr(body.observaciones, 5000),
+      metadata,
+      created_by: ctx.usuarioId,
+      updated_by: ctx.usuarioId,
+    });
+    const row = (data?.[0] ?? null) as unknown as AgendaCitaRow | null;
+    if (error || !row) return fail(error?.message ?? "No se pudo crear la cita.");
+
+    await guardarResponsables(ctx.db, row.id, responsableId, validos);
+    await avisarResponsables(ctx.db, ctx.empresaId, { cita: row, usuarioIds: validos, actorId: ctx.usuarioId, motivo: "nueva" });
+    const [enriched] = await enrichAgendaRows(ctx.db, [row], ctx);
+    return created(enriched ?? row);
+  } catch (e) {
+    console.error("[agenda] POST", (e as Error).message);
+    return ERR.server();
+  }
 });

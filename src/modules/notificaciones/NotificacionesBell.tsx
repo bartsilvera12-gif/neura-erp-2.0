@@ -8,6 +8,8 @@
  *     20 s: si el canal no entrega nada (publicación/RLS), la campanita funciona igual
  *   · SONIDO sólo por avisos NUEVOS después de la primera carga (abrir la app no suena)
  *   · click: abre la URL del aviso y lo marca leído · "Marcar todas como leídas" por bandeja
+ *   · recordatorios de reunión de la Agenda (60 y 30 min antes): llegan calculados en vivo
+ *     (`derivada`), sin fila en la base: no se marcan leídos, se apagan solos
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -28,6 +30,9 @@ type Notificacion = {
   url: string | null;
   leida_at: string | null;
   created_at: string;
+  /** Recordatorio de reunión calculado en vivo (sin fila): no se puede marcar leído. */
+  derivada?: boolean;
+  cita_id?: string;
 };
 type Resp = {
   notificaciones: Notificacion[];
@@ -135,7 +140,7 @@ export function NotificacionesBell() {
     // Optimista: se apaga al instante y la recarga confirma.
     const ahora = new Date().toISOString();
     const afecta = (n: Notificacion) =>
-      payload.ids ? payload.ids.includes(n.id) : payload.bandeja === "soporte" ? n.bandeja === "soporte" : payload.bandeja === "general" ? n.bandeja !== "soporte" : true;
+      n.derivada ? false : payload.ids ? payload.ids.includes(n.id) : payload.bandeja === "soporte" ? n.bandeja === "soporte" : payload.bandeja === "general" ? n.bandeja !== "soporte" : true;
     setItems((prev) => prev.map((n) => (!n.leida_at && afecta(n) ? { ...n, leida_at: ahora } : n)));
     try {
       await apiFetch("/api/notificaciones", { method: "POST", body: JSON.stringify(payload) });
@@ -156,7 +161,7 @@ export function NotificacionesBell() {
 
   const esSoporte = (n: Notificacion) => n.bandeja === "soporte";
   const itemsBandeja = items.filter((n) => (bandeja === "soporte" ? esSoporte(n) : !esSoporte(n)));
-  const hayNoLeidasBandeja = itemsBandeja.some((n) => !n.leida_at);
+  const hayNoLeidasBandeja = itemsBandeja.some((n) => !n.leida_at && !n.derivada);
   const total = noLeidas.total;
 
   return (
@@ -250,8 +255,10 @@ export function NotificacionesBell() {
                 const estilo = estiloDe(n);
                 const Icono = estilo.icon;
                 const noLeida = !n.leida_at;
+                // Los recordatorios derivados no tienen fila: su id no es un uuid y no se marcan.
+                const marcable = noLeida && !n.derivada;
                 const contenido = (
-                  <div className={`flex gap-3 px-3.5 py-3 ${noLeida ? "bg-sky-50/40 pr-24" : ""}`}>
+                  <div className={`flex gap-3 px-3.5 py-3 ${noLeida ? "bg-sky-50/40" : ""} ${marcable ? "pr-24" : ""}`}>
                     <span className={`mt-0.5 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${estilo.wrap}`} aria-hidden>
                       <Icono className="h-4 w-4" />
                     </span>
@@ -270,18 +277,18 @@ export function NotificacionesBell() {
                     {n.url ? (
                       <Link
                         href={n.url}
-                        onClick={() => { setAbierto(false); if (noLeida) void marcarLeidas({ ids: [n.id] }); }}
+                        onClick={() => { setAbierto(false); if (marcable) void marcarLeidas({ ids: [n.id] }); }}
                         className="block transition-colors hover:bg-slate-50"
                       >
                         {contenido}
                       </Link>
                     ) : (
-                      <button type="button" onClick={() => noLeida && void marcarLeidas({ ids: [n.id] })} className="block w-full text-left transition-colors hover:bg-slate-50">
+                      <button type="button" onClick={() => marcable && void marcarLeidas({ ids: [n.id] })} className="block w-full text-left transition-colors hover:bg-slate-50">
                         {contenido}
                       </button>
                     )}
                     {/* Hermano del Link (no hijo): marcar leída nunca navega por accidente. */}
-                    {noLeida ? (
+                    {marcable ? (
                       <button
                         type="button"
                         onClick={() => void marcarLeidas({ ids: [n.id] })}
