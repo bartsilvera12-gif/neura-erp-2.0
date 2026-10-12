@@ -28,11 +28,14 @@ import { TabSuscripciones } from "@/modules/clientes/ficha/TabSuscripciones";
 import { ModalNuevaSuscripcion } from "@/modules/clientes/suscripciones/ModalNuevaSuscripcion";
 import type { SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos";
 import { Avatar, BadgeEstado, CategoriaChip, CodigoChip, TEAL, codigoCliente, estadoDe, fechaCorta, gs } from "@/modules/clientes/ui";
+import { moduloEstaActivo } from "@/modules/registry";
+import { ProyectosDeCliente } from "@/modules/proyectos/ui/ProyectosDeCliente";
 
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric" });
 
-type Tab = "informacion" | "estado_cuenta" | "suscripciones" | "compras" | "contactos" | "actividad" | "notas";
+type Tab = "informacion" | "estado_cuenta" | "suscripciones" | "compras" | "contactos" | "proyectos" | "actividad" | "notas";
+const CON_PROYECTOS = moduloEstaActivo("proyectos");
 
 export default function ClienteDetallePage() {
   const { id } = useParams<{ id: string }>();
@@ -50,6 +53,7 @@ export default function ClienteDetallePage() {
   const [eliminando, setEliminando] = useState(false);
   const [cambiando, setCambiando] = useState(false);
   const [notasCount, setNotasCount] = useState(0);
+  const [proyectosCount, setProyectosCount] = useState<number | null>(null);
   const [subs, setSubs] = useState<SuscripcionCliente[]>([]);
   const [subsCargando, setSubsCargando] = useState(true);
   const [subsError, setSubsError] = useState<string | null>(null);
@@ -133,6 +137,7 @@ export default function ClienteDetallePage() {
     { id: "suscripciones", label: "Suscripciones", badge: subs.filter((s) => s.estado !== "cancelada").length },
     { id: "compras", label: "Compras", badge: r?.compras ?? data.ventas.length },
     { id: "contactos", label: "Contactos", badge: data.contactos.length },
+    ...(CON_PROYECTOS ? [{ id: "proyectos" as Tab, label: "Proyectos", badge: proyectosCount ?? undefined }] : []),
     { id: "actividad", label: "Actividad" },
     { id: "notas", label: "Notas", badge: notasCount },
   ];
@@ -296,6 +301,7 @@ export default function ClienteDetallePage() {
           ) : null}
           {tab === "compras" ? <TabCompras ventas={data.ventas} /> : null}
           {tab === "contactos" ? <TabContactos clienteId={c.id} contactos={data.contactos} onChange={() => void cargar()} /> : null}
+          {tab === "proyectos" && CON_PROYECTOS ? <ProyectosDeCliente clienteId={c.id} clienteNombre={c.razon_social || c.nombre} onConteo={setProyectosCount} /> : null}
           {tab === "actividad" ? <TabActividad clienteId={c.id} recarga={recargaHist} /> : null}
           {tab === "notas" ? <TabNotas clienteId={c.id} notaAnterior={c.notas} onCambio={setNotasCount} /> : null}
         </div>
