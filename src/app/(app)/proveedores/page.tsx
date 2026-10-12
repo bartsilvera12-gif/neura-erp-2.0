@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
-import { Ban, CheckCircle2, Download, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Truck, Upload, X } from "lucide-react";
+import { Ban, CheckCircle2, Download, Loader2, MoreHorizontal, Pencil, Plus, ReceiptText, Search, Trash2, Truck, Upload, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
 import { invalidarProveedores } from "@/modules/proveedores/cache";
@@ -19,6 +19,7 @@ import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { MenuAcciones } from "@/components/MenuAcciones";
 import { ProveedorForm } from "@/modules/proveedores/ProveedorForm";
+import { EstadoCuentaProveedor } from "@/modules/proveedores/EstadoCuentaProveedor";
 import { ExcelImportWizard } from "@/modules/inventario/ExcelImportWizard";
 import { condicionTexto, nombreProveedor, type CategoriaProveedor, type Proveedor } from "@/modules/proveedores/tipos";
 import { TZ_PY } from "@/lib/fecha/paraguay";
@@ -37,6 +38,7 @@ export default function ProveedoresPage() {
   const [verInactivos, setVerInactivos] = useState(false);
   const [form, setForm] = useState<{ open: boolean; prov: Proveedor | null }>({ open: false, prov: null });
   const [borrando, setBorrando] = useState<Proveedor | null>(null);
+  const [cuenta, setCuenta] = useState<Proveedor | null>(null);
   const [exportando, setExportando] = useState(false);
   const [importando, setImportando] = useState(false);
 
@@ -219,6 +221,10 @@ export default function ProveedoresPage() {
                         {p.ultima_compra ? <p className="text-[11px] text-slate-400">última {fechaCorta(p.ultima_compra)}</p> : null}
                       </td>
                       <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => setCuenta(p)} title="Estado de cuenta" className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50">
+                          <ReceiptText className="h-3.5 w-3.5" /> Estado de cuenta
+                        </button>
                         {esAdmin ? (
                           <MenuAcciones
                             etiqueta={`Acciones de ${nombre}`}
@@ -234,6 +240,7 @@ export default function ProveedoresPage() {
                             <MoreHorizontal className="h-5 w-5" />
                           </MenuAcciones>
                         ) : null}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -271,6 +278,10 @@ export default function ProveedoresPage() {
             void cargar();
           }}
         />
+      ) : null}
+
+      {cuenta ? (
+        <EstadoCuentaProveedor proveedorId={cuenta.id} proveedorNombre={nombreProveedor(cuenta)} puedePagar={esAdmin} onClose={() => setCuenta(null)} />
       ) : null}
 
       {borrando ? (

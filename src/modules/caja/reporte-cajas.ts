@@ -4,7 +4,8 @@
  * Fuente de verdad del cajón = caja_movimientos (no anulados):
  *   - ingresos con venta_id → ventas de contado, un movimiento por medio (pago mixto → varios)
  *   - cobro_id               → cobros a clientes (cuenta corriente), se muestran aparte
- *   - sin venta ni cobro     → movimientos manuales (ingreso/egreso/retiro/ajuste)
+ *   - pago_proveedor_id      → pagos a proveedores en efectivo (órdenes de pago), aparte
+ *   - sin venta, cobro ni pago → movimientos manuales (ingreso/egreso/retiro/ajuste)
  * Las ventas a CRÉDITO no tocan el cajón: salen de `ventas` (tipo_venta=CREDITO, no anuladas).
  *
  * Uso solo del lado del servidor (recibe el ctx.db de withTenant).
@@ -35,6 +36,8 @@ export type CajaReporteFila = {
   total_credito: number;
   cobros_efectivo: number;
   cobros_otros: number;
+  /** pagos a proveedores en efectivo (salen del cajón) */
+  pagos_proveedores_efectivo: number;
   ingresos_efectivo: number;
   egresos_efectivo: number;
   retiros_efectivo: number;
@@ -142,7 +145,7 @@ async function nombresUsuarios(db: TenantDb, ids: string[]) {
   return map;
 }
 
-type Mov = { caja_id: string; tipo: string; monto: number; medio: string; venta_id: string | null; cobro_id: string | null };
+type Mov = { caja_id: string; tipo: string; monto: number; medio: string; venta_id: string | null; cobro_id: string | null; pago_proveedor_id: string | null };
 type VentaCred = { caja_id: string; total: number; tipo_venta: string; estado: string };
 
 function armarFila(c: Fila, movs: Mov[], ventas: VentaCred[], nombres: Map<string, string>): CajaReporteFila {
@@ -163,7 +166,12 @@ function armarFila(c: Fila, movs: Mov[], ventas: VentaCred[], nombres: Map<strin
   const cobros_efectivo = cobroMovs.filter((m) => esEfvo(m.medio)).reduce((a, m) => a + m.monto, 0);
   const cobros_otros = cobroMovs.filter((m) => !esEfvo(m.medio)).reduce((a, m) => a + m.monto, 0);
 
-  const manuales = movs.filter((m) => !m.venta_id && !m.cobro_id);
+  // Pagos a proveedores (órdenes de pago) en efectivo: salen del cajón, se muestran aparte.
+  const pagos_proveedores_efectivo = movs
+    .filter((m) => m.pago_proveedor_id && m.tipo === "egreso" && esEfvo(m.medio))
+    .reduce((a, m) => a + m.monto, 0);
+
+  const manuales = movs.filter((m) => !m.venta_id && !m.cobro_id && !m.pago_proveedor_id);
   const sumMan = (tipo: string) => manuales.filter((m) => m.tipo === tipo && esEfvo(m.medio)).reduce((a, m) => a + m.monto, 0);
   const ingresos_efectivo = sumMan("ingreso");
   const egresos_efectivo = sumMan("egreso");
@@ -172,7 +180,8 @@ function armarFila(c: Fila, movs: Mov[], ventas: VentaCred[], nombres: Map<strin
 
   const monto_apertura = num(c.monto_apertura);
   const efectivo_esperado =
-    monto_apertura + total_efectivo + cobros_efectivo + ingresos_efectivo - egresos_efectivo - retiros_efectivo + ajustes_efectivo;
+    monto_apertura + total_efectivo + cobros_efectivo + ingresos_efectivo - egresos_efectivo - retiros_efectivo + ajustes_efectivo -
+    pagos_proveedores_efectivo;
   const contadoCierre = numONull(c.monto_cierre_contado);
   const cerrada = c.estado === "cerrada";
 
@@ -195,6 +204,7 @@ function armarFila(c: Fila, movs: Mov[], ventas: VentaCred[], nombres: Map<strin
     total_credito,
     cobros_efectivo,
     cobros_otros,
+    pagos_proveedores_efectivo,
     ingresos_efectivo,
     egresos_efectivo,
     retiros_efectivo,
@@ -215,6 +225,7 @@ const aMov = (m: Fila): Mov => ({
   medio: String(m.medio_pago ?? "efectivo").trim().toLowerCase(),
   venta_id: m.venta_id ? String(m.venta_id) : null,
   cobro_id: m.cobro_id ? String(m.cobro_id) : null,
+  pago_proveedor_id: m.pago_proveedor_id ? String(m.pago_proveedor_id) : null,
 });
 
 // ── Listado ───────────────────────────────────────────────────────────────────
@@ -243,7 +254,7 @@ export async function getReporteCajas(db: TenantDb, rango: ReturnType<typeof res
       Promise.all([
         todas((a, b) =>
           db
-            .select("caja_movimientos", "id, caja_id, tipo, monto, medio_pago, venta_id, cobro_id")
+            .select("caja_movimientos", "id, caja_id, tipo, monto, medio_pago, venta_id, cobro_id, pago_proveedor_id")
             .in("caja_id", lote)
             .is("anulado_at", null)
             .order("id", { ascending: true })
@@ -307,7 +318,7 @@ export async function getDetalleCaja(db: TenantDb, id: string): Promise<CajaDeta
     db.select("cajas", COLS_CAJA).eq("id", id).limit(1),
     todas((a, b) =>
       db
-        .select("caja_movimientos", "id, caja_id, tipo, concepto, monto, medio_pago, venta_id, cobro_id, observacion, usuario_id, usuario_email, created_at")
+        .select("caja_movimientos", "id, caja_id, tipo, concepto, monto, medio_pago, venta_id, cobro_id, pago_proveedor_id, observacion, usuario_id, usuario_email, created_at")
         .eq("caja_id", id)
         .is("anulado_at", null)
         .order("created_at", { ascending: true })
@@ -360,7 +371,7 @@ export async function getDetalleCaja(db: TenantDb, id: string): Promise<CajaDeta
       .filter((m) => !m.venta_id)
       .map((m) => ({
         id: String(m.id),
-        tipo: m.cobro_id ? "cobro" : String(m.tipo),
+        tipo: m.cobro_id ? "cobro" : m.pago_proveedor_id ? "pago_proveedor" : String(m.tipo),
         concepto: String(m.concepto ?? ""),
         monto: num(m.monto),
         medio_pago: String(m.medio_pago ?? "efectivo"),

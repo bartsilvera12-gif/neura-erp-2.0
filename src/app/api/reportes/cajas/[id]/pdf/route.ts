@@ -84,7 +84,7 @@ export const GET = withTenant(async (ctx, req) => {
   }
   for (const m of data.movimientos) {
     const entrada = m.tipo === "ingreso" || m.tipo === "cobro" || (m.tipo === "ajuste" && m.monto >= 0);
-    const tipo = m.tipo === "cobro" ? "Cobro" : m.tipo === "ingreso" ? "Ingreso" : m.tipo === "egreso" ? "Egreso" : m.tipo === "retiro" ? "Retiro" : "Ajuste";
+    const tipo = m.tipo === "cobro" ? "Cobro" : m.tipo === "pago_proveedor" ? "Pago a proveedor" : m.tipo === "ingreso" ? "Ingreso" : m.tipo === "egreso" ? "Egreso" : m.tipo === "retiro" ? "Retiro" : "Ajuste";
     const autor = m.usuario_nombre || m.usuario_email;
     timeline.push({ ts: m.created_at, tipo, detalle: autor ? `${m.concepto} · ${autor}` : m.concepto, medio: medioLabel(m.medio_pago), monto: Math.abs(m.monto), signo: entrada ? 1 : -1 });
   }
@@ -228,6 +228,10 @@ export const GET = withTenant(async (ctx, req) => {
   yd += FILA;
   fila(xDer, yd, "(-) Egresos", signo(c.egresos_efectivo, true), { gris: c.egresos_efectivo === 0, color: c.egresos_efectivo ? ROJO : undefined });
   yd += FILA;
+  if (c.pagos_proveedores_efectivo) {
+    fila(xDer, yd, "(-) Pagos a proveedores", signo(c.pagos_proveedores_efectivo, true), { color: ROJO });
+    yd += FILA;
+  }
   fila(xDer, yd, "(-) Retiros", signo(c.retiros_efectivo, true), { gris: c.retiros_efectivo === 0, color: c.retiros_efectivo ? ROJO : undefined });
   yd += FILA;
   if (c.ajustes_efectivo) {

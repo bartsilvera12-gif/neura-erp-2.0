@@ -26,3 +26,22 @@ export async function descargarArchivo(path: string, nombrePorDefecto: string) {
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 15000);
 }
+
+/**
+ * Abre un PDF en una pestaña nueva (para imprimirlo desde el visor del navegador).
+ * La pestaña se abre ANTES del fetch (si no, el bloqueador de ventanas la frena);
+ * si igual no se pudo abrir, lo descarga.
+ */
+export async function abrirArchivo(path: string, nombrePorDefecto: string) {
+  const w = window.open("", "_blank");
+  try {
+    const res = await pedir(path);
+    const url = URL.createObjectURL(await res.blob());
+    if (w) w.location.href = url;
+    else await descargarArchivo(path, nombrePorDefecto);
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  } catch (e) {
+    w?.close();
+    throw e;
+  }
+}

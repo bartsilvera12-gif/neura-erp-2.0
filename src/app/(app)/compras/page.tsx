@@ -8,7 +8,7 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { Ban, Loader2, Plus, Search, ShoppingCart, X } from "lucide-react";
+import { Ban, Banknote, Loader2, Plus, Printer, Search, ShoppingCart, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
@@ -19,6 +19,8 @@ import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos"
 import { cargarProveedores } from "@/modules/proveedores/cache";
 import { ComprobantesCompra } from "@/modules/compras/Comprobantes";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { ESTADO_CXP, dinero } from "@/modules/compras/pagos";
+import { RegistrarPagoProveedor, imprimirOrdenPago, useAvisoPago } from "@/modules/compras/RegistrarPagoProveedor";
 
 const TEAL = clienteConfig.color;
 const POR_PAGINA = 25;
@@ -46,6 +48,9 @@ export default function ComprasPage() {
   useEffect(() => {
     // Solo para el filtro: la lista liviana compartida (sin rubros ni compras).
     void cargarProveedores().then(setProveedores);
+    // /compras?ver=<id> (desde Pagos a proveedores): abre el detalle de esa compra.
+    const ver = new URLSearchParams(window.location.search).get("ver");
+    if (ver && /^[0-9a-f-]{36}$/i.test(ver)) { setViendo(ver); window.history.replaceState(null, "", "/compras"); }
   }, []);
   useEffect(() => {
     const t = setTimeout(() => { setQ(borrador.trim()); setPagina(1); }, 350);
@@ -181,6 +186,8 @@ export default function ComprasPage() {
 
 function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => void; onAnulada: () => void }) {
   const [c, setC] = useState<Compra | null>(null);
+  const [pagando, setPagando] = useState(false);
+  const { nodo: aviso, avisar } = useAvisoPago();
   const [anulando, setAnulando] = useState(false);
   const [motivo, setMotivo] = useState("");
   const [busy, setBusy] = useState(false);
@@ -208,7 +215,9 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
   }
 
   const anulada = c?.estado === "anulada";
+  const cxp = c?.cuenta_pagar ?? null;
   return (
+    <>
     <Drawer
       titulo={c ? `Compra ${c.numero_control}` : "Compra"}
       subtitulo={c ? `${c.proveedor_nombre} · factura ${c.numero_factura}` : undefined}
@@ -272,12 +281,17 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
 
           {c.observacion ? <p className="rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-600">{c.observacion}</p> : null}
 
+          {c.tipo_pago === "credito" && cxp ? <CuentaPagarBloque c={c} puedePagar={esAdmin && !anulada} onPagar={() => setPagando(true)} /> : null}
+
           <ComprobantesCompra compraId={c.id} esAdmin={esAdmin} />
 
           {anulando ? (
             <div className="rounded-xl border border-rose-200 p-4">
               <p className="text-sm font-semibold text-slate-800">¿Por qué la anulás?</p>
               <p className="mt-0.5 text-xs text-slate-500">Se descuenta del stock lo que entró con esta compra y se recalcula el costo promedio. Queda registrado en el kardex.</p>
+              {cxp && Number(cxp.pagado) > 0 ? (
+                <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Esta compra ya tiene pagos al proveedor ({dinero(cxp.pagado, cxp.moneda)}): para anularla primero anulá esas órdenes de pago.</p>
+              ) : null}
               <textarea autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={2} maxLength={500} placeholder="Ej: se cargó con el proveedor equivocado"
                 className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
             </div>
@@ -290,6 +304,55 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
         </div>
       )}
     </Drawer>
+    {pagando && c && cxp ? (
+      <RegistrarPagoProveedor proveedorId={c.proveedor_id} proveedorNombre={c.proveedor_nombre} moneda={cxp.moneda} cxpInicial={cxp.id}
+        onClose={() => setPagando(false)} onHecho={(p) => { avisar(p); cargar(); }} />
+    ) : null}
+    {aviso}
+    </>
+  );
+}
+
+/** Compra a crédito: cómo está su cuenta a pagar (saldo, pagado, vencimiento y pagos aplicados). */
+function CuentaPagarBloque({ c, puedePagar, onPagar }: { c: Compra; puedePagar: boolean; onPagar: () => void }) {
+  const x = c.cuenta_pagar!;
+  const din = (v: number) => dinero(v, x.moneda);
+  const abierta = x.estado === "pendiente" || x.estado === "parcial";
+  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: TZ_PY });
+  const atraso = abierta && x.vencimiento < hoy ? Math.round((Date.parse(hoy) - Date.parse(x.vencimiento)) / 86400000) : 0;
+  const est = atraso > 0 ? { t: `Vencida · ${atraso} días de atraso`, c: "bg-rose-50 text-rose-700" } : ESTADO_CXP[x.estado] ?? ESTADO_CXP.pendiente;
+  return (
+    <div className="rounded-xl border border-slate-200">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Cuenta a pagar</p>
+        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${est.c}`}>{est.t}</span>
+      </div>
+      <dl className="grid grid-cols-3 gap-3 px-4 py-3 text-sm">
+        <div><dt className="text-[11px] text-slate-500">Saldo</dt><dd className="font-bold tabular-nums text-slate-900">{din(x.saldo)}</dd></div>
+        <div><dt className="text-[11px] text-slate-500">Pagado</dt><dd className="font-semibold tabular-nums text-emerald-700">{din(x.pagado)}</dd></div>
+        <div><dt className="text-[11px] text-slate-500">Vence</dt><dd className={`font-medium ${atraso > 0 ? "text-rose-600" : "text-slate-800"}`}>{fechaDia(x.vencimiento)}</dd></div>
+      </dl>
+      {x.pagos.length ? (
+        <ul className="divide-y divide-slate-100 border-t border-slate-100">
+          {x.pagos.map((p) => (
+            <li key={p.id} className={`flex items-center gap-3 px-4 py-2 text-xs ${p.anulado_at ? "opacity-60" : ""}`}>
+              <span className={`font-mono font-semibold text-slate-800 ${p.anulado_at ? "line-through" : ""}`}>{p.numero}</span>
+              <span className="text-slate-500">{fecha(p.fecha)}</span>
+              {p.anulado_at ? <span className="rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600">Anulada</span> : null}
+              <span className={`ml-auto font-semibold tabular-nums ${p.anulado_at ? "text-slate-400 line-through" : "text-emerald-700"}`}>{din(p.monto)}</span>
+              <button onClick={() => imprimirOrdenPago(p.id, p.numero).catch(() => {})} title="Orden de pago en PDF" aria-label={`Orden de pago ${p.numero} en PDF`} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Printer className="h-3.5 w-3.5" /></button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {puedePagar && abierta && Number(x.saldo) > 0 ? (
+        <div className="border-t border-slate-100 px-4 py-3">
+          <button onClick={onPagar} className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white hover:brightness-95" style={{ backgroundColor: TEAL }}>
+            <Banknote className="h-4 w-4" /> Pagar {din(x.saldo)}
+          </button>
+        </div>
+      ) : null}
+    </div>
   );
 }
 

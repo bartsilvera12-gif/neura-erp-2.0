@@ -23,7 +23,7 @@ export const GET = withTenant(async (ctx) => {
     .select(
       "cajas",
       "id, numero_caja, estado, fecha_apertura, monto_apertura, " +
-        "movs:caja_movimientos(id, tipo, concepto, monto, medio_pago, venta_id, cobro_id, observacion, created_at)",
+        "movs:caja_movimientos(id, tipo, concepto, monto, medio_pago, venta_id, cobro_id, pago_proveedor_id, observacion, created_at)",
     )
     .eq("estado", "abierta")
     .is("movs.anulado_at", null)
@@ -45,6 +45,7 @@ export const GET = withTenant(async (ctx) => {
     medio_pago: String(m.medio_pago ?? "efectivo"),
     venta_id: m.venta_id ? String(m.venta_id) : null,
     cobro_id: m.cobro_id ? String(m.cobro_id) : null,
+    pago_proveedor_id: m.pago_proveedor_id ? String(m.pago_proveedor_id) : null,
     observacion: (m.observacion as string | null) ?? null,
     created_at: String(m.created_at),
   }));
@@ -65,17 +66,29 @@ export const GET = withTenant(async (ctx) => {
   const cobros_otros = cobroMovs.filter((m) => !esEfvo(m.medio_pago)).reduce((a, x) => a + x.monto, 0);
   const cantidad_cobros = new Set(cobroMovs.map((x) => x.cobro_id)).size;
 
-  // Movimientos manuales (sin venta ni cobro) para la lista y el efectivo esperado.
-  const movimientos = all.filter((m) => !m.venta_id && !m.cobro_id).map(({ id, tipo, concepto, monto, medio_pago, observacion, created_at }) => ({ id, tipo, concepto, monto, medio_pago, observacion, created_at }));
-  const sumMov = (pred: (x: (typeof movimientos)[number]) => boolean) => movimientos.filter(pred).reduce((a, x) => a + x.monto, 0);
+  // Pagos a proveedores en efectivo (órdenes de pago): salen del cajón, se muestran aparte.
+  const pagoProvMovs = all.filter((m) => m.pago_proveedor_id && m.tipo === "egreso");
+  const pagos_proveedores_efectivo = pagoProvMovs.filter((m) => esEfvo(m.medio_pago)).reduce((a, x) => a + x.monto, 0);
+  const cantidad_pagos_proveedores = new Set(pagoProvMovs.map((x) => x.pago_proveedor_id)).size;
+
+  // Lista: todo lo que no es venta ni cobro (los pagos a proveedores con su propio tipo
+  // "pago_proveedor"). Efectivo esperado: solo los manuales (sin pago a proveedor).
+  const movimientos = all
+    .filter((m) => !m.venta_id && !m.cobro_id)
+    .map(({ id, tipo, concepto, monto, medio_pago, observacion, created_at, pago_proveedor_id }) => ({
+      id, tipo: pago_proveedor_id ? "pago_proveedor" : tipo, concepto, monto, medio_pago, observacion, created_at,
+    }));
+  const manuales = all.filter((m) => !m.venta_id && !m.cobro_id && !m.pago_proveedor_id);
+  const sumMov = (pred: (x: (typeof manuales)[number]) => boolean) => manuales.filter(pred).reduce((a, x) => a + x.monto, 0);
   const ingresos_efectivo = sumMov((m) => m.tipo === "ingreso" && esEfvo(m.medio_pago));
   const egresos_efectivo = sumMov((m) => m.tipo === "egreso" && esEfvo(m.medio_pago));
   const retiros_efectivo = sumMov((m) => m.tipo === "retiro" && esEfvo(m.medio_pago));
   const ajustes_efectivo = sumMov((m) => m.tipo === "ajuste" && esEfvo(m.medio_pago));
 
-  // Efectivo físico esperado: apertura + todo el efectivo (ventas + manuales).
+  // Efectivo físico esperado: apertura + todo el efectivo (ventas + cobros + manuales − pagos a proveedores).
   const efectivo_esperado =
-    Number(caja.monto_apertura) + total_efectivo + cobros_efectivo + ingresos_efectivo - egresos_efectivo - retiros_efectivo + ajustes_efectivo;
+    Number(caja.monto_apertura) + total_efectivo + cobros_efectivo + ingresos_efectivo - egresos_efectivo - retiros_efectivo + ajustes_efectivo -
+    pagos_proveedores_efectivo;
 
   return ok({
     caja: {
@@ -99,6 +112,8 @@ export const GET = withTenant(async (ctx) => {
       cobros_efectivo,
       cobros_otros,
       cantidad_cobros,
+      pagos_proveedores_efectivo,
+      cantidad_pagos_proveedores,
       movimientos,
     },
   });

@@ -38,6 +38,10 @@ export type CajaResumen = {
   cobros_efectivo?: number;
   cobros_otros?: number;
   cantidad_cobros?: number;
+  /** pagos a proveedores (órdenes de pago) en efectivo que salieron de esta caja */
+  pagos_proveedores_efectivo?: number;
+  cantidad_pagos_proveedores?: number;
+  /** incluye los pagos a proveedores con tipo "pago_proveedor" */
   movimientos: MovimientoCaja[];
 };
 

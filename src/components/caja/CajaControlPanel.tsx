@@ -141,6 +141,9 @@ export default function CajaControlPanel({
               <Stat label="Ingresos efvo." value={formatGs(resumen.ingresos_efectivo)} />
               <Stat label="Egresos efvo." value={formatGs(resumen.egresos_efectivo)} />
               <Stat label="Retiros efvo." value={formatGs(resumen.retiros_efectivo)} />
+              {(resumen.pagos_proveedores_efectivo ?? 0) > 0 ? (
+                <Stat label="Pagos a proveedores" value={formatGs(resumen.pagos_proveedores_efectivo ?? 0)} sub={`${resumen.cantidad_pagos_proveedores ?? 0} orden(es) de pago`} />
+              ) : null}
             </div>
           )}
 
@@ -164,15 +167,16 @@ export default function CajaControlPanel({
                       </thead>
                       <tbody className="divide-y divide-emerald-100">
                         {resumen.movimientos.slice().reverse().map((m) => {
-                          const tipoBadge = m.tipo === "ingreso" ? "bg-emerald-100 text-emerald-800" : m.tipo === "egreso" ? "bg-rose-100 text-rose-800" : m.tipo === "retiro" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-700";
+                          const tipoBadge = m.tipo === "ingreso" ? "bg-emerald-100 text-emerald-800" : m.tipo === "egreso" || m.tipo === "pago_proveedor" ? "bg-rose-100 text-rose-800" : m.tipo === "retiro" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-700";
+                          const salida = m.tipo === "egreso" || m.tipo === "retiro" || m.tipo === "pago_proveedor";
                           return (
                             <tr key={m.id} className="hover:bg-emerald-50/30">
                               <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-500">{new Date(m.created_at).toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit" })}</td>
-                              <td className="px-3 py-2"><span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${tipoBadge}`}>{m.tipo}</span></td>
+                              <td className="px-3 py-2"><span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${tipoBadge}`}>{m.tipo === "pago_proveedor" ? "Pago a proveedor" : m.tipo}</span></td>
                               <td className="px-3 py-2 text-slate-700"><div className="font-medium">{m.concepto}</div>{m.observacion && <div className="text-[11px] text-slate-500">{m.observacion}</div>}</td>
                               <td className="hidden px-3 py-2 capitalize text-slate-600 sm:table-cell">{m.medio_pago}</td>
-                              <td className={`px-3 py-2 text-right font-semibold tabular-nums ${m.tipo === "ingreso" ? "text-emerald-700" : m.tipo === "egreso" || m.tipo === "retiro" ? "text-rose-700" : "text-slate-700"}`}>
-                                {m.tipo === "egreso" || m.tipo === "retiro" ? "−" : m.tipo === "ingreso" ? "+" : ""}{formatGs(m.monto)}
+                              <td className={`px-3 py-2 text-right font-semibold tabular-nums ${m.tipo === "ingreso" ? "text-emerald-700" : salida ? "text-rose-700" : "text-slate-700"}`}>
+                                {salida ? "−" : m.tipo === "ingreso" ? "+" : ""}{formatGs(m.monto)}
                               </td>
                             </tr>
                           );
@@ -293,6 +297,7 @@ function CerrarCajaModal({ caja, resumen, onClose, onDone }: { caja: CajaTurno; 
   const otrosMedios = transf + tarjeta + pos + (resumen.cobros_otros ?? 0); // no entra al cajón físico
   const efectivoEsperado = resumen.efectivo_esperado;
   const manualNet = resumen.ingresos_efectivo - resumen.egresos_efectivo - resumen.retiros_efectivo + resumen.ajustes_efectivo;
+  const pagosProv = resumen.pagos_proveedores_efectivo ?? 0;
 
   const contado = parseFloat(monto) || 0;
   const difEfectivo = contado - efectivoEsperado;
@@ -332,6 +337,7 @@ function CerrarCajaModal({ caja, resumen, onClose, onDone }: { caja: CajaTurno; 
           <Row label="Ventas en efectivo" value={`+ ${formatGs(resumen.total_efectivo)}`} />
           {cobrosEfvo > 0 && <Row label={`Cobros a clientes en efectivo (${resumen.cantidad_cobros ?? 0})`} value={`+ ${formatGs(cobrosEfvo)}`} />}
           {manualNet !== 0 && <Row label="Entradas y salidas manuales" value={`${manualNet > 0 ? "+" : "−"} ${formatGs(Math.abs(manualNet))}`} />}
+          {pagosProv > 0 && <Row label={`(-) Pagos a proveedores en efectivo (${resumen.cantidad_pagos_proveedores ?? 0})`} value={`− ${formatGs(pagosProv)}`} />}
         </div>
         <div className="mt-2.5 flex items-baseline justify-between border-t border-sky-200 pt-2.5">
           <span className="text-sm font-semibold text-sky-900">Debería haber en el cajón</span>

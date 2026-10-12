@@ -101,7 +101,7 @@ export default function DetalleTurnoPage() {
     }
     for (const m of data.movimientos) {
       const entrada = m.tipo === "ingreso" || m.tipo === "cobro" || (m.tipo === "ajuste" && m.monto >= 0);
-      const tipo = m.tipo === "cobro" ? "Cobro" : m.tipo === "ingreso" ? "Ingreso" : m.tipo === "egreso" ? "Egreso" : m.tipo === "retiro" ? "Retiro" : "Ajuste";
+      const tipo = m.tipo === "cobro" ? "Cobro" : m.tipo === "pago_proveedor" ? "Pago a proveedor" : m.tipo === "ingreso" ? "Ingreso" : m.tipo === "egreso" ? "Egreso" : m.tipo === "retiro" ? "Retiro" : "Ajuste";
       const autor = m.usuario_nombre || m.usuario_email;
       filas.push({
         key: `m-${m.id}`,
@@ -177,7 +177,7 @@ export default function DetalleTurnoPage() {
             <Resumen label="POS" value={formatGs(c.total_pos)} />
             <Resumen label="Transferencia" value={formatGs(c.total_transferencia)} hint={c.total_otros ? `+ ${formatGs(c.total_otros)} otros` : undefined} />
             <Resumen label="Crédito" value={formatGs(c.total_credito)} hint="no ingresa a caja" />
-            <Resumen label="Efectivo esperado" value={formatGs(c.efectivo_esperado)} hint={c.cobros_efectivo ? `incluye cobros ${formatGs(c.cobros_efectivo)}` : "apertura + efectivo ± movs"} />
+            <Resumen label="Efectivo esperado" value={formatGs(c.efectivo_esperado)} hint={[c.cobros_efectivo ? `incluye cobros ${formatGs(c.cobros_efectivo)}` : "", c.pagos_proveedores_efectivo ? `− pagos a proveedores ${formatGs(c.pagos_proveedores_efectivo)}` : ""].filter(Boolean).join(" · ") || "apertura + efectivo ± movs"} />
             <Resumen
               label="Contado / Diferencia"
               value={c.monto_cierre_contado == null ? "—" : formatGs(c.monto_cierre_contado)}

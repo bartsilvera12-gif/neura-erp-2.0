@@ -39,6 +39,21 @@ export type Compra = {
   anulada_motivo: string | null;
   items?: CompraItem[];
   cantidad_items?: number;
+  /** Solo en el detalle de una compra a crédito: su cuenta a pagar y los pagos aplicados. */
+  cuenta_pagar?: CuentaPagarCompra | null;
+};
+
+export type CuentaPagarCompra = {
+  id: string;
+  numero: string;
+  fecha_emision: string;
+  vencimiento: string;
+  moneda: "GS" | "USD";
+  monto: number;
+  pagado: number;
+  saldo: number;
+  estado: "pendiente" | "parcial" | "pagada" | "anulada";
+  pagos: { id: string; numero: string; fecha: string; monto: number; anulado_at: string | null }[];
 };
 
 export const COLS_COMPRA =
