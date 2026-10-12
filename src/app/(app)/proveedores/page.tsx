@@ -8,7 +8,7 @@
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { Ban, CheckCircle2, Download, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Truck, X } from "lucide-react";
+import { Ban, CheckCircle2, Download, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Truck, Upload, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
 import { invalidarProveedores } from "@/modules/proveedores/cache";
@@ -19,6 +19,7 @@ import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { MenuAcciones } from "@/components/MenuAcciones";
 import { ProveedorForm } from "@/modules/proveedores/ProveedorForm";
+import { ExcelImportWizard } from "@/modules/inventario/ExcelImportWizard";
 import { condicionTexto, nombreProveedor, type CategoriaProveedor, type Proveedor } from "@/modules/proveedores/tipos";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 
@@ -37,6 +38,7 @@ export default function ProveedoresPage() {
   const [form, setForm] = useState<{ open: boolean; prov: Proveedor | null }>({ open: false, prov: null });
   const [borrando, setBorrando] = useState<Proveedor | null>(null);
   const [exportando, setExportando] = useState(false);
+  const [importando, setImportando] = useState(false);
 
   const cargar = useCallback(async () => {
     try {
@@ -107,6 +109,11 @@ export default function ProveedoresPage() {
           <button onClick={exportar} disabled={exportando || lista.length === 0} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
             {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Exportar Excel
           </button>
+          {esAdmin ? (
+            <button onClick={() => setImportando(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
+              <Upload className="h-4 w-4" /> Importar Excel
+            </button>
+          ) : null}
           {esAdmin ? (
             <button onClick={() => setForm({ open: true, prov: null })} className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
               <Plus className="h-4 w-4" /> Nuevo proveedor
@@ -243,6 +250,26 @@ export default function ProveedoresPage() {
           categorias={categorias}
           onClose={() => setForm({ open: false, prov: null })}
           onSaved={() => { setForm({ open: false, prov: null }); invalidar("/api/proveedores/categorias"); void cargar(); }}
+        />
+      ) : null}
+
+      {importando ? (
+        <ExcelImportWizard
+          entidad="proveedores"
+          previewUrl="/api/proveedores/importar/preview"
+          commitUrl="/api/proveedores/importar/commit"
+          templateUrl="/api/proveedores/importar/plantilla"
+          etiquetas={{ INSERT: "Nuevo", UPDATE: "Actualiza", SKIP: "Sin cambios", ERROR: "Error" }}
+          textoConfirmar={(s) => {
+            const n = s.insertar + s.actualizar;
+            return `Importar ${n.toLocaleString("es-PY")} ${n === 1 ? "proveedor" : "proveedores"}`;
+          }}
+          onClose={() => setImportando(false)}
+          onCompleted={() => {
+            invalidarProveedores();
+            invalidar("/api/proveedores/categorias");
+            void cargar();
+          }}
         />
       ) : null}
 

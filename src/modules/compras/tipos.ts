@@ -46,3 +46,16 @@ export const COLS_COMPRA =
 
 export const COLS_ITEM =
   "id, producto_id, producto_nombre, producto_sku, cantidad, costo_unitario_original, costo_unitario, tipo_iva, subtotal, monto_iva, total, precio_venta_nuevo";
+
+/** Comprobante adjunto a una compra (foto o PDF de la factura). */
+export type ComprobanteCompra = {
+  id: string;
+  compra_id: string;
+  nombre: string;
+  mime: string | null;
+  size: number | null;
+  subido_por: string | null;
+  created_at: string;
+};
+
+export const COLS_COMPROBANTE = "id, compra_id, nombre, mime, size, subido_por, created_at";

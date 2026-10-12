@@ -17,6 +17,8 @@ import { TZ_PY } from "@/lib/fecha/paraguay";
 import type { Compra } from "@/modules/compras/tipos";
 import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos";
 import { cargarProveedores } from "@/modules/proveedores/cache";
+import { ComprobantesCompra } from "@/modules/compras/Comprobantes";
+import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 
 const TEAL = clienteConfig.color;
 const POR_PAGINA = 25;
@@ -183,6 +185,7 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
   const [motivo, setMotivo] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const esAdmin = useUsuario()?.rol === "ADMIN";
 
   const cargar = useCallback(() => {
     apiFetch<Compra>(`/api/compras/${id}`).then(setC).catch((e) => setError((e as Error).message));
@@ -268,6 +271,8 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
           </div>
 
           {c.observacion ? <p className="rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-600">{c.observacion}</p> : null}
+
+          <ComprobantesCompra compraId={c.id} esAdmin={esAdmin} />
 
           {anulando ? (
             <div className="rounded-xl border border-rose-200 p-4">

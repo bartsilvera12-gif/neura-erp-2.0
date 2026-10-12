@@ -24,6 +24,7 @@ import type { ProductoInventario } from "@/modules/inventario/tipos";
 import type { ProveedorMin } from "@/modules/proveedores/tipos";
 import { cargarProveedores } from "@/modules/proveedores/cache";
 import type { OrdenCompra } from "@/modules/compras/ordenes";
+import { AdjuntosPendientes, subirComprobantes } from "@/modules/compras/Comprobantes";
 import { BuscadorProductos, ET, Fila, gs, INPUT, ivaDe, Segmentado, sumarDias, Tarjeta, usd } from "@/modules/compras/partes";
 
 const TEAL = clienteConfig.color;
@@ -65,7 +66,9 @@ function NuevaCompra() {
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hecha, setHecha] = useState<{ numero: string; total: number } | null>(null);
+  const [hecha, setHecha] = useState<{ numero: string; total: number; adjuntos: number; fallidos: string[] } | null>(null);
+  const [adjuntos, setAdjuntos] = useState<File[]>([]);
+  const [subiendoAdjuntos, setSubiendoAdjuntos] = useState(false);
 
   useEffect(() => {
     // Misma lista (y misma llamada) que usa el SelectorProveedor.
@@ -208,7 +211,15 @@ function NuevaCompra() {
           })),
         }),
       });
-      setHecha({ numero: r.numero_control, total: r.total });
+      // Los comprobantes se suben recién con la compra creada. Si alguno falla, la compra
+      // queda igual (ya está registrada) y se avisa para adjuntarlo desde el detalle.
+      let fallidos: string[] = [];
+      if (adjuntos.length) {
+        setSubiendoAdjuntos(true);
+        fallidos = await subirComprobantes(r.id, adjuntos);
+        setSubiendoAdjuntos(false);
+      }
+      setHecha({ numero: r.numero_control, total: r.total, adjuntos: adjuntos.length - fallidos.length, fallidos });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -222,6 +233,7 @@ function NuevaCompra() {
     setTimbrado("");
     setObservacion("");
     setLineas([]);
+    setAdjuntos([]);
     setFechaFactura(hoyPY());
   }
 
@@ -233,7 +245,15 @@ function NuevaCompra() {
         <p className="mt-1 text-sm text-slate-500">
           <strong className="font-semibold text-slate-700">{hecha.numero}</strong> por <strong className="font-semibold text-slate-700">{gs(hecha.total)}</strong>.
           El stock, los costos y el kardex ya quedaron actualizados.
+          {hecha.adjuntos ? ` Se ${hecha.adjuntos === 1 ? "adjuntó 1 comprobante" : `adjuntaron ${hecha.adjuntos} comprobantes`}.` : ""}
         </p>
+        {hecha.fallidos.length ? (
+          <div className="mx-auto mt-4 max-w-md rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-left text-xs text-amber-800">
+            <p className="font-semibold">La compra quedó registrada, pero no se pudo subir {hecha.fallidos.length === 1 ? "un comprobante" : `${hecha.fallidos.length} comprobantes`}:</p>
+            <ul className="mt-1 list-disc space-y-0.5 pl-4">{hecha.fallidos.map((f, i) => <li key={i}>{f}</li>)}</ul>
+            <p className="mt-1">Podés adjuntarlo después desde el detalle de la compra (Compras → tocá la compra → Adjuntar comprobante).</p>
+          </div>
+        ) : null}
         <div className="mt-6 flex justify-center gap-2">
           <Link href="/compras" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Ver compras</Link>
           {orden ? (
@@ -363,6 +383,10 @@ function NuevaCompra() {
               <textarea value={observacion} onChange={(e) => setObservacion(e.target.value)} rows={2} maxLength={2000} placeholder="Ej: faltó 1 caja, la traen el lunes" className={INPUT} />
             </label>
 
+            <div className="mt-4">
+              <AdjuntosPendientes files={adjuntos} onChange={setAdjuntos} disabled={busy} />
+            </div>
+
             {faltan.length ? (
               <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">Falta: {faltan.join(", ")}.</p>
             ) : null}
@@ -370,7 +394,7 @@ function NuevaCompra() {
             <button onClick={registrar} disabled={!!faltan.length || busy}
               className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: TEAL }}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              {busy ? "Registrando…" : "Registrar compra"}
+              {subiendoAdjuntos ? "Subiendo comprobantes…" : busy ? "Registrando…" : "Registrar compra"}
             </button>
             <p className="mt-2 text-center text-[11px] text-slate-400">Suma el stock, recalcula el costo promedio y queda en el kardex.</p>
           </div>

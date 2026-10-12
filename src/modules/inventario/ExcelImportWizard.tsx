@@ -14,11 +14,14 @@ import { clienteConfig } from "@/cliente.config";
 
 const TEAL = clienteConfig.color;
 
-type FilaPreview = { row_number: number; action: "INSERT" | "UPDATE" | "SKIP" | "ERROR"; warnings: string[]; errors: string[]; data: Record<string, string> };
+type Accion = "INSERT" | "UPDATE" | "SKIP" | "ERROR";
+type FilaPreview = { row_number: number; action: Accion; warnings: string[]; errors: string[]; data: Record<string, string> };
 type Preview = {
   summary: {
     total: number; insertar: number; actualizar: number; omitir: number; errores: number; warnings: number;
     faltantes?: { categorias: string[] };
+    /** avisos generales del archivo (ej. "se van a crear 3 rubros nuevos") */
+    notas?: string[];
     movimientos_a_generar?: number; unidades_entrada?: number; unidades_salida?: number;
   };
   rows: FilaPreview[];
@@ -37,6 +40,8 @@ export function ExcelImportWizard({
   commitUrl,
   templateUrl,
   permiteCrearFaltantes = false,
+  etiquetas,
+  textoConfirmar,
   onClose,
   onCompleted,
 }: {
@@ -45,6 +50,10 @@ export function ExcelImportWizard({
   commitUrl: string;
   templateUrl: string;
   permiteCrearFaltantes?: boolean;
+  /** cómo se llama cada acción en la tabla y los contadores (por defecto INSERT/UPDATE/…) */
+  etiquetas?: Partial<Record<Accion, string>>;
+  /** texto del botón de confirmar según la vista previa (por defecto "Confirmar e importar") */
+  textoConfirmar?: (s: Preview["summary"]) => string;
   onClose: () => void;
   onCompleted?: () => void;
 }) {
@@ -157,11 +166,16 @@ export function ExcelImportWizard({
               <div className="space-y-3">
                 <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-5">
                   <Stat label="Total filas" value={preview.summary.total} color="slate" />
-                  <Stat label="Insertar" value={preview.summary.insertar} color="green" />
-                  <Stat label="Actualizar" value={preview.summary.actualizar} color="sky" />
-                  <Stat label="Omitir" value={preview.summary.omitir} color="amber" />
+                  <Stat label={etiquetas?.INSERT ?? "Insertar"} value={preview.summary.insertar} color="green" />
+                  <Stat label={etiquetas?.UPDATE ?? "Actualizar"} value={preview.summary.actualizar} color="sky" />
+                  <Stat label={etiquetas?.SKIP ?? "Omitir"} value={preview.summary.omitir} color="amber" />
                   <Stat label="Errores" value={preview.summary.errores} color="red" />
                 </div>
+                {preview.summary.notas?.length ? (
+                  <div className="space-y-0.5 rounded border border-sky-200 bg-sky-50 p-2 text-xs text-sky-800">
+                    {preview.summary.notas.map((n, i) => <p key={i}>{n}</p>)}
+                  </div>
+                ) : null}
                 {preview.summary.warnings > 0 ? (
                   <div className="rounded border border-amber-200 bg-amber-50 p-2 text-xs text-amber-700">{preview.summary.warnings} advertencia(s) — revisá la tabla.</div>
                 ) : null}
@@ -185,16 +199,16 @@ export function ExcelImportWizard({
                     Crear las categorías faltantes durante la importación
                   </label>
                 ) : null}
-                <TablaPreview rows={preview.rows} />
+                <TablaPreview rows={preview.rows} etiquetas={etiquetas} />
                 <div className="flex justify-between gap-2 pt-2">
                   <button onClick={() => setPaso("upload")} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">← Volver</button>
                   <button
                     onClick={confirmar}
-                    disabled={busy || preview.summary.errores === preview.summary.total}
+                    disabled={busy || preview.summary.errores === preview.summary.total || preview.summary.insertar + preview.summary.actualizar === 0}
                     className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                   >
                     {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    {busy ? "Importando..." : "Confirmar e importar"}
+                    {busy ? "Importando..." : textoConfirmar ? textoConfirmar(preview.summary) : "Confirmar e importar"}
                   </button>
                 </div>
               </div>
@@ -215,6 +229,8 @@ export function ExcelImportWizard({
                     <strong>Movimientos generados:</strong> {commit.summary.movimientos_generados} · +{commit.summary.unidades_entrada ?? 0} entrada(s) · −{commit.summary.unidades_salida ?? 0} salida(s)
                     {commit.summary.categorias_creadas ? ` · ${commit.summary.categorias_creadas} categoría(s) creada(s)` : ""}
                   </div>
+                ) : commit.summary.categorias_creadas ? (
+                  <div className="rounded border border-sky-200 bg-sky-50 p-2 text-xs text-sky-800">{commit.summary.categorias_creadas} rubro(s) nuevo(s) creado(s)</div>
                 ) : null}
                 {commit.errors.length ? (
                   <ul className="max-h-40 overflow-y-auto rounded border border-red-200 bg-red-50 p-2 text-xs text-red-700">
@@ -250,7 +266,7 @@ function Stat({ label, value, color }: { label: string; value: number; color: "s
   );
 }
 
-function TablaPreview({ rows }: { rows: FilaPreview[] }) {
+function TablaPreview({ rows, etiquetas }: { rows: FilaPreview[]; etiquetas?: Partial<Record<Accion, string>> }) {
   const visibles = rows.slice(0, 200);
   return (
     <div className="max-h-[40vh] overflow-auto rounded-lg border border-slate-200">
@@ -274,7 +290,7 @@ function TablaPreview({ rows }: { rows: FilaPreview[] }) {
             return (
               <tr key={r.row_number} className="border-t border-slate-100">
                 <td className="px-2 py-1 text-slate-500">{r.row_number}</td>
-                <td className="px-2 py-1"><span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${badge}`}>{r.action}</span></td>
+                <td className="px-2 py-1"><span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${badge}`}>{etiquetas?.[r.action] ?? r.action}</span></td>
                 <td className="max-w-md truncate px-2 py-1 text-slate-700">{resumen}</td>
                 <td className="px-2 py-1 text-xs">
                   {r.errors.map((e, i) => <div key={`e${i}`} className="text-red-700">⚠ {e}</div>)}
