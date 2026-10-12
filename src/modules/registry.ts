@@ -11,13 +11,15 @@ import { moduloInventario } from "@/modules/inventario/module";
 import { moduloReportes } from "@/modules/reportes/module";
 import { moduloCompras } from "@/modules/compras/module";
 import { moduloSoporte } from "@/modules/soporte/module";
+import { moduloCrm } from "@/modules/crm/module";
 import { moduloGestionClientes, moduloPlanes, moduloAgenda, moduloCobranzas } from "@/modules/clientes/modulos-comerciales";
 
 // El orden de acá es el orden dentro de cada familia del menú (igual que sistemas-propio):
-// Comercial: Clientes, Gestión Clientes, Planes, Agenda · Finanzas: Caja, Cobranzas,
+// Comercial: Clientes, CRM Funnel, Gestión Clientes, Planes, Agenda · Finanzas: Caja, Cobranzas,
 // Compras, Reportes · Operaciones: Inventario · Soporte: Soporte.
 const TODOS: Modulo[] = [
   moduloClientes,
+  moduloCrm,
   moduloGestionClientes,
   moduloPlanes,
   moduloAgenda,
