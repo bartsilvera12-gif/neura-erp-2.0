@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 import { clienteConfig } from "@/cliente.config";
 
@@ -10,6 +11,8 @@ const BRAND = clienteConfig.color;
  * Dropdown elegante y animado (estilo React Bits): no es el <select> nativo, sino un
  * listbox propio con apertura suave, hover y check en el elegido. Cierra con Escape o
  * click afuera.
+ * La lista se monta en <body> con position: fixed (como MenuAcciones): nunca queda cortada
+ * dentro de un modal con scroll ni de una tabla; si abajo no entra, se abre hacia arriba.
  */
 export function Select({
   value,
@@ -34,13 +37,44 @@ export function Select({
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(-1); // opción resaltada para el teclado
   const ref = useRef<HTMLDivElement>(null);
+  const lista = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<{ left: number; width: number; top?: number; bottom?: number; maxH: number } | null>(null);
   const current = options.find((o) => o[0] === value) ?? options[0];
 
   useEffect(() => {
-    const onClick = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setOpen(false);
+    const onClick = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (ref.current?.contains(t) || lista.current?.contains(t)) return;
+      setOpen(false);
+    };
     document.addEventListener("mousedown", onClick);
     return () => document.removeEventListener("mousedown", onClick);
   }, []);
+
+  // Posición de la lista pegada al botón; se recalcula al scrollear o cambiar el tamaño.
+  const ubicar = useCallback(() => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const margen = 8;
+    const abajo = window.innerHeight - r.bottom - margen;
+    const arriba = r.top - margen;
+    const alto = Math.min(320, options.length * 38 + 10);
+    if (abajo >= Math.min(alto, 180) || abajo >= arriba) {
+      setPos({ left: r.left, width: r.width, top: r.bottom + 6, maxH: Math.max(120, abajo - 6) });
+    } else {
+      setPos({ left: r.left, width: r.width, bottom: window.innerHeight - r.top + 6, maxH: Math.max(120, arriba - 6) });
+    }
+  }, [options.length]);
+  useLayoutEffect(() => {
+    if (!open) return;
+    ubicar();
+    window.addEventListener("resize", ubicar);
+    window.addEventListener("scroll", ubicar, true);
+    return () => {
+      window.removeEventListener("resize", ubicar);
+      window.removeEventListener("scroll", ubicar, true);
+    };
+  }, [open, ubicar]);
 
   // Navegación por teclado (combobox): ↑/↓ mueven, Enter elige, Esc cierra.
   function onTriggerKey(e: React.KeyboardEvent) {
@@ -75,10 +109,14 @@ export function Select({
         <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
 
-      {open && !disabled ? (
+      {open && !disabled && pos && typeof document !== "undefined" ? createPortal(
         <div
-          className="absolute left-0 right-0 z-30 mt-1.5 origin-top rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_-8px_rgba(2,48,71,0.25)]"
-          style={{ animation: "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)" }}
+          ref={lista}
+          className="fixed z-[200] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_-8px_rgba(2,48,71,0.25)]"
+          style={{
+            left: pos.left, width: Math.max(pos.width, minWidth ?? 0), top: pos.top, bottom: pos.bottom, maxHeight: pos.maxH,
+            transformOrigin: pos.top != null ? "top" : "bottom", animation: "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)",
+          }}
           role="listbox"
         >
           {options.map(([v, label], idx) => {
@@ -100,7 +138,8 @@ export function Select({
               </button>
             );
           })}
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </div>
   );

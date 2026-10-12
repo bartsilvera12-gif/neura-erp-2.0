@@ -8,7 +8,7 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, Eye, EyeOff, Loader2,
   Package, Pencil, Plus, RotateCcw, Search, Trash2, Upload, X,
@@ -412,12 +412,6 @@ function ConfirmarEliminar({ producto, onClose, onEliminado }: { producto: Produ
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !busy) onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [busy, onClose]);
-
   async function eliminar() {
     setBusy(true);
     setError(null);
@@ -430,11 +424,10 @@ function ConfirmarEliminar({ producto, onClose, onEliminado }: { producto: Produ
     }
   }
 
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[120] overflow-y-auto bg-slate-900/40 backdrop-blur-sm" onClick={() => !busy && onClose()}>
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="w-full max-w-sm overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5" onClick={(e) => e.stopPropagation()} style={{ animation: "rb-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
+  return (
+    <CapaModal onClose={busy ? undefined : onClose} z="z-[120]" fondo="bg-slate-900/40 backdrop-blur-sm">
+        <div className={`flex w-full max-w-sm ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5`} onClick={(e) => e.stopPropagation()} style={{ animation: "rb-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
+          <div className="min-h-0 flex-1 overflow-y-auto">
           <div className="flex flex-col items-center px-6 pb-2 pt-7">
             <div className="flex h-12 w-12 items-center justify-center rounded-full bg-rose-50 ring-4 ring-rose-50/60">
               <Trash2 className="h-5 w-5 text-rose-600" />
@@ -449,7 +442,9 @@ function ConfirmarEliminar({ producto, onClose, onEliminado }: { producto: Produ
             {producto.sku ? <p className="mt-0.5 text-[11px] uppercase tracking-wider text-slate-400">SKU <span className="font-mono text-slate-500">{producto.sku}</span></p> : null}
           </div>
           {error ? <div className="mx-6 mt-3 rounded-lg border border-rose-100 bg-rose-50/70 px-3 py-2 text-[12px] text-rose-700">{error}</div> : null}
-          <div className="mt-5 flex gap-2 border-t border-slate-100 bg-slate-50/40 px-5 py-3">
+          <div className="h-5" />
+          </div>
+          <div className="flex shrink-0 gap-2 border-t border-slate-100 bg-slate-50/40 px-5 py-3">
             <button onClick={onClose} disabled={busy} className="flex-1 rounded-lg border-2 border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
             <button onClick={eliminar} disabled={busy} className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 active:scale-[0.98] disabled:opacity-60">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
@@ -457,8 +452,6 @@ function ConfirmarEliminar({ producto, onClose, onEliminado }: { producto: Produ
             </button>
           </div>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </CapaModal>
   );
 }

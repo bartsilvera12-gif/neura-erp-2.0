@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { CalendarClock, ClipboardPen, MapPin, Phone, User, UserPlus, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 import { ESTADOS_TERMINALES, inicialesNombre, nombreCapitular, type AgendaCitaEnriquecida, type AgendaEstado } from "@/modules/agenda/dominio";
 import { estadoStyle, tipoLabel } from "../calendar-utils";
@@ -134,9 +135,10 @@ export default function CitaDetalleModal({
   const tipificacionId = typeof cita.metadata?.tipificacion_id === "string" ? cita.metadata.tipificacion_id : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4" onClick={onClose}>
-      <div className="max-h-[90vh] w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <CapaModal onClose={onClose} fondo="bg-slate-900/40">
+      <div className={`flex w-full max-w-lg ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-xl`} onClick={(e) => e.stopPropagation()}>
         {/* Encabezado: título + estado como chip de color (es el dato que se mira primero). */}
+        <div className="shrink-0">
         <Spotlight color="rgba(79, 174, 178, 0.14)">
           <div className="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
             <div className="min-w-0 flex-1">
@@ -161,8 +163,9 @@ export default function CitaDetalleModal({
             </button>
           </div>
         </Spotlight>
+        </div>
 
-        <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {/* Fecha y hora: un rango con la duración ya calculada. */}
           <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#4FAEB2]/12 text-[#3F8E91]">
@@ -256,7 +259,7 @@ export default function CitaDetalleModal({
 
         {/* Acciones con jerarquía: la de avance va llena, el resto en contorno, y "Cancelar"
             queda separada a la izquierda porque es la destructiva. */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3.5">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3.5">
           {terminal ? (
             <span className="text-xs text-slate-400">Cita en estado terminal ({est.label.toLowerCase()}). No admite más cambios.</span>
           ) : !puede ? (
@@ -295,7 +298,7 @@ export default function CitaDetalleModal({
           )}
         </div>
       </div>
-    </div>
+    </CapaModal>
   );
 }
 

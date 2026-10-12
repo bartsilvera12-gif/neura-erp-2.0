@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { FileText, Trash2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { browserClient } from "@/lib/supabase/browser";
@@ -56,12 +56,6 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
     apiFetch<Detalle>(`/api/ventas/${ventaId}`).then(setD).catch((e) => setError((e as Error).message)).finally(() => setCargando(false));
   }, [ventaId]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [onClose]);
-
   async function anular() {
     setAnulando(true);
     try {
@@ -96,14 +90,12 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
   const anulada = venta?.estado === "anulada";
   const credito = venta?.tipo_venta === "CREDITO";
 
-  // Portal a <body>: ningún contenedor (scroll/transform) lo recorta. Overlay con
-  // scroll propio y centrado: si es más alto que la pantalla, se scrollea, no se corta.
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[120] overflow-y-auto bg-slate-900/30" onClick={onClose}>
-     <div className="flex min-h-full items-center justify-center p-4">
+  // Capa compartida (portal, margen, Esc, scroll-lock): título y acciones fijos, sólo
+  // el cuerpo scrollea.
+  return (
+    <CapaModal onClose={onClose} z="z-[120]" fondo="bg-slate-900/30">
       <div
-        className="flex max-h-[calc(100vh-2rem)] w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white"
+        className={`flex ${ALTO_MAX_MODAL} w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)", boxShadow: "0 24px 50px -24px rgba(2,48,71,0.35)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -160,7 +152,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
           ) : null}
         </div>
 
-        <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
           {!anulada && venta ? (
             confirmar ? (
               <div className="flex items-center gap-2">
@@ -180,9 +172,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
           </button>
         </div>
       </div>
-     </div>
-    </div>,
-    document.body,
+    </CapaModal>
   );
 }
 

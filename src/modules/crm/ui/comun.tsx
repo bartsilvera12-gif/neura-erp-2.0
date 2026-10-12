@@ -9,6 +9,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Search, X } from "lucide-react";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 
 export const INPUT =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20";
@@ -60,32 +61,21 @@ export function ModalGrande({
 }: {
   eyebrow: string; titulo: React.ReactNode; subtitulo?: React.ReactNode; onClose: () => void; children: React.ReactNode; extra?: React.ReactNode;
 }) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      // Si hay un modal chico encima (motivo, transformar), ese se cierra primero.
-      if (e.key === "Escape" && !document.querySelector("[data-modal-chico]")) onClose();
-    };
-    window.addEventListener("keydown", onKey);
-    const body = document.body;
-    const prev = body.style.overflow;
-    body.style.overflow = "hidden";
-    return () => {
-      window.removeEventListener("keydown", onKey);
-      body.style.overflow = prev;
-    };
+  // Si hay un modal chico encima (motivo, transformar), el Escape lo cierra a él primero.
+  const cerrar = useCallback(() => {
+    if (!document.querySelector("[data-modal-chico]")) onClose();
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[45] flex items-center justify-center p-3 sm:p-6">
-      <button type="button" aria-label="Cerrar" className="absolute inset-0 bg-slate-900/55 backdrop-blur-sm" onClick={onClose} />
+    <CapaModal onClose={cerrar} z="z-[45]" fondo="bg-slate-900/55 backdrop-blur-sm">
       <div
         role="dialog"
         aria-modal="true"
-        className="relative flex h-[88vh] max-h-[920px] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl ring-1 ring-[var(--brand)]/15"
+        className={`relative flex h-[min(88dvh,920px)] ${ALTO_MAX_MODAL} w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl ring-1 ring-[var(--brand)]/15`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
       >
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--brand)] via-[var(--brand)]/80 to-[var(--brand)]/40" />
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[var(--brand)]/5 px-6 pb-5 pt-6">
+        <div className="flex shrink-0 flex-wrap items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[var(--brand)]/5 px-6 pb-5 pt-6">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--brand)] shadow-[0_0_0_3px_var(--brand-100)]" />
@@ -101,7 +91,7 @@ export function ModalGrande({
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
       </div>
-    </div>
+    </CapaModal>
   );
 }
 

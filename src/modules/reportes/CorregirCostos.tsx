@@ -6,7 +6,7 @@
  * pasadas que quedaron en 0 (así la ganancia del reporte pasa a ser real).
  */
 import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { Loader2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { traerProductosLote } from "@/modules/inventario/lote";
@@ -48,12 +48,6 @@ export function CorregirCostos({
       );
   }, [productos]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !busy) onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [busy, onClose]);
-
   const conCosto = items?.filter((i) => i.costo > 0).length ?? 0;
 
   async function guardar() {
@@ -78,12 +72,10 @@ export function CorregirCostos({
     }
   }
 
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[120] overflow-y-auto bg-slate-900/40 backdrop-blur-sm" onClick={() => !busy && onClose()}>
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5" onClick={(e) => e.stopPropagation()} style={{ animation: "rb-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-          <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+  return (
+    <CapaModal onClose={busy ? undefined : onClose} z="z-[120]" fondo="bg-slate-900/40 backdrop-blur-sm">
+        <div className={`flex ${ALTO_MAX_MODAL} w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5`} onClick={(e) => e.stopPropagation()} style={{ animation: "rb-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
+          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
             <div>
               <h3 className="text-base font-semibold text-slate-900">Corregir costos</h3>
               <p className="mt-0.5 text-xs text-slate-500">Cargá el costo de cada producto. Es lo que se le resta a la venta para calcular la ganancia.</p>
@@ -91,7 +83,7 @@ export function CorregirCostos({
             <button onClick={onClose} disabled={busy} aria-label="Cerrar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
           </div>
 
-          <div className="max-h-[55vh] overflow-y-auto px-6 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
             {!items ? (
               <div className="flex justify-center py-8"><Loader2 className="h-5 w-5 animate-spin text-slate-400" /></div>
             ) : (
@@ -130,7 +122,7 @@ export function CorregirCostos({
             )}
           </div>
 
-          <div className="space-y-3 border-t border-slate-100 px-6 py-4">
+          <div className="shrink-0 space-y-3 border-t border-slate-100 px-6 py-4">
             <label className="flex cursor-pointer items-start gap-2 text-sm text-slate-700">
               <input type="checkbox" checked={completar} onChange={(e) => setCompletar(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-slate-300" />
               <span>
@@ -151,8 +143,6 @@ export function CorregirCostos({
             </div>
           </div>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </CapaModal>
   );
 }

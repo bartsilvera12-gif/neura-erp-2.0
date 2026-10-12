@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { Select } from "@/components/Select";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { AGENDA_ESTADOS, type AgendaCitaEnriquecida } from "@/modules/agenda/dominio";
 import { HORARIO_DEFECTO, fechaLocalAIso, rangoEnHorarioLaboral, textoHorario, type Horario } from "@/modules/agenda/horario";
 import { aPared, ahoraPared, estadoStyle, hhmm, pad, tipoLabel, ymd } from "../calendar-utils";
@@ -273,14 +274,13 @@ export default function CitaFormModal({
   const tipos = [...new Set([...(options.tipos.length ? options.tipos : ["reunion"]), tipo].filter(Boolean))];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 sm:p-4">
-      <button className="absolute inset-0 cursor-default bg-slate-900/55 backdrop-blur-sm" aria-label="Cerrar" onClick={onClose} />
-      <div className="relative flex h-[100dvh] max-h-[100dvh] w-full max-w-lg flex-col overflow-hidden rounded-none border-0 border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15 sm:h-auto sm:max-h-[88dvh] sm:rounded-2xl sm:border">
+    <CapaModal onClose={onClose} fondo="bg-slate-900/55 backdrop-blur-sm">
+      <div className={`relative flex w-full max-w-lg ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15`}>
         {/* barra superior degradé */}
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
 
         {/* header con gradiente sutil */}
-        <div className="flex items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-5 pb-4 pt-5">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-5 pb-4 pt-5">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold tracking-tight text-slate-900">{tituloModal}</h2>
             <p className="mt-0.5 text-sm text-slate-500">{subtitulo}</p>
@@ -295,7 +295,7 @@ export default function CitaFormModal({
           </button>
         </div>
 
-        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
           {/* BÁSICO */}
           {!reprog && (
             <section className="space-y-3">
@@ -466,7 +466,7 @@ export default function CitaFormModal({
           {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs text-rose-700">{error}</div>}
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-4">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-4">
           <button
             type="button"
             onClick={onClose}
@@ -491,6 +491,6 @@ export default function CitaFormModal({
           </button>
         </div>
       </div>
-    </div>
+    </CapaModal>
   );
 }

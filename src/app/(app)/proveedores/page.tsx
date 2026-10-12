@@ -7,7 +7,7 @@
  * con compras registradas no se borra: se desactiva.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { createPortal } from "react-dom";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { Ban, CheckCircle2, Download, Loader2, MoreHorizontal, Pencil, Plus, Search, Trash2, Truck, Upload, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
@@ -292,14 +292,15 @@ export default function ProveedoresPage() {
 function ConfirmarBorrado({ nombre, onCancelar, onConfirmar }: { nombre: string; onCancelar: () => void; onConfirmar: () => Promise<void> }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm" onClick={() => !busy && onCancelar()}>
-      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-sm rounded-2xl bg-white p-6 shadow-2xl" style={{ animation: "rb-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-        <h3 className="text-lg font-semibold text-slate-900">¿Eliminar a {nombre}?</h3>
-        <p className="mt-1 text-sm text-slate-500">No tiene compras registradas, así que se puede borrar. No se puede deshacer.</p>
-        {error ? <p className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
-        <div className="mt-5 flex justify-end gap-2">
+  return (
+    <CapaModal onClose={busy ? undefined : onCancelar} z="z-[120]" fondo="bg-slate-900/40 backdrop-blur-sm">
+      <div onClick={(e) => e.stopPropagation()} className={`flex w-full max-w-sm ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`} style={{ animation: "rb-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
+        <h3 className="shrink-0 px-6 pt-6 text-lg font-semibold text-slate-900">¿Eliminar a {nombre}?</h3>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6">
+          <p className="mt-1 text-sm text-slate-500">No tiene compras registradas, así que se puede borrar. No se puede deshacer.</p>
+          {error ? <p className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
+        </div>
+        <div className="flex shrink-0 justify-end gap-2 px-6 pt-5 pb-6">
           <button onClick={onCancelar} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
           <button
             disabled={busy}
@@ -310,7 +311,6 @@ function ConfirmarBorrado({ nombre, onCancelar, onConfirmar }: { nombre: string;
           </button>
         </div>
       </div>
-    </div>,
-    document.body,
+    </CapaModal>
   );
 }

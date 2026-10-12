@@ -5,8 +5,8 @@
  *   1. subir archivo (+ descargar plantilla)   2. vista previa con acciones por fila
  *   3. resultado. Al confirmar se vuelve a subir el MISMO archivo (el servidor re-valida).
  */
-import { useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { useState } from "react";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { Download, Loader2, Upload, X } from "lucide-react";
 import { apiForm } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
@@ -66,12 +66,6 @@ export function ExcelImportWizard({
   const [crearFaltantes, setCrearFaltantes] = useState(false);
   const [arrastrando, setArrastrando] = useState(false);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !busy) onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [busy, onClose]);
-
   async function analizar() {
     if (!file) return;
     setBusy(true);
@@ -106,12 +100,10 @@ export function ExcelImportWizard({
     }
   }
 
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[120] overflow-y-auto bg-slate-900/50 backdrop-blur-[2px]" onClick={() => !busy && onClose()}>
-      <div className="flex min-h-full items-start justify-center px-4 pb-8 pt-16">
-        <div className="flex max-h-[85vh] w-full max-w-5xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between border-b border-slate-100 p-5">
+  return (
+    <CapaModal onClose={busy ? undefined : onClose} z="z-[120]" fondo="bg-slate-900/50 backdrop-blur-[2px]">
+        <div className={`flex ${ALTO_MAX_MODAL} w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+          <div className="flex shrink-0 items-center justify-between border-b border-slate-100 p-5">
             <div>
               <h2 className="text-lg font-semibold text-slate-800">Importar {entidad} desde Excel</h2>
               <p className="text-xs text-slate-400">Paso {paso === "upload" ? "1 de 3" : paso === "preview" ? "2 de 3" : "3 de 3"}</p>
@@ -121,7 +113,7 @@ export function ExcelImportWizard({
             </button>
           </div>
 
-          <div className="flex-1 space-y-4 overflow-y-auto p-5">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
             {error ? <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
 
             {paso === "upload" ? (
@@ -152,13 +144,6 @@ export function ExcelImportWizard({
                     className="sr-only"
                   />
                 </label>
-                <div className="flex justify-end gap-2 pt-2">
-                  <button onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
-                  <button onClick={analizar} disabled={!file || busy} className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    {busy ? "Analizando..." : "Analizar (preview)"}
-                  </button>
-                </div>
               </div>
             ) : null}
 
@@ -200,17 +185,6 @@ export function ExcelImportWizard({
                   </label>
                 ) : null}
                 <TablaPreview rows={preview.rows} etiquetas={etiquetas} />
-                <div className="flex justify-between gap-2 pt-2">
-                  <button onClick={() => setPaso("upload")} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">← Volver</button>
-                  <button
-                    onClick={confirmar}
-                    disabled={busy || preview.summary.errores === preview.summary.total || preview.summary.insertar + preview.summary.actualizar === 0}
-                    className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
-                  >
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                    {busy ? "Importando..." : textoConfirmar ? textoConfirmar(preview.summary) : "Confirmar e importar"}
-                  </button>
-                </div>
               </div>
             ) : null}
 
@@ -237,16 +211,39 @@ export function ExcelImportWizard({
                     {commit.errors.map((e, i) => <li key={i}>• {e}</li>)}
                   </ul>
                 ) : null}
-                <div className="flex justify-end gap-2 pt-2">
-                  <button onClick={onClose} className="rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Cerrar</button>
-                </div>
+              </div>
+            ) : null}
+          </div>
+          {/* Acciones del paso: fijas abajo, siempre visibles aunque la tabla sea larga. */}
+          <div className="shrink-0 border-t border-slate-100 px-5 py-4">
+            {paso === "upload" ? (
+              <div className="flex justify-end gap-2">
+                <button onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+                <button onClick={analizar} disabled={!file || busy} className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {busy ? "Analizando..." : "Analizar (preview)"}
+                </button>
+              </div>
+            ) : paso === "preview" && preview ? (
+              <div className="flex justify-between gap-2">
+                <button onClick={() => setPaso("upload")} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">← Volver</button>
+                <button
+                  onClick={confirmar}
+                  disabled={busy || preview.summary.errores === preview.summary.total || preview.summary.insertar + preview.summary.actualizar === 0}
+                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                >
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                  {busy ? "Importando..." : textoConfirmar ? textoConfirmar(preview.summary) : "Confirmar e importar"}
+                </button>
+              </div>
+            ) : paso === "done" && commit ? (
+              <div className="flex justify-end gap-2">
+                <button onClick={onClose} className="rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Cerrar</button>
               </div>
             ) : null}
           </div>
         </div>
-      </div>
-    </div>,
-    document.body,
+    </CapaModal>
   );
 }
 

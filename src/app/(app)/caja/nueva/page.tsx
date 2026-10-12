@@ -21,6 +21,7 @@ import MontoInput, { parseMontoInput } from "@/components/ui/MontoInput";
 import { QtyInput } from "@/components/ui/QtyInput";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
 import { Select } from "@/components/Select";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import {
   calcIva,
   formatGs,
@@ -821,12 +822,13 @@ function CajaPageContenido() {
 
       {/* Modal de cobro */}
       {cobroOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => { if (!cobrando) setCobroOpen(false); }}>
-          <div role="dialog" aria-modal className="w-full max-w-md space-y-4 rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div>
+        <CapaModal onClose={cobrando ? undefined : () => setCobroOpen(false)} fondo="bg-black/40" cerrarConEscape={false}>
+          <div role="dialog" aria-modal className={`flex w-full max-w-md ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`}>
+            <div className="shrink-0 px-6 pt-6 pb-4">
               <h3 className="text-lg font-semibold text-slate-900">Cobrar</h3>
               <p className="mt-1 text-sm text-slate-500">Total: <strong className="text-slate-900">{formatGs(total)}</strong> · {cantTotal} ítem{cantTotal === 1 ? "" : "s"}</p>
             </div>
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-1">
             {tipoVenta === "CREDITO" ? (
               <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-sm text-amber-800">
                 Venta <strong>a crédito</strong>{plazoDiasNum ? ` a ${plazoDiasNum} días` : ""}. Se registra en la cuenta corriente del cliente; no entra dinero a la caja ahora.
@@ -877,12 +879,13 @@ function CajaPageContenido() {
               </>
             )}
             {cobroError && <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{cobroError}</div>}
-            <div className="flex justify-end gap-2 pt-1">
+            </div>
+            <div className="flex shrink-0 justify-end gap-2 px-6 pt-5 pb-6">
               <button type="button" onClick={() => setCobroOpen(false)} disabled={cobrando} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
               <button type="button" onClick={() => void confirmarCobro()} disabled={cobrando || !cobroListo} className="rounded-lg px-5 py-2 text-sm font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40" style={{ backgroundColor: TEAL }}>{cobrando ? "Cobrando…" : "Confirmar e imprimir"}</button>
             </div>
           </div>
-        </div>
+        </CapaModal>
       )}
 
       {modalNuevoCliente && (

@@ -7,9 +7,9 @@
  * hay caja abierta (onStateChange) para habilitar/bloquear la venta.
  */
 import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
 import { ArrowLeftRight, ChevronDown, ChevronUp, Clock, Lock } from "lucide-react";
 import MontoInput from "@/components/ui/MontoInput";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { clienteConfig } from "@/cliente.config";
 import {
   abrirCaja,
@@ -219,30 +219,20 @@ function Stat({ label, value, sub, accent }: { label: string; value: string; sub
   );
 }
 
-function ModalShell({ title, children, onClose }: { title: string; children: React.ReactNode; onClose: () => void }) {
-  // Cerrar con Esc.
-  useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === "Escape") onClose(); }
-    document.addEventListener("keydown", onKey);
-    return () => document.removeEventListener("keydown", onKey);
-  }, [onClose]);
-  // Overlay con scroll propio + centrado: si el modal es más alto que la pantalla,
-  // se puede scrollear y NO se corta ni arriba ni abajo. Va al <body> (portal) para que
-  // la barra de arriba de la app no le tape el título.
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[120] overflow-y-auto bg-slate-900/60 backdrop-blur-sm" onClick={onClose}>
-      <div className="flex min-h-full items-center justify-center p-4">
-        <div className="flex w-full max-w-md flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-          <div className="flex items-center justify-between border-b border-slate-200 p-4">
-            <h3 className="text-base font-semibold text-slate-800">{title}</h3>
-            <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-700" title="Cerrar (Esc)">✕</button>
-          </div>
-          <div className="p-4">{children}</div>
+function ModalShell({ title, children, footer, onClose }: { title: string; children: React.ReactNode; footer?: React.ReactNode; onClose: () => void }) {
+  // Capa compartida (portal, margen, Esc, scroll-lock). Título y botones fijos: sólo
+  // el cuerpo scrollea, así nunca se corta aunque el modal sea más alto que la pantalla.
+  return (
+    <CapaModal onClose={onClose} z="z-[120]" fondo="bg-slate-900/60 backdrop-blur-sm">
+      <div className={`flex w-full max-w-md ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl`} onClick={(e) => e.stopPropagation()}>
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-200 p-4">
+          <h3 className="text-base font-semibold text-slate-800">{title}</h3>
+          <button type="button" onClick={onClose} className="text-slate-400 hover:text-slate-700" title="Cerrar (Esc)">✕</button>
         </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4">{children}</div>
+        {footer ? <div className="flex shrink-0 justify-end gap-2 px-4 pb-4 pt-1">{footer}</div> : null}
       </div>
-    </div>,
-    document.body,
+    </CapaModal>
   );
 }
 
@@ -268,16 +258,19 @@ function AbrirCajaModal({ onClose, onDone }: { onClose: () => void; onDone: () =
   }
 
   return (
-    <ModalShell title="Abrir caja" onClose={onClose}>
+    <ModalShell title="Abrir caja" onClose={onClose}
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50">Cancelar</button>
+          <button type="button" onClick={submit} disabled={saving} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">{saving ? "Abriendo…" : "Abrir caja"}</button>
+        </>
+      }
+    >
       <label className="mb-1.5 block text-sm font-medium text-slate-700">Monto de apertura (Gs.)</label>
       <MontoInput value={monto} onChange={(n) => setMonto(String(n))} placeholder="Ej: 300.000" className={inputClass} decimals={false} autoFocus />
       <label className="mb-1.5 mt-3 block text-sm font-medium text-slate-700">Observación (opcional)</label>
       <textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={2} className={inputClass} placeholder="Ej: turno tarde" />
       <ErrorBanner msg={error} />
-      <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50">Cancelar</button>
-        <button type="button" onClick={submit} disabled={saving} className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 disabled:opacity-50">{saving ? "Abriendo…" : "Abrir caja"}</button>
-      </div>
     </ModalShell>
   );
 }
@@ -314,7 +307,14 @@ function CerrarCajaModal({ caja, resumen, onClose, onDone }: { caja: CajaTurno; 
   }
 
   return (
-    <ModalShell title={`Cerrar caja · turno N° ${caja.numero_caja}`} onClose={onClose}>
+    <ModalShell title={`Cerrar caja · turno N° ${caja.numero_caja}`} onClose={onClose}
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50">Cancelar</button>
+          <button type="button" onClick={submit} disabled={saving || monto === ""} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50">{saving ? "Cerrando…" : "Confirmar cierre"}</button>
+        </>
+      }
+    >
       <SectionLabel>Ventas del turno</SectionLabel>
       <div className="space-y-1.5 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
         <Row label="Cantidad de ventas" value={String(resumen.cantidad_ventas)} />
@@ -357,10 +357,6 @@ function CerrarCajaModal({ caja, resumen, onClose, onDone }: { caja: CajaTurno; 
       <label className="mb-1.5 mt-3 block text-sm font-medium text-slate-700">Observación {monto !== "" && difEfectivo !== 0 ? <span className="font-normal text-slate-400">(contá qué pasó con la diferencia)</span> : <span className="font-normal text-slate-400">(opcional)</span>}</label>
       <textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={2} className={inputClass} placeholder={monto !== "" && difEfectivo !== 0 ? "Ej: se dio mal un vuelto" : ""} />
       <ErrorBanner msg={error} />
-      <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50">Cancelar</button>
-        <button type="button" onClick={submit} disabled={saving || monto === ""} className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50">{saving ? "Cerrando…" : "Confirmar cierre"}</button>
-      </div>
     </ModalShell>
   );
 }
@@ -417,7 +413,14 @@ function MovimientoModal({ onClose, onDone }: { onClose: () => void; onDone: () 
     `rounded-md border py-1.5 text-xs font-medium transition-colors ${sel ? "text-white" : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`;
 
   return (
-    <ModalShell title="Movimiento de caja" onClose={onClose}>
+    <ModalShell title="Movimiento de caja" onClose={onClose}
+      footer={
+        <>
+          <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50">Cancelar</button>
+          <button type="button" onClick={submit} disabled={saving} className="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: TEAL }}>{saving ? "Guardando…" : "Registrar"}</button>
+        </>
+      }
+    >
       <label className="mb-1.5 block text-sm font-medium text-slate-700">Tipo</label>
       <div className="grid grid-cols-4 gap-1">
         {TIPOS.map((t) => (
@@ -438,10 +441,6 @@ function MovimientoModal({ onClose, onDone }: { onClose: () => void; onDone: () 
       <label className="mb-1.5 mt-3 block text-sm font-medium text-slate-700">Observación (opcional)</label>
       <textarea value={obs} onChange={(e) => setObs(e.target.value)} rows={2} className={inputClass} />
       <ErrorBanner msg={error} />
-      <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="rounded-lg border border-slate-200 px-4 py-2 text-sm hover:bg-slate-50">Cancelar</button>
-        <button type="button" onClick={submit} disabled={saving} className="rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50" style={{ backgroundColor: TEAL }}>{saving ? "Guardando…" : "Registrar"}</button>
-      </div>
     </ModalShell>
   );
 }

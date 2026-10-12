@@ -10,7 +10,7 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal, flushSync } from "react-dom";
+import { flushSync } from "react-dom";
 import { Ban, CheckCircle2, ChevronRight, Loader2, MoreHorizontal, Palette, Pencil, Plus, Search, Tags, X } from "lucide-react";
 import { coincide } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -19,6 +19,7 @@ import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { ColorPicker } from "@/components/ColorPicker";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { MenuAcciones, type ItemMenu } from "@/components/MenuAcciones";
 import { ArbolCategoria } from "@/modules/inventario/ArbolCategoria";
 import { colorLibre, coloresPorCategoria, tonosDe, type Categoria } from "@/modules/inventario/categorias";
@@ -505,12 +506,6 @@ function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuarda
   // Dos niveles: una categoría con subcategorías no puede quedar dentro de otra.
   const tieneHijas = categorias.some((c) => c.parent_id === categoria.id);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !busy) onClose(); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [busy, onClose]);
-
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -527,13 +522,12 @@ function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuarda
     }
   }
 
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[120] overflow-y-auto bg-slate-900/40 backdrop-blur-sm" onClick={() => !busy && onClose()}>
-      <div className="flex min-h-full items-center justify-center p-4">
-        <form onSubmit={guardar} onClick={(e) => e.stopPropagation()} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl ring-1 ring-slate-900/5" style={{ animation: "rb-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-          <h3 className="text-lg font-semibold text-slate-900">{categoria.parent_id ? "Editar subcategoría" : "Editar categoría"}</h3>
-          <div className="mt-4 space-y-3">
+  return (
+    <CapaModal onClose={busy ? undefined : onClose} z="z-[120]" fondo="bg-slate-900/40 backdrop-blur-sm">
+        <form onSubmit={guardar} onClick={(e) => e.stopPropagation()} className={`flex w-full max-w-md ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5`} style={{ animation: "rb-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
+          <h3 className="shrink-0 px-6 pt-6 text-lg font-semibold text-slate-900">{categoria.parent_id ? "Editar subcategoría" : "Editar categoría"}</h3>
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-6 py-1">
+          <div className="space-y-3">
             <label className="block">
               <span className={ET}>Nombre</span>
               <input autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} required className={INPUT} />
@@ -565,15 +559,14 @@ function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuarda
             </label>
           </div>
           {error ? <p className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
-          <div className="mt-5 flex justify-end gap-2">
+          </div>
+          <div className="flex shrink-0 justify-end gap-2 px-6 pt-4 pb-6">
             <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
             <button type="submit" disabled={busy || !nombre.trim()} className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
               {busy ? "Guardando..." : "Guardar cambios"}
             </button>
           </div>
         </form>
-      </div>
-    </div>,
-    document.body,
+    </CapaModal>
   );
 }

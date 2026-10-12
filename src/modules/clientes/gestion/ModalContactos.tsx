@@ -6,7 +6,7 @@
  * un formulario para agregar o editar. Usa /api/clientes/[id]/contactos.
  */
 import { useCallback, useEffect, useState } from "react";
-import { createPortal } from "react-dom";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { Loader2, Mail, Pencil, Phone, Plus, Trash2, UserRound, Users, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { TEAL } from "@/modules/clientes/ui";
@@ -43,15 +43,6 @@ export function ModalContactos({ clienteId, clienteNombre, puedeEditar, onClose,
     }
   }, [url]);
   useEffect(() => { void cargar(); }, [cargar]);
-
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => { if (e.key === "Escape" && !guardando) onClose(); };
-    window.addEventListener("keydown", k);
-    const body = document.body;
-    const prev = body.style.overflow;
-    body.style.overflow = "hidden";
-    return () => { window.removeEventListener("keydown", k); body.style.overflow = prev; };
-  }, [onClose, guardando]);
 
   function nuevo() {
     setForm(VACIO);
@@ -105,14 +96,12 @@ export function ModalContactos({ clienteId, clienteNombre, puedeEditar, onClose,
     }
   }
 
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[2px]" role="presentation"
-      style={{ animation: "modal-backdrop 0.15s ease-out" }} onClick={() => { if (!guardando) onClose(); }}>
+  return (
+    <CapaModal onClose={guardando ? undefined : onClose} z="z-[120]" fondo="bg-slate-900/40 backdrop-blur-[2px]">
       <div role="dialog" aria-modal="true" aria-labelledby="contactos-cliente-titulo"
-        className="flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        className={`flex ${ALTO_MAX_MODAL} w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }} onClick={(e) => e.stopPropagation()}>
-        <div className="flex items-start gap-3 border-b border-slate-100 px-5 py-4" style={{ backgroundImage: `linear-gradient(to right, ${TEAL}1f, ${TEAL}0d, transparent)` }}>
+        <div className="flex shrink-0 items-start gap-3 border-b border-slate-100 px-5 py-4" style={{ backgroundImage: `linear-gradient(to right, ${TEAL}1f, ${TEAL}0d, transparent)` }}>
           <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl" style={{ backgroundColor: `${TEAL}26`, color: TEAL }}>
             <Users className="h-5 w-5" aria-hidden />
           </span>
@@ -219,7 +208,7 @@ export function ModalContactos({ clienteId, clienteNombre, puedeEditar, onClose,
         </div>
 
         {!abierto && puedeEditar ? (
-          <div className="flex justify-end border-t border-slate-100 px-5 py-3">
+          <div className="flex shrink-0 justify-end border-t border-slate-100 px-5 py-3">
             <button type="button" onClick={nuevo}
               className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-95"
               style={{ backgroundColor: TEAL }}>
@@ -228,7 +217,6 @@ export function ModalContactos({ clienteId, clienteNombre, puedeEditar, onClose,
           </div>
         ) : null}
       </div>
-    </div>,
-    document.body,
+    </CapaModal>
   );
 }

@@ -5,8 +5,8 @@
  * mes con su estado (Emitida / Pagada / Vencida / Proyectada), el monto y la acción:
  * "Emitir cuota" en los meses sin emitir (los futuros piden confirmación) o "Ver venta".
  */
-import { createPortal } from "react-dom";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { CalendarClock, Loader2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
@@ -29,14 +29,6 @@ export function ModalFacturacion({ clienteNombre, suscripcion: s, puedeEmitir, o
   const [viendo, setViendo] = useState<string | null>(null);
   const actual = mesActual();
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape" && !viendo) onClose(); };
-    window.addEventListener("keydown", onKey);
-    const body = document.body;
-    const prev = body.style.overflow;
-    body.style.overflow = "hidden";
-    return () => { window.removeEventListener("keydown", onKey); body.style.overflow = prev; };
-  }, [onClose, viendo]);
 
   async function emitir(periodo: string) {
     setEmitiendo(periodo);
@@ -58,10 +50,11 @@ export function ModalFacturacion({ clienteNombre, suscripcion: s, puedeEmitir, o
   }
 
   const activa = s.estado === "activa";
-  if (typeof document === "undefined") return null;
-  return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-[2px]" style={{ animation: "modal-backdrop 0.15s ease-out" }} onClick={onClose}>
-      <div className="relative flex max-h-[88vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+  return (
+    <>
+    {/* Mientras está abierta la venta encima, Esc/click afuera cierran sólo esa. */}
+    <CapaModal onClose={viendo ? undefined : onClose} fondo="bg-slate-900/40 backdrop-blur-[2px]">
+      <div className={`relative flex ${ALTO_MAX_MODAL} w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }} onClick={(e) => e.stopPropagation()}>
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-1" style={{ background: `linear-gradient(to right, ${TEAL}, ${TEAL}cc, ${TEAL}66)` }} />
 
@@ -170,12 +163,10 @@ export function ModalFacturacion({ clienteNombre, suscripcion: s, puedeEmitir, o
           </button>
         </div>
       </div>
-      {viendo ? (
-        <div onClick={(e) => e.stopPropagation()}>
-          <VentaDetalle ventaId={viendo} onClose={() => setViendo(null)} onAnulada={() => { setViendo(null); void onCambio(); }} />
-        </div>
-      ) : null}
-    </div>,
-    document.body,
+    </CapaModal>
+    {viendo ? (
+      <VentaDetalle ventaId={viendo} onClose={() => setViendo(null)} onAnulada={() => { setViendo(null); void onCambio(); }} />
+    ) : null}
+    </>
   );
 }
