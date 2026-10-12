@@ -83,8 +83,8 @@ export const GET = withTenant(async (ctx, req) => {
     });
   }
   for (const m of data.movimientos) {
-    const entrada = m.tipo === "ingreso" || (m.tipo === "ajuste" && m.monto >= 0);
-    const tipo = m.tipo === "ingreso" ? "Ingreso" : m.tipo === "egreso" ? "Egreso" : m.tipo === "retiro" ? "Retiro" : "Ajuste";
+    const entrada = m.tipo === "ingreso" || m.tipo === "cobro" || (m.tipo === "ajuste" && m.monto >= 0);
+    const tipo = m.tipo === "cobro" ? "Cobro" : m.tipo === "ingreso" ? "Ingreso" : m.tipo === "egreso" ? "Egreso" : m.tipo === "retiro" ? "Retiro" : "Ajuste";
     const autor = m.usuario_nombre || m.usuario_email;
     timeline.push({ ts: m.created_at, tipo, detalle: autor ? `${m.concepto} · ${autor}` : m.concepto, medio: medioLabel(m.medio_pago), monto: Math.abs(m.monto), signo: entrada ? 1 : -1 });
   }
@@ -221,6 +221,8 @@ export const GET = withTenant(async (ctx, req) => {
   fila(xDer, yd, "Fondo de apertura", `Gs. ${gs(c.monto_apertura)}`);
   yd += FILA;
   fila(xDer, yd, "(+) Ventas en efectivo", signo(c.total_efectivo), { gris: c.total_efectivo === 0 });
+  yd += FILA;
+  fila(xDer, yd, "(+) Cobros a clientes", signo(c.cobros_efectivo), { gris: c.cobros_efectivo === 0 });
   yd += FILA;
   fila(xDer, yd, "(+) Ingresos manuales", signo(c.ingresos_efectivo), { gris: c.ingresos_efectivo === 0 });
   yd += FILA;

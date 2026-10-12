@@ -52,6 +52,8 @@ export const GET = withTenant(async (ctx, req) => {
         { header: "Transferencia", value: (x) => x.total_transferencia, width: 14 },
         { header: "Otros medios", value: (x) => x.total_otros, width: 13 },
         { header: "Crédito", value: (x) => x.total_credito, width: 14 },
+        { header: "Cobros ef.", value: (x) => x.cobros_efectivo, width: 13 },
+        { header: "Cobros otros medios", value: (x) => x.cobros_otros, width: 13 },
         { header: "Ingresos ef.", value: (x) => x.ingresos_efectivo, width: 13 },
         { header: "Egresos ef.", value: (x) => x.egresos_efectivo, width: 13 },
         { header: "Retiros ef.", value: (x) => x.retiros_efectivo, width: 13 },
