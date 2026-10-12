@@ -1,6 +1,7 @@
 "use client";
 
 /** Piezas visuales chicas de Conversaciones (copiadas del sistema actual). */
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { useEffect, useState, type ReactNode } from "react";
 import { Globe, MessageCircle, Send, X, type LucideIcon } from "lucide-react";
 import { ventanaAbierta, type EstadoEntrega } from "@/modules/conversaciones/dominio";
@@ -168,19 +169,13 @@ export function Ventana({
   ancho?: string;
   z?: string;
 }) {
-  useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === "Escape" && onCerrar();
-    window.addEventListener("keydown", k);
-    return () => window.removeEventListener("keydown", k);
-  }, [onCerrar]);
   return (
-    <div className={`fixed inset-0 ${z} flex items-center justify-center bg-slate-900/45 p-4 backdrop-blur-[2px]`} role="presentation" onClick={onCerrar}>
+    <CapaModal onClose={onCerrar} z={z}>
       <div
         role="dialog"
         aria-modal="true"
-        className={`flex max-h-[min(92vh,760px)] w-full ${ancho} flex-col overflow-hidden rounded-2xl border border-[#4FAEB2]/25 bg-white shadow-2xl shadow-[#2F6E71]/15`}
+        className={`flex ${ALTO_MAX_MODAL} w-full ${ancho} flex-col overflow-hidden rounded-2xl border border-[#4FAEB2]/25 bg-white shadow-2xl shadow-[#2F6E71]/15`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex shrink-0 items-start gap-3 border-b border-[#4FAEB2]/20 bg-gradient-to-r from-[#4FAEB2]/14 via-[#4FAEB2]/6 to-transparent px-5 py-4">
           <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#4FAEB2]/15 text-[#2F6E71]">
@@ -196,7 +191,7 @@ export function Ventana({
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-5 pb-5 pt-4">{children}</div>
       </div>
-    </div>
+    </CapaModal>
   );
 }
 

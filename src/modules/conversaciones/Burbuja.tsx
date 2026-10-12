@@ -18,7 +18,8 @@ type Props = {
   m: Mensaje;
   url: string | undefined;
   cita: Cita | null;
-  onResponder: (m: Mensaje) => void;
+  /** Sin onResponder (lectura, p. ej. Monitoreo): no se muestra el botón Responder. */
+  onResponder?: (m: Mensaje) => void;
   onVerImagen: (url: string, nombre: string) => void;
   onIrA: (id: string) => void;
   onReintentar: (id: string) => void;
@@ -80,17 +81,19 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
                 <Download className="h-3.5 w-3.5" aria-hidden />
               </button>
             ) : null}
-            <button
-              type="button"
-              aria-label="Responder"
-              title="Responder"
-              onClick={() => onResponder(m)}
-              className={`grid h-6 w-6 place-items-center rounded-full opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100 ${
-                claro ? "bg-black/20 text-white hover:bg-black/35" : "bg-slate-900/10 text-slate-700 hover:bg-slate-900/20"
-              }`}
-            >
-              <CornerUpLeft className="h-3.5 w-3.5" aria-hidden />
-            </button>
+            {onResponder ? (
+              <button
+                type="button"
+                aria-label="Responder"
+                title="Responder"
+                onClick={() => onResponder(m)}
+                className={`grid h-6 w-6 place-items-center rounded-full opacity-0 transition-opacity focus:opacity-100 group-hover:opacity-100 ${
+                  claro ? "bg-black/20 text-white hover:bg-black/35" : "bg-slate-900/10 text-slate-700 hover:bg-slate-900/20"
+                }`}
+              >
+                <CornerUpLeft className="h-3.5 w-3.5" aria-hidden />
+              </button>
+            ) : null}
           </div>
         ) : null}
 

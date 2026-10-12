@@ -1,12 +1,18 @@
 "use client";
 
-/** Transferir la conversación a otro usuario de la empresa (o dejarla sin asignar). */
-import { useMemo, useState } from "react";
+/**
+ * Transferir la conversación a otro usuario de la empresa (o dejarla sin asignar). Cada
+ * asesor muestra si está en línea, su estado y cuántos chats abiertos tiene.
+ */
+import { useEffect, useMemo, useState } from "react";
 import { ArrowLeftRight } from "lucide-react";
 import { filtrar } from "@/lib/busqueda";
 import { accionConversacion } from "@/modules/conversaciones/api";
 import type { FilaBandeja } from "@/modules/conversaciones/dominio";
 import { AvisoError, Ventana } from "@/modules/conversaciones/ui";
+import { pedirCargaAgentes } from "@/modules/conversaciones/api-supervision";
+import { ESTADO_AGENTE_LABEL, type AgenteCarga } from "@/modules/conversaciones/supervision";
+import { PuntoOnline } from "@/modules/conversaciones/ui-supervision";
 
 export function ModalTransferir({
   conv,
@@ -25,6 +31,16 @@ export function ModalTransferir({
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const lista = useMemo(() => filtrar(equipo, q, (u) => ({ principal: u.nombre, otros: [u.rol] })), [equipo, q]);
+  const [carga, setCarga] = useState<Map<string, AgenteCarga> | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    pedirCargaAgentes()
+      .then((a) => vivo && setCarga(new Map(a.map((x) => [x.id, x]))))
+      .catch(() => vivo && setCarga(new Map()));
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   const correr = async (clave: string, fn: () => Promise<FilaBandeja>) => {
     setOcupado(clave);
@@ -56,14 +72,21 @@ export function ModalTransferir({
         ) : (
           lista.map((a) => {
             const actual = a.id === conv.asignado_id;
+            const k = carga?.get(a.id);
             return (
               <div key={a.id} className={`flex items-center justify-between gap-2 px-4 py-3 ${actual ? "bg-emerald-50/80" : ""}`}>
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold leading-snug text-slate-900">
-                    {a.nombre}
-                    {a.id === yo ? <span className="ml-1 text-[11px] font-normal text-slate-400">(vos)</span> : null}
+                <span className="flex min-w-0 items-start gap-2.5">
+                  <PuntoOnline online={!!k?.online} className="mt-1.5" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold leading-snug text-slate-900">
+                      {a.nombre}
+                      {a.id === yo ? <span className="ml-1 text-[11px] font-normal text-slate-400">(vos)</span> : null}
+                    </span>
+                    <span className="text-[11px] text-slate-500">
+                      {a.rol}
+                      {k ? ` · ${ESTADO_AGENTE_LABEL[k.estado]} · ${k.carga} ${k.carga === 1 ? "chat abierto" : "chats abiertos"}` : carga ? " · sin cola" : ""}
+                    </span>
                   </span>
-                  <span className="text-[11px] text-slate-500">{a.rol}</span>
                 </span>
                 <button
                   type="button"

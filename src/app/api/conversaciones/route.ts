@@ -4,6 +4,8 @@
  *   GET /api/conversaciones?vista=mias|sin_asignar|todas|cerradas&q=&asignado=&canal=&cursor_at=&cursor_id=&limite=
  *       → { rows, contadores, siguiente: { at, id } | null }
  *   GET /api/conversaciones?solo=contadores → { contadores } (para refrescar las pestañas)
+ * El vencimiento del SLA de primera respuesta se suma con una consulta por id (solo las
+ * abiertas de la página que lo tienen).
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, ERR } from "@/lib/api/responses";
@@ -37,6 +39,7 @@ export const GET = withTenant(async (ctx, req) => {
   }
   const contadores = data?.contadores ?? CONTADORES_VACIOS;
   if (soloContadores) return ok({ contadores });
+  // chat_bandeja ya trae sla_vence_at / primera_respuesta_at (sin consulta extra por página).
   const rows = (data?.rows ?? []).map((r) => ({ ...r, etiquetas: r.etiquetas ?? [] }));
   const ult = rows.length === limite ? rows[rows.length - 1] : null;
   return ok({

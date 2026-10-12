@@ -4,9 +4,13 @@
  * Bandeja omnicanal (Conversaciones). Lista a la izquierda con pestañas (Mías / Sin asignar /
  * Todas / Cerradas), búsqueda y filtros; chat al centro; ficha del contacto superpuesta.
  * Todo en vivo por Realtime (broadcast privado) con respaldo por sondeo si se cae.
+ * Arriba, el estado del asesor (Disponible / Ocupado / En pausa): la bandeja late cada 30 s
+ * con la pestaña visible (presencia para la asignación automática y el Monitoreo).
+ * ?c=<conversación> abre ese chat (también si se llega desde un aviso estando acá).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { useSearchParams } from "next/navigation";
 import { CheckCircle2, FlaskConical, MessagesSquare, Zap } from "lucide-react";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { olvidarOpciones, pedirOpciones } from "@/modules/conversaciones/api";
@@ -15,6 +19,8 @@ import { useBandeja } from "@/modules/conversaciones/useBandeja";
 import { ListaConversaciones } from "@/modules/conversaciones/ListaConversaciones";
 import { PanelChat } from "@/modules/conversaciones/PanelChat";
 import { Girando, tabClass } from "@/modules/conversaciones/ui";
+import { usePresencia } from "@/modules/conversaciones/presencia";
+import { SelectorEstado } from "@/modules/conversaciones/ui-supervision";
 
 const ModalRespuestas = dynamic(() => import("@/modules/conversaciones/ModalRespuestas").then((m) => m.ModalRespuestas), { ssr: false });
 const ModalSimular = dynamic(() => import("@/modules/conversaciones/ModalSimular").then((m) => m.ModalSimular), { ssr: false });
@@ -27,6 +33,7 @@ const claseSelect =
 
 export function Bandeja() {
   const me = useUsuario();
+  const presencia = usePresencia();
   const [opciones, setOpciones] = useState<OpcionesBandeja | null>(null);
   const [errorOpciones, setErrorOpciones] = useState<string | null>(null);
   const [vista, setVista] = useState<Vista>("mias");
@@ -66,16 +73,21 @@ export function Bandeja() {
   const filtros = useMemo(() => ({ vista, q, canal, asesor: vista === "todas" || vista === "cerradas" ? asesor : "" }), [vista, q, canal, asesor]);
   const b = useBandeja({ empresaId: me?.empresaId ?? null, yo: opciones?.yo ?? null, filtros });
 
-  // Enlace directo ?c=<conversación>; la URL sigue al chat abierto (sin navegar).
-  const inicial = useRef(false);
+  // Enlace directo ?c=<conversación> (al entrar o desde la campanita estando acá); la URL
+  // sigue al chat abierto (sin navegar). ultimoC evita reabrir lo que la propia pantalla
+  // escribió en la URL.
+  const sp = useSearchParams();
+  const cUrl = sp.get("c");
+  const ultimoC = useRef<string | null>(null);
   useEffect(() => {
-    if (inicial.current || !opciones) return;
-    inicial.current = true;
-    const c = new URLSearchParams(window.location.search).get("c");
-    if (c && /^[0-9a-f-]{36}$/i.test(c)) b.abrir(c);
-  }, [opciones, b]);
+    if (!opciones || cUrl === ultimoC.current) return;
+    ultimoC.current = cUrl;
+    if (cUrl && /^[0-9a-f-]{36}$/i.test(cUrl)) b.abrir(cUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opciones, cUrl, b.abrir]);
   const abrir = useCallback(
     (id: string | null) => {
+      ultimoC.current = id;
       b.abrir(id);
       const url = new URL(window.location.href);
       if (id) url.searchParams.set("c", id);
@@ -161,6 +173,7 @@ export function Bandeja() {
             ))}
           </select>
         ) : null}
+        <SelectorEstado estado={presencia.estado} error={presencia.error} onCambiar={(e) => void presencia.cambiar(e)} />
         {opciones?.es_admin ? (
           <>
             <button type="button" onClick={() => setModal("respuestas")} title="Respuestas rápidas" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">

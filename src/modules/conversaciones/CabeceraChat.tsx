@@ -12,6 +12,7 @@ import { ESTADO_CLASE, ESTADO_LABEL, inicial, nombreContacto, telefonoLegible, t
 import { EtiquetasPopover } from "@/modules/conversaciones/Etiquetas";
 import { accionConversacion } from "@/modules/conversaciones/api";
 import { Avatar, CanalBadge, VentanaWhatsApp } from "@/modules/conversaciones/ui";
+import { SlaBadge } from "@/modules/conversaciones/ui-supervision";
 
 const btn = "inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-semibold shadow-sm transition-colors disabled:opacity-50";
 const btnBlanco = `${btn} border-slate-200 bg-white text-slate-700 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]`;
@@ -133,6 +134,7 @@ export function CabeceraChat({
           <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${ESTADO_CLASE[conv.estado]}`}>{ESTADO_LABEL[conv.estado]}</span>
           <span aria-hidden="true" className="mx-0.5 h-3.5 w-px bg-slate-200" />
           {!cerrada ? <VentanaWhatsApp canalTipo={conv.canal_tipo} expira={conv.ventana_expira_at} /> : null}
+          {!cerrada ? <SlaBadge vence={conv.sla_vence_at} primera={conv.primera_respuesta_at} /> : null}
           {conv.asignado_nombre ? (
             <span className="inline-flex max-w-[11rem] items-center gap-1 truncate rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-800" title="Agente asignado">
               <UserRound className="h-3 w-3 shrink-0" aria-hidden /> {mia ? "Vos" : conv.asignado_nombre}

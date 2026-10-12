@@ -251,7 +251,7 @@ begin
   return (
   with base as (
     select c.id, c.estado, c.asignado_id, c.canal_id, c.prioridad, c.ultimo_mensaje_at, c.ultimo_preview, c.ultimo_from_me,
-           c.ultimo_tipo, c.no_leidos, c.ventana_expira_at, c.etiquetas,
+           c.ultimo_tipo, c.no_leidos, c.ventana_expira_at, c.etiquetas, c.sla_vence_at, c.primera_respuesta_at, c.espera_motivo,
            k.id as contacto_id, k.nombre as contacto_nombre, k.telefono as contacto_telefono, k.avatar_url, k.cliente_id, k.prospecto_id,
            ca.tipo as canal_tipo, ca.nombre as canal_nombre, u.nombre as asignado_nombre
       from chat_conversaciones c

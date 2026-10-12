@@ -25,7 +25,7 @@ export const idConversacion = (req: { url: string }) => idDeRuta(req, "conversac
 // ── Fila de la lista (una sola conversación) ─────────────────────────────────
 const COLS_RESUMEN =
   "id, estado, asignado_id, canal_id, prioridad, ultimo_mensaje_at, ultimo_preview, ultimo_from_me, ultimo_tipo, no_leidos, " +
-  "ventana_expira_at, etiquetas, contacto_id, " +
+  "ventana_expira_at, sla_vence_at, primera_respuesta_at, etiquetas, contacto_id, " +
   "contacto:chat_contactos!contacto_id(nombre, telefono, avatar_url, cliente_id, prospecto_id), " +
   "canal:chat_canales!canal_id(tipo, nombre), asignado:usuarios!asignado_id(nombre)";
 
@@ -55,6 +55,8 @@ export async function leerResumen(db: TenantDb, id: string): Promise<FilaBandeja
     ultimo_tipo: (r.ultimo_tipo as string | null) ?? null,
     no_leidos: Number(r.no_leidos ?? 0),
     ventana_expira_at: (r.ventana_expira_at as string | null) ?? null,
+    sla_vence_at: (r.sla_vence_at as string | null) ?? null,
+    primera_respuesta_at: (r.primera_respuesta_at as string | null) ?? null,
     etiquetas: (r.etiquetas as string[] | null) ?? [],
     contacto_id: String(r.contacto_id),
     contacto_nombre: r.contacto?.nombre ?? null,
@@ -284,4 +286,28 @@ export async function audioAMp3(datos: Buffer): Promise<Buffer | null> {
   } finally {
     await rm(dir, { recursive: true, force: true }).catch(() => {});
   }
+}
+
+// ── Supervisión (Monitoreo / colas) ──────────────────────────────────────────
+/** Monitoreo: ADMIN o supervisor de alguna cola (chat_cola_agentes.es_supervisor). */
+export async function puedeSupervisar(ctx: TenantContext): Promise<boolean> {
+  if (ctx.rol === "ADMIN") return true;
+  const { data } = await ctx.db.select("chat_cola_agentes", "cola_id").eq("usuario_id", ctx.usuarioId).eq("es_supervisor", true).limit(1);
+  return !!data?.length;
+}
+
+/** Auditoría de ruteo (tomada / transferida / asignada_supervisor / liberada). Nunca rompe la acción. */
+export async function registrarRuteo(
+  db: TenantDb,
+  e: { conversacion_id: string; evento: string; de_usuario?: string | null; a_usuario?: string | null; cola_id?: string | null; detalle?: Record<string, unknown> },
+) {
+  const { error } = await db.insert("chat_ruteo_eventos", {
+    conversacion_id: e.conversacion_id,
+    evento: e.evento,
+    de_usuario: e.de_usuario ?? null,
+    a_usuario: e.a_usuario ?? null,
+    cola_id: e.cola_id ?? null,
+    detalle: e.detalle ?? {},
+  });
+  if (error) console.error("[conversaciones] ruteo", error.message);
 }

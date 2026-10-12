@@ -9,6 +9,7 @@ import { memo } from "react";
 import { Check, StickyNote } from "lucide-react";
 import { ESTADO_CLASE, ESTADO_LABEL, horaLista, inicial, nombreContacto, telefonoLegible, type FilaBandeja } from "@/modules/conversaciones/dominio";
 import { Avatar, IconoCanal, VentanaWhatsApp } from "@/modules/conversaciones/ui";
+import { SlaBadge } from "@/modules/conversaciones/ui-supervision";
 
 export const ALTO_TARJETA = 96;
 
@@ -73,6 +74,7 @@ function Tarjeta({
             ) : c.estado !== "cerrada" ? (
               <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-800">Sin asignar</span>
             ) : null}
+            {c.estado !== "cerrada" ? <SlaBadge vence={c.sla_vence_at} primera={c.primera_respuesta_at} compacta /> : null}
             <VentanaWhatsApp canalTipo={c.canal_tipo} expira={c.estado === "cerrada" ? null : c.ventana_expira_at} compacta />
             {c.etiquetas.slice(0, 2).map((e) => (
               <span key={e} className="max-w-[6rem] truncate rounded-full border border-indigo-200 bg-indigo-50 px-1.5 py-0.5 text-[9px] font-medium text-indigo-700">

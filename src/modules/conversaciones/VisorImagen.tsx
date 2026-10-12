@@ -2,6 +2,7 @@
 
 /** Visor de imagen a pantalla completa: rueda para acercar, arrastrar para moverse, Esc cierra. */
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Download, RotateCw, X, ZoomIn, ZoomOut } from "lucide-react";
 import { descargar } from "@/modules/conversaciones/media";
 
@@ -25,7 +26,8 @@ export function VisorImagen({ url, nombre, onCerrar }: { url: string; nombre: st
     });
 
   const boton = "grid h-9 w-9 place-items-center rounded-lg text-white/80 transition-colors hover:bg-white/10 hover:text-white";
-  return (
+  if (typeof document === "undefined") return null;
+  return createPortal(
     <div className="fixed inset-0 z-[130] flex flex-col bg-black/90" role="dialog" aria-modal="true">
       <div className="flex shrink-0 items-center justify-between gap-2 px-3 py-2">
         <span className="truncate text-xs text-white/70">{nombre}</span>
@@ -62,6 +64,7 @@ export function VisorImagen({ url, nombre, onCerrar }: { url: string; nombre: st
       <p className="shrink-0 bg-black/40 px-3 py-1.5 text-center text-[10px] text-white/45">
         Rueda para acercar · doble clic para alternar · arrastrá para moverte · Esc para cerrar
       </p>
-    </div>
+    </div>,
+    document.body,
   );
 }

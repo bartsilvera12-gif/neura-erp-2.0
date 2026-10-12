@@ -32,6 +32,9 @@ export type FilaBandeja = {
   ultimo_tipo: string | null;
   no_leidos: number;
   ventana_expira_at: string | null;
+  /** SLA de primera respuesta (colas): vence a los N min de asignada; null si ya respondieron. */
+  sla_vence_at?: string | null;
+  primera_respuesta_at?: string | null;
   etiquetas: string[];
   contacto_id: string;
   contacto_nombre: string | null;

@@ -35,7 +35,8 @@ export function Hilo({
   error: string | null;
   ultimoId: string | null;
   cargarAnteriores: () => void;
-  onResponder: (m: Mensaje) => void;
+  /** Sin onResponder el hilo es de solo lectura (Monitoreo, Finalizadas, Historial). */
+  onResponder?: (m: Mensaje) => void;
   onReintentar: (id: string) => void;
   onDescartar: (id: string) => void;
 }) {
