@@ -356,6 +356,59 @@ begin
   end loop;
 end $$;
 
+-- ── SLA en horas laborales (reloj del actual: lun-vie hora_inicio-hora_fin, sáb hasta sabado_hasta) ──
+create or replace function :"schema".soporte_sumar_horas_laborales(p_desde timestamptz, p_horas numeric)
+returns timestamptz language plpgsql stable set search_path = :"schema", public as $fn$
+declare
+  cfg soporte_config;
+  v_local timestamp := p_desde at time zone 'America/Asuncion';
+  v_resto numeric := coalesce(p_horas, 0) * 60;   -- en minutos
+  v_ini timestamp; v_fin timestamp; v_dow int; v_disp numeric;
+  v_guard int := 0;
+begin
+  if p_horas is null or p_horas <= 0 then return null; end if;
+  select * into cfg from soporte_config where empresa_id = empresa_actual();
+  if not found then cfg.hora_inicio := 8; cfg.hora_fin := 17; cfg.sabado_hasta := 12; end if;
+  loop
+    v_guard := v_guard + 1;
+    exit when v_guard > 400;
+    v_dow := extract(isodow from v_local);
+    v_ini := date_trunc('day', v_local) + make_interval(hours => cfg.hora_inicio);
+    v_fin := date_trunc('day', v_local) + make_interval(hours => case when v_dow = 6 then cfg.sabado_hasta when v_dow = 7 then 0 else cfg.hora_fin end);
+    if v_dow = 7 or v_fin <= v_ini or v_local >= v_fin then
+      v_local := date_trunc('day', v_local) + interval '1 day' + make_interval(hours => cfg.hora_inicio);
+      continue;
+    end if;
+    if v_local < v_ini then v_local := v_ini; end if;
+    v_disp := extract(epoch from (v_fin - v_local)) / 60;
+    if v_resto <= v_disp then
+      return (v_local + make_interval(mins => v_resto::int)) at time zone 'America/Asuncion';
+    end if;
+    v_resto := v_resto - v_disp;
+    v_local := date_trunc('day', v_local) + interval '1 day' + make_interval(hours => cfg.hora_inicio);
+  end loop;
+  return null;
+end;
+$fn$;
+grant execute on function :"schema".soporte_sumar_horas_laborales(timestamptz, numeric) to authenticated, service_role;
+
+-- La fecha objetivo se calcula sola si no viene (alta + SLA en horas laborales), como el actual.
+create or replace function :"schema".tg_soporte_tickets_objetivo()
+returns trigger language plpgsql set search_path = :"schema", public as $fn$
+begin
+  if new.fecha_objetivo is null and new.sla_horas is not null and new.sla_horas > 0 then
+    new.fecha_objetivo := soporte_sumar_horas_laborales(coalesce(new.created_at, now()), new.sla_horas);
+  end if;
+  if new.responsable_id is null then
+    select responsable_defecto_id into new.responsable_id from soporte_config where empresa_id = new.empresa_id;
+  end if;
+  return new;
+end;
+$fn$;
+drop trigger if exists trg_soporte_tickets_objetivo on :"schema".soporte_tickets;
+create trigger trg_soporte_tickets_objetivo before insert on :"schema".soporte_tickets
+  for each row execute function :"schema".tg_soporte_tickets_objetivo();
+
 -- ── Tipificación + ticket en UNA transacción (nunca queda una sin la otra) ──
 create or replace function :"schema".soporte_crear_ticket_desde_tipificacion(p_tipificacion jsonb, p_ticket jsonb)
 returns jsonb language plpgsql security invoker set search_path = :"schema", public as $$
