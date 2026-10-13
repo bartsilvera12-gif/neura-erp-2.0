@@ -88,9 +88,14 @@ export function NotificacionesBell() {
   }, []);
 
   useEffect(() => { cargarRef.current = cargar; }, [cargar]);
+  // Primera carga UNA vez: en dev (StrictMode) el efecto corre dos veces y pedía dos veces
+  // /api/notificaciones; las refs sobreviven a ese desmontaje simulado.
+  const cargoInicial = useRef(false);
   useEffect(() => {
     prepararSonidos();
     setSonido(leerSonidoActivado());
+    if (cargoInicial.current) return;
+    cargoInicial.current = true;
     void cargar();
   }, [cargar]);
 

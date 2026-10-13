@@ -6,7 +6,7 @@
  * (+ receptor SIFEN avanzado) y datos comerciales. "Guardar cambios"
  * manda solo lo de este formulario; la Actividad registra cada cambio sola.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Briefcase, IdCard, Loader2, Pencil, Phone, Plus, X } from "lucide-react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -90,13 +90,18 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
   const [guardado, setGuardado] = useState(false);
   const [abierto, setAbierto] = useState(false);
   // Al abrir, el formulario arranca con los datos actuales (descarta lo que quedó sin guardar).
-  const abrir = () => { setF(formDesde(cliente)); setError(null); setNuevaCat(null); setGuardado(false); setAbierto(true); };
+  const abrir = () => { cargarCatalogos(); setF(formDesde(cliente)); setError(null); setNuevaCat(null); setGuardado(false); setAbierto(true); };
 
   useEffect(() => { setF(formDesde(cliente)); }, [cliente]);
-  useEffect(() => {
+  // Usuarios (vendedor) y categorías solo los usa el modal de edición: se piden al pasar el
+  // mouse / enfocar "Editar información" (o al abrirlo), no al abrir la ficha. Cacheados.
+  const catalogosPedidos = useRef(false);
+  function cargarCatalogos() {
+    if (catalogosPedidos.current) return;
+    catalogosPedidos.current = true;
     apiFetchCache<UsuarioMin[]>("/api/usuarios?min=1").then(setUsuarios).catch((e) => { setUsuarios([]); setErrorUsuarios((e as Error).message); });
     apiFetchCache<Categoria[]>("/api/clientes/categorias").then(setCategorias).catch(() => {});
-  }, []);
+  }
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => { setF((p) => ({ ...p, [k]: v })); setGuardado(false); };
   const inp = (k: keyof Form) => ({
@@ -189,7 +194,6 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
     }
   }
 
-  const vendedor = cliente.vendedor_usuario_id ? usuarios?.find((u) => u.id === cliente.vendedor_usuario_id)?.nombre ?? null : null;
   const credito = cliente.condicion_pago === "CREDITO";
   const usd = cliente.moneda_preferida === "USD";
   const sifen = [
@@ -216,7 +220,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         <p className="text-sm text-slate-500">Datos del cliente. Para cambiarlos usá <b className="font-semibold text-slate-700">Editar información</b>.</p>
         <div className="flex items-center gap-3">
           {guardado ? <span className="text-xs font-medium text-emerald-600">Cambios guardados</span> : null}
-          <button type="button" onClick={abrir}
+          <button type="button" onClick={abrir} onMouseEnter={cargarCatalogos} onFocus={cargarCatalogos}
             className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95"
             style={{ backgroundColor: TEAL }}>
             <Pencil className="h-4 w-4" /> Editar información
@@ -240,7 +244,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
           {credito ? <Dato label="Límite de crédito">{Number(cliente.limite_credito ?? 0) > 0 ? `Gs. ${Number(cliente.limite_credito).toLocaleString("es-PY")}` : "Sin límite"}</Dato> : null}
           <Dato label="Moneda">{usd ? "Dólares (US$)" : "Guaraníes (Gs.)"}</Dato>
           <Dato label="Valor anual estimado">{Number(cliente.valor_anual ?? 0) > 0 ? `${usd ? "US$" : "Gs."} ${Number(cliente.valor_anual).toLocaleString("es-PY")}` : null}</Dato>
-          <Dato label="Vendedor">{vendedor ?? cliente.vendedor_texto ?? null}</Dato>
+          <Dato label="Vendedor">{cliente.vendedor_nombre ?? null}</Dato>
           <Dato label="Estado">
             <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.activo !== false ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
               <i aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${cliente.activo !== false ? "bg-emerald-500" : "bg-slate-400"}`} />

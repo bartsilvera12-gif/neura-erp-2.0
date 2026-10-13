@@ -6,8 +6,8 @@
  * "antes → después"; en bajas y eliminaciones, el motivo. Las suscripciones dejan su rastro
  * (alta, cuota emitida, cambio de plan, pausa, reactivación, cancelación) en una línea legible.
  */
-import { useCallback, useEffect, useState } from "react";
-import { apiFetch } from "@/lib/api/client-fetch";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetchSWR } from "@/lib/api/cache-cliente";
 import type { EventoHistorial } from "@/modules/clientes/ficha/tipos";
 import { fechaHora } from "@/modules/clientes/ui";
 import { monto } from "@/modules/clientes/suscripciones/ui";
@@ -78,24 +78,31 @@ export function TabHistorial({ clienteId, recarga }: { clienteId: string; recarg
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const cargar = useCallback(async () => {
+  // Cache en memoria mientras la ficha está abierta: volver a la pestaña la pinta al instante
+  // (sin pedir si se vio hace < 30 s); después de un cambio (`recarga`) se pide fresca.
+  const cargar = useCallback(async (fresco: boolean) => {
     setCargando(true);
     setError(null);
     try {
-      setHistorial(await apiFetch<EventoHistorial[]>(`/api/clientes/${clienteId}/historial`));
+      await apiFetchSWR<EventoHistorial[]>(`/api/clientes/${clienteId}/historial`, (h) => { setHistorial(h); setCargando(false); }, { fresco, maxEdadMs: 30_000 });
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setCargando(false);
     }
   }, [clienteId]);
-  useEffect(() => { void cargar(); }, [cargar, recarga]);
+  const recargaVista = useRef(recarga);
+  useEffect(() => {
+    const fresco = recargaVista.current !== recarga;
+    recargaVista.current = recarga;
+    void cargar(fresco);
+  }, [cargar, recarga]);
 
   return (
     <div className="max-w-3xl">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700">Historial de cambios</h3>
-        <button type="button" onClick={() => void cargar()} disabled={cargando}
+        <button type="button" onClick={() => void cargar(true)} disabled={cargando}
           className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
           {cargando ? "Actualizando…" : "Actualizar"}
         </button>

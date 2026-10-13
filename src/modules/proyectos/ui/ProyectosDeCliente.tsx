@@ -7,8 +7,7 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { apiFetch } from "@/lib/api/client-fetch";
-import { apiFetchCache } from "@/lib/api/cache-cliente";
+import { apiFetchCache, apiFetchSWR } from "@/lib/api/cache-cliente";
 import type { Estado, Tarjeta } from "@/modules/proyectos/tipos";
 import { ModalProyecto } from "./comun";
 import { ProyectoDetalle } from "./ProyectoDetalle";
@@ -28,19 +27,20 @@ export function ProyectosDeCliente({ clienteId }: { clienteId: string }) {
   const [estados, setEstados] = useState<Estado[]>([]);
   const [abierto, setAbierto] = useState<string | null>(null);
 
-  const cargar = useCallback(async () => {
+  // Cache en memoria: volver a la pestaña (dentro de 30 s) la pinta al instante sin pedir;
+  // "Actualizar" y cerrar un proyecto piden fresco (fresco = true por defecto).
+  const cargar = useCallback(async (fresco = true) => {
     setCargando(true);
     try {
       const sp = new URLSearchParams({ cliente: clienteId, limite: String(LIMITE) });
-      const r = await apiFetch<{ items: Tarjeta[] }>(`/api/proyectos?${sp}`);
-      setProyectos(r.items ?? []);
+      await apiFetchSWR<{ items: Tarjeta[] }>(`/api/proyectos?${sp}`, (r) => setProyectos(r.items ?? []), { fresco, maxEdadMs: 30_000 });
     } catch {
       setProyectos([]);
     }
     setCargando(false);
   }, [clienteId]);
 
-  useEffect(() => { void cargar(); }, [cargar]);
+  useEffect(() => { void cargar(false); }, [cargar]);
   useEffect(() => {
     apiFetchCache<Estado[]>("/api/proyectos/estados").then(setEstados).catch(() => {});
   }, []);

@@ -11,14 +11,14 @@
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Download, Loader2, Plus, Search, Users } from "lucide-react";
-import { apiFetch } from "@/lib/api/client-fetch";
-import { apiFetchCache } from "@/lib/api/cache-cliente";
+import { apiFetchCache, apiFetchSWR, guardadoAlInstante, invalidar, precargar } from "@/lib/api/cache-cliente";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { Select } from "@/components/Select";
 import { ClienteForm } from "@/modules/clientes/ClienteForm";
 import { FichaClienteModal } from "@/modules/clientes/ficha/FichaClienteModal";
+import { urlFicha } from "@/modules/clientes/ficha/url";
 import type { Categoria } from "@/modules/clientes/esquema";
 import {
   Avatar, BadgeEstado, BadgeOrigen, CategoriaChip, CodigoChip, TEAL, codigoCliente, estadoDe, fechaCorta, gs,
@@ -38,6 +38,7 @@ type Fila = {
   suscripcion_activa: string | null;
 };
 type Kpis = { clientes: number; activos: number; empresas: number; con_deuda: number; a_cobrar: number; vencido: number };
+type Resp = { rows: Fila[]; total: number; kpis: Kpis };
 
 // ── Columnas configurables ──────────────────────────────────────────────────
 type ColKey =
@@ -116,13 +117,50 @@ function normalizarCols(raw: unknown): ColKey[] {
   return next.length > 0 ? next : [...DEFAULT_COLS];
 }
 
+type Filtros = { q: string; estado: string; tipo: string; origen: string; categoria: string; deuda: string };
+const FILTROS_INICIALES: Filtros = { q: "", estado: "activos", tipo: "", origen: "", categoria: "", deuda: "" };
+
+function paramsFiltros(f: Filtros) {
+  const sp = new URLSearchParams();
+  if (f.q) sp.set("q", f.q);
+  sp.set("estado", f.estado);
+  if (f.tipo) sp.set("tipo", f.tipo);
+  if (f.origen) sp.set("origen", f.origen);
+  if (f.categoria) sp.set("categoria", f.categoria);
+  if (f.deuda) sp.set("deuda", f.deuda);
+  return sp;
+}
+/** URL de una página de la lista: también es la clave del cache en memoria (filtros + página). */
+function urlLista(f: Filtros, pagina: number) {
+  const sp = paramsFiltros(f);
+  sp.set("paginado", "1");
+  sp.set("pagina", String(pagina));
+  sp.set("por_pagina", String(POR_PAGINA));
+  return `/api/clientes?${sp}`;
+}
+
+// Fila memorizada: abrir/cerrar la ficha, el hover o tipear en el buscador re-renderizan la
+// página, pero una fila solo se vuelve a dibujar si cambió su cliente o las columnas.
+const FilaCliente = memo(function FilaCliente({ c, columnas, onAbrir, onIntencion, onSinIntencion }: {
+  c: Fila; columnas: Col[]; onAbrir: (id: string) => void; onIntencion: (id: string, ya?: boolean) => void; onSinIntencion: () => void;
+}) {
+  return (
+    <tr onClick={() => onAbrir(c.id)} onMouseEnter={() => onIntencion(c.id)} onMouseLeave={onSinIntencion}
+      onPointerDown={() => onIntencion(c.id, true)} className="group cursor-pointer transition-colors hover:bg-[var(--brand-50)]">
+      {columnas.map((col) => <td key={col.key} className={col.td}>{col.render(c)}</td>)}
+    </tr>
+  );
+});
+
 export default function ClientesPage() {
   const router = useRouter();
-  const [rows, setRows] = useState<Fila[]>([]);
-  const [total, setTotal] = useState(0);
-  const [kpis, setKpis] = useState<Kpis | null>(null);
+  // Volver a /clientes pinta en el primer render lo último que se vio (y se refresca atrás).
+  const [inicial] = useState(() => guardadoAlInstante<Resp>(urlLista(FILTROS_INICIALES, 1)));
+  const [rows, setRows] = useState<Fila[]>(inicial?.rows ?? []);
+  const [total, setTotal] = useState(inicial?.total ?? 0);
+  const [kpis, setKpis] = useState<Kpis | null>(inicial?.kpis ?? null);
   const [pagina, setPagina] = useState(1);
-  const [cargando, setCargando] = useState(true);
+  const [cargando, setCargando] = useState(!inicial);
   const [borrador, setBorrador] = useState("");
   const [q, setQ] = useState("");
   const [estado, setEstado] = useState("activos");
@@ -142,10 +180,14 @@ export default function ClientesPage() {
   const [visibles, setVisibles] = useState<ColKey[]>(DEFAULT_COLS);
   const colsRef = useRef<HTMLDivElement>(null);
 
+  // Debounce del buscador. Si el texto no cambió (al montar, o espacios de más) no hace nada:
+  // así no vuelve a la página 1 ni dispara otra carga.
   useEffect(() => {
-    const t = setTimeout(() => { setQ(borrador.trim()); setPagina(1); }, 300);
-    return () => clearTimeout(t);
-  }, [borrador]);
+    const t = borrador.trim();
+    if (t === q) return;
+    const id = setTimeout(() => { setQ(t); setPagina(1); }, 300);
+    return () => clearTimeout(id);
+  }, [borrador, q]);
 
   useEffect(() => {
     apiFetchCache<Categoria[]>("/api/clientes/categorias").then(setCategorias).catch(() => {});
@@ -190,16 +232,37 @@ export default function ClientesPage() {
     const id = new URLSearchParams(window.location.search).get("cliente");
     if (id) setFicha(id);
   }, []);
-  function abrirFicha(id: string) {
+  // Estables (useCallback) para que las filas memorizadas no se re-rendericen.
+  const abrirFicha = useCallback((id: string) => {
     cambioEnFicha.current = false;
     setFicha(id);
     window.history.replaceState({}, "", `/clientes?cliente=${encodeURIComponent(id)}`);
-  }
+  }, []);
+  // Cerrar sin cambios no toca la lista (ni re-pide nada). Si se guardó algo en la ficha,
+  // se descartan las páginas guardadas y se recarga la actual.
   function cerrarFicha() {
     setFicha(null);
     window.history.replaceState({}, "", "/clientes");
-    if (cambioEnFicha.current) setRecarga((k) => k + 1);
+    if (cambioEnFicha.current) {
+      cambioEnFicha.current = false;
+      invalidar("/api/clientes");
+      setRecarga((k) => k + 1);
+    }
   }
+
+  // Prefetch de la ficha: con el mouse ~150 ms sobre la fila (o al apretar) se pide en
+  // segundo plano, así el modal abre con los datos ya en memoria.
+  const intencion = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const onIntencion = useCallback((id: string, ya?: boolean) => {
+    if (intencion.current) clearTimeout(intencion.current);
+    intencion.current = null;
+    if (ya) void precargar(urlFicha(id));
+    else intencion.current = setTimeout(() => void precargar(urlFicha(id)), 150);
+  }, []);
+  const onSinIntencion = useCallback(() => {
+    if (intencion.current) clearTimeout(intencion.current);
+    intencion.current = null;
+  }, []);
 
   // Aviso después de dar de baja desde la ficha.
   useEffect(() => {
@@ -210,30 +273,39 @@ export default function ClientesPage() {
     return () => clearTimeout(t);
   }, []);
 
-  const filtros = useCallback(() => {
-    const sp = new URLSearchParams();
-    if (q) sp.set("q", q);
-    sp.set("estado", estado);
-    if (tipo) sp.set("tipo", tipo);
-    if (origen) sp.set("origen", origen);
-    if (categoria) sp.set("categoria", categoria);
-    if (deuda) sp.set("deuda", deuda);
-    return sp;
-  }, [q, estado, tipo, origen, categoria, deuda]);
+  const f = useMemo<Filtros>(() => ({ q, estado, tipo, origen, categoria, deuda }), [q, estado, tipo, origen, categoria, deuda]);
+  const filtros = useCallback(() => paramsFiltros(f), [f]);
 
+  // Carga de la página: cache en memoria por filtros + página (volver a una página es
+  // instantáneo y se refresca atrás), las filas anteriores quedan visibles mientras llega
+  // la nueva (sin parpadeo) y un request viejo se aborta si cambia la URL antes de que
+  // responda. No se aborta en el cleanup: en dev (StrictMode) el efecto corre dos veces y
+  // la segunda reusa el MISMO request en curso (uno solo en la red).
+  const vigente = useRef<{ url: string; ctrl: AbortController } | null>(null);
+  const recargaVista = useRef(recarga);
   useEffect(() => {
-    let cancel = false;
+    const url = urlLista(f, pagina);
+    const previo = vigente.current;
+    if (previo && previo.url !== url) previo.ctrl.abort();
+    const ctrl = previo && previo.url === url && !previo.ctrl.signal.aborted ? previo.ctrl : new AbortController();
+    vigente.current = { url, ctrl };
+    // Después de guardar algo (alta, cambios en la ficha) no sirve lo guardado.
+    const fresco = recargaVista.current !== recarga;
+    recargaVista.current = recarga;
     setCargando(true);
-    const sp = filtros();
-    sp.set("paginado", "1");
-    sp.set("pagina", String(pagina));
-    sp.set("por_pagina", String(POR_PAGINA));
-    apiFetch<{ rows: Fila[]; total: number; kpis: Kpis }>(`/api/clientes?${sp}`)
-      .then((r) => { if (!cancel) { setRows(r.rows); setTotal(r.total); setKpis(r.kpis); } })
-      .catch(() => { if (!cancel) { setRows([]); setTotal(0); } })
-      .finally(() => { if (!cancel) setCargando(false); });
-    return () => { cancel = true; };
-  }, [filtros, pagina, recarga]);
+    apiFetchSWR<Resp>(url, (r, viejo) => {
+      setRows(r.rows); setTotal(r.total); setKpis(r.kpis);
+      if (viejo) setCargando(false);
+      // Prefetch de la página siguiente (es una consulta barata), cuando el navegador está libre.
+      if (!viejo && pagina * POR_PAGINA < r.total) {
+        const sig = urlLista(f, pagina + 1);
+        if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(() => void precargar(sig));
+        else setTimeout(() => void precargar(sig), 300);
+      }
+    }, { signal: ctrl.signal, fresco, maxEdadMs: 2000 })
+      .catch(() => { if (!ctrl.signal.aborted) { setRows([]); setTotal(0); } })
+      .finally(() => { if (!ctrl.signal.aborted) setCargando(false); });
+  }, [f, pagina, recarga]);
 
   const hayFiltros = !!(q || borrador || estado !== "activos" || tipo || origen || categoria || deuda);
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
@@ -417,9 +489,7 @@ export default function ClientesPage() {
               </thead>
               <tbody className={`divide-y divide-slate-100 ${cargando ? "opacity-60" : ""}`}>
                 {rows.map((c) => (
-                  <tr key={c.id} onClick={() => abrirFicha(c.id)} className="group cursor-pointer transition-colors hover:bg-[var(--brand-50)]">
-                    {columnas.map((col) => <td key={col.key} className={col.td}>{col.render(c)}</td>)}
-                  </tr>
+                  <FilaCliente key={c.id} c={c} columnas={columnas} onAbrir={abrirFicha} onIntencion={onIntencion} onSinIntencion={onSinIntencion} />
                 ))}
               </tbody>
             </table>

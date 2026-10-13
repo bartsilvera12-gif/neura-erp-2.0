@@ -9,9 +9,10 @@
  * PDF y anular), que en el 2.0 solo se ven acá.
  */
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { apiFetchSWR } from "@/lib/api/cache-cliente";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { CapaModal } from "@/components/CapaModal";
 import { hoyPY, TZ_PY } from "@/lib/fecha/paraguay";
@@ -73,10 +74,18 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
   const [bajandoPdf, setBajandoPdf] = useState(false);
   const hoy = hoyPY();
 
-  const cargar = useCallback(() => {
-    apiFetch<EstadoCuenta>(`/api/clientes/${clienteId}/estado-cuenta`).then((r) => { setEc(r); setError(null); }).catch((e) => setError((e as Error).message));
+  // Cache en memoria mientras la ficha está abierta: volver a la pestaña la pinta al instante
+  // (sin pedir si se vio hace < 30 s); después de un cambio (`recarga`) se pide fresca.
+  const cargar = useCallback((fresco = true) => {
+    apiFetchSWR<EstadoCuenta>(`/api/clientes/${clienteId}/estado-cuenta`, (r) => { setEc(r); setError(null); }, { fresco, maxEdadMs: 30_000 })
+      .catch((e) => setError((e as Error).message));
   }, [clienteId]);
-  useEffect(() => { cargar(); }, [cargar, recarga]);
+  const recargaVista = useRef(recarga);
+  useEffect(() => {
+    const fresco = recargaVista.current !== recarga;
+    recargaVista.current = recarga;
+    cargar(fresco);
+  }, [cargar, recarga]);
 
   const cxcPorVenta = useMemo(() => new Map((ec?.cuentas ?? []).map((c) => [c.venta_id, c])), [ec]);
 

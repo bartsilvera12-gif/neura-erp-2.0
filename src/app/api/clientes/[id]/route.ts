@@ -2,7 +2,8 @@
  * Cliente — ficha, edición y eliminación.
  *   GET    /api/clientes/[id]  → cliente (con código, categoría, vendedor, creado por, baja) +
  *                                estado de cuenta (saldo/límite) + últimas ventas + contactos +
- *                                resumen + cantidad de notas
+ *                                resumen + cantidad de notas (ficha_cliente: UNA llamada a la base)
+ *                                ?con=suscripciones → además `suscripciones` (facturacion_suscripciones)
  *   PATCH  /api/clientes/[id]  → edita campos. activo: true también levanta una baja.
  *   DELETE /api/clientes/[id]  → { motivo } eliminación lógica, solo ADMIN. Bloqueada si tiene
  *                                ventas o deuda (en ese caso, dar de baja).
@@ -20,66 +21,22 @@ function clienteId(req: { url: string }): string | null {
   return i >= 0 ? (segs[i + 1] ?? null) : null;
 }
 
-const DETALLE =
-  "id, codigo, nombre, razon_social, tipo_cliente, documento, ruc, nombre_contacto, telefono, telefono_secundario, email, email_secundario, " +
-  "direccion, ciudad, pais, sitio_web, instagram, linkedin, categoria_id, valor_anual, moneda_preferida, condicion_pago, plazo_dias, " +
-  "limite_credito, origen, notas, activo, vendedor_usuario_id, vendedor_texto, created_by, creado_at, updated_at, baja_at, baja_por, " +
-  "baja_motivo, sifen_naturaleza, sifen_ti_ope, sifen_extranjero, sifen_pais_iso3, sifen_tipo_documento, sifen_num_id, sifen_direccion, sifen_numero_casa";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export const GET = withTenant(async (ctx, req) => {
   const id = clienteId(req);
   if (!id) return ERR.invalid("Falta el id del cliente");
+  // Un id que no es uuid no existe (y así la base no responde con error de tipo → 500).
+  if (!UUID_RE.test(id)) return ERR.notFound();
 
-  // Lecturas independientes: van juntas (1 viaje). Usuarios y categorías son listas cortas
-  // de la empresa: se resuelven los nombres acá en vez de pedir joins.
-  const [cli, saldo, resumen, ventas, contactos, usuarios, categorias, notas] = await Promise.all([
-    ctx.db.select("clientes", DETALLE).eq("id", id).is("deleted_at", null).limit(1),
-    ctx.db.rpc<number>("cliente_saldo", { p_cliente_id: id }),
-    ctx.db.rpc("resumen_cliente", { p_cliente: id }),
-    ctx.db
-      .select("ventas", "id, numero_control, fecha, total, tipo_venta, estado")
-      .eq("cliente_id", id)
-      .order("fecha", { ascending: false })
-      .limit(50),
-    ctx.db
-      .select("cliente_contactos", "id, nombre, cargo, telefono, email, notas")
-      .eq("cliente_id", id)
-      .order("created_at", { ascending: true }),
-    ctx.db.select("usuarios", "id, nombre"),
-    ctx.db.select("cliente_categorias", "id, nombre, color"),
-    ctx.db.select("cliente_notas", "id", { count: "exact", head: true }).eq("cliente_id", id),
-  ]);
-  if (cli.error) return ERR.server();
-  if (!cli.data?.length) return ERR.notFound();
-
-  const c = cli.data[0] as unknown as Record<string, unknown> & {
-    limite_credito: number | null; vendedor_usuario_id: string | null; vendedor_texto: string | null;
-    created_by: string | null; baja_por: string | null; categoria_id: string | null;
-  };
-  const nombreUsuario = new Map(((usuarios.data ?? []) as unknown as { id: string; nombre: string }[]).map((u) => [u.id, u.nombre]));
-  const cat = ((categorias.data ?? []) as unknown as { id: string; nombre: string; color: string | null }[]).find((x) => x.id === c.categoria_id);
-  const cliente = {
-    ...c,
-    categoria_nombre: cat?.nombre ?? null,
-    categoria_color: cat?.color ?? null,
-    vendedor_nombre: (c.vendedor_usuario_id ? nombreUsuario.get(c.vendedor_usuario_id) : null) ?? c.vendedor_texto ?? null,
-    creado_por_nombre: c.created_by ? nombreUsuario.get(c.created_by) ?? null : null,
-    baja_por_nombre: c.baja_por ? nombreUsuario.get(c.baja_por) ?? null : null,
-  };
-  const saldoNum = Number(saldo.data ?? 0);
-  const limite = Number(c.limite_credito ?? 0);
-  return ok({
-    cliente,
-    estado_cuenta: {
-      saldo: saldoNum,
-      limite_credito: limite,
-      disponible: limite > 0 ? Math.max(0, limite - saldoNum) : null,
-    },
-    ventas: ventas.data ?? [],
-    contactos: contactos.data ?? [],
-    resumen: resumen.data ?? null,
-    notas_count: notas.count ?? 0,
-  });
+  // Todo en UNA llamada (ficha_cliente, 46_clientes_rendimiento): antes eran 8 consultas en
+  // paralelo (cliente, saldo, resumen, ventas, contactos, usuarios, categorías, notas) y la
+  // ficha pedía aparte /facturacion. Misma forma de respuesta; `suscripciones` solo si se pide.
+  const conSubs = new URL(req.url).searchParams.get("con") === "suscripciones";
+  const { data, error } = await ctx.db.rpc<Record<string, unknown> | null>("ficha_cliente", { p_cliente: id, p_suscripciones: conSubs });
+  if (error) return ERR.server();
+  if (!data) return ERR.notFound();
+  return ok(data);
 });
 
 const editarCliente = z.object({ ...camposCliente, activo: z.boolean().optional() });

@@ -14,9 +14,11 @@
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { ClipboardPen, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { apiFetchSWR, guardadoAlInstante } from "@/lib/api/cache-cliente";
+import { urlFicha } from "@/modules/clientes/ficha/url";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
 import { RegistrarTransferencia } from "@/modules/cobranzas/RegistrarTransferencia";
@@ -42,10 +44,13 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
   const salir = (url: string) => {
     if (onCerrar) { onCambio?.(); onCerrar(); } else router.push(url);
   };
+  // Datos de entrada: si la lista ya los precargó (hover sobre la fila) o la ficha se abrió
+  // hace poco, se pintan en el primer render, sin skeleton.
+  const [inicial] = useState(() => guardadoAlInstante<Detalle & { suscripciones?: SuscripcionCliente[] }>(urlFicha(id)));
   const me = useUsuario();
   const esAdmin = me?.rol === "ADMIN";
-  const [data, setData] = useState<Detalle | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState<Detalle | null>(inicial ?? null);
+  const [loading, setLoading] = useState(!inicial);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("informacion");
   // Registrar cobro: null = cerrado; "" = general; id = la cuenta de esa venta.
@@ -57,39 +62,48 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
   const [bajando, setBajando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   const [cambiando, setCambiando] = useState(false);
-  const [subs, setSubs] = useState<SuscripcionCliente[]>([]);
-  const [subsCargando, setSubsCargando] = useState(true);
+  const [subs, setSubs] = useState<SuscripcionCliente[]>(inicial?.suscripciones ?? []);
+  const [subsCargando, setSubsCargando] = useState(!inicial);
   const [subsError, setSubsError] = useState<string | null>(null);
   const [nuevaSusc, setNuevaSusc] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const puedeSuscribir = me?.rol === "ADMIN" || me?.rol === "VENDEDOR";
 
-  const cargar = useCallback(async () => {
+  // UNA llamada trae lo que se ve de entrada (cliente, resumen, suscripciones + facturación).
+  // Con cache en memoria (stale-while-revalidate): si viene del prefetch de la lista se usa
+  // tal cual (maxEdad 15 s); si no, se muestra lo guardado y se refresca atrás.
+  // `fresco` = después de guardar algo. Ya NO avisa onCambio: la lista solo se recarga al
+  // cerrar si de verdad cambió algo (ver `cambio`).
+  const vigente = useRef<AbortController | null>(null);
+  const cargar = useCallback(async (fresco = true) => {
+    vigente.current?.abort();
+    const ctrl = new AbortController();
+    vigente.current = ctrl;
     try {
-      const d = await apiFetch<Detalle>(`/api/clientes/${id}`);
-      setData(d);
-      onCambio?.();
-      setRecargaHist((k) => k + 1);
+      await apiFetchSWR<Detalle & { suscripciones?: SuscripcionCliente[] }>(urlFicha(id), (d) => {
+        setData(d);
+        setSubs(d.suscripciones ?? []);
+        setSubsError(null);
+        setSubsCargando(false);
+        setLoading(false);
+      }, { fresco, maxEdadMs: fresco ? 0 : 15_000, signal: ctrl.signal });
     } catch (e) {
+      if (ctrl.signal.aborted) return;
       setError((e as Error).message);
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-  useEffect(() => { void cargar(); }, [cargar]);
-
-  const cargarSubs = useCallback(async () => {
-    setSubsCargando(true);
-    try {
-      setSubs(await apiFetch<SuscripcionCliente[]>(`/api/clientes/${id}/facturacion`));
-      setSubsError(null);
-    } catch (e) {
       setSubsError((e as Error).message);
-    } finally {
       setSubsCargando(false);
+    } finally {
+      if (!ctrl.signal.aborted) setLoading(false);
     }
   }, [id]);
-  useEffect(() => { void cargarSubs(); }, [cargarSubs]);
+  useEffect(() => { void cargar(false); }, [cargar]);
+
+  /** Se guardó algo: la ficha se recarga (fresca), la Actividad también y la lista sabrá que debe refrescar al cerrar. */
+  const cambio = useCallback(async () => {
+    onCambio?.();
+    setRecargaHist((k) => k + 1);
+    await cargar(true);
+  }, [cargar, onCambio]);
 
   useEffect(() => {
     if (!aviso) return;
@@ -101,7 +115,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
   async function suscripcionesCambiaron(mensaje?: string) {
     if (mensaje) setAviso(mensaje);
     setRecargaCuenta((k) => k + 1);
-    await Promise.all([cargarSubs(), cargar()]);
+    await cambio();
   }
 
   async function cambiarActivo(activo: boolean) {
@@ -109,7 +123,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
     setError(null);
     try {
       await apiFetch(`/api/clientes/${id}`, { method: "PATCH", body: JSON.stringify({ activo }) });
-      await cargar();
+      await cambio();
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -278,14 +292,14 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
         <div className="relative min-h-[220px]">
           <div className="p-6">
             {tab === "informacion" ? (
-              <TabInformacion cliente={c} esAdmin={esAdmin} onGuardado={() => void cargar()} />
+              <TabInformacion cliente={c} esAdmin={esAdmin} onGuardado={() => void cambio()} />
             ) : null}
             {tab === "estado_cuenta" ? (
               <TabEstadoCuenta clienteId={c.id} ventas={data.ventas} recarga={recargaCuenta} esAdmin={esAdmin}
                 onRegistrarPago={(cxc) => setTransfiriendo(cxc ?? "")}
                 onCobroCaja={() => setCobrando("")}
                 onFacturaContado={() => setFacturaContado(true)}
-                onCambio={() => { void cargar(); void cargarSubs(); }} />
+                onCambio={() => void cambio()} />
             ) : null}
             {tab === "suscripciones" ? (
               <TabSuscripciones clienteNombre={c.razon_social || c.nombre} suscripciones={subs} cargando={subsCargando} error={subsError}
@@ -300,16 +314,16 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
       {transfiriendo !== null ? (
         <RegistrarTransferencia clienteInicial={{ id: c.id, nombre: c.razon_social || c.nombre, cxcId: transfiriendo || null }}
           onClose={() => setTransfiriendo(null)}
-          onHecho={(m) => { setTransfiriendo(null); setAviso(m); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); void cargar(); }} />
+          onHecho={(m) => { setTransfiriendo(null); setAviso(m); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); void cambio(); }} />
       ) : null}
       {facturaContado ? (
         <FacturaContadoModal clienteId={c.id} clienteNombre={c.razon_social || c.nombre} moneda={c.moneda_preferida === "USD" ? "USD" : "GS"}
           onClose={() => setFacturaContado(false)}
-          onEmitida={(m) => { setFacturaContado(false); setAviso(m); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); void cargar(); }} />
+          onEmitida={(m) => { setFacturaContado(false); setAviso(m); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); void cambio(); }} />
       ) : null}
       {cobrando !== null ? (
         <RegistrarCobro clienteId={c.id} clienteNombre={c.razon_social || c.nombre} cxcInicial={cobrando || null} onClose={() => setCobrando(null)}
-          onHecho={() => { void cargar(); void cargarSubs(); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); }} />
+          onHecho={() => { void cambio(); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); }} />
       ) : null}
       {nuevaSusc ? (
         <ModalNuevaSuscripcion clienteId={c.id} suscripciones={subs} esAdmin={esAdmin} onClose={() => setNuevaSusc(false)}
