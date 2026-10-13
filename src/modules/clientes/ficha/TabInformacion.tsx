@@ -235,15 +235,6 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
           <Dato label="RUC para factura" mono>{cliente.ruc}</Dato>
         </Tarjeta>
 
-        <Tarjeta titulo="Contacto" icono={Phone}>
-          <Dato label="Teléfono">{cliente.telefono ? <a href={`tel:${cliente.telefono.replace(/\s+/g, "")}`} className="hover:text-[var(--brand)] hover:underline">{cliente.telefono}</a> : null}</Dato>
-          <Dato label="Teléfono secundario">{cliente.telefono_secundario}</Dato>
-          <Dato label="Email">{cliente.email ? <a href={`mailto:${cliente.email}`} className="break-all hover:text-[var(--brand)] hover:underline">{cliente.email}</a> : null}</Dato>
-          <Dato label="Email secundario">{cliente.email_secundario}</Dato>
-          <Dato label="Dirección" ancho>{[cliente.direccion, cliente.ciudad, cliente.pais].filter(Boolean).join(", ") || null}</Dato>
-          {sifen ? <Dato label="SIFEN del receptor" ancho>{sifen}</Dato> : null}
-        </Tarjeta>
-
         <Tarjeta titulo="Datos comerciales" icono={Briefcase}>
           <Dato label="Condición de pago">{credito ? `Crédito · ${cliente.plazo_dias ?? 30} días` : "Contado"}</Dato>
           {credito ? <Dato label="Límite de crédito">{Number(cliente.limite_credito ?? 0) > 0 ? `Gs. ${Number(cliente.limite_credito).toLocaleString("es-PY")}` : "Sin límite"}</Dato> : null}
@@ -256,6 +247,15 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
               {cliente.activo !== false ? "Activo" : "Inactivo"}
             </span>
           </Dato>
+        </Tarjeta>
+
+        <Tarjeta titulo="Contacto" icono={Phone} ancho>
+          <Dato label="Teléfono">{cliente.telefono ? <a href={`tel:${cliente.telefono.replace(/\s+/g, "")}`} className="hover:text-[var(--brand)] hover:underline">{cliente.telefono}</a> : null}</Dato>
+          <Dato label="Teléfono secundario">{cliente.telefono_secundario}</Dato>
+          <Dato label="Email">{cliente.email ? <a href={`mailto:${cliente.email}`} className="break-all hover:text-[var(--brand)] hover:underline">{cliente.email}</a> : null}</Dato>
+          <Dato label="Email secundario">{cliente.email_secundario}</Dato>
+          <Dato label="Dirección" ancho>{[cliente.direccion, cliente.ciudad, cliente.pais].filter(Boolean).join(", ") || null}</Dato>
+          {sifen ? <Dato label="SIFEN del receptor" ancho>{sifen}</Dato> : null}
         </Tarjeta>
 
       </div>
@@ -479,14 +479,14 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
   );
 }
 
-function Tarjeta({ titulo, icono: Icono, children }: { titulo: string; icono: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+function Tarjeta({ titulo, icono: Icono, children, ancho = false }: { titulo: string; icono: React.ComponentType<{ className?: string }>; children: React.ReactNode; ancho?: boolean }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+    <section className={`rounded-2xl border border-slate-200 bg-white shadow-sm ${ancho ? "lg:col-span-2" : ""}`}>
       <div className="flex items-center gap-2.5 border-b border-slate-100 px-5 py-3.5">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#4FAEB2]/12 text-[#3F8E91]"><Icono className="h-3.5 w-3.5" /></span>
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">{titulo}</h3>
       </div>
-      <dl className="grid grid-cols-1 gap-x-6 gap-y-3.5 px-5 py-4 sm:grid-cols-2">{children}</dl>
+      <dl className={`grid grid-cols-1 gap-x-6 gap-y-3.5 px-5 py-4 sm:grid-cols-2 ${ancho ? "lg:grid-cols-4" : ""}`}>{children}</dl>
     </section>
   );
 }
