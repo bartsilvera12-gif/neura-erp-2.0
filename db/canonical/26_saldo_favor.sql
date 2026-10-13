@@ -88,7 +88,14 @@ begin
     if v_total > v_deuda then raise exception 'Con saldo a favor solo se puede pagar hasta la deuda'; end if;
   end if;
 
-  select id into v_caja from cajas where empresa_id = v_empresa and estado = 'abierta' order by fecha_apertura desc limit 1;
+  -- sin_caja: el cobro NO pasa por la caja (transferencia aprobada en Conciliación bancaria:
+  -- la plata entró al banco, no a la caja del día). Con efectivo no se permite.
+  if coalesce((p->>'sin_caja')::boolean, false) then
+    if v_hay_efectivo then raise exception 'Un cobro en efectivo siempre entra a la caja'; end if;
+    v_caja := null;
+  else
+    select id into v_caja from cajas where empresa_id = v_empresa and estado = 'abierta' order by fecha_apertura desc limit 1;
+  end if;
   if v_hay_efectivo and v_caja is null then
     raise exception 'Para cobrar en efectivo abrí la caja primero (el efectivo entra a la caja)';
   end if;

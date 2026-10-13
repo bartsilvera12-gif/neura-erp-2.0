@@ -13,7 +13,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, CalendarClock, Check, Info, Ticket, Volume2, VolumeX } from "lucide-react";
+import { Banknote, Bell, CalendarClock, Check, Info, Ticket, Volume2, VolumeX } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { browserClient } from "@/lib/supabase/browser";
 import { fechaRelativa } from "@/modules/tipificacion/dominio";
@@ -46,10 +46,15 @@ const POLL_MS = 20_000;
 const ESTILO: Record<string, { icon: typeof Bell; wrap: string; label: string }> = {
   soporte: { icon: Ticket, wrap: "bg-orange-50 text-orange-600", label: "Soporte" },
   agenda: { icon: CalendarClock, wrap: "bg-teal-50 text-teal-700", label: "Agenda" },
+  cobranza: { icon: Banknote, wrap: "bg-emerald-50 text-emerald-700", label: "Cobranzas" },
   general: { icon: Info, wrap: "bg-sky-50 text-sky-600", label: "Aviso" },
 };
 const estiloDe = (n: Notificacion) =>
-  n.bandeja === "soporte" || n.tipo.startsWith("soporte") ? ESTILO.soporte : n.tipo.startsWith("agenda") ? ESTILO.agenda : ESTILO.general;
+  n.bandeja === "soporte" || n.tipo.startsWith("soporte") ? ESTILO.soporte
+    : n.tipo.startsWith("agenda") ? ESTILO.agenda
+    // cobro_pendiente: transferencia por aprobar (click → /cobranzas/conciliacion?cobro=…)
+    : n.tipo.startsWith("cobro") ? ESTILO.cobranza
+    : ESTILO.general;
 
 export function NotificacionesBell() {
   const [abierto, setAbierto] = useState(false);
