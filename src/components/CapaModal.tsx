@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 /**
@@ -30,12 +30,17 @@ export function CapaModal({
   cerrarConEscape?: boolean;
 }) {
   const [montado, setMontado] = useState(false);
+  const capa = useRef<HTMLDivElement>(null);
   useEffect(() => setMontado(true), []);
 
   useEffect(() => {
     if (!montado) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && cerrarConEscape && onClose) onClose();
+      if (e.key !== "Escape" || !cerrarConEscape || !onClose) return;
+      // Con modales apilados (ej. un modal dentro de la ficha), Escape cierra solo el de arriba.
+      const capas = document.querySelectorAll("[data-capa-modal]");
+      if (capas.length && capas[capas.length - 1] !== capa.current) return;
+      onClose();
     };
     window.addEventListener("keydown", onKey);
     const body = document.body;
@@ -57,6 +62,8 @@ export function CapaModal({
   };
   return createPortal(
     <div
+      ref={capa}
+      data-capa-modal=""
       className={`fixed inset-0 ${z} overflow-y-auto overscroll-contain ${fondo}`}
       style={{ animation: "modal-backdrop 0.15s ease-out" }}
       onMouseDown={afuera}

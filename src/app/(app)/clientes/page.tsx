@@ -18,6 +18,7 @@ import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { Select } from "@/components/Select";
 import { ClienteForm } from "@/modules/clientes/ClienteForm";
+import { FichaClienteModal } from "@/modules/clientes/ficha/FichaClienteModal";
 import type { Categoria } from "@/modules/clientes/esquema";
 import {
   Avatar, BadgeEstado, BadgeOrigen, CategoriaChip, CodigoChip, TEAL, codigoCliente, estadoDe, fechaCorta, gs,
@@ -57,7 +58,7 @@ const COLUMNAS: Col[] = [
       <div className="flex min-w-56 items-center gap-2.5">
         <Avatar nombre={c.nombre} />
         <div className="min-w-0">
-          <Link href={`/clientes/${c.id}`} onClick={(e) => e.stopPropagation()} className="block truncate text-sm font-semibold text-slate-900 group-hover:text-slate-950">
+          <Link href={`/clientes/${c.id}`} onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) { e.stopPropagation(); return; } e.preventDefault(); }} className="block truncate text-sm font-semibold text-slate-900 group-hover:text-slate-950">
             {c.nombre}
           </Link>
           {c.tipo_cliente === "empresa" && (c.ruc || c.documento) ? (
@@ -131,6 +132,9 @@ export default function ClientesPage() {
   const [deuda, setDeuda] = useState("");
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [nuevo, setNuevo] = useState(false);
+  const [ficha, setFicha] = useState<string | null>(null);
+  const [recarga, setRecarga] = useState(0);
+  const cambioEnFicha = useRef(false);
   const [exportando, setExportando] = useState(false);
   const [bajaOk, setBajaOk] = useState(false);
   const [colsOpen, setColsOpen] = useState(false);
@@ -181,6 +185,22 @@ export default function ClientesPage() {
     return () => { document.removeEventListener("mousedown", fuera); document.removeEventListener("keydown", esc); };
   }, [colsOpen]);
 
+  // La ficha se abre en un modal sobre la lista (como el sistema actual); ?cliente=<id> la reabre.
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("cliente");
+    if (id) setFicha(id);
+  }, []);
+  function abrirFicha(id: string) {
+    cambioEnFicha.current = false;
+    setFicha(id);
+    window.history.replaceState({}, "", `/clientes?cliente=${encodeURIComponent(id)}`);
+  }
+  function cerrarFicha() {
+    setFicha(null);
+    window.history.replaceState({}, "", "/clientes");
+    if (cambioEnFicha.current) setRecarga((k) => k + 1);
+  }
+
   // Aviso después de dar de baja desde la ficha.
   useEffect(() => {
     if (new URLSearchParams(window.location.search).get("baja_ok") !== "1") return;
@@ -213,7 +233,7 @@ export default function ClientesPage() {
       .catch(() => { if (!cancel) { setRows([]); setTotal(0); } })
       .finally(() => { if (!cancel) setCargando(false); });
     return () => { cancel = true; };
-  }, [filtros, pagina]);
+  }, [filtros, pagina, recarga]);
 
   const hayFiltros = !!(q || borrador || estado !== "activos" || tipo || origen || categoria || deuda);
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
@@ -397,7 +417,7 @@ export default function ClientesPage() {
               </thead>
               <tbody className={`divide-y divide-slate-100 ${cargando ? "opacity-60" : ""}`}>
                 {rows.map((c) => (
-                  <tr key={c.id} onClick={() => router.push(`/clientes/${c.id}`)} className="group cursor-pointer transition-colors hover:bg-[var(--brand-50)]">
+                  <tr key={c.id} onClick={() => abrirFicha(c.id)} className="group cursor-pointer transition-colors hover:bg-[var(--brand-50)]">
                     {columnas.map((col) => <td key={col.key} className={col.td}>{col.render(c)}</td>)}
                   </tr>
                 ))}
@@ -416,7 +436,8 @@ export default function ClientesPage() {
         ) : null}
       </div>
 
-      {nuevo ? <ClienteForm onClose={() => setNuevo(false)} onSaved={(id) => { setNuevo(false); if (id) router.push(`/clientes/${id}`); }} /> : null}
+      {nuevo ? <ClienteForm onClose={() => setNuevo(false)} onSaved={(id) => { setNuevo(false); setRecarga((k) => k + 1); if (id) abrirFicha(id); }} /> : null}
+      {ficha ? <FichaClienteModal id={ficha} onCerrar={cerrarFicha} onCambio={() => { cambioEnFicha.current = true; }} /> : null}
     </div>
   );
 }
