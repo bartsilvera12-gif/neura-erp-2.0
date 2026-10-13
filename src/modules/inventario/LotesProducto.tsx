@@ -6,9 +6,11 @@
  * acción "Dar de baja" (vencido, roto…) que saca las unidades de ESE lote y queda en el
  * kardex. Abajo, si el stock no coincide con los lotes, se muestra lo que está sin lote.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, PackageX } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { useListaCacheada } from "@/modules/inventario/lista-cache";
+import { urlLotes } from "@/modules/inventario/ficha-cache";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { Select } from "@/components/Select";
 import { parseNumero } from "@/lib/imports/consolidacion-productos";
@@ -33,22 +35,23 @@ export function LotesProducto({
   /** después de una baja: el stock nuevo del producto */
   onStockCambiado?: (stock: number) => void;
 }) {
-  const [datos, setDatos] = useState<LotesDeProducto | null>(null);
-  const [error, setError] = useState(false);
   const [baja, setBaja] = useState<LoteProducto | null>(null);
   const [alerta, setAlerta] = useState(30);
+  // Cacheado (y precargado al pasar el mouse por "editar"); después de una baja se pide
+  // de nuevo (recarga) y se avisa el stock nuevo cuando llega.
+  const [recarga, setRecarga] = useState(0);
+  const avisarStock = useRef(false);
+  const lista = useListaCacheada<LotesDeProducto>(urlLotes(productoId), recarga);
+  // Al recargar después de una baja la tabla queda visible hasta que llegan los datos nuevos.
+  const datos = lista.cargando && recarga === 0 ? null : lista.datos;
+  const error = lista.error;
 
-  const cargar = useCallback(() => {
-    setError(false);
-    return apiFetch<LotesDeProducto>(`/api/productos/${productoId}/lotes`)
-      .then((d) => { setDatos(d); return d; })
-      .catch(() => { setError(true); return null; });
-  }, [productoId]);
-
+  useEffect(() => setAlerta(diasAlerta()), []);
   useEffect(() => {
-    setAlerta(diasAlerta());
-    void cargar();
-  }, [cargar]);
+    if (!avisarStock.current || lista.cargando) return;
+    avisarStock.current = false;
+    if (lista.datos && !lista.error) onStockCambiado?.(Number(lista.datos.stock_actual));
+  }, [lista.datos, lista.cargando, lista.error, onStockCambiado]);
 
   if (error) return <p className="text-xs text-rose-600">No se pudieron cargar los lotes.</p>;
   if (!datos) return <p className="flex items-center gap-2 text-xs text-slate-400"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando lotes…</p>;
@@ -116,10 +119,10 @@ export function LotesProducto({
           lote={baja}
           unidad={u}
           onClose={() => setBaja(null)}
-          onHecho={async () => {
+          onHecho={() => {
             setBaja(null);
-            const d = await cargar();
-            if (d) onStockCambiado?.(Number(d.stock_actual));
+            avisarStock.current = true;
+            setRecarga((k) => k + 1);
           }}
         />
       ) : null}

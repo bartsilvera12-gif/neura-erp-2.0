@@ -7,19 +7,23 @@
  * UN producto (?producto=<id>, enlace desde el panel del producto).
  */
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownToLine, ArrowLeft, ArrowUpFromLine, Calendar, ChevronLeft, ChevronRight,
   Download, History, Loader2, Package, Plus, Search, X,
 } from "lucide-react";
-import { apiFetch } from "@/lib/api/client-fetch";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
-import { NuevoMovimiento } from "@/modules/inventario/NuevoMovimiento";
+import { invalidarLista, precargarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { ORIGEN_LABEL, type Movimiento, type OrigenMovimiento, type TipoMovimiento } from "@/modules/inventario/kardex";
+
+// El panel "Nuevo movimiento" se baja recién al usarlo (se precarga al pasar el mouse).
+const cargarNuevoMovimiento = () => import("@/modules/inventario/NuevoMovimiento");
+const NuevoMovimiento = dynamic(() => cargarNuevoMovimiento().then((m) => m.NuevoMovimiento), { ssr: false });
 
 const TEAL = clienteConfig.color;
 const TZ = "America/Asuncion";
@@ -45,6 +49,7 @@ const fecha = (iso: string) =>
   new Date(iso).toLocaleString("es-PY", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(",", " ·");
 
 type ProductoFiltro = { id: string; nombre: string; sku: string; stock_actual: number; unidad_medida: string };
+type PaginaMov = { rows: Movimiento[]; total: number; producto: ProductoFiltro | null };
 
 export default function MovimientosPage() {
   return (
@@ -58,10 +63,6 @@ function Movimientos() {
   const router = useRouter();
   const productoId = useSearchParams().get("producto") ?? "";
 
-  const [items, setItems] = useState<Movimiento[]>([]);
-  const [total, setTotal] = useState(0);
-  const [producto, setProducto] = useState<ProductoFiltro | null>(null);
-  const [cargando, setCargando] = useState(true);
   const [exportando, setExportando] = useState(false);
   const esAdmin = useUsuario()?.rol === "ADMIN";
   const [nuevo, setNuevo] = useState(false);
@@ -73,14 +74,14 @@ function Movimientos() {
   const [origen, setOrigen] = useState("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
-  const [pagina, setPagina] = useState(1);
 
+  // Debounce de la búsqueda; no dispara si el texto no cambió (al montar).
   useEffect(() => {
-    const t = setTimeout(() => setQ(busqueda.trim()), 350);
+    const texto = busqueda.trim();
+    if (texto === q) return;
+    const t = setTimeout(() => setQ(texto), 350);
     return () => clearTimeout(t);
-  }, [busqueda]);
-
-  useEffect(() => { setPagina(1); }, [q, tipo, origen, desde, hasta, productoId]);
+  }, [busqueda, q]);
 
   const filtros = useMemo(() => {
     const sp = new URLSearchParams();
@@ -93,22 +94,79 @@ function Movimientos() {
     return sp;
   }, [q, tipo, origen, desde, hasta, productoId]);
 
-  useEffect(() => {
-    let cancel = false;
-    setCargando(true);
+  // La página vuelve a 1 al cambiar un filtro SIN un render (y un request) intermedio con
+  // la página vieja: la página guardada vale solo para los filtros con que se eligió.
+  const claveFiltros = filtros.toString();
+  const [pag, setPag] = useState({ de: claveFiltros, n: 1 });
+  const pagina = pag.de === claveFiltros ? pag.n : 1;
+  const setPagina = (f: number | ((p: number) => number)) =>
+    setPag((x) => {
+      const actual = x.de === claveFiltros ? x.n : 1;
+      return { de: claveFiltros, n: typeof f === "function" ? f(actual) : f };
+    });
+
+  const urlDe = (n: number) => {
     const sp = new URLSearchParams(filtros);
-    sp.set("pagina", String(pagina));
+    sp.set("pagina", String(n));
     sp.set("por_pagina", String(POR_PAGINA));
-    apiFetch<{ rows: Movimiento[]; total: number; producto: ProductoFiltro | null }>(`/api/inventario/movimientos?${sp}`)
-      .then((r) => { if (!cancel) { setItems(r.rows); setTotal(r.total); setProducto(r.producto); } })
-      .catch(() => { if (!cancel) { setItems([]); setTotal(0); } })
-      .finally(() => { if (!cancel) setCargando(false); });
-    return () => { cancel = true; };
-  }, [filtros, pagina, recarga]);
+    return `/api/inventario/movimientos?${sp}`;
+  };
+  // Un request por filtros + página, cacheado; mientras llega uno nuevo quedan las filas.
+  const lista = useListaCacheada<PaginaMov>(urlDe(pagina), recarga);
+  const { cargando } = lista;
+  const items = useMemo(() => (lista.error ? [] : lista.datos?.rows ?? []), [lista.datos, lista.error]);
+  const total = lista.error ? 0 : lista.datos?.total ?? 0;
+  const producto = lista.datos?.producto ?? null;
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+  // Página siguiente precargada: "Siguiente" se siente instantáneo.
+  const urlSiguiente = !cargando && !lista.error && pagina < totalPaginas ? urlDe(pagina + 1) : null;
+  useEffect(() => {
+    if (!urlSiguiente) return;
+    const t = setTimeout(() => precargarLista(urlSiguiente), 300);
+    return () => clearTimeout(t);
+  }, [urlSiguiente]);
   const de = total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
   const a = Math.min(pagina * POR_PAGINA, total);
+  // Filas memorizadas: escribir en el buscador no re-renderiza la tabla en cada tecla.
+  const filas = useMemo(() => (
+    items.map((m) => {
+      const Icono = TIPO_ICONO[m.tipo] ?? ArrowDownToLine;
+      const entrada = m.tipo === "ENTRADA";
+      return (
+        <tr key={m.id} className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
+          <td className="px-5 py-3">
+            <Link href={`/inventario/movimientos?producto=${m.producto_id}`} className="font-semibold text-slate-800 hover:text-[var(--brand)] hover:underline" title="Ver el historial de este producto">
+              {m.producto_nombre ?? "—"}
+            </Link>
+          </td>
+          <td className="px-3 py-3 font-mono text-xs text-slate-500">{m.producto_sku}</td>
+          <td className="px-3 py-3">
+            <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold ${TIPO_BADGE[m.tipo]}`}>
+              <Icono className="h-3 w-3" strokeWidth={2.5} /> {m.tipo}
+            </span>
+          </td>
+          <td className={`px-3 py-3 text-right font-bold tabular-nums ${entrada ? "text-emerald-700" : "text-red-600"}`}>
+            {entrada ? "+" : "−"}{cantidad(Math.abs(m.cantidad))}
+          </td>
+          <td className="whitespace-nowrap px-3 py-3 text-right text-xs tabular-nums text-slate-700">{gs(m.costo_unitario)}</td>
+          <td className="px-3 py-3">
+            <span className={`inline-flex whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-semibold ${ORIGEN_BADGE[m.origen] ?? ORIGEN_BADGE.ajuste_manual}`}>
+              {ORIGEN_LABEL[m.origen] ?? m.origen}
+            </span>
+          </td>
+          <td className="max-w-[220px] px-3 py-3 text-xs text-slate-500" title={[m.referencia, m.proveedor, m.numero_factura && `Fact. ${m.numero_factura}`].filter(Boolean).join(" · ")}>
+            <span className="block truncate">{m.referencia ?? "—"}</span>
+            {m.proveedor || m.numero_factura ? (
+              <span className="block truncate text-[11px] text-slate-400">{[m.proveedor, m.numero_factura && `Fact. ${m.numero_factura}`].filter(Boolean).join(" · ")}</span>
+            ) : null}
+          </td>
+          <td className="px-3 py-3 text-xs text-slate-600">{m.usuario_nombre ?? <span className="text-slate-300">—</span>}</td>
+          <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-slate-500">{fecha(m.fecha)}</td>
+        </tr>
+      );
+    })
+  ), [items, cargando]);
   const hayFiltros = !!(busqueda || tipo || origen || desde || hasta || productoId);
 
   function limpiar() {
@@ -147,7 +205,7 @@ function Movimientos() {
         </div>
         <div className="flex items-center gap-2">
           {esAdmin ? (
-            <button onClick={() => setNuevo(true)} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-bold text-white shadow-sm transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
+            <button onClick={() => setNuevo(true)} onMouseEnter={() => void cargarNuevoMovimiento()} onFocus={() => void cargarNuevoMovimiento()} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-bold text-white shadow-sm transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
               <Plus className="h-4 w-4" strokeWidth={2.5} /> Nuevo movimiento
             </button>
           ) : null}
@@ -273,42 +331,7 @@ function Movimientos() {
                   </td>
                 </tr>
               ) : (
-                items.map((m) => {
-                  const Icono = TIPO_ICONO[m.tipo] ?? ArrowDownToLine;
-                  const entrada = m.tipo === "ENTRADA";
-                  return (
-                    <tr key={m.id} className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
-                      <td className="px-5 py-3">
-                        <Link href={`/inventario/movimientos?producto=${m.producto_id}`} className="font-semibold text-slate-800 hover:text-[var(--brand)] hover:underline" title="Ver el historial de este producto">
-                          {m.producto_nombre ?? "—"}
-                        </Link>
-                      </td>
-                      <td className="px-3 py-3 font-mono text-xs text-slate-500">{m.producto_sku}</td>
-                      <td className="px-3 py-3">
-                        <span className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold ${TIPO_BADGE[m.tipo]}`}>
-                          <Icono className="h-3 w-3" strokeWidth={2.5} /> {m.tipo}
-                        </span>
-                      </td>
-                      <td className={`px-3 py-3 text-right font-bold tabular-nums ${entrada ? "text-emerald-700" : "text-red-600"}`}>
-                        {entrada ? "+" : "−"}{cantidad(Math.abs(m.cantidad))}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right text-xs tabular-nums text-slate-700">{gs(m.costo_unitario)}</td>
-                      <td className="px-3 py-3">
-                        <span className={`inline-flex whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-semibold ${ORIGEN_BADGE[m.origen] ?? ORIGEN_BADGE.ajuste_manual}`}>
-                          {ORIGEN_LABEL[m.origen] ?? m.origen}
-                        </span>
-                      </td>
-                      <td className="max-w-[220px] px-3 py-3 text-xs text-slate-500" title={[m.referencia, m.proveedor, m.numero_factura && `Fact. ${m.numero_factura}`].filter(Boolean).join(" · ")}>
-                        <span className="block truncate">{m.referencia ?? "—"}</span>
-                        {m.proveedor || m.numero_factura ? (
-                          <span className="block truncate text-[11px] text-slate-400">{[m.proveedor, m.numero_factura && `Fact. ${m.numero_factura}`].filter(Boolean).join(" · ")}</span>
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-3 text-xs text-slate-600">{m.usuario_nombre ?? <span className="text-slate-300">—</span>}</td>
-                      <td className="whitespace-nowrap px-3 py-3 text-xs tabular-nums text-slate-500">{fecha(m.fecha)}</td>
-                    </tr>
-                  );
-                })
+                filas
               )}
             </tbody>
           </table>
@@ -338,7 +361,14 @@ function Movimientos() {
         <NuevoMovimiento
           productoInicial={productoId || undefined}
           onClose={() => setNuevo(false)}
-          onGuardado={() => { setNuevo(false); setPagina(1); setRecarga((k) => k + 1); }}
+          onGuardado={() => {
+            setNuevo(false);
+            setPagina(1);
+            // El movimiento cambia el stock (lista de productos) y puede crear lotes.
+            invalidarLista("/api/productos");
+            invalidarLista("/api/inventario/vencimientos");
+            setRecarga((k) => k + 1);
+          }}
         />
       ) : null}
     </div>

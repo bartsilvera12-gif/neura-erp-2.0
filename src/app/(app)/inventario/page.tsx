@@ -7,7 +7,8 @@
  * Crear y editar siguen en el panel lateral del 2.0 (el listado queda visible atrás).
  */
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import {
   ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, Eye, EyeOff, Loader2,
@@ -19,13 +20,33 @@ import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
-import { ProductoForm } from "@/modules/inventario/ProductoForm";
-import { ExcelImportWizard } from "@/modules/inventario/ExcelImportWizard";
-import { colorCategoria, coloresPorCategoria, opcionesFiltroCategoria, partesCategoria, rutaCategoria, type Categoria } from "@/modules/inventario/categorias";
+import { colorCategoria, coloresPorCategoria, opcionesFiltroCategoria, partesCategoria, rutaCategoria, type Categoria, type ColorCategoria } from "@/modules/inventario/categorias";
+import { invalidarLista, precargarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
+import { precargarFichaProducto } from "@/modules/inventario/ficha-cache";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
+
+// El panel del producto y el asistente de Excel se bajan recién cuando se usan (la
+// pantalla carga menos JS); al pasar el mouse por "editar"/"nuevo" ya se precargan.
+const cargarProductoForm = () => import("@/modules/inventario/ProductoForm");
+const ProductoForm = dynamic(() => cargarProductoForm().then((m) => m.ProductoForm), { ssr: false });
+const ExcelImportWizard = dynamic(() => import("@/modules/inventario/ExcelImportWizard").then((m) => m.ExcelImportWizard), { ssr: false });
 
 const TEAL = clienteConfig.color;
 const POR_PAGINA = [25, 50, 100, 200] as const;
+type Pagina = { rows: ProductoInventario[]; total: number };
+
+/** URL de una página del listado (misma forma siempre: es la clave del cache). */
+function urlPagina(f: { pagina: number; porPagina: number; busqueda: string; categoriaId: string; verInactivos: boolean }) {
+  const sp = new URLSearchParams({ paginado: "1", pagina: String(f.pagina), por_pagina: String(f.porPagina) });
+  if (f.busqueda) sp.set("q", f.busqueda);
+  if (f.categoriaId) sp.set("categoria", f.categoriaId);
+  if (f.verInactivos) sp.set("inactivos", "1");
+  return `/api/productos?${sp}`;
+}
+
+// Categorías ya vistas en esta pestaña: al volver a Inventario las etiquetas de categoría
+// se pintan en el primer render (después se refrescan igual que antes).
+let categoriasVistas: Categoria[] = [];
 
 const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
 const margenVenta = (costo: number, precio: number) => (precio ? ((precio - costo) / precio) * 100 : 0);
@@ -34,10 +55,7 @@ const formatStock = (n: number) => Number(n).toLocaleString("es-PY", { maximumFr
 
 export default function InventarioPage() {
   const esAdmin = useUsuario()?.rol === "ADMIN";
-  const [productos, setProductos] = useState<ProductoInventario[]>([]);
-  const [total, setTotal] = useState(0);
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const [categorias, setCategorias] = useState<Categoria[]>(categoriasVistas);
   const [recarga, setRecarga] = useState(0);
 
   // Filtros / paginado
@@ -57,41 +75,55 @@ export default function InventarioPage() {
 
   // Categorías: frescas al entrar (otras pantallas, como la importación inicial, pueden
   // haber creado nuevas); en las recargas tras cada edición salen del cache compartido.
+  // Mientras tanto se pintan las últimas vistas (categoriasVistas).
   const primeraCarga = useRef(true);
   useEffect(() => {
     const fresco = primeraCarga.current;
     primeraCarga.current = false;
     apiFetchCache<{ categorias: Categoria[] }>("/api/inventario/categorias", { fresco })
-      .then((r) => setCategorias([...r.categorias].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"))))
+      .then((r) => {
+        categoriasVistas = [...r.categorias].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+        setCategorias(categoriasVistas);
+      })
       .catch(() => {});
   }, [recarga]);
 
-  // Debounce de la búsqueda (350 ms, como Ferretería).
+  // Debounce de la búsqueda (350 ms, como Ferretería). No dispara si el texto no cambió
+  // (al montar, o espacios de más): así no se pide dos veces lo mismo.
   useEffect(() => {
+    const texto = busquedaBorrador.trim();
+    if (texto === busqueda) return;
     const t = setTimeout(() => {
-      setBusqueda(busquedaBorrador.trim());
+      setBusqueda(texto);
       setPagina(1);
     }, 350);
     return () => clearTimeout(t);
-  }, [busquedaBorrador]);
+  }, [busquedaBorrador, busqueda]);
 
-  useEffect(() => {
-    let cancel = false;
-    setCargando(true);
-    const sp = new URLSearchParams({ paginado: "1", pagina: String(pagina), por_pagina: String(porPagina) });
-    if (busqueda) sp.set("q", busqueda);
-    if (categoriaId) sp.set("categoria", categoriaId);
-    if (verInactivos) sp.set("inactivos", "1");
-    apiFetch<{ rows: ProductoInventario[]; total: number }>(`/api/productos?${sp}`)
-      .then((r) => { if (!cancel) { setProductos(r.rows); setTotal(r.total); } })
-      .catch(() => { if (!cancel) { setProductos([]); setTotal(0); } })
-      .finally(() => { if (!cancel) setCargando(false); });
-    return () => { cancel = true; };
-  }, [pagina, porPagina, busqueda, categoriaId, verInactivos, recarga]);
+  // Un solo request por combinación de filtros + página, cacheado: volver a una página ya
+  // vista pinta al instante; mientras llega una nueva quedan las filas anteriores.
+  const filtros = { busqueda, categoriaId, verInactivos, porPagina };
+  const url = urlPagina({ ...filtros, pagina });
+  const { datos, cargando, error } = useListaCacheada<Pagina>(url, recarga);
+  const productos = useMemo(() => (error ? [] : datos?.rows ?? []), [datos, error]);
+  const total = error ? 0 : datos?.total ?? 0;
 
-  const refrescar = useCallback(() => setRecarga((k) => k + 1), []);
+  const refrescar = useCallback(() => {
+    // Editar un producto cambia también el kardex (ajuste de stock) y los lotes.
+    invalidarLista("/api/inventario/movimientos");
+    invalidarLista("/api/inventario/vencimientos");
+    setRecarga((k) => k + 1);
+  }, []);
 
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+
+  // Página siguiente precargada: "Siguiente" se siente instantáneo.
+  const urlSiguiente = !cargando && !error && pagina < totalPaginas ? urlPagina({ ...filtros, pagina: pagina + 1 }) : null;
+  useEffect(() => {
+    if (!urlSiguiente) return;
+    const t = setTimeout(() => precargarLista(urlSiguiente), 300);
+    return () => clearTimeout(t);
+  }, [urlSiguiente]);
   const paginaSegura = Math.min(pagina, totalPaginas);
   const desdeIdx = total === 0 ? 0 : (paginaSegura - 1) * porPagina + 1;
   const hastaIdx = Math.min(paginaSegura * porPagina, total);
@@ -99,8 +131,11 @@ export default function InventarioPage() {
   const colores = useMemo(() => coloresPorCategoria(categorias), [categorias]);
   const hayFiltros = !!busqueda || !!categoriaId;
 
-  async function toggleActivo(p: ProductoInventario) {
-    if (togglingId) return;
+  // Callbacks estables para las filas memorizadas (FilaProducto).
+  const toggleEnCurso = useRef(false);
+  const toggleActivo = useCallback(async (p: ProductoInventario) => {
+    if (toggleEnCurso.current) return;
+    toggleEnCurso.current = true;
     setTogglingId(p.id);
     try {
       await apiFetch(`/api/productos/${p.id}`, { method: "PATCH", body: JSON.stringify({ activo: p.activo === false }) });
@@ -108,9 +143,16 @@ export default function InventarioPage() {
     } catch {
       /* la fila queda igual; se puede reintentar */
     } finally {
+      toggleEnCurso.current = false;
       setTogglingId(null);
     }
-  }
+  }, [refrescar]);
+  const abrirForm = useCallback((p: ProductoInventario | null) => setForm({ open: true, prod: p }), []);
+  // Hover sobre "editar": se baja el JS del panel y se piden costos/lotes del producto.
+  const precargarFicha = useCallback((p: ProductoInventario) => {
+    void cargarProductoForm();
+    precargarFichaProducto(p);
+  }, []);
 
   async function exportar() {
     setExportando(true);
@@ -184,7 +226,7 @@ export default function InventarioPage() {
               </div>
             </div>
             <div className="ml-auto">
-              <button onClick={() => setForm({ open: true, prod: null })} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 active:scale-95" style={{ backgroundColor: TEAL }}>
+              <button onClick={() => abrirForm(null)} onMouseEnter={() => void cargarProductoForm()} onFocus={() => void cargarProductoForm()} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 active:scale-95" style={{ backgroundColor: TEAL }}>
                 <Plus className="h-3.5 w-3.5" /> Nuevo producto
               </button>
             </div>
@@ -262,85 +304,10 @@ export default function InventarioPage() {
                   </td>
                 </tr>
               ) : (
-                productos.map((p) => {
-                  const costo = Number(p.costo_promedio) || 0;
-                  // Misma regla que el reporte de Stock mínimo: mínimo cargado y stock por debajo.
-                  const stockBajo = Number(p.stock_minimo) > 0 && Number(p.stock_actual) < Number(p.stock_minimo);
-                  const margen = margenVenta(costo, Number(p.precio_venta));
-                  const sinControl = p.controla_stock === false;
-                  const { madre: catMadre, sub: catSub } = partesCategoria(p.categoria_principal_id, categoriaPorId);
-                  const inactivo = p.activo === false;
-                  return (
-                    <tr key={p.id} className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
-                            {p.imagen_url ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={p.imagen_url} alt="" className="h-full w-full object-cover" />
-                            ) : (
-                              p.nombre.charAt(0).toUpperCase()
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="truncate font-bold text-slate-900">
-                              {p.nombre}
-                              {inactivo ? <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-700">Inactivo</span> : null}
-                            </p>
-                            <p className="mt-0.5 font-mono text-[11px] text-slate-600 lg:hidden">{p.sku}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="hidden px-3 py-3 font-mono text-xs text-slate-600 lg:table-cell">{p.sku}</td>
-                      <td className="hidden px-3 py-3 text-xs text-slate-600 md:table-cell">
-                        {catMadre ? (
-                          (() => {
-                            const c = colores.get(catMadre.id) ?? colorCategoria(catMadre.nombre);
-                            const ruta = catSub ? `${catMadre.nombre} › ${catSub.nombre}` : catMadre.nombre;
-                            return (
-                              <span className="inline-flex max-w-full items-center gap-1.5 truncate whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)]" title={ruta}>
-                                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: c.dot, boxShadow: `0 0 0 3px ${c.bg}` }} />
-                                <span className="truncate">
-                                  {catMadre.nombre}
-                                  {catSub ? <span className="font-medium text-slate-500"> › {catSub.nombre}</span> : null}
-                                </span>
-                              </span>
-                            );
-                          })()
-                        ) : (
-                          <span className="text-slate-400">— Sin categoría</span>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-slate-700">{gs(costo)}</td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums text-slate-900">{gs(Number(p.precio_venta))}</td>
-                      <td className="px-3 py-3 text-center">
-                        {sinControl ? (
-                          <span className="text-xs font-medium text-slate-500">— sin control</span>
-                        ) : (
-                          <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums ${stockBajo ? "bg-red-50 text-red-700 ring-1 ring-red-100" : Number(p.stock_actual) > 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" : "bg-slate-50 text-slate-500 ring-1 ring-slate-200"}`}>
-                            {formatStock(Number(p.stock_actual))}
-                            <span className="text-[10px] font-normal opacity-80">{p.unidad_medida}</span>
-                          </span>
-                        )}
-                      </td>
-                      <td className={`hidden px-3 py-3 text-right font-semibold tabular-nums lg:table-cell ${margenColor(margen)}`}>{margen.toFixed(1)}%</td>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center justify-center gap-1">
-                          <button onClick={() => setForm({ open: true, prod: p })} title={inactivo ? "Ver producto (inactivo)" : "Editar producto"} aria-label={`${inactivo ? "Ver" : "Editar"} ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)]">
-                            {inactivo ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
-                          </button>
-                          <button onClick={() => toggleActivo(p)} disabled={togglingId === p.id} title={inactivo ? "Reactivar producto" : "Desactivar producto (reversible)"} aria-label={`${inactivo ? "Reactivar" : "Desactivar"} ${p.nombre}`}
-                            className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition disabled:opacity-40 ${inactivo ? "text-emerald-600 hover:bg-emerald-50" : "text-slate-500 hover:bg-amber-50 hover:text-amber-600"}`}>
-                            {togglingId === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : inactivo ? <RotateCcw className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                          </button>
-                          <button onClick={() => setEliminando(p)} title="Eliminar producto (permanente)" aria-label={`Eliminar ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-red-50 hover:text-red-600">
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
+                productos.map((p) => (
+                  <FilaProducto key={p.id} p={p} cargando={cargando} toggling={togglingId === p.id} categoriaPorId={categoriaPorId} colores={colores}
+                    onEditar={abrirForm} onToggle={toggleActivo} onEliminar={setEliminando} onPrecargar={precargarFicha} />
+                ))
               )}
             </tbody>
           </table>
@@ -398,6 +365,102 @@ export default function InventarioPage() {
     </div>
   );
 }
+
+/**
+ * Fila del listado, memorizada: escribir en el buscador (o abrir un modal) re-renderiza la
+ * pantalla pero no las filas que no cambiaron. Las acciones llegan como callbacks estables.
+ */
+const FilaProducto = memo(function FilaProducto({
+  p, cargando, toggling, categoriaPorId, colores, onEditar, onToggle, onEliminar, onPrecargar,
+}: {
+  p: ProductoInventario;
+  cargando: boolean;
+  toggling: boolean;
+  categoriaPorId: Map<string, Categoria>;
+  colores: Map<string, ColorCategoria>;
+  onEditar: (p: ProductoInventario) => void;
+  onToggle: (p: ProductoInventario) => void;
+  onEliminar: (p: ProductoInventario) => void;
+  onPrecargar: (p: ProductoInventario) => void;
+}) {
+  const costo = Number(p.costo_promedio) || 0;
+  // Misma regla que el reporte de Stock mínimo: mínimo cargado y stock por debajo.
+  const stockBajo = Number(p.stock_minimo) > 0 && Number(p.stock_actual) < Number(p.stock_minimo);
+  const margen = margenVenta(costo, Number(p.precio_venta));
+  const sinControl = p.controla_stock === false;
+  const { madre: catMadre, sub: catSub } = partesCategoria(p.categoria_principal_id, categoriaPorId);
+  const inactivo = p.activo === false;
+  return (
+    <tr className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
+      <td className="px-5 py-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
+            {p.imagen_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={p.imagen_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              p.nombre.charAt(0).toUpperCase()
+            )}
+          </div>
+          <div className="min-w-0">
+            <p className="truncate font-bold text-slate-900">
+              {p.nombre}
+              {inactivo ? <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-700">Inactivo</span> : null}
+            </p>
+            <p className="mt-0.5 font-mono text-[11px] text-slate-600 lg:hidden">{p.sku}</p>
+          </div>
+        </div>
+      </td>
+      <td className="hidden px-3 py-3 font-mono text-xs text-slate-600 lg:table-cell">{p.sku}</td>
+      <td className="hidden px-3 py-3 text-xs text-slate-600 md:table-cell">
+        {catMadre ? (
+          (() => {
+            const c = colores.get(catMadre.id) ?? colorCategoria(catMadre.nombre);
+            const ruta = catSub ? `${catMadre.nombre} › ${catSub.nombre}` : catMadre.nombre;
+            return (
+              <span className="inline-flex max-w-full items-center gap-1.5 truncate whitespace-nowrap rounded-md border border-slate-200/70 bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 shadow-[0_1px_2px_rgba(15,23,42,0.04)]" title={ruta}>
+                <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: c.dot, boxShadow: `0 0 0 3px ${c.bg}` }} />
+                <span className="truncate">
+                  {catMadre.nombre}
+                  {catSub ? <span className="font-medium text-slate-500"> › {catSub.nombre}</span> : null}
+                </span>
+              </span>
+            );
+          })()
+        ) : (
+          <span className="text-slate-400">— Sin categoría</span>
+        )}
+      </td>
+      <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-slate-700">{gs(costo)}</td>
+      <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums text-slate-900">{gs(Number(p.precio_venta))}</td>
+      <td className="px-3 py-3 text-center">
+        {sinControl ? (
+          <span className="text-xs font-medium text-slate-500">— sin control</span>
+        ) : (
+          <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums ${stockBajo ? "bg-red-50 text-red-700 ring-1 ring-red-100" : Number(p.stock_actual) > 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" : "bg-slate-50 text-slate-500 ring-1 ring-slate-200"}`}>
+            {formatStock(Number(p.stock_actual))}
+            <span className="text-[10px] font-normal opacity-80">{p.unidad_medida}</span>
+          </span>
+        )}
+      </td>
+      <td className={`hidden px-3 py-3 text-right font-semibold tabular-nums lg:table-cell ${margenColor(margen)}`}>{margen.toFixed(1)}%</td>
+      <td className="px-5 py-3">
+        <div className="flex items-center justify-center gap-1">
+          <button onClick={() => onEditar(p)} onMouseEnter={() => onPrecargar(p)} onFocus={() => onPrecargar(p)} title={inactivo ? "Ver producto (inactivo)" : "Editar producto"} aria-label={`${inactivo ? "Ver" : "Editar"} ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)]">
+            {inactivo ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />}
+          </button>
+          <button onClick={() => onToggle(p)} disabled={toggling} title={inactivo ? "Reactivar producto" : "Desactivar producto (reversible)"} aria-label={`${inactivo ? "Reactivar" : "Desactivar"} ${p.nombre}`}
+            className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition disabled:opacity-40 ${inactivo ? "text-emerald-600 hover:bg-emerald-50" : "text-slate-500 hover:bg-amber-50 hover:text-amber-600"}`}>
+            {toggling ? <Loader2 className="h-4 w-4 animate-spin" /> : inactivo ? <RotateCcw className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+          </button>
+          <button onClick={() => onEliminar(p)} title="Eliminar producto (permanente)" aria-label={`Eliminar ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-red-50 hover:text-red-600">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+});
 
 function BotonPag({ children, onClick, disabled, title }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; title?: string }) {
   return (

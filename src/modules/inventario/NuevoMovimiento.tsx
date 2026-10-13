@@ -86,15 +86,18 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
   useEffect(() => {
     if (prod) return;
     const q = busqueda.trim();
-    if (!q) { setResultados([]); return; }
+    if (!q) { setResultados([]); setBuscando(false); return; }
+    // AbortController: si se sigue escribiendo, la búsqueda anterior se cancela y su
+    // respuesta (que puede llegar después) no pisa los resultados nuevos.
+    const ctrl = new AbortController();
     const t = setTimeout(() => {
       setBuscando(true);
-      apiFetch<{ rows: Prod[] }>(`/api/productos?paginado=1&por_pagina=10&q=${encodeURIComponent(q)}`)
-        .then((r) => setResultados(r.rows))
-        .catch(() => setResultados([]))
-        .finally(() => setBuscando(false));
+      apiFetch<{ rows: Prod[] }>(`/api/productos?paginado=1&por_pagina=10&q=${encodeURIComponent(q)}`, { signal: ctrl.signal })
+        .then((r) => { if (!ctrl.signal.aborted) setResultados(r.rows); })
+        .catch(() => { if (!ctrl.signal.aborted) setResultados([]); })
+        .finally(() => { if (!ctrl.signal.aborted) setBuscando(false); });
     }, 250);
-    return () => clearTimeout(t);
+    return () => { clearTimeout(t); ctrl.abort(); };
   }, [busqueda, prod]);
 
   function elegir(p: Prod) {

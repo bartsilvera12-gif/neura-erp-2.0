@@ -4,6 +4,7 @@
  */
 import type { TenantDb } from "@/lib/api/tenant-db";
 import { condicionGrupo } from "@/lib/api/busqueda-servidor";
+import { UUID_RE as UUID, faltaFuncion } from "@/modules/inventario/server/ids";
 
 export const COLS_MOV =
   "id, producto_id, producto_nombre, producto_sku, tipo, cantidad, costo_unitario, origen, referencia, proveedor, numero_factura, usuario_nombre, fecha";
@@ -40,4 +41,34 @@ export function consultaMovimientos(db: TenantDb, f: FiltrosMov, opts?: { count?
   // Cada palabra (o una variante por error de tipeo) tiene que aparecer, en cualquier orden.
   for (const g of grupos) q = q.or(condicionGrupo(g));
   return q.order("fecha", { ascending: false }).order("id", { ascending: false });
+}
+
+/**
+ * Kardex en UNA llamada a la base (listar_movimientos, receta 47): la búsqueda inteligente
+ * (variantes por error de tipeo) se resuelve adentro, sin el viaje previo a
+ * variantes_busqueda; el conteo y el salto de página salen del índice. Mismas filas, mismo
+ * orden y mismo total que consultaMovimientos (verificado con 200k movimientos).
+ * Devuelve null si la receta no está aplicada en este schema (usar consultaMovimientos).
+ */
+export async function listarMovimientosRpc(
+  db: TenantDb,
+  f: FiltrosMov,
+  pag: { limit: number; offset: number; total?: boolean },
+): Promise<{ rows: unknown[]; total: number } | null> {
+  const { data, error } = await db.rpc<{ rows: unknown[] | null; total: number | null }>("listar_movimientos", {
+    p_q: f.q || null,
+    p_tipo: TIPOS_MOV.includes(f.tipo) ? f.tipo : null,
+    p_origen: ORIGENES_MOV.includes(f.origen) ? f.origen : null,
+    p_producto: UUID.test(f.producto) ? f.producto : null,
+    p_desde: RE_FECHA.test(f.desde) ? f.desde : null,
+    p_hasta: RE_FECHA.test(f.hasta) ? f.hasta : null,
+    p_limit: pag.limit,
+    p_offset: pag.offset,
+    p_total: pag.total ?? true,
+  });
+  if (error) {
+    if (faltaFuncion(error)) return null;
+    throw new Error("db");
+  }
+  return { rows: data?.rows ?? [], total: Number(data?.total) || 0 };
 }

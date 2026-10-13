@@ -6,7 +6,8 @@
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
-import { created, fail, ERR } from "@/lib/api/responses";
+import { UUID_RE, idInvalido } from "@/modules/inventario/server/ids";
+import { created, fail } from "@/lib/api/responses";
 
 const cuerpo = z.object({
   cantidad: z.coerce.number().positive("La cantidad tiene que ser mayor a 0").nullish(),
@@ -17,7 +18,7 @@ export const POST = withTenant(
   async (ctx, req, input) => {
     const segs = new URL(req.url).pathname.split("/").filter(Boolean);
     const id = segs[segs.indexOf("lotes") + 1];
-    if (!/^[0-9a-f-]{36}$/i.test(id ?? "")) return ERR.invalid("Falta el id del lote");
+    if (!UUID_RE.test(id ?? "")) return idInvalido("lote"); // 400 antes de ir a la base
     const { data, error } = await ctx.db.rpc("dar_baja_lote", {
       p_lote_id: id,
       p_cantidad: input.cantidad ?? null,

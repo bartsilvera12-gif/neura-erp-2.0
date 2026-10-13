@@ -10,7 +10,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CalendarClock, Download, Loader2, Search, X } from "lucide-react";
-import { apiFetch } from "@/lib/api/client-fetch";
+import { invalidarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
@@ -31,18 +31,18 @@ export default function VencimientosPage() {
   const [busqueda, setBusqueda] = useState("");
   const [q, setQ] = useState("");
   const [estado, setEstado] = useState("");
-  const [datos, setDatos] = useState<ReporteVencimientos | null>(null);
-  const [cargando, setCargando] = useState(true);
-  const [error, setError] = useState(false);
   const [exportando, setExportando] = useState(false);
   const [recarga, setRecarga] = useState(0);
   const [baja, setBaja] = useState<FilaVencimiento | null>(null);
 
   useEffect(() => setDias(diasAlerta()), []);
+  // Debounce de la búsqueda; no dispara si el texto no cambió (al montar).
   useEffect(() => {
-    const t = setTimeout(() => setQ(busqueda.trim()), 300);
+    const texto = busqueda.trim();
+    if (texto === q) return;
+    const t = setTimeout(() => setQ(texto), 300);
     return () => clearTimeout(t);
-  }, [busqueda]);
+  }, [busqueda, q]);
 
   const filtros = useMemo(() => {
     const sp = new URLSearchParams({ dias: String(dias ?? 30) });
@@ -51,17 +51,11 @@ export default function VencimientosPage() {
     return sp;
   }, [dias, q, estado]);
 
-  useEffect(() => {
-    if (dias == null) return;
-    let cancel = false;
-    setCargando(true);
-    setError(false);
-    apiFetch<ReporteVencimientos>(`/api/inventario/vencimientos?${filtros}`)
-      .then((r) => { if (!cancel) setDatos(r); })
-      .catch(() => { if (!cancel) setError(true); })
-      .finally(() => { if (!cancel) setCargando(false); });
-    return () => { cancel = true; };
-  }, [filtros, dias, recarga]);
+  // Un request por combinación de filtros, cacheado (volver a la pantalla pinta al
+  // instante y se refresca en segundo plano); mientras llega, queda la lista anterior.
+  const lista = useListaCacheada<ReporteVencimientos>(dias == null ? null : `/api/inventario/vencimientos?${filtros}`, recarga);
+  const { datos, error } = lista;
+  const cargando = lista.cargando || dias == null;
 
   function cambiarDias(v: string) {
     const n = Number(v);
@@ -81,8 +75,39 @@ export default function VencimientosPage() {
   }
 
   const t = datos?.totales;
-  const items = datos?.items ?? [];
+  const items = useMemo(() => datos?.items ?? [], [datos]);
   const sinLotes = datos && !datos.hay_productos_con_lotes;
+  // Filas memorizadas: con miles de lotes, escribir en el buscador no re-renderiza la tabla
+  // en cada tecla (solo cuando cambian los datos).
+  const filas = useMemo(() => (
+    items.map((f) => {
+      const vencido = f.estado === "vencido";
+      return (
+        <tr key={f.lote_id} className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
+          <td className="px-5 py-3">
+            <p className="font-semibold text-slate-900">{f.producto}</p>
+            <p className="font-mono text-[11px] text-slate-500">{f.sku}</p>
+          </td>
+          <td className="px-3 py-3 font-mono text-xs font-semibold text-slate-700">{f.numero}</td>
+          <td className="whitespace-nowrap px-3 py-3 text-slate-700">{fechaCorta(f.vencimiento)}</td>
+          <td className="whitespace-nowrap px-3 py-3">
+            <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${vencido ? "bg-rose-50 text-rose-700 ring-1 ring-rose-200" : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"}`}>
+              {vencido ? `Vencido ${textoDias(f.dias)}` : `Vence ${textoDias(f.dias)}`}
+            </span>
+          </td>
+          <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums text-slate-900">{cant(f.cantidad)} <span className="text-[10px] font-normal text-slate-400">{f.unidad_medida === "Unidad" ? "u." : f.unidad_medida}</span></td>
+          <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-slate-700">{gs(f.valor)}</td>
+          {esAdmin ? (
+            <td className="px-5 py-3 text-right">
+              <button onClick={() => setBaja(f)} className="whitespace-nowrap rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700">
+                Dar de baja
+              </button>
+            </td>
+          ) : null}
+        </tr>
+      );
+    })
+  ), [items, cargando, esAdmin]);
   const hayFiltros = !!(busqueda || estado);
   const input = "h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 
@@ -191,33 +216,7 @@ export default function VencimientosPage() {
                   </td>
                 </tr>
               ) : (
-                items.map((f) => {
-                  const vencido = f.estado === "vencido";
-                  return (
-                    <tr key={f.lote_id} className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
-                      <td className="px-5 py-3">
-                        <p className="font-semibold text-slate-900">{f.producto}</p>
-                        <p className="font-mono text-[11px] text-slate-500">{f.sku}</p>
-                      </td>
-                      <td className="px-3 py-3 font-mono text-xs font-semibold text-slate-700">{f.numero}</td>
-                      <td className="whitespace-nowrap px-3 py-3 text-slate-700">{fechaCorta(f.vencimiento)}</td>
-                      <td className="whitespace-nowrap px-3 py-3">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${vencido ? "bg-rose-50 text-rose-700 ring-1 ring-rose-200" : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"}`}>
-                          {vencido ? `Vencido ${textoDias(f.dias)}` : `Vence ${textoDias(f.dias)}`}
-                        </span>
-                      </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums text-slate-900">{cant(f.cantidad)} <span className="text-[10px] font-normal text-slate-400">{f.unidad_medida === "Unidad" ? "u." : f.unidad_medida}</span></td>
-                      <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-slate-700">{gs(f.valor)}</td>
-                      {esAdmin ? (
-                        <td className="px-5 py-3 text-right">
-                          <button onClick={() => setBaja(f)} className="whitespace-nowrap rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700">
-                            Dar de baja
-                          </button>
-                        </td>
-                      ) : null}
-                    </tr>
-                  );
-                })
+                filas
               )}
             </tbody>
           </table>
@@ -234,7 +233,7 @@ export default function VencimientosPage() {
           lote={{ id: baja.lote_id, numero: baja.numero, vencimiento: baja.vencimiento, cantidad: baja.cantidad, producto: baja.producto }}
           unidad={baja.unidad_medida === "Unidad" ? "u." : baja.unidad_medida}
           onClose={() => setBaja(null)}
-          onHecho={() => { setBaja(null); setRecarga((k) => k + 1); }}
+          onHecho={() => { setBaja(null); invalidarLista("/api/productos"); invalidarLista("/api/inventario/movimientos"); setRecarga((k) => k + 1); }}
         />
       ) : null}
     </div>

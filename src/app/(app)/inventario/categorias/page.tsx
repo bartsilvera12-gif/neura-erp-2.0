@@ -39,14 +39,22 @@ function contenedorScroll(el: HTMLElement): HTMLElement {
   return (document.scrollingElement as HTMLElement) ?? document.documentElement;
 }
 
+// Última lista vista en esta pestaña: al volver a la pantalla se pinta en el primer render
+// (sin "Cargando") y se refresca igual que antes. Se olvida si cambia el usuario.
+let ultimaVista: { usuario: string | undefined; categorias: Categoria[]; conteo: Record<string, number> } | null = null;
+
 const sinTildes = (t: string) => t.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase();
 const nProductos = (n: number) => (n === 1 ? "1 producto" : `${n} productos`);
 
 export default function CategoriasPage() {
-  const [categorias, setCategorias] = useState<Categoria[]>([]);
-  const [conteo, setConteo] = useState<Record<string, number>>({});
-  const [cargando, setCargando] = useState(true);
-  const esAdmin = useUsuario()?.rol === "ADMIN";
+  const usuario = useUsuario();
+  const vista = ultimaVista && usuario && ultimaVista.usuario === usuario.usuarioId ? ultimaVista : null;
+  const [categorias, setCategorias] = useState<Categoria[]>(vista?.categorias ?? []);
+  const [conteo, setConteo] = useState<Record<string, number>>(vista?.conteo ?? {});
+  const [cargando, setCargando] = useState(!vista);
+  const esAdmin = usuario?.rol === "ADMIN";
+  const usuarioId = useRef(usuario?.usuarioId);
+  usuarioId.current = usuario?.usuarioId;
   const [nombre, setNombre] = useState("");
   const [padre, setPadre] = useState("");
   const [colorNuevo, setColorNuevo] = useState<string | null>(null); // null = el libre que propone el sistema
@@ -111,6 +119,7 @@ export default function CategoriasPage() {
       const r = await apiFetch<{ categorias: Categoria[]; conteo?: Record<string, number> }>("/api/inventario/categorias?todas=1&conteo=1");
       setCategorias(r.categorias);
       setConteo(r.conteo ?? {});
+      ultimaVista = { usuario: usuarioId.current, categorias: r.categorias, conteo: r.conteo ?? {} };
     } finally {
       setCargando(false);
     }

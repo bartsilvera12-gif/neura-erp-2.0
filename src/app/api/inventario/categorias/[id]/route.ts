@@ -5,6 +5,7 @@
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, fail, ERR } from "@/lib/api/responses";
+import { UUID_RE, idInvalido } from "@/modules/inventario/server/ids";
 
 function catId(url: string): string | null {
   const segs = new URL(url).pathname.split("/").filter(Boolean);
@@ -25,6 +26,7 @@ export const PATCH = withTenant(
   async (ctx, req, input) => {
     const id = catId(req.url);
     if (!id) return ERR.invalid("Falta el id de la categoría");
+    if (!UUID_RE.test(id)) return idInvalido("categoría"); // 400 antes de ir a la base
     if (input.parent_id === id) return fail("Una categoría no puede estar dentro de sí misma.", 400);
     // Dos niveles: la madre tiene que ser una categoría principal, y una categoría con
     // subcategorías no puede pasar a ser subcategoría de otra.

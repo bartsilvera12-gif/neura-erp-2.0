@@ -27,17 +27,27 @@ const COLS =
 
 export const GET = withTenant(async (ctx) => {
   try {
+    // PostgREST devuelve de a 1000: el primer lote trae el total y el resto se pide de a
+    // 6 en paralelo (antes, todos en serie: 50 viajes de ida y vuelta con 50k productos).
+    const lote = (desde: number, conTotal: boolean) =>
+      ctx.db
+        .select("productos", COLS, conTotal ? { count: "exact" } : undefined)
+        .order("nombre", { ascending: true })
+        .order("id", { ascending: true }) // orden estable entre lotes
+        .range(desde, desde + 999);
     const traerTodos = async () => {
-      const out: Fila[] = [];
-      for (let desde = 0; ; desde += 1000) {
-        const { data, error } = await ctx.db
-          .select("productos", COLS)
-          .order("nombre", { ascending: true })
-          .order("id", { ascending: true })
-          .range(desde, desde + 999);
-        if (error) throw new Error("db");
-        out.push(...((data ?? []) as unknown as Fila[]));
-        if ((data ?? []).length < 1000) break;
+      const primero = await lote(0, true);
+      if (primero.error) throw new Error("db");
+      const out = (primero.data ?? []) as unknown as Fila[];
+      const total = primero.count ?? out.length;
+      const paso = out.length; // lo que de verdad devolvió el servidor (por si su tope es menor)
+      if (!paso) return out;
+      const desdes: number[] = [];
+      for (let d = paso; d < total; d += paso) desdes.push(d);
+      for (let i = 0; i < desdes.length; i += 6) {
+        const tanda = await Promise.all(desdes.slice(i, i + 6).map((d) => lote(d, false)));
+        if (tanda.some((r) => r.error)) throw new Error("db");
+        for (const r of tanda) out.push(...((r.data ?? []) as unknown as Fila[]));
       }
       return out;
     };

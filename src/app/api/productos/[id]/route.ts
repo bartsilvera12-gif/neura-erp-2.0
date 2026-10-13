@@ -12,11 +12,10 @@ import { withTenant } from "@/lib/api/with-tenant";
 import { ok, fail, ERR } from "@/lib/api/responses";
 import { registrarMovimiento } from "@/modules/inventario/server/kardex";
 import { COLS_PRODUCTO_DETALLE } from "@/modules/inventario/server/productos-lote";
+import { UUID_RE, idDeRuta, idInvalido } from "@/modules/inventario/server/ids";
 
 function prodId(req: { url: string }): string | null {
-  const segs = new URL(req.url).pathname.split("/").filter(Boolean);
-  const i = segs.indexOf("productos");
-  return i >= 0 ? (segs[i + 1] ?? null) : null;
+  return idDeRuta(req.url, "productos");
 }
 
 // Mismas columnas que /api/productos/lote (compartidas para que no se desfasen).
@@ -25,6 +24,8 @@ const DETALLE = COLS_PRODUCTO_DETALLE;
 export const GET = withTenant(async (ctx, req) => {
   const id = prodId(req);
   if (!id) return ERR.invalid("Falta el id del producto");
+  // "undefined" u otro texto: 400 (antes iba a la base y volvía 500).
+  if (!UUID_RE.test(id)) return idInvalido();
   const { data, error } = await ctx.db.select("productos", DETALLE).eq("id", id).limit(1);
   if (error) return ERR.server();
   if (!data?.length) return ERR.notFound();
@@ -57,6 +58,9 @@ export const PATCH = withTenant(
   async (ctx, req, input) => {
     const id = prodId(req);
     if (!id) return ERR.invalid("Falta el id del producto");
+    if (!UUID_RE.test(id)) return idInvalido();
+  // "undefined" u otro texto: 400 (antes iba a la base y volvía 500).
+  if (!UUID_RE.test(id)) return idInvalido();
     // Stock anterior, para dejar la diferencia en el kardex.
     const antes = input.stock_actual !== undefined
       ? await ctx.db.select("productos", "nombre, sku, stock_actual, costo_promedio, controla_lotes").eq("id", id).limit(1)
@@ -101,6 +105,9 @@ export const DELETE = withTenant(
   async (ctx, req) => {
     const id = prodId(req);
     if (!id) return ERR.invalid("Falta el id del producto");
+    if (!UUID_RE.test(id)) return idInvalido();
+  // "undefined" u otro texto: 400 (antes iba a la base y volvía 500).
+  if (!UUID_RE.test(id)) return idInvalido();
 
     // ventas_items apunta con ON DELETE SET NULL: el borrado "funcionaría" y dejaría
     // ventas huérfanas. Se chequea antes. El kardex lo frena la base (FK RESTRICT).

@@ -1,19 +1,22 @@
 /**
  * Productos — catálogo que vende la caja y que gestiona Inventario.
  *   GET  /api/productos                → vendibles y activos — columnas completas (tope 1000)
- *   GET  /api/productos?pos=1[&campos=nombre] → catálogo liviano de la caja, completo (por lotes).
+ *   GET  /api/productos?pos=1[&campos=nombre] → catálogo liviano de la caja, completo (una llamada).
  *        Productos con lotes vencidos traen stock_vencido (aviso no bloqueante de la caja).
  *   GET  /api/productos?scope=inventario → todos los activos — lista completa
  *   GET  /api/productos?paginado=1&pagina&por_pagina&q&categoria&inactivos=1
  *        → { rows, total } paginado EN EL SERVIDOR (pantalla de Inventario). Con q, búsqueda
  *          inteligente (buscar_productos: sin tildes, cualquier orden, errores de tipeo,
  *          SKU/código de barras exacto primero, ordenado por relevancia).
+ *          OJO: q / pagina / por_pagina solo valen CON paginado=1 (sin él se ignoran y
+ *          devuelve la lista de vendibles de arriba).
  *   POST /api/productos                → alta (ADMIN); si arranca con stock, queda en el kardex
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, created, fail, ERR } from "@/lib/api/responses";
 import { registrarMovimiento } from "@/modules/inventario/server/kardex";
+import { faltaFuncion } from "@/modules/inventario/server/ids";
 
 const COLS =
   "id, nombre, sku, codigo_barras, categoria_principal_id, proveedor_principal_id, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, controla_lotes, es_vendible, activo, imagen_url";
@@ -46,6 +49,20 @@ export const GET = withTenant(async (ctx, req) => {
       return ok({ rows: data.rows ?? [], total: data.total ?? 0 });
     }
 
+    // Una sola llamada (listar_productos_inventario, receta 47): página + total salen del
+    // índice (empresa, nombre, id), y "categoría + subcategorías" ya no es un viaje previo.
+    // Mismas columnas y orden que la consulta de abajo, que queda de respaldo si la receta
+    // no está aplicada en este schema.
+    const cat = categoria === "__sin__" || /^[0-9a-f-]{36}$/i.test(categoria) ? categoria : null;
+    const rpc = await ctx.db.rpc<{ rows: unknown[]; total: number }>("listar_productos_inventario", {
+      p_categoria: cat,
+      p_inactivos: sp.get("inactivos") === "1",
+      p_limit: porPagina,
+      p_offset: desde,
+    });
+    if (!rpc.error && rpc.data) return ok({ rows: rpc.data.rows ?? [], total: Number(rpc.data.total) || 0 });
+    if (!faltaFuncion(rpc.error)) return ERR.server();
+
     let query = ctx.db.select("productos", COLS, { count: "exact" });
     if (sp.get("inactivos") !== "1") query = query.eq("activo", true);
     if (categoria === "__sin__") query = query.is("categoria_principal_id", null);
@@ -66,7 +83,26 @@ export const GET = withTenant(async (ctx, req) => {
   // el POS (sin costos) y COMPLETO: PostgREST corta en 1000 filas, así que se pide de a
   // lotes (el primero trae el total; el resto en paralelo). &campos=nombre → solo nombres.
   if (sp.get("pos") === "1") {
-    const cols = sp.get("campos") === "nombre" ? "nombre" : COLS_POS;
+    const soloNombre = sp.get("campos") === "nombre";
+    // UNA llamada (productos_pos, receta 47) en vez de 1 + N lotes de 1000 con OFFSET
+    // creciente: mismas columnas, mismo orden y el mismo aviso de vencidos. Lo de abajo
+    // queda de respaldo si la receta no está aplicada en este schema.
+    const rpc = await ctx.db.rpc<{ productos: Record<string, unknown>[]; vencidos: { producto_id: string; vencido: number }[] }>(
+      "productos_pos", { p_solo_nombre: soloNombre });
+    if (!rpc.error && rpc.data) {
+      const filas = rpc.data.productos ?? [];
+      if (rpc.data.vencidos?.length) {
+        const porId = new Map(rpc.data.vencidos.map((v) => [v.producto_id, Number(v.vencido) || 0]));
+        for (const f of filas) {
+          const v = porId.get(f.id as string);
+          if (v) f.stock_vencido = v;
+        }
+      }
+      return ok(filas);
+    }
+    if (!faltaFuncion(rpc.error)) return ERR.server();
+
+    const cols = soloNombre ? "nombre" : COLS_POS;
     const lote = (desde: number, hasta: number, conTotal: boolean) =>
       ctx.db
         .select("productos", cols, conTotal ? { count: "exact" } : undefined)

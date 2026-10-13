@@ -5,9 +5,10 @@
  * con qué factura y cuánto subió o bajó contra la compra anterior. Muestra las últimas 5
  * y el resto con "Ver todas".
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Loader2, TrendingDown, TrendingUp } from "lucide-react";
-import { apiFetch } from "@/lib/api/client-fetch";
+import { useListaCacheada } from "@/modules/inventario/lista-cache";
+import { urlCostos } from "@/modules/inventario/ficha-cache";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 
 export type CompraCosto = {
@@ -29,17 +30,10 @@ const num = (v: number) => Number(v || 0).toLocaleString("es-PY", { maximumFract
 const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric" });
 
 export function HistorialCostos({ productoId, unidad }: { productoId: string; unidad: string }) {
-  const [data, setData] = useState<HistorialCostosData | null>(null);
-  const [error, setError] = useState(false);
+  // Cacheado (y precargado al pasar el mouse por "editar"): reabrir la ficha pinta al instante.
+  const { datos, cargando, error } = useListaCacheada<HistorialCostosData>(urlCostos(productoId));
+  const data = cargando ? null : datos;
   const [todas, setTodas] = useState(false);
-
-  useEffect(() => {
-    let vivo = true;
-    apiFetch<HistorialCostosData>(`/api/productos/${productoId}/costos`)
-      .then((r) => vivo && setData(r))
-      .catch(() => vivo && setError(true));
-    return () => { vivo = false; };
-  }, [productoId]);
 
   if (error) return <p className="text-xs text-rose-600">No se pudo cargar el historial de costos.</p>;
   if (!data) {

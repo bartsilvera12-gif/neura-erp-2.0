@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, created, fail, ERR } from "@/lib/api/responses";
-import { consultaMovimientos, filtrosDeUrl } from "@/modules/inventario/server/movimientos";
+import { consultaMovimientos, filtrosDeUrl, listarMovimientosRpc } from "@/modules/inventario/server/movimientos";
 import { variantesBusqueda } from "@/lib/api/busqueda-servidor";
 
 export const GET = withTenant(async (ctx, req) => {
@@ -16,14 +16,21 @@ export const GET = withTenant(async (ctx, req) => {
   const f = filtrosDeUrl(sp);
   const desde = (pagina - 1) * porPagina;
 
-  const [res, prod] = await Promise.all([
-    consultaMovimientos(ctx.db, f, { count: "exact" }, await variantesBusqueda(ctx.db, f.q)).range(desde, desde + porPagina - 1),
+  // Página + total en UNA llamada (listar_movimientos), en paralelo con el producto del
+  // historial. Si la receta 47 no está aplicada, la consulta anterior (2 viajes con búsqueda).
+  const [rpc, prod] = await Promise.all([
+    listarMovimientosRpc(ctx.db, f, { limit: porPagina, offset: desde }).catch(() => "error" as const),
     /^[0-9a-f-]{36}$/i.test(f.producto)
       ? ctx.db.select("productos", "id, nombre, sku, stock_actual, unidad_medida").eq("id", f.producto).limit(1)
       : Promise.resolve(null),
   ]);
+  if (rpc === "error") return ERR.server();
+  const producto = prod?.data?.[0] ?? null;
+  if (rpc) return ok({ rows: rpc.rows, total: rpc.total, producto });
+
+  const res = await consultaMovimientos(ctx.db, f, { count: "exact" }, await variantesBusqueda(ctx.db, f.q)).range(desde, desde + porPagina - 1);
   if (res.error && (res.error as { code?: string }).code !== "PGRST103") return ERR.server();
-  return ok({ rows: res.data ?? [], total: res.count ?? 0, producto: prod?.data?.[0] ?? null });
+  return ok({ rows: res.data ?? [], total: res.count ?? 0, producto });
 });
 
 const nuevo = z.object({

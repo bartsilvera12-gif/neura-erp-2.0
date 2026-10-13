@@ -2,11 +2,13 @@
  * Exportar movimientos de inventario a Excel, con los mismos filtros de la pantalla.
  *   GET /api/inventario/movimientos/export?q&tipo&origen&desde&hasta&producto → movimientos-….xlsx
  * Tope de 50.000 filas por archivo (para períodos más largos, filtrar por fecha).
+ * Las filas se piden de a 5000 (4 en paralelo), no de a 1000 en serie.
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { buildXlsx, hoja, xlsxHeaders } from "@/lib/excel/xlsx";
 import { TZ_PY } from "@/lib/fecha/paraguay";
-import { consultaMovimientos, filtrosDeUrl } from "@/modules/inventario/server/movimientos";
+import { consultaMovimientos, filtrosDeUrl, listarMovimientosRpc, type FiltrosMov } from "@/modules/inventario/server/movimientos";
+import type { TenantDb } from "@/lib/api/tenant-db";
 import { variantesBusqueda } from "@/lib/api/busqueda-servidor";
 import { ORIGEN_LABEL } from "@/modules/inventario/kardex";
 
@@ -26,17 +28,44 @@ type Mov = {
   fecha: string;
 };
 
+// listar_movimientos (receta 47) devuelve hasta 5000 por llamada (no le aplica el tope
+// de 1000 filas de PostgREST) y salta páginas por el índice: el total primero y el resto
+// de a 4 en paralelo. Antes: hasta 50 viajes EN SERIE de 1000 filas con OFFSET creciente.
+const POR_LLAMADA = 5000;
+const EN_PARALELO = 4;
+
+async function traerFilas(db: TenantDb, f: FiltrosMov): Promise<Mov[]> {
+  const primera = await listarMovimientosRpc(db, f, { limit: POR_LLAMADA, offset: 0 });
+  if (primera) {
+    const filas = primera.rows as Mov[];
+    const hasta = Math.min(primera.total, TOPE);
+    const offsets: number[] = [];
+    for (let d = POR_LLAMADA; d < hasta; d += POR_LLAMADA) offsets.push(d);
+    for (let i = 0; i < offsets.length; i += EN_PARALELO) {
+      const tanda = await Promise.all(
+        offsets.slice(i, i + EN_PARALELO).map((d) =>
+          listarMovimientosRpc(db, f, { limit: Math.min(POR_LLAMADA, hasta - d), offset: d, total: false })),
+      );
+      for (const r of tanda) filas.push(...((r?.rows ?? []) as Mov[]));
+    }
+    return filas.slice(0, TOPE);
+  }
+  // Respaldo (receta 47 sin aplicar): la consulta anterior, de a 1000.
+  const filas: Mov[] = [];
+  const grupos = await variantesBusqueda(db, f.q);
+  for (let desde = 0; desde < TOPE; desde += 1000) {
+    const { data, error } = await consultaMovimientos(db, f, undefined, grupos).range(desde, desde + 999);
+    if (error) throw new Error("db");
+    filas.push(...((data ?? []) as unknown as Mov[]));
+    if ((data ?? []).length < 1000) break;
+  }
+  return filas;
+}
+
 export const GET = withTenant(async (ctx, req) => {
   const f = filtrosDeUrl(new URL(req.url).searchParams);
   try {
-    const filas: Mov[] = [];
-    const grupos = await variantesBusqueda(ctx.db, f.q);
-    for (let desde = 0; desde < TOPE; desde += 1000) {
-      const { data, error } = await consultaMovimientos(ctx.db, f, undefined, grupos).range(desde, desde + 999);
-      if (error) throw new Error("db");
-      filas.push(...((data ?? []) as unknown as Mov[]));
-      if ((data ?? []).length < 1000) break;
-    }
+    const filas = await traerFilas(ctx.db, f);
     const xlsx = buildXlsx([
       hoja("Movimientos", filas, [
         { header: "Fecha", value: (m) => new Date(m.fecha), width: 18 },
