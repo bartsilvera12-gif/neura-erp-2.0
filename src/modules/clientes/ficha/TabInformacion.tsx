@@ -3,7 +3,8 @@
 /**
  * Pestaña "Información" de la ficha: todos los datos del cliente editables en el lugar,
  * con las secciones del sistema actual — identificación (+ datos para factura), contacto
- * (+ receptor SIFEN avanzado), presencia digital y datos comerciales. "Guardar cambios"
+ * (+ receptor SIFEN avanzado), presencia digital y datos comerciales, en tarjetas a dos
+ * columnas (como el modal del sistema actual) para aprovechar el ancho. "Guardar cambios"
  * manda solo lo de este formulario; la Actividad registra cada cambio sola.
  */
 import { useEffect, useState } from "react";
@@ -16,11 +17,16 @@ import type { Categoria, ClienteCompleto } from "@/modules/clientes/esquema";
 import type { UsuarioMin } from "@/modules/clientes/ficha/tipos";
 import { TEAL, fechaCorta } from "@/modules/clientes/ui";
 
-const INPUT = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]";
-const LABEL = "mb-1 block text-xs font-medium text-slate-500";
+const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]";
+const LABEL = "mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500";
 
 function SectionTitle({ children }: { children: React.ReactNode }) {
-  return <p className="mb-4 text-xs font-semibold uppercase tracking-widest text-slate-400">{children}</p>;
+  return (
+    <div className="mb-4 flex items-center gap-2">
+      <span aria-hidden="true" className="block h-5 w-1 rounded-full bg-[var(--brand)]" />
+      <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">{children}</p>
+    </div>
+  );
 }
 
 function Campo({ label, children, className = "" }: { label: string; children: React.ReactNode; className?: string }) {
@@ -180,7 +186,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
   }
 
   return (
-    <form onSubmit={guardar} className="max-w-2xl space-y-8">
+    <form onSubmit={guardar} className="space-y-5">
       {cliente.baja_at ? (
         <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-amber-800">Baja registrada</p>
@@ -192,15 +198,17 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         </div>
       ) : null}
 
+      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
+        <div className="space-y-5">
       {/* Identificación */}
-      <section className="space-y-4">
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <SectionTitle>Datos de identificación</SectionTitle>
         <div>
           <span className={LABEL}>Tipo de cliente</span>
-          <div className="flex w-fit overflow-hidden rounded-lg border border-slate-200">
+          <div className="flex w-fit overflow-hidden rounded-xl border border-slate-200 shadow-sm">
             {(["empresa", "persona"] as const).map((t) => (
               <button key={t} type="button" onClick={() => set("tipo_cliente", t)}
-                className={`px-4 py-2 text-sm font-medium transition-colors ${f.tipo_cliente === t ? "text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+                className={`px-5 py-2.5 text-sm font-semibold transition-colors ${f.tipo_cliente === t ? "text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-50"}`}
                 style={f.tipo_cliente === t ? { backgroundColor: TEAL } : undefined}>
                 {t === "empresa" ? "Empresa" : "Persona"}
               </button>
@@ -255,7 +263,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
       </section>
 
       {/* Contacto */}
-      <section className="space-y-4">
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <SectionTitle>Contacto</SectionTitle>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo label="Email"><input type="email" {...inp("email")} maxLength={120} className={INPUT} /></Campo>
@@ -317,18 +325,10 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         </details>
       </section>
 
-      {/* Digital */}
-      <section className="space-y-4">
-        <SectionTitle>Presencia digital</SectionTitle>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Campo label="Sitio web"><input {...inp("sitio_web")} maxLength={200} placeholder="https://" className={INPUT} /></Campo>
-          <Campo label="Instagram"><input {...inp("instagram")} maxLength={120} placeholder="@usuario" className={INPUT} /></Campo>
-          <Campo label="LinkedIn"><input {...inp("linkedin")} maxLength={200} placeholder="URL o perfil" className={INPUT} /></Campo>
         </div>
-      </section>
-
+        <div className="space-y-5">
       {/* Comercial */}
-      <section className="space-y-4">
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <SectionTitle>Datos comerciales</SectionTitle>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo label="Condición de pago">
@@ -373,17 +373,30 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         </div>
       </section>
 
+      {/* Digital */}
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <SectionTitle>Presencia digital</SectionTitle>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Campo label="Sitio web"><input {...inp("sitio_web")} maxLength={200} placeholder="https://" className={INPUT} /></Campo>
+          <Campo label="Instagram"><input {...inp("instagram")} maxLength={120} placeholder="@usuario" className={INPUT} /></Campo>
+          <Campo label="LinkedIn"><input {...inp("linkedin")} maxLength={200} placeholder="URL o perfil" className={INPUT} /></Campo>
+        </div>
+      </section>
+
+        </div>
+      </div>
+
       {error ? (
         <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           <span>⚠</span><span className="font-medium">{error}</span>
         </div>
       ) : null}
 
-      <div className="flex items-center gap-3">
-        <button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:brightness-95 active:scale-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
+      <div className="sticky bottom-0 z-10 flex items-center justify-end gap-3 rounded-2xl border border-slate-200 bg-white/95 px-5 py-3 shadow-[0_-4px_16px_-8px_rgba(15,23,42,0.12)] backdrop-blur">
+        {guardado ? <span className="mr-auto text-xs font-medium text-emerald-600">Cambios guardados</span> : null}
+        <button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95 active:scale-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {busy ? "Guardando…" : "Guardar cambios"}
         </button>
-        {guardado ? <span className="text-xs font-medium text-emerald-600">Cambios guardados</span> : null}
       </div>
     </form>
   );
