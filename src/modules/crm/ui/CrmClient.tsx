@@ -406,15 +406,6 @@ export default function CrmClient() {
         </div>
       </div>
 
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <MetricCard label="Leads Hoy" value={k?.leads_hoy ?? "—"} sub={hoy ? "filtrando · clic para quitar" : "creados hoy · clic para filtrar"} icon={<Users className="h-4 w-4" />} onClick={() => setHoy((v) => !v)} active={hoy} />
-        <MetricCard label="Leads del Mes" value={k?.leads_mes ?? "—"} sub="creados en el mes" icon={<CalendarDays className="h-4 w-4" />} />
-        <MetricCard label="Valor en Negociación" value={k ? `Gs. ${gsCorto(k.en_negociacion)}` : "—"} sub="pipeline activo" icon={<Coins className="h-4 w-4" />} accent="featured" />
-        <MetricCard label="Ganados del Mes" value={k?.ganados_mes ?? "—"} sub="cierres del mes" icon={<Trophy className="h-4 w-4" />} accent="success" />
-        <MetricCard label="Acciones vencidas" value={k?.acciones_vencidas ?? "—"} sub="próxima acción atrasada" icon={<AlarmClock className="h-4 w-4" />} accent="warning" />
-      </div>
-
       {/* Buscador + filtros */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-64 flex-1">

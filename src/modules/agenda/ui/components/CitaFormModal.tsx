@@ -42,6 +42,21 @@ function diffMin(hi: string, hf: string): number | null {
   return h2 * 60 + m2 - (h1 * 60 + m1);
 }
 
+// Horarios cada 15 min para los selectores de hora (si la cita trae una hora fuera de la
+// grilla, se agrega tal cual para no perderla).
+const SLOTS = Array.from({ length: 96 }, (_, i) => `${pad(Math.floor(i / 4))}:${pad((i % 4) * 15)}`);
+const aMin = (h: string) => { const [a, b] = h.split(":").map((x) => parseInt(x, 10)); return a * 60 + b; };
+function opcionesHora(valor: string, desde?: string): [string, string][] {
+  const base = desde ? SLOTS.filter((h) => aMin(h) > aMin(desde)) : SLOTS;
+  const lista = valor && !base.includes(valor) ? [...base, valor].sort((x, y) => aMin(x) - aMin(y)) : base;
+  return lista.map((h) => {
+    if (!desde) return [h, h];
+    const d = aMin(h) - aMin(desde);
+    const txt = d < 60 ? `${d} min` : d % 60 === 0 ? `${d / 60} h` : `${Math.floor(d / 60)} h ${d % 60} min`;
+    return [h, `${h}  ·  ${txt}`];
+  });
+}
+
 const inputCls =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition-colors hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20";
 const labelCls = "block text-xs font-medium text-slate-600 mb-1";
@@ -355,11 +370,11 @@ export default function CitaFormModal({
               </div>
               <div>
                 <label className={labelCls}>Inicio *</label>
-                <input type="time" className={inputCls} value={horaInicio} onChange={(e) => onChangeInicio(e.target.value)} />
+                <Select block value={horaInicio} onChange={onChangeInicio} options={[["", "Elegí la hora"] as [string, string], ...opcionesHora(horaInicio)].slice(horaInicio ? 1 : 0)} />
               </div>
               <div>
                 <label className={labelCls}>Fin *</label>
-                <input type="time" className={inputCls} value={horaFin} onChange={(e) => setHoraFin(e.target.value)} />
+                <Select block value={horaFin} onChange={setHoraFin} options={[["", "Elegí la hora"] as [string, string], ...opcionesHora(horaFin, horaInicio || undefined)].slice(horaFin ? 1 : 0)} />
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-1.5">

@@ -76,6 +76,13 @@ export function Select({
     };
   }, [open, ubicar]);
 
+  // Al abrir, la opción elegida queda a la vista (listas largas como horarios).
+  useEffect(() => {
+    if (!open || !pos) return;
+    lista.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: "center" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, pos != null]);
+
   // Navegación por teclado (combobox): ↑/↓ mueven, Enter elige, Esc cierra.
   function onTriggerKey(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
