@@ -273,8 +273,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
         <div className="relative min-h-[220px]">
           <div className="p-6">
             {tab === "informacion" ? (
-              <TabInformacion cliente={c} esAdmin={esAdmin} suscripcionActiva={activas[0] ?? null} ventasCount={data.ventas.length}
-                onGuardado={() => void cargar()} />
+              <TabInformacion cliente={c} esAdmin={esAdmin} onGuardado={() => void cargar()} />
             ) : null}
             {tab === "estado_cuenta" ? (
               <TabEstadoCuenta clienteId={c.id} ventas={data.ventas} recarga={recargaCuenta} esAdmin={esAdmin}
