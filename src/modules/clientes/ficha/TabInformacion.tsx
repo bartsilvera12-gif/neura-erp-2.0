@@ -3,11 +3,11 @@
 /**
  * Pestaña "Información" de la ficha: vista de lectura en tarjetas compactas y un botón
  * "Editar información" que abre el modal (estilo del sistema actual) con las secciones — identificación (+ datos para factura), contacto
- * (+ receptor SIFEN avanzado), presencia digital y datos comerciales. "Guardar cambios"
+ * (+ receptor SIFEN avanzado) y datos comerciales. "Guardar cambios"
  * manda solo lo de este formulario; la Actividad registra cada cambio sola.
  */
 import { useEffect, useState } from "react";
-import { Briefcase, Globe, IdCard, Loader2, Pencil, Phone, Plus, X } from "lucide-react";
+import { Briefcase, IdCard, Loader2, Pencil, Phone, Plus, X } from "lucide-react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
@@ -258,11 +258,6 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
           </Dato>
         </Tarjeta>
 
-        <Tarjeta titulo="Presencia digital" icono={Globe}>
-          <Dato label="Sitio web" ancho>{cliente.sitio_web ? <a href={/^https?:\/\//i.test(cliente.sitio_web) ? cliente.sitio_web : `https://${cliente.sitio_web}`} target="_blank" rel="noopener noreferrer" className="break-all text-[var(--brand)] hover:underline">{cliente.sitio_web}</a> : null}</Dato>
-          <Dato label="Instagram">{cliente.instagram}</Dato>
-          <Dato label="LinkedIn">{cliente.linkedin}</Dato>
-        </Tarjeta>
       </div>
 
       {abierto ? (
@@ -458,15 +453,6 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         </div>
       </section>
 
-      {/* Digital */}
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-        <SectionTitle>Presencia digital</SectionTitle>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          <Campo label="Sitio web"><input {...inp("sitio_web")} maxLength={200} placeholder="https://" className={INPUT} /></Campo>
-          <Campo label="Instagram"><input {...inp("instagram")} maxLength={120} placeholder="@usuario" className={INPUT} /></Campo>
-          <Campo label="LinkedIn"><input {...inp("linkedin")} maxLength={200} placeholder="URL o perfil" className={INPUT} /></Campo>
-        </div>
-      </section>
 
       {error ? (
         <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
