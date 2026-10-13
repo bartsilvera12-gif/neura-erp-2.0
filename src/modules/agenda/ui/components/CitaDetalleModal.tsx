@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRef, useState } from "react";
-import { CalendarClock, ClipboardPen, MapPin, Phone, User, UserPlus, X } from "lucide-react";
+import { Building2, ClipboardPen, Clock, Lock, MapPin, Phone, StickyNote, User, UserPlus, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { TZ_PY } from "@/lib/fecha/paraguay";
@@ -15,6 +15,25 @@ function fmtDia(iso: string): string {
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleString("es-PY", { timeZone: TZ_PY, weekday: "long", day: "2-digit", month: "long" });
 }
+
+/** "oct" y "13" para la hoja de calendario. */
+function fmtMes(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString("es-PY", { timeZone: TZ_PY, month: "short" }).replace(".", "");
+}
+function fmtNumDia(iso: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString("es-PY", { timeZone: TZ_PY, day: "numeric" });
+}
+
+const MSJ_TERMINAL: Record<string, string> = {
+  reprogramada: "Esta cita se reprogramó (hay una nueva en su lugar)",
+  completada: "Esta cita ya se completó",
+  cancelada: "Esta cita fue cancelada",
+  no_asistio: "El cliente no asistió a esta cita",
+};
 
 /** "10:00" */
 function fmtHora(iso: string): string {
@@ -139,6 +158,7 @@ export default function CitaDetalleModal({
       <div className={`flex w-full max-w-lg ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-xl`} onClick={(e) => e.stopPropagation()}>
         {/* Encabezado: título + estado como chip de color (es el dato que se mira primero). */}
         <div className="shrink-0">
+        <div aria-hidden="true" className={`h-1 ${est.dot}`} />
         <Spotlight color="rgba(79, 174, 178, 0.14)">
           <div className="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
             <div className="min-w-0 flex-1">
@@ -166,85 +186,109 @@ export default function CitaDetalleModal({
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          {/* Fecha y hora: un rango con la duración ya calculada. */}
-          <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50/60 px-4 py-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#4FAEB2]/12 text-[#3F8E91]">
-              <CalendarClock className="h-4 w-4" aria-hidden="true" />
-            </span>
-            <div className="min-w-0">
+          {/* Fecha y hora: hoja de calendario con el día + rango grande con la duración. */}
+          <div className="flex items-center gap-4 rounded-2xl border border-[#4FAEB2]/25 bg-gradient-to-br from-[#4FAEB2]/[0.07] via-white to-white p-3.5">
+            <div className="flex w-14 shrink-0 flex-col overflow-hidden rounded-xl border border-[#4FAEB2]/30 bg-white text-center shadow-sm">
+              <span className="bg-[#3F8E91] py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">{fmtMes(cita.inicio_at)}</span>
+              <span className="py-1 text-xl font-bold leading-none tabular-nums text-slate-900">{fmtNumDia(cita.inicio_at)}</span>
+            </div>
+            <div className="min-w-0 flex-1">
               {/* first-letter:uppercase y no capitalize (que dejaría "Viernes 21 De Agosto"). */}
-              <p className="text-[13px] font-semibold text-slate-900 first-letter:uppercase">{fmtDia(cita.inicio_at)}</p>
-              <p className="text-[12px] text-slate-500">
+              <p className="text-[12px] font-medium text-slate-500 first-letter:uppercase">{fmtDia(cita.inicio_at)}</p>
+              <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-semibold tabular-nums tracking-tight text-slate-900">
                 {fmtHora(cita.inicio_at)} – {fmtHora(cita.fin_at)}
-                {dur ? <span className="text-slate-400"> · {dur}</span> : null}
+                {dur ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[#4FAEB2]/12 px-2 py-0.5 text-[11px] font-semibold text-[#2F6E71]">
+                    <Clock className="h-3 w-3" aria-hidden="true" />
+                    {dur}
+                  </span>
+                ) : null}
               </p>
             </div>
           </div>
 
-          <Seccion titulo={responsables.length > 1 ? "Responsables" : "Responsable"} icono={User}>
-            <ul className="space-y-1.5">
-              {responsables.map((r, i) => {
-                const nombre = nombreCapitular(r.nombre ?? r.id);
-                return (
-                  <li key={r.id} className="flex items-center gap-2.5">
-                    <span
-                      aria-hidden="true"
-                      className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${avatarClase(nombre)}`}
-                    >
-                      {inicialesNombre(r.nombre ?? r.id)}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-[13px] text-slate-800">{nombre}</span>
-                    {i === 0 && responsables.length > 1 ? (
-                      <span className="shrink-0 rounded-md bg-[#4FAEB2]/12 px-1.5 py-0.5 text-[10px] font-semibold text-[#3F8E91]">principal</span>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
-          </Seccion>
+          {/* Datos en una sola tarjeta con filas: ícono · etiqueta · valor. */}
+          <div className="mt-4 divide-y divide-slate-100 rounded-2xl border border-slate-200">
+            <Fila titulo={responsables.length > 1 ? "Responsables" : "Responsable"} icono={User}>
+              <ul className="space-y-1.5">
+                {responsables.map((r, i) => {
+                  const nombre = nombreCapitular(r.nombre ?? r.id);
+                  return (
+                    <li key={r.id} className="flex items-center gap-2">
+                      <span
+                        aria-hidden="true"
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${avatarClase(nombre)}`}
+                      >
+                        {inicialesNombre(r.nombre ?? r.id)}
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">{nombre}</span>
+                      {i === 0 && responsables.length > 1 ? (
+                        <span className="shrink-0 rounded-md bg-[#4FAEB2]/12 px-1.5 py-0.5 text-[10px] font-semibold text-[#3F8E91]">principal</span>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            </Fila>
 
-          {cita.creado_por ? (
-            <Seccion titulo="Cargada por" icono={UserPlus}>
-              <p className="text-[13px] text-slate-800">{nombreCapitular(cita.creado_por.nombre ?? cita.creado_por.id)}</p>
-            </Seccion>
-          ) : null}
+            {cliente || telefono ? (
+              <Fila titulo="Cliente / contacto" icono={Building2}>
+                {cliente ? (
+                  cita.cliente_id ? (
+                    <Link href={`/clientes/${cita.cliente_id}`} className="text-[13px] font-medium text-slate-800 hover:text-[#3F8E91] hover:underline">
+                      {cliente}
+                    </Link>
+                  ) : (
+                    <p className="text-[13px] font-medium text-slate-800">{cliente}</p>
+                  )
+                ) : null}
+                {telefono ? (
+                  <a href={`tel:${telefono.replace(/\s+/g, "")}`} className="mt-0.5 flex w-fit items-center gap-1 text-[12px] text-slate-500 hover:text-[#3F8E91]">
+                    <Phone className="h-3 w-3" aria-hidden="true" /> {telefono}
+                  </a>
+                ) : null}
+                {cita.cliente_id && tipificacionId ? (
+                  <Link
+                    href={`/clientes/${cita.cliente_id}/tipificacion#tip-${tipificacionId}`}
+                    className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-[#3F8E91] hover:underline"
+                  >
+                    <ClipboardPen className="h-3.5 w-3.5" /> Ver tipificación
+                  </Link>
+                ) : null}
+              </Fila>
+            ) : null}
 
-          {cliente || telefono ? (
-            <Seccion titulo="Cliente / contacto" icono={Phone}>
-              {cliente ? <p className="text-[13px] text-slate-800">{cliente}</p> : null}
-              {telefono ? <p className="text-[12px] text-slate-500">{telefono}</p> : null}
-              {cita.cliente_id && tipificacionId ? (
-                <Link
-                  href={`/clientes/${cita.cliente_id}/tipificacion#tip-${tipificacionId}`}
-                  className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-[#3F8E91] hover:underline"
-                >
-                  <ClipboardPen className="h-3.5 w-3.5" /> Ver tipificación
-                </Link>
-              ) : null}
-            </Seccion>
-          ) : null}
+            {cita.ubicacion ? (
+              <Fila titulo="Ubicación / enlace" icono={MapPin}>
+                {/^https?:\/\//i.test(cita.ubicacion.trim()) ? (
+                  <a
+                    href={cita.ubicacion.trim()}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="break-all text-[13px] font-medium text-[#3F8E91] underline underline-offset-2 hover:text-[#2F6E71]"
+                  >
+                    {cita.ubicacion}
+                  </a>
+                ) : (
+                  <p className="break-words text-[13px] font-medium text-slate-800">{cita.ubicacion}</p>
+                )}
+              </Fila>
+            ) : null}
 
-          {cita.ubicacion ? (
-            <Seccion titulo="Ubicación / enlace" icono={MapPin}>
-              {/^https?:\/\//i.test(cita.ubicacion.trim()) ? (
-                <a
-                  href={cita.ubicacion.trim()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="break-all text-[13px] text-[#3F8E91] underline underline-offset-2 hover:text-[#2F6E71]"
-                >
-                  {cita.ubicacion}
-                </a>
-              ) : (
-                <p className="break-words text-[13px] text-slate-800">{cita.ubicacion}</p>
-              )}
-            </Seccion>
-          ) : null}
+            {cita.creado_por ? (
+              <Fila titulo="Cargada por" icono={UserPlus}>
+                <p className="text-[13px] text-slate-600">{nombreCapitular(cita.creado_por.nombre ?? cita.creado_por.id)}</p>
+              </Fila>
+            ) : null}
+          </div>
 
           {cita.observaciones ? (
-            <Seccion titulo="Observaciones">
-              <p className="whitespace-pre-wrap break-words text-[13px] text-slate-700">{cita.observaciones}</p>
-            </Seccion>
+            <div className="mt-4 rounded-2xl border border-amber-200/70 bg-amber-50/50 px-4 py-3">
+              <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-amber-700">
+                <StickyNote className="h-3 w-3" aria-hidden="true" /> Observaciones
+              </p>
+              <p className="mt-1 whitespace-pre-wrap break-words text-[13px] text-slate-700">{cita.observaciones}</p>
+            </div>
           ) : null}
 
           {cita.cancelada_motivo ? (
@@ -261,9 +305,12 @@ export default function CitaDetalleModal({
             queda separada a la izquierda porque es la destructiva. */}
         <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3.5">
           {terminal ? (
-            <span className="text-xs text-slate-400">Cita en estado terminal ({est.label.toLowerCase()}). No admite más cambios.</span>
+            <span className="flex items-center gap-2 text-xs text-slate-500">
+              <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
+              {MSJ_TERMINAL[cita.estado] ?? `Esta cita está ${est.label.toLowerCase()}`}: ya no se puede modificar.
+            </span>
           ) : !puede ? (
-            <span className="text-xs text-slate-400">Sólo sus responsables, quien la cargó o un administrador pueden cambiarla.</span>
+            <span className="flex items-center gap-2 text-xs text-slate-500"><Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />Sólo sus responsables, quien la cargó o un administrador pueden cambiarla.</span>
           ) : (
             <>
               <button
@@ -302,22 +349,24 @@ export default function CitaDetalleModal({
   );
 }
 
-function Seccion({
+function Fila({
   titulo,
   icono: Icono,
   children,
 }: {
   titulo: string;
-  icono?: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
+  icono: React.ComponentType<{ className?: string; "aria-hidden"?: boolean }>;
   children: React.ReactNode;
 }) {
   return (
-    <div className="mt-4">
-      <div className="mb-1.5 flex items-center gap-1.5">
-        {Icono ? <Icono className="h-3 w-3 text-slate-400" aria-hidden /> : null}
-        <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{titulo}</p>
+    <div className="flex gap-3 px-4 py-3">
+      <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+        <Icono className="h-3.5 w-3.5" aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="mb-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{titulo}</p>
+        {children}
       </div>
-      {children}
     </div>
   );
 }

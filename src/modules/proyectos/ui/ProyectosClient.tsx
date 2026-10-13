@@ -3,8 +3,7 @@
 /**
  * /proyectos — tablero de Proyectos (portado del sistema actual, núcleo genérico, re-pensado
  * para que vuele):
- *   · encabezado + KPIs (activos, vencidos, vencen en 3 días, sin fecha prometida, bloqueados,
- *     sin movimiento, urgentes, entregados del mes) que calcula la base en la MISMA consulta
+ *   · encabezado (sin tarjetas de KPIs)
  *   · filtros: búsqueda en el servidor (250 ms), responsable, cliente, prioridad, archivados
  *     y rango de entrega (acota solo las columnas de Entregado, como el actual)
  *   · Kanban por estado: cada columna trae su cantidad y las primeras 30 tarjetas; "Cargar
@@ -23,10 +22,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import {
-  AlarmClock, Archive, BarChart3, CalendarClock, CalendarX2, ClipboardCheck, Flame, FolderKanban, LayoutGrid, List, Lock, Plus, Search,
-  Settings2, Timer, Trophy, Users,
-} from "lucide-react";
+import { Archive, BarChart3, ClipboardCheck, LayoutGrid, List, Plus, Search, Settings2, Users } from "lucide-react";
 import { Select } from "@/components/Select";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
@@ -168,43 +164,6 @@ const aTarjeta = (p: Proyecto): Tarjeta => ({
   responsable_tecnico_id: p.responsable_tecnico_id, tecnico_nombre: p.tecnico_nombre,
   project_manager_id: p.project_manager_id, pm_nombre: p.pm_nombre, tareas_total: p.tareas_total, tareas_hechas: p.tareas_hechas,
 });
-
-// ── KPI (MetricCard del sistema actual, versión compacta) ───────────────────
-function MetricCard({ label, value, sub, icon, accent = "neutral", onClick, active = false }: {
-  label: string; value: string | number; sub?: string; icon: React.ReactNode;
-  accent?: "neutral" | "featured" | "warning" | "danger" | "success"; onClick?: () => void; active?: boolean;
-}) {
-  const chip =
-    accent === "featured" ? "border-[var(--brand)]/30 bg-[var(--brand)]/[0.12] text-[var(--brand)]"
-    : accent === "warning" ? "border-amber-200 bg-amber-50 text-amber-600"
-    : accent === "danger" ? "border-rose-200 bg-rose-50 text-rose-600"
-    : accent === "success" ? "border-emerald-200 bg-emerald-50 text-emerald-600"
-    : "border-slate-200 bg-slate-50 text-slate-500";
-  const card =
-    accent === "featured"
-      ? "relative overflow-hidden rounded-2xl border border-[var(--brand)]/55 bg-gradient-to-br from-white via-white to-[var(--brand)]/[0.08] p-3.5 shadow-[0_4px_18px_rgba(63,142,145,0.08)] transition-all duration-200 hover:-translate-y-0.5"
-      : "relative overflow-hidden rounded-2xl border border-[var(--brand)]/45 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md";
-  const inner = (
-    <>
-      {accent === "featured" ? <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[var(--brand)] via-[var(--brand)]/70 to-[var(--brand)]/30" /> : null}
-      <div className="flex items-center gap-2">
-        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border ${chip}`}>{icon}</span>
-        <p className="text-[10px] font-semibold uppercase leading-tight tracking-[0.1em] text-slate-500">{label}</p>
-      </div>
-      <p className="mt-2 text-2xl font-semibold leading-tight tracking-tight tabular-nums text-slate-900">{value}</p>
-      {sub ? <p className="mt-0.5 text-[11px] text-slate-500">{sub}</p> : null}
-    </>
-  );
-  if (onClick) {
-    return (
-      <button type="button" onClick={onClick} aria-pressed={active}
-        className={`${card} cursor-pointer text-left ${active ? "border-[var(--brand)] ring-2 ring-[var(--brand)]" : "hover:border-[var(--brand)]/70"}`}>
-        {inner}
-      </button>
-    );
-  }
-  return <div className={card}>{inner}</div>;
-}
 
 type PideMotivo = { t: Tarjeta; a: Columna; resolver: (m: string | null) => void };
 
@@ -498,7 +457,6 @@ export default function ProyectosClient() {
 
   // ── Derivados ──
   const columnas: Columna[] = tablero?.columnas ?? [];
-  const k = tablero?.kpis;
   const total = columnas.reduce((s, c) => s + c.cantidad, 0);
   const opcionesResp: [string, string][] = [
     ["", "Todos los responsables"],
@@ -573,19 +531,6 @@ export default function ProyectosClient() {
         <DashboardPm esAdmin={esAdmin} config={config} version={dashVersion} onAbrir={acciones.onAbrir} />
       ) : (
       <>
-      {/* KPIs */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 2xl:grid-cols-8">
-        <MetricCard label="Activos" value={k?.activos ?? "—"} sub="en curso" icon={<FolderKanban className="h-3.5 w-3.5" />} accent="featured" />
-        <MetricCard label="Vencidos" value={k?.vencidos ?? "—"} sub="fecha prometida pasada" icon={<AlarmClock className="h-3.5 w-3.5" />} accent="danger" />
-        <MetricCard label="Vencen en 3 días" value={k?.vencen_3_dias ?? "—"} sub="próximos a la fecha" icon={<CalendarClock className="h-3.5 w-3.5" />} accent="warning" />
-        <MetricCard label="Sin fecha" value={k?.sin_fecha ?? "—"} sub="prometida a definir" icon={<CalendarX2 className="h-3.5 w-3.5" />} accent="warning" />
-        <MetricCard label="Bloqueados" value={k?.bloqueados ?? "—"} sub="con motivo cargado" icon={<Lock className="h-3.5 w-3.5" />} accent="danger" />
-        <MetricCard label="Sin movimiento" value={k?.sin_movimiento ?? "—"} sub="+3 días sin actividad" icon={<Timer className="h-3.5 w-3.5" />} />
-        <MetricCard label="Urgentes" value={k?.urgentes ?? "—"} sub={prioridad === "urgente" ? "filtrando · clic para quitar" : "clic para filtrar"} icon={<Flame className="h-3.5 w-3.5" />}
-          accent="danger" onClick={() => setPrioridad((p) => (p === "urgente" ? "" : "urgente"))} active={prioridad === "urgente"} />
-        <MetricCard label="Entregados del mes" value={k?.entregados_mes ?? "—"} sub="cierres del mes" icon={<Trophy className="h-3.5 w-3.5" />} accent="success" />
-      </div>
-
       {/* Buscador + filtros */}
       <div className="flex flex-col gap-2 xl:flex-row xl:flex-wrap xl:items-center">
         <div className="relative min-w-[220px] flex-1">
