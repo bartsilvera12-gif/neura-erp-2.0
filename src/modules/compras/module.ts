@@ -1,6 +1,9 @@
 import type { Modulo } from "@/modules/types";
 
-/** Compras: facturas de compra a proveedores y el maestro de proveedores. */
+/**
+ * Compras: facturas de compra a proveedores, órdenes de compra, el maestro de proveedores
+ * y los pagos a proveedores (cuentas a pagar de compras y gastos a crédito).
+ */
 export const moduloCompras: Modulo = {
   id: "compras",
   label: "Compras",
@@ -12,5 +15,6 @@ export const moduloCompras: Modulo = {
     { label: "Compras", href: "/compras" },
     { label: "Órdenes de compra", href: "/compras/ordenes" },
     { label: "Proveedores", href: "/proveedores" },
+    { label: "Pagos a proveedores", href: "/compras/pagos" },
   ],
 };

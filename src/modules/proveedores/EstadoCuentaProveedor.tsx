@@ -13,7 +13,7 @@ import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { TZ_PY } from "@/lib/fecha/paraguay";
-import { ESTADO_CXP, dinero, nombreMetodoPago, type EstadoCuentaProveedor as EC, type PagoEstadoCuenta } from "@/modules/compras/pagos";
+import { ESTADO_CXP, dinero, hrefOrigenCxp, nombreMetodoPago, type EstadoCuentaProveedor as EC, type PagoEstadoCuenta } from "@/modules/compras/pagos";
 import { RegistrarPagoProveedor, imprimirOrdenPago, useAvisoPago } from "@/modules/compras/RegistrarPagoProveedor";
 import { AnularPago, DetallePago } from "@/modules/compras/DetallePago";
 
@@ -108,7 +108,7 @@ export function EstadoCuentaProveedor({ proveedorId, proveedorNombre, puedePagar
                           {cuentas.map((c) => (
                             <tr key={c.id} className={c.estado === "anulada" ? "opacity-50" : ""}>
                               <td className="px-4 py-2.5"><span className="font-mono text-xs font-semibold text-slate-800">{c.numero}</span><span className="block text-[11px] text-slate-500">{dia(c.fecha_emision)}</span></td>
-                              <td className="px-4 py-2.5"><Link href={`/compras?ver=${c.compra_id}`} className="font-mono text-xs text-[var(--brand)] hover:underline">{c.compra_numero}</Link></td>
+                              <td className="px-4 py-2.5"><Link href={hrefOrigenCxp(c)} className="font-mono text-xs text-[var(--brand)] hover:underline">{c.compra_numero}</Link></td>
                               <td className={`px-4 py-2.5 text-xs ${c.dias_atraso > 0 ? "font-semibold text-rose-600" : "text-slate-600"}`}>
                                 {dia(c.vencimiento)}{c.dias_atraso > 0 ? <span className="block">{c.dias_atraso} días de atraso</span> : null}
                               </td>

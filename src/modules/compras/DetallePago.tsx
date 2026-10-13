@@ -10,7 +10,7 @@ import { Ban, Loader2, Printer, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { TZ_PY } from "@/lib/fecha/paraguay";
-import { dinero, nombreMetodoPago, type PagoProveedor } from "@/modules/compras/pagos";
+import { dinero, hrefOrigenCxp, nombreMetodoPago, type PagoProveedor } from "@/modules/compras/pagos";
 import { imprimirOrdenPago } from "@/modules/compras/RegistrarPagoProveedor";
 
 const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -67,7 +67,7 @@ export function DetallePago({ id, puedeAnular, onClose, onAnular }: { id: string
                     <li key={a.cxp_id} className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm">
                       <span>
                         <span className="font-mono text-xs font-semibold text-slate-800">{a.numero}</span>
-                        {a.compra_numero ? <Link href={`/compras?ver=${a.compra_id}`} className="ml-2 font-mono text-xs text-[var(--brand)] hover:underline">{a.compra_numero}</Link> : null}
+                        {a.compra_numero ? <Link href={hrefOrigenCxp(a)} className="ml-2 font-mono text-xs text-[var(--brand)] hover:underline">{a.compra_numero}</Link> : null}
                       </span>
                       <span className="font-semibold tabular-nums text-emerald-700">{din(a.monto)}</span>
                     </li>

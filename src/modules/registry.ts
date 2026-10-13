@@ -16,11 +16,11 @@ import { moduloConversaciones } from "@/modules/conversaciones/module";
 import { moduloFinalizadas, moduloMonitoreo, moduloHistorialOmnicanal } from "@/modules/conversaciones/modulos-omnicanal";
 import { moduloGestionClientes, moduloPlanes, moduloAgenda } from "@/modules/clientes/modulos-comerciales";
 import { moduloCobranzas, moduloConciliacion } from "@/modules/cobranzas/module";
-import { moduloPagos } from "@/modules/compras/modulos-finanzas";
+import { moduloPagos, moduloGastos } from "@/modules/compras/modulos-finanzas";
 import { moduloProyectos } from "@/modules/proyectos/module";
 
 // El orden de acá es el orden dentro de cada familia del menú (igual que sistemas-propio):
-// Comercial: Clientes, CRM Funnel, Gestión Clientes, Planes, Agenda, Proyectos · Finanzas: Caja, Cobranzas, Conciliación, Pagos,
+// Comercial: Clientes, CRM Funnel, Gestión Clientes, Planes, Agenda, Proyectos · Finanzas: Caja, Cobranzas, Conciliación, Pagos, Gastos y Servicios,
 // Compras, Reportes · Operaciones: Inventario · Omnicanal: Conversaciones, Finalizadas, Monitoreo, Historial omnicanal ·
 // Soporte: Soporte.
 const TODOS: Modulo[] = [
@@ -34,6 +34,7 @@ const TODOS: Modulo[] = [
   moduloCobranzas,
   moduloConciliacion,
   moduloPagos,
+  moduloGastos,
   moduloCompras,
   moduloReportes,
   moduloInventario,

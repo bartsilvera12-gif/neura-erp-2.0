@@ -35,7 +35,7 @@ export const GET = withTenant(
         .eq("id", id)
         .limit(1),
       ctx.db.select("pagos_proveedores_medios", "metodo, monto, referencia").eq("pago_id", id),
-      ctx.db.select("pagos_proveedores_aplicaciones", "monto, cuentas_por_pagar(numero, fecha_emision, vencimiento, monto, compras(numero_control))").eq("pago_id", id),
+      ctx.db.select("pagos_proveedores_aplicaciones", "monto, cuentas_por_pagar(numero, fecha_emision, vencimiento, monto, compras(numero_control), gastos(numero))").eq("pago_id", id),
     ]);
     if (p.error || m.error || a.error) return ERR.server();
     const k = p.data?.[0] as unknown as {
@@ -46,7 +46,7 @@ export const GET = withTenant(
     const medios = (m.data ?? []) as unknown as { metodo: string; monto: number; referencia: string | null }[];
     const apl = (a.data ?? []) as unknown as {
       monto: number;
-      cuentas_por_pagar: { numero: string; fecha_emision: string; vencimiento: string; monto: number; compras: { numero_control: string } | null } | null;
+      cuentas_por_pagar: { numero: string; fecha_emision: string; vencimiento: string; monto: number; compras: { numero_control: string } | null; gastos: { numero: string | null } | null } | null;
     }[];
     const [prov, ec] = await Promise.all([
       ctx.db.select("proveedores", "nombre, ruc, telefono").eq("id", k.proveedor_id).limit(1),
@@ -100,7 +100,7 @@ export const GET = withTenant(
       body: apl.map((x) => {
         const cx = x.cuentas_por_pagar;
         return [
-          pdfTxt(cx?.numero ?? "—"), pdfTxt(cx?.compras?.numero_control ?? "—"), dia(cx?.fecha_emision ?? ""), dia(cx?.vencimiento ?? ""),
+          pdfTxt(cx?.numero ?? "—"), pdfTxt(cx?.compras?.numero_control ?? cx?.gastos?.numero ?? "—"), dia(cx?.fecha_emision ?? ""), dia(cx?.vencimiento ?? ""),
           cx ? din(cx.monto) : "—", din(x.monto),
         ];
       }),

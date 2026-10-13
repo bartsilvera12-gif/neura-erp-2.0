@@ -9,6 +9,8 @@
 --   · anular_pago_proveedor devuelve la deuda (no si salió efectivo de una caja cerrada)
 --   · listar_cuentas_pagar: lista con antigüedad de deuda (por vencer / vencido por tramo)
 --   · estado_cuenta_proveedor: facturas a crédito + pagos del proveedor
+-- NOTA: 48_pagos_gastos redefine listar_cuentas_pagar y estado_cuenta_proveedor para incluir
+-- las cuentas a pagar de los gastos a crédito (compra_id pasa a opcional, se suma gasto_id).
 -- Moneda: cada cuenta en la moneda de su compra; el pago es en esa moneda.
 -- IDEMPOTENTE.
 -- =============================================================================

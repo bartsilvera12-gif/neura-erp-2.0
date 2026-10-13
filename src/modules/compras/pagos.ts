@@ -11,6 +11,10 @@ export const METODOS_PAGO_PROV: { v: MetodoPagoProv; l: string }[] = [
 ];
 export const nombreMetodoPago = (m: string) => METODOS_PAGO_PROV.find((x) => x.v === m)?.l ?? m;
 
+/** Pantalla del documento que originó la deuda: la compra o el gasto (Gastos y Servicios). */
+export const hrefOrigenCxp = (c: { compra_id?: string | null; gasto_id?: string | null }) =>
+  c.gasto_id ? `/gastos?ver=${c.gasto_id}` : `/compras?ver=${c.compra_id ?? ""}`;
+
 /** Gs. 1.250.000 · US$ 1.250,50 */
 export function dinero(v: number, moneda: Moneda | string = "GS") {
   const n = Number(v) || 0;
@@ -25,7 +29,9 @@ export type EstadoCxp = "pendiente" | "parcial" | "pagada" | "anulada";
 
 export type CuentaPagar = {
   id: string;
-  compra_id: string;
+  /** Origen de la deuda: una compra a crédito o un gasto a crédito (Gastos y Servicios). */
+  compra_id: string | null;
+  gasto_id?: string | null;
   proveedor_id: string;
   numero: string; // factura del proveedor
   fecha_emision: string;
@@ -74,13 +80,14 @@ export type PagoProveedor = {
   anulado_por: string | null;
   anulado_motivo: string | null;
   medios: MedioPago[];
-  aplicaciones?: { monto: number; cxp_id: string; numero: string; compra_id: string; compra_numero: string | null }[];
+  aplicaciones?: { monto: number; cxp_id: string; numero: string; compra_id: string | null; gasto_id?: string | null; compra_numero: string | null }[];
 };
 
 /** Cuenta tal como la devuelve estado_cuenta_proveedor. */
 export type CuentaProveedor = {
   id: string;
-  compra_id: string;
+  compra_id: string | null;
+  gasto_id?: string | null;
   compra_numero: string;
   numero: string;
   fecha_emision: string;

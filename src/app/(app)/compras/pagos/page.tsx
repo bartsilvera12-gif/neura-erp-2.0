@@ -19,7 +19,7 @@ import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { cargarProveedores } from "@/modules/proveedores/cache";
 import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos";
 import {
-  ESTADO_CXP, dinero, nombreMetodoPago, textoVencimiento,
+  ESTADO_CXP, dinero, hrefOrigenCxp, nombreMetodoPago, textoVencimiento,
   type AntiguedadPagar, type CuentaPagar, type ListaCuentasPagar, type Moneda, type PagoProveedor,
 } from "@/modules/compras/pagos";
 import { RegistrarPagoProveedor, imprimirOrdenPago, useAvisoPago } from "@/modules/compras/RegistrarPagoProveedor";
@@ -59,7 +59,7 @@ export default function PagosProveedoresPage() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Finanzas · Compras</p>
           </div>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Pagos a proveedores</h1>
-          <p className="mt-1 text-sm text-slate-500">Lo que les debés a tus proveedores por compras a crédito, empezando por lo más urgente.</p>
+          <p className="mt-1 text-sm text-slate-500">Lo que les debés a tus proveedores por compras y gastos a crédito, empezando por lo más urgente.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-xl bg-slate-100 p-1">
@@ -237,7 +237,7 @@ function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, prov
             <tr className="border-b-2 text-[11px] font-bold uppercase tracking-wider" style={{ borderColor: `${TEAL}26`, backgroundColor: `${TEAL}0d`, color: TEAL }}>
               <th className="px-5 py-3">Proveedor</th>
               <th className="px-3 py-3">Factura</th>
-              <th className="px-3 py-3">Compra</th>
+              <th className="px-3 py-3">Compra / gasto</th>
               <th className="px-3 py-3">Emisión</th>
               <th className="px-3 py-3">Vencimiento</th>
               <th className="px-3 py-3 text-right">Monto</th>
@@ -255,7 +255,7 @@ function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, prov
                 <td colSpan={10} className="px-5 py-16 text-center">
                   <Banknote className="mx-auto h-8 w-8 text-slate-300" />
                   <p className="mt-3 text-sm font-medium text-slate-700">{q || filtro || proveedor ? "Ninguna factura coincide" : `No le debés nada a ningún proveedor${moneda === "USD" ? " en dólares" : ""}`}</p>
-                  <p className="mt-1 text-xs text-slate-500">Las compras a crédito aparecen acá hasta que las pagues.</p>
+                  <p className="mt-1 text-xs text-slate-500">Las compras y los gastos a crédito aparecen acá hasta que los pagues.</p>
                 </td>
               </tr>
             ) : (
@@ -274,7 +274,7 @@ function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, prov
                       </p>
                     </td>
                     <td className="px-3 py-3 font-mono text-xs font-semibold text-slate-800">{r.numero}</td>
-                    <td className="px-3 py-3"><Link href={`/compras?ver=${r.compra_id}`} className="font-mono text-xs font-semibold text-[var(--brand)] hover:underline">{r.compra_numero}</Link></td>
+                    <td className="px-3 py-3"><Link href={hrefOrigenCxp(r)} className="font-mono text-xs font-semibold text-[var(--brand)] hover:underline">{r.compra_numero}</Link></td>
                     <td className="px-3 py-3 text-xs text-slate-600">{dia(r.fecha_emision)}</td>
                     <td className="px-3 py-3 text-xs">
                       <span className="text-slate-700">{dia(r.vencimiento)}</span>
