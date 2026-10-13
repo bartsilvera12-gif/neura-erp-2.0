@@ -50,13 +50,16 @@ const CLASES_ESTADO: Record<EstadoUi, string> = {
   Pendiente: "bg-amber-100 text-amber-700",
 };
 
-export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistrarPago, onCambio }: {
+export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistrarPago, onCobroCaja, onFacturaContado, onCambio }: {
   clienteId: string;
   ventas: Venta[];
   recarga: number;
   esAdmin: boolean;
   /** abre Registrar cobro (con la cuenta de esa venta elegida, o general) */
   onRegistrarPago: (cxcId: string | null) => void;
+  /** Cobro directo en la caja (efectivo y otros medios), baja la deuda al instante. */
+  onCobroCaja: () => void;
+  onFacturaContado: () => void;
   /** se anuló una venta o un cobro: la ficha recarga */
   onCambio: () => void;
 }) {
@@ -127,12 +130,20 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
           >
             {bajandoPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Estado de cuenta PDF
           </button>
-          <Link
-            href={`/caja/nueva?cliente=${encodeURIComponent(clienteId)}`}
+          <button
+            type="button"
+            onClick={onFacturaContado}
             className="text-sm font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded-lg"
           >
-            Venta al contado
-          </Link>
+            Factura al contado
+          </button>
+          <button
+            type="button"
+            onClick={onCobroCaja}
+            className="text-sm font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded-lg"
+          >
+            Cobro en caja
+          </button>
           <button
             type="button"
             onClick={() => onRegistrarPago(null)}

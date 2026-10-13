@@ -36,8 +36,10 @@ export type CuotaFija = { cxc_id: string; numero: string; vencimiento: string; s
 
 const disponible = (c: { saldo: number; en_aprobacion: number }) => Math.max(0, Math.round(Number(c.saldo) - Number(c.en_aprobacion)));
 
-export function RegistrarTransferencia({ fija, onClose, onHecho }: {
+export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho }: {
   fija?: CuotaFija;
+  /** Ficha del cliente: abre con sus cuotas abiertas (y esa cuota marcada si viene cxcId). */
+  clienteInicial?: { id: string; nombre: string; cxcId?: string | null };
   onClose: () => void;
   onHecho: (mensaje: string) => void;
 }) {
@@ -85,16 +87,21 @@ export function RegistrarTransferencia({ fija, onClose, onHecho }: {
     return () => { vivo = false; clearTimeout(t); };
   }, [busqueda, fija, cliente]);
 
-  async function elegirFactura(f: FilaBusqueda) {
-    setCliente({ id: f.cliente_id, nombre: f.cliente_nombre });
+  function elegirFactura(f: FilaBusqueda) {
+    void cargarCliente(f.cliente_id, f.cliente_nombre, f.id);
+  }
+
+  async function cargarCliente(clienteId: string, nombre: string, cxcId: string | null) {
+    setCliente({ id: clienteId, nombre });
     setCargandoCuotas(true);
     setError(null);
     try {
-      const d = await apiFetch<DetalleCobranza>(`/api/cobranzas/clientes/${f.cliente_id}`);
+      const d = await apiFetch<DetalleCobranza>(`/api/cobranzas/clientes/${clienteId}`);
       const todas = d.servicios.flatMap((s) => s.cuotas.map((c) => ({ ...c, plan: planDe(s) })))
         .sort((a, b) => a.vencimiento.localeCompare(b.vencimiento) || a.numero.localeCompare(b.numero));
       setCuotas(todas);
-      const esa = todas.find((c) => c.id === f.id);
+      // Sin cuota elegida: la más vieja con algo libre (se paga primero la más vieja).
+      const esa = cxcId ? todas.find((c) => c.id === cxcId) : todas.find((c) => disponible(c) > 0);
       setElegidas(esa && disponible(esa) > 0 ? { [esa.id]: disponible(esa) } : {});
       if (esa && disponible(esa) <= 0) setError(`${esa.numero} ya tiene todo su saldo esperando aprobación.`);
     } catch (e) {
@@ -104,6 +111,11 @@ export function RegistrarTransferencia({ fija, onClose, onHecho }: {
       setCargandoCuotas(false);
     }
   }
+
+  useEffect(() => {
+    if (clienteInicial) void cargarCliente(clienteInicial.id, clienteInicial.nombre, clienteInicial.cxcId ?? null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const banco = bancos.find((b) => b.id === bancoId) ?? null;
   function cambiarBanco(id: string) {
@@ -146,7 +158,7 @@ export function RegistrarTransferencia({ fija, onClose, onHecho }: {
   if (!banco) faltan.push("el banco");
   if (!titular.trim()) faltan.push("el titular");
   if (!operacion.trim() && !banco?.sin_referencia) faltan.push("el N° de operación");
-  if (fija && !archivo) faltan.push("el comprobante");
+  if ((fija || clienteInicial) && !archivo) faltan.push("el comprobante");
   const invalido = faltan.length > 0 || !!montoMal || !fecha || fecha > hoy;
 
   async function guardar() {
@@ -305,7 +317,7 @@ export function RegistrarTransferencia({ fija, onClose, onHecho }: {
           </div>
           <div>
             <span className={LABEL}>
-              Comprobante <span className="normal-case text-slate-400">({fija ? "obligatorio" : "opcional"} — JPG, PNG, WebP o PDF, máx. 8 MB)</span>
+              Comprobante <span className="normal-case text-slate-400">({fija || clienteInicial ? "obligatorio" : "opcional"} — JPG, PNG, WebP o PDF, máx. 8 MB)</span>
             </span>
             {!archivo ? (
               <button type="button" onClick={() => fileRef.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/5">

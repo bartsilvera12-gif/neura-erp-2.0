@@ -5,7 +5,8 @@
  * /clientes/[id] y, como en el sistema actual, dentro del modal "Detalle del cliente" que
  * abre la lista (onCerrar).
  * Encabezado: avatar, nombre, código CL-…, estado, "Cliente desde", Dar de baja / Reactivar
- * y Eliminar (administrador); acciones Nueva suscripción, Venta al contado y Registrar pago;
+ * y Eliminar (administrador); acciones Nueva suscripción, Factura al contado (servicio puntual sin caja) y
+ * Registrar pago (transferencia → Conciliación, como el actual);
  * franja de datos (origen, categoría, condición, suscripción activa, moneda, vendedor,
  * creado por). Pestañas, iguales al sistema actual: Información (formulario editable en el
  * lugar), Estado de cuenta (ventas, cobros y PDF), Suscripciones (facturación, cambio de
@@ -18,6 +19,8 @@ import { ClipboardPen, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
+import { RegistrarTransferencia } from "@/modules/cobranzas/RegistrarTransferencia";
+import { FacturaContadoModal } from "@/modules/clientes/ficha/FacturaContadoModal";
 import type { Detalle } from "@/modules/clientes/ficha/tipos";
 import { TabInformacion } from "@/modules/clientes/ficha/TabInformacion";
 import { TabEstadoCuenta } from "@/modules/clientes/ficha/TabEstadoCuenta";
@@ -47,6 +50,8 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
   const [tab, setTab] = useState<Tab>("informacion");
   // Registrar cobro: null = cerrado; "" = general; id = la cuenta de esa venta.
   const [cobrando, setCobrando] = useState<string | null>(null);
+  const [transfiriendo, setTransfiriendo] = useState<string | null>(null);
+  const [facturaContado, setFacturaContado] = useState(false);
   const [recargaCuenta, setRecargaCuenta] = useState(0);
   const [recargaHist, setRecargaHist] = useState(0);
   const [bajando, setBajando] = useState(false);
@@ -216,12 +221,12 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
                 <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Nueva suscripción
               </button>
             </span>
-            <Link href="/caja/nueva"
+            <button type="button" onClick={() => setFacturaContado(true)}
               className="rounded-xl border px-3 py-1.5 text-xs font-semibold transition hover:brightness-95"
               style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}14`, color: TEAL }}>
-              Venta al contado
-            </Link>
-            <button type="button" onClick={() => setCobrando("")}
+              Factura al contado
+            </button>
+            <button type="button" onClick={() => setTransfiriendo("")}
               className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
               Registrar pago
             </button>
@@ -277,7 +282,9 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
             ) : null}
             {tab === "estado_cuenta" ? (
               <TabEstadoCuenta clienteId={c.id} ventas={data.ventas} recarga={recargaCuenta} esAdmin={esAdmin}
-                onRegistrarPago={(cxc) => setCobrando(cxc ?? "")}
+                onRegistrarPago={(cxc) => setTransfiriendo(cxc ?? "")}
+                onCobroCaja={() => setCobrando("")}
+                onFacturaContado={() => setFacturaContado(true)}
                 onCambio={() => { void cargar(); void cargarSubs(); }} />
             ) : null}
             {tab === "suscripciones" ? (
@@ -290,6 +297,16 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
         </div>
       </div>
 
+      {transfiriendo !== null ? (
+        <RegistrarTransferencia clienteInicial={{ id: c.id, nombre: c.razon_social || c.nombre, cxcId: transfiriendo || null }}
+          onClose={() => setTransfiriendo(null)}
+          onHecho={(m) => { setTransfiriendo(null); setAviso(m); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); void cargar(); }} />
+      ) : null}
+      {facturaContado ? (
+        <FacturaContadoModal clienteId={c.id} clienteNombre={c.razon_social || c.nombre} moneda={c.moneda_preferida === "USD" ? "USD" : "GS"}
+          onClose={() => setFacturaContado(false)}
+          onEmitida={(m) => { setFacturaContado(false); setAviso(m); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); void cargar(); }} />
+      ) : null}
       {cobrando !== null ? (
         <RegistrarCobro clienteId={c.id} clienteNombre={c.razon_social || c.nombre} cxcInicial={cobrando || null} onClose={() => setCobrando(null)}
           onHecho={() => { void cargar(); void cargarSubs(); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); }} />
