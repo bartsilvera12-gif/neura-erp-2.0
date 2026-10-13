@@ -1,14 +1,14 @@
 "use client";
 
 /**
- * Pestaña "Información" de la ficha: todos los datos del cliente editables en el lugar,
- * con las secciones del sistema actual — identificación (+ datos para factura), contacto
- * (+ receptor SIFEN avanzado), presencia digital y datos comerciales, en tarjetas a dos
- * columnas (como el modal del sistema actual) para aprovechar el ancho. "Guardar cambios"
+ * Pestaña "Información" de la ficha: vista de lectura en tarjetas compactas y un botón
+ * "Editar información" que abre el modal (estilo del sistema actual) con las secciones — identificación (+ datos para factura), contacto
+ * (+ receptor SIFEN avanzado), presencia digital y datos comerciales. "Guardar cambios"
  * manda solo lo de este formulario; la Actividad registra cada cambio sola.
  */
 import { useEffect, useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Briefcase, Globe, IdCard, Loader2, Pencil, Phone, Plus, X } from "lucide-react";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
 import { Select } from "@/components/Select";
@@ -88,6 +88,9 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guardado, setGuardado] = useState(false);
+  const [abierto, setAbierto] = useState(false);
+  // Al abrir, el formulario arranca con los datos actuales (descarta lo que quedó sin guardar).
+  const abrir = () => { setF(formDesde(cliente)); setError(null); setNuevaCat(null); setGuardado(false); setAbierto(true); };
 
   useEffect(() => { setF(formDesde(cliente)); }, [cliente]);
   useEffect(() => {
@@ -177,6 +180,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         }),
       });
       setGuardado(true);
+      setAbierto(false);
       onGuardado();
     } catch (err) {
       setError((err as Error).message);
@@ -185,8 +189,17 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
     }
   }
 
+  const vendedor = cliente.vendedor_usuario_id ? usuarios?.find((u) => u.id === cliente.vendedor_usuario_id)?.nombre ?? null : null;
+  const credito = cliente.condicion_pago === "CREDITO";
+  const usd = cliente.moneda_preferida === "USD";
+  const sifen = [
+    cliente.sifen_naturaleza === "contribuyente" ? "Contribuyente" : cliente.sifen_naturaleza === "no_contribuyente" ? "No contribuyente" : null,
+    cliente.sifen_ti_ope ?? null,
+    cliente.sifen_extranjero ? `Extranjero (${cliente.sifen_pais_iso3 ?? "—"})` : null,
+  ].filter(Boolean).join(" · ");
+
   return (
-    <form onSubmit={guardar} className="space-y-5">
+    <div className="space-y-5">
       {cliente.baja_at ? (
         <div className="space-y-2 rounded-xl border border-amber-200 bg-amber-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-wider text-amber-800">Baja registrada</p>
@@ -198,8 +211,82 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         </div>
       ) : null}
 
-      <div className="grid grid-cols-1 items-start gap-5 xl:grid-cols-2">
-        <div className="space-y-5">
+      {/* Vista de lectura: tarjetas compactas; para cambiar algo se abre el modal. */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-slate-500">Datos del cliente. Para cambiarlos usá <b className="font-semibold text-slate-700">Editar información</b>.</p>
+        <div className="flex items-center gap-3">
+          {guardado ? <span className="text-xs font-medium text-emerald-600">Cambios guardados</span> : null}
+          <button type="button" onClick={abrir}
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95"
+            style={{ backgroundColor: TEAL }}>
+            <Pencil className="h-4 w-4" /> Editar información
+          </button>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+        <Tarjeta titulo="Identificación" icono={IdCard}>
+          <Dato label="Tipo">{cliente.tipo_cliente === "empresa" ? "Empresa" : "Persona"}</Dato>
+          <Dato label="Categoría">{cliente.categoria_nombre ?? null}</Dato>
+          <Dato label={cliente.tipo_cliente === "empresa" ? "Nombre de empresa" : "Nombre completo"} ancho>{cliente.nombre}</Dato>
+          <Dato label={cliente.tipo_cliente === "empresa" ? "RUC" : "CI / Documento"} mono>{cliente.documento}</Dato>
+          {cliente.tipo_cliente === "empresa" ? <Dato label="Persona de contacto">{cliente.nombre_contacto}</Dato> : null}
+          <Dato label="Factura a nombre de">{cliente.razon_social}</Dato>
+          <Dato label="RUC para factura" mono>{cliente.ruc}</Dato>
+        </Tarjeta>
+
+        <Tarjeta titulo="Contacto" icono={Phone}>
+          <Dato label="Teléfono">{cliente.telefono ? <a href={`tel:${cliente.telefono.replace(/\s+/g, "")}`} className="hover:text-[var(--brand)] hover:underline">{cliente.telefono}</a> : null}</Dato>
+          <Dato label="Teléfono secundario">{cliente.telefono_secundario}</Dato>
+          <Dato label="Email">{cliente.email ? <a href={`mailto:${cliente.email}`} className="break-all hover:text-[var(--brand)] hover:underline">{cliente.email}</a> : null}</Dato>
+          <Dato label="Email secundario">{cliente.email_secundario}</Dato>
+          <Dato label="Dirección" ancho>{[cliente.direccion, cliente.ciudad, cliente.pais].filter(Boolean).join(", ") || null}</Dato>
+          {sifen ? <Dato label="SIFEN del receptor" ancho>{sifen}</Dato> : null}
+        </Tarjeta>
+
+        <Tarjeta titulo="Datos comerciales" icono={Briefcase}>
+          <Dato label="Condición de pago">{credito ? `Crédito · ${cliente.plazo_dias ?? 30} días` : "Contado"}</Dato>
+          {credito ? <Dato label="Límite de crédito">{Number(cliente.limite_credito ?? 0) > 0 ? `Gs. ${Number(cliente.limite_credito).toLocaleString("es-PY")}` : "Sin límite"}</Dato> : null}
+          <Dato label="Moneda">{usd ? "Dólares (US$)" : "Guaraníes (Gs.)"}</Dato>
+          <Dato label="Valor anual estimado">{Number(cliente.valor_anual ?? 0) > 0 ? `${usd ? "US$" : "Gs."} ${Number(cliente.valor_anual).toLocaleString("es-PY")}` : null}</Dato>
+          <Dato label="Vendedor">{vendedor ?? cliente.vendedor_texto ?? null}</Dato>
+          <Dato label="Estado">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-semibold ${cliente.activo !== false ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+              <i aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${cliente.activo !== false ? "bg-emerald-500" : "bg-slate-400"}`} />
+              {cliente.activo !== false ? "Activo" : "Inactivo"}
+            </span>
+          </Dato>
+        </Tarjeta>
+
+        <Tarjeta titulo="Presencia digital" icono={Globe}>
+          <Dato label="Sitio web" ancho>{cliente.sitio_web ? <a href={/^https?:\/\//i.test(cliente.sitio_web) ? cliente.sitio_web : `https://${cliente.sitio_web}`} target="_blank" rel="noopener noreferrer" className="break-all text-[var(--brand)] hover:underline">{cliente.sitio_web}</a> : null}</Dato>
+          <Dato label="Instagram">{cliente.instagram}</Dato>
+          <Dato label="LinkedIn">{cliente.linkedin}</Dato>
+        </Tarjeta>
+      </div>
+
+      {abierto ? (
+        <CapaModal onClose={busy ? undefined : () => setAbierto(false)} fondo="bg-slate-900/55 backdrop-blur-sm">
+          <div role="dialog" aria-modal="true" aria-labelledby="cli-info-titulo"
+            className={`relative flex w-full max-w-4xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15`}
+            style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
+            <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-6 pb-5 pt-6">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2">
+                  <span aria-hidden="true" className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4FAEB2]">Editar</p>
+                </div>
+                <h2 id="cli-info-titulo" className="mt-1 truncate text-2xl font-semibold tracking-tight text-slate-900">{cliente.nombre}</h2>
+                <p className="mt-1 text-sm text-slate-500">Todos los datos del cliente. La Actividad registra cada cambio.</p>
+              </div>
+              <button type="button" onClick={() => setAbierto(false)} disabled={busy} aria-label="Cerrar"
+                className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            <form id="cli-info-form" onSubmit={guardar} className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-slate-50/50 px-6 py-5">
       {/* Identificación */}
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <SectionTitle>Datos de identificación</SectionTitle>
@@ -325,8 +412,6 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         </details>
       </section>
 
-        </div>
-        <div className="space-y-5">
       {/* Comercial */}
       <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <SectionTitle>Datos comerciales</SectionTitle>
@@ -383,21 +468,49 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         </div>
       </section>
 
-        </div>
-      </div>
-
       {error ? (
         <div className="flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
           <span>⚠</span><span className="font-medium">{error}</span>
         </div>
       ) : null}
+            </form>
 
-      <div className="sticky bottom-0 z-10 flex items-center justify-end gap-3 rounded-2xl border border-slate-200 bg-white/95 px-5 py-3 shadow-[0_-4px_16px_-8px_rgba(15,23,42,0.12)] backdrop-blur">
-        {guardado ? <span className="mr-auto text-xs font-medium text-emerald-600">Cambios guardados</span> : null}
-        <button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95 active:scale-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {busy ? "Guardando…" : "Guardar cambios"}
-        </button>
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-white px-6 py-4">
+              <button type="button" onClick={() => setAbierto(false)} disabled={busy}
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
+                Cancelar
+              </button>
+              <button type="submit" form="cli-info-form" disabled={busy}
+                className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95 disabled:opacity-50"
+                style={{ backgroundColor: TEAL }}>
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {busy ? "Guardando…" : "Guardar cambios"}
+              </button>
+            </div>
+          </div>
+        </CapaModal>
+      ) : null}
+    </div>
+  );
+}
+
+function Tarjeta({ titulo, icono: Icono, children }: { titulo: string; icono: React.ComponentType<{ className?: string }>; children: React.ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="flex items-center gap-2.5 border-b border-slate-100 px-5 py-3.5">
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#4FAEB2]/12 text-[#3F8E91]"><Icono className="h-3.5 w-3.5" /></span>
+        <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">{titulo}</h3>
       </div>
-    </form>
+      <dl className="grid grid-cols-1 gap-x-6 gap-y-3.5 px-5 py-4 sm:grid-cols-2">{children}</dl>
+    </section>
+  );
+}
+
+function Dato({ label, children, ancho = false, mono = false }: { label: string; children: React.ReactNode; ancho?: boolean; mono?: boolean }) {
+  const vacio = children === null || children === undefined || children === "";
+  return (
+    <div className={`min-w-0 ${ancho ? "sm:col-span-2" : ""}`}>
+      <dt className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{label}</dt>
+      <dd className={`mt-0.5 break-words text-sm ${vacio ? "text-slate-300" : "font-medium text-slate-800"} ${mono && !vacio ? "font-mono" : ""}`}>{vacio ? "—" : children}</dd>
+    </div>
   );
 }
