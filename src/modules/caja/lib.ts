@@ -25,6 +25,8 @@ export type Producto = {
   imagen_url?: string | null;
   /** Descuento del producto (%), definido en Inventario. La caja lo aplica solo. */
   descuento_pct?: number;
+  /** Productos con lotes: unidades en lotes VENCIDOS (la caja no las vende; avisa sin bloquear). */
+  stock_vencido?: number;
 };
 
 export type Cliente = {

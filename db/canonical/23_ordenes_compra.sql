@@ -212,6 +212,8 @@ end;
 $fn$;
 
 -- La compra sabe recibir una orden (orden_compra_id + oc_item_id por línea).
+-- OJO: 44_lotes.sql REDEFINE registrar_compra y anular_compra (lotes con vencimiento);
+-- la versión vigente es la de 44 (idéntica a esta para productos sin lotes).
 drop function if exists :"schema".registrar_compra(jsonb);
 create or replace function :"schema".registrar_compra(p jsonb)
 returns jsonb

@@ -8,6 +8,8 @@
  *    compra y cuánto subió) y, si querés, el nuevo precio de venta con el margen en vivo.
  * 3) Resumen: totales con IVA contenido, qué falta completar y "Registrar compra".
  * Todo se guarda junto en la base (registrar_compra): stock, costo promedio, precio y kardex.
+ * Productos con lotes: cada línea lleva lote (prellenado L-YYMMDD, editable) y vencimiento
+ * (obligatorio). Una línea = un lote: para dos lotes del mismo producto, dos líneas.
  */
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -26,6 +28,7 @@ import { cargarProveedores } from "@/modules/proveedores/cache";
 import type { OrdenCompra } from "@/modules/compras/ordenes";
 import { AdjuntosPendientes, subirComprobantes } from "@/modules/compras/Comprobantes";
 import { BuscadorProductos, ET, Fila, gs, INPUT, ivaDe, Segmentado, sumarDias, Tarjeta, usd } from "@/modules/compras/partes";
+import { loteAutomatico } from "@/modules/inventario/vencimientos";
 
 const TEAL = clienteConfig.color;
 type Linea = {
@@ -35,6 +38,9 @@ type Linea = {
   costo: number;          // en la moneda de la factura, IVA incluido
   precioNuevo: number;    // 0 = no cambia
   ultima: { costo: number; fecha: string; proveedor: string | null } | null;
+  /** productos con lotes: N° de lote (vacío → L-YYMMDD) y vencimiento YYYY-MM-DD */
+  lote: string;
+  vencimiento: string;
   /** línea de la orden que se está recibiendo */
   ocItemId?: string;
   pedido?: number;
@@ -109,6 +115,8 @@ function NuevaCompra() {
             costo: Number(i.costo_unitario_original) || 0,
             precioNuevo: 0,
             ultima: u ? { costo: Number(u.costo), fecha: u.fecha, proveedor: u.proveedor } : null,
+            lote: loteAutomatico(hoyPY()),
+            vencimiento: "",
             ocItemId: i.id,
             pedido: Number(i.cantidad),
             recibidoAntes: Number(i.cantidad_recibida),
@@ -135,14 +143,17 @@ function NuevaCompra() {
     setMoneda(p.moneda);
   }
 
+  const conLotes = (p: ProductoInventario) => !!(p.controla_stock && p.controla_lotes);
+
   async function agregar(prod: ProductoInventario) {
-    const existente = lineas.find((l) => l.prod.id === prod.id);
+    // Con lotes, cada vez que se agrega es otra línea (otro lote); sin lotes, suma 1.
+    const existente = conLotes(prod) ? null : lineas.find((l) => l.prod.id === prod.id);
     if (existente) {
       setLineas((ls) => ls.map((l) => (l.key === existente.key ? { ...l, cantidad: String((Number(l.cantidad.replace(",", ".")) || 0) + 1) } : l)));
       return;
     }
     const key = `${prod.id}-${Date.now()}`;
-    setLineas((ls) => [...ls, { key, prod, cantidad: "1", costo: 0, precioNuevo: 0, ultima: null }]);
+    setLineas((ls) => [...ls, { key, prod, cantidad: "1", costo: 0, precioNuevo: 0, ultima: null, lote: loteAutomatico(hoyPY()), vencimiento: "" }]);
     // Última compra: se muestra al lado del costo y se propone el mismo costo.
     try {
       const h = await apiFetch<HistorialCostosData>(`/api/productos/${prod.id}/costos`);
@@ -182,6 +193,7 @@ function NuevaCompra() {
     lineas.length === 0 && "al menos un producto",
     lineas.some((l) => !(Number(l.cantidad.replace(",", ".")) > 0)) && "la cantidad de algún producto",
     lineas.some((l) => !(l.costo > 0)) && "el costo de algún producto",
+    lineas.some((l) => conLotes(l.prod) && !l.vencimiento) && "el vencimiento de algún producto con lotes",
   ].filter(Boolean) as string[];
 
   async function registrar() {
@@ -208,6 +220,8 @@ function NuevaCompra() {
             costo_unitario: l.costo,
             precio_venta_nuevo: l.precioNuevo > 0 ? l.precioNuevo : null,
             oc_item_id: l.ocItemId ?? null,
+            lote: conLotes(l.prod) ? l.lote.trim() || null : null,
+            vencimiento: conLotes(l.prod) ? l.vencimiento : null,
           })),
         }),
       });
@@ -453,6 +467,24 @@ function LineaCompra({ l, moneda, factor, onCambiar, onQuitar }: {
           <MontoInput value={l.precioNuevo || ""} onChange={(v) => onCambiar({ precioNuevo: v })} decimals={false} placeholder={Number(l.prod.precio_venta).toLocaleString("es-PY")} className={`${INPUT} py-2 text-right tabular-nums`} />
         </label>
       </div>
+
+      {l.prod.controla_stock && l.prod.controla_lotes ? (
+        <div className="mt-2 grid grid-cols-3 gap-2 rounded-lg bg-slate-50/70 p-2">
+          <label className="block">
+            <span className={ET}>Lote <span className="font-normal text-slate-400">(editable)</span></span>
+            <input value={l.lote} onChange={(e) => onCambiar({ lote: e.target.value.slice(0, 40) })} placeholder={loteAutomatico(hoyPY())} className={`${INPUT} bg-white py-2 font-mono uppercase`} />
+          </label>
+          <label className="block">
+            <span className={ET}>Vencimiento *</span>
+            <input type="date" value={l.vencimiento} onChange={(e) => onCambiar({ vencimiento: e.target.value })} className={`${INPUT} bg-white py-2 ${l.vencimiento ? "" : "border-amber-300"}`} />
+          </label>
+          <p className="self-end pb-2 text-[11px] text-slate-500">
+            {!l.vencimiento ? "Cargá el vencimiento de este lote."
+              : l.vencimiento < hoyPY() ? <span className="font-semibold text-rose-600">Esa fecha ya pasó: el lote entra vencido.</span>
+              : "Para otro lote del mismo producto, agregalo de nuevo."}
+          </p>
+        </div>
+      ) : null}
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
         <span className="flex items-center gap-2">

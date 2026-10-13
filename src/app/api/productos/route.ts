@@ -1,7 +1,8 @@
 /**
  * Productos — catálogo que vende la caja y que gestiona Inventario.
  *   GET  /api/productos                → vendibles y activos — columnas completas (tope 1000)
- *   GET  /api/productos?pos=1[&campos=nombre] → catálogo liviano de la caja, completo (por lotes)
+ *   GET  /api/productos?pos=1[&campos=nombre] → catálogo liviano de la caja, completo (por lotes).
+ *        Productos con lotes vencidos traen stock_vencido (aviso no bloqueante de la caja).
  *   GET  /api/productos?scope=inventario → todos los activos — lista completa
  *   GET  /api/productos?paginado=1&pagina&por_pagina&q&categoria&inactivos=1
  *        → { rows, total } paginado EN EL SERVIDOR (pantalla de Inventario). Con q, búsqueda
@@ -15,7 +16,7 @@ import { ok, created, fail, ERR } from "@/lib/api/responses";
 import { registrarMovimiento } from "@/modules/inventario/server/kardex";
 
 const COLS =
-  "id, nombre, sku, codigo_barras, categoria_principal_id, proveedor_principal_id, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, es_vendible, activo, imagen_url";
+  "id, nombre, sku, codigo_barras, categoria_principal_id, proveedor_principal_id, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, controla_lotes, es_vendible, activo, imagen_url";
 // Lo que lee la caja (POS) de cada producto: ni costos, ni categoría, ni proveedor.
 const COLS_POS =
   "id, nombre, sku, codigo_barras, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, unidad_medida, tipo_iva, controla_stock, imagen_url";
@@ -74,7 +75,14 @@ export const GET = withTenant(async (ctx, req) => {
         .order("nombre", { ascending: true })
         .order("id", { ascending: true }) // orden estable entre lotes
         .range(desde, hasta);
-    const primero = await lote(0, LOTE - 1, true);
+    // Unidades en lotes vencidos, en paralelo con el primer lote (no agrega espera: solo
+    // devuelve filas si hay lotes vencidos con stock).
+    const [primero, vencidos] = await Promise.all([
+      lote(0, LOTE - 1, true),
+      cols === COLS_POS
+        ? ctx.db.rpc<{ producto_id: string; vencido: number }[]>("lotes_stock_vencido")
+        : Promise.resolve({ data: null, error: null }),
+    ]);
     if (primero.error) return ERR.server();
     const filas = (primero.data ?? []) as unknown as Record<string, unknown>[];
     const total = primero.count ?? filas.length;
@@ -86,6 +94,14 @@ export const GET = withTenant(async (ctx, req) => {
       const resto = await Promise.all(pedidos);
       if (resto.some((r) => r.error)) return ERR.server();
       for (const r of resto) filas.push(...((r.data ?? []) as unknown as Record<string, unknown>[]));
+    }
+    // Si la consulta de vencidos falla, la caja sigue andando (solo no avisa).
+    if (vencidos.data?.length) {
+      const porId = new Map(vencidos.data.map((v) => [v.producto_id, Number(v.vencido) || 0]));
+      for (const f of filas) {
+        const v = porId.get(f.id as string);
+        if (v) f.stock_vencido = v;
+      }
     }
     return ok(filas);
   }
@@ -114,13 +130,19 @@ const crearProducto = z.object({
   unidad_medida: z.string().trim().default("Unidad"),
   tipo_iva: z.enum(["EXENTA", "5%", "10%"]).default("10%"),
   controla_stock: z.boolean().default(true),
+  controla_lotes: z.boolean().default(false),
   es_vendible: z.boolean().default(true),
   imagen_url: z.string().url().max(500).nullish(),
 });
 
 export const POST = withTenant(
   async (ctx, _req, input) => {
-    const { data, error } = await ctx.db.insert("productos", { ...input, codigo_barras: input.codigo_barras || null });
+    // Lotes solo tiene sentido si controla stock.
+    const { data, error } = await ctx.db.insert("productos", {
+      ...input,
+      codigo_barras: input.codigo_barras || null,
+      controla_lotes: input.controla_stock && input.controla_lotes,
+    });
     if (error || !data?.[0]) {
       if (error && /duplicate|unique/i.test(error.message)) return fail("Ya existe un producto con ese SKU o código.", 409);
       return ERR.server();

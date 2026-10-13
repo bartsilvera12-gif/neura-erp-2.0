@@ -325,6 +325,21 @@ function CajaPageContenido() {
   const haySinStock = sinStock.length > 0;
   const idsSinStock = useMemo(() => new Set(sinStock.map((l) => l.producto.id)), [sinStock]);
 
+  // Lotes vencidos (NO bloquea): lo pedido supera lo que no está vencido. La base vende
+  // solo de lotes vigentes (primero el que vence antes) y el resto queda sin lote.
+  const conVencidos = useMemo(() => {
+    const pedido = new Map<string, number>();
+    for (const l of cart) if (l.producto.stock_vencido) pedido.set(l.producto.id, (pedido.get(l.producto.id) ?? 0) + l.cantidad);
+    const out: { id: string; nombre: string; vigente: number; pedido: number }[] = [];
+    for (const [id, cant] of pedido) {
+      const p = cart.find((l) => l.producto.id === id)!.producto;
+      const vigente = Math.max(0, Number(p.stock_actual) - Number(p.stock_vencido ?? 0));
+      if (cant > vigente && !idsSinStock.has(id)) out.push({ id, nombre: p.nombre, vigente, pedido: cant });
+    }
+    return out;
+  }, [cart, idsSinStock]);
+  const idsVencidos = useMemo(() => new Set(conVencidos.map((v) => v.id)), [conVencidos]);
+
   // Cliente seleccionado / filtrado.
   const clienteSel = useMemo(() => clientes.find((c) => c.id === clienteId) ?? null, [clientes, clienteId]);
   // Con texto, busca en la base (todos los clientes, no solo los cargados) y mientras
@@ -696,6 +711,19 @@ function CajaPageContenido() {
                 </ul>
               </div>
             )}
+            {conVencidos.length > 0 && (
+              <div className="mb-3 rounded-xl border border-amber-300 bg-amber-50 p-3">
+                <p className="text-sm font-semibold text-amber-800">⚠ Hay unidades de lotes vencidos</p>
+                <ul className="mt-1 space-y-0.5 text-xs text-amber-900">
+                  {conVencidos.map((v) => (
+                    <li key={v.id} className="tabular-nums">
+                      <strong>{v.nombre}</strong> · {v.vigente > 0 ? `sin vencer quedan ${v.vigente}` : "solo queda stock vencido"} / Solicitado: {v.pedido}
+                    </li>
+                  ))}
+                </ul>
+                <p className="mt-1 text-[11px] text-amber-800">Revisá la fecha antes de entregar. Podés cobrar igual.</p>
+              </div>
+            )}
             {cart.length === 0 ? (
               <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-slate-400">
                 <Package className="h-8 w-8 text-slate-300" />
@@ -719,6 +747,7 @@ function CajaPageContenido() {
                           <div className="flex flex-wrap items-center gap-1.5">
                             <p className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">{l.producto.nombre}</p>
                             {sinStockLinea && <span className="rounded-full border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-800">❌ Sin stock</span>}
+                            {!sinStockLinea && idsVencidos.has(l.producto.id) && <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">⚠ Vencido</span>}
                             {tier !== "minorista" && (
                               <span className="rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ borderColor: `${TEAL}55`, backgroundColor: `${TEAL}14`, color: TEAL }}>
                                 {tier === "mayorista" ? "Mayorista" : "Distribuidor"}

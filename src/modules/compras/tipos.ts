@@ -12,6 +12,9 @@ export type CompraItem = {
   monto_iva: number;
   total: number;
   precio_venta_nuevo: number | null;
+  /** productos con lotes: lote y vencimiento con que entró */
+  lote_numero?: string | null;
+  lote_vencimiento?: string | null;
 };
 
 export type Compra = {
@@ -60,7 +63,7 @@ export const COLS_COMPRA =
   "id, numero_control, proveedor_id, proveedor_nombre, fecha, fecha_factura, nro_timbrado, numero_factura, tipo_pago, plazo_dias, vencimiento, moneda, tipo_cambio, subtotal, monto_iva, total, estado, observacion, usuario_nombre, anulada_at, anulada_por, anulada_motivo";
 
 export const COLS_ITEM =
-  "id, producto_id, producto_nombre, producto_sku, cantidad, costo_unitario_original, costo_unitario, tipo_iva, subtotal, monto_iva, total, precio_venta_nuevo";
+  "id, producto_id, producto_nombre, producto_sku, cantidad, costo_unitario_original, costo_unitario, tipo_iva, subtotal, monto_iva, total, precio_venta_nuevo, lote_numero, lote_vencimiento";
 
 /** Comprobante adjunto a una compra (foto o PDF de la factura). */
 export type ComprobanteCompra = {

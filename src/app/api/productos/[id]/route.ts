@@ -47,6 +47,7 @@ const editar = z.object({
   unidad_medida: z.string().trim().optional(),
   tipo_iva: z.enum(["EXENTA", "5%", "10%"]).optional(),
   controla_stock: z.boolean().optional(),
+  controla_lotes: z.boolean().optional(),
   es_vendible: z.boolean().optional(),
   imagen_url: z.string().url().max(500).nullish(),
   activo: z.boolean().optional(),
@@ -58,10 +59,19 @@ export const PATCH = withTenant(
     if (!id) return ERR.invalid("Falta el id del producto");
     // Stock anterior, para dejar la diferencia en el kardex.
     const antes = input.stock_actual !== undefined
-      ? await ctx.db.select("productos", "nombre, sku, stock_actual, costo_promedio").eq("id", id).limit(1)
+      ? await ctx.db.select("productos", "nombre, sku, stock_actual, costo_promedio, controla_lotes").eq("id", id).limit(1)
       : null;
+    const previo = antes?.data?.[0] as { stock_actual: number; controla_lotes: boolean } | undefined;
+    // Con lotes, el stock se mueve por compras, movimientos o bajas de lote (cada unidad
+    // tiene su lote): editarlo a mano dejaría los lotes descuadrados.
+    if (previo && input.stock_actual !== undefined && Number(input.stock_actual) !== Number(previo.stock_actual)
+        && (input.controla_lotes ?? previo.controla_lotes)) {
+      return fail("Este producto controla lotes: cambiá el stock con una compra, un movimiento o dando de baja un lote.", 400);
+    }
     const patch: Record<string, unknown> = { ...input, updated_at: new Date().toISOString() };
     if (input.codigo_barras !== undefined) patch.codigo_barras = input.codigo_barras || null;
+    // Lotes solo tiene sentido si controla stock.
+    if (input.controla_stock === false) patch.controla_lotes = false;
     const { error } = await ctx.db.update("productos", patch).eq("id", id);
     if (error) {
       if (/duplicate key|unique/i.test(error.message)) return fail("Ya existe un producto con ese SKU.", 409);

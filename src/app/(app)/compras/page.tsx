@@ -265,6 +265,7 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
                     <p className="text-[11px] text-slate-500">
                       {Number(i.cantidad).toLocaleString("es-PY")} × {c.moneda === "USD" ? `US$ ${Number(i.costo_unitario_original).toLocaleString("es-PY")}` : gs(i.costo_unitario)}
                       {i.precio_venta_nuevo ? ` · precio de venta → ${gs(i.precio_venta_nuevo)}` : ""}
+                      {i.lote_numero ? <> · lote <span className="font-mono font-semibold text-slate-600">{i.lote_numero}</span>{i.lote_vencimiento ? ` vence ${i.lote_vencimiento.slice(8, 10)}/${i.lote_vencimiento.slice(5, 7)}/${i.lote_vencimiento.slice(0, 4)}` : ""}</> : null}
                     </p>
                   </div>
                   <p className="text-sm font-semibold tabular-nums text-slate-900">{gs(i.total)}</p>

@@ -1,4 +1,6 @@
 -- =============================================================================
+-- Lotes con vencimiento: la devolución a los mismos lotes la hace un trigger en ventas
+-- al pasar a 'anulada' (44_lotes.sql); esta función no cambia.
 -- Anulación de venta (transaccional). Revierte lo que la venta hizo:
 --   - devuelve el stock de cada ítem (si el producto controla stock) y lo registra
 --     en el kardex como ENTRADA con origen 'anulacion_venta'

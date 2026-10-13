@@ -13,6 +13,8 @@ import type { TipoIva } from "@/modules/caja/lib";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 import { partesCategoria, type Categoria } from "@/modules/inventario/categorias";
 import { HistorialCostos } from "@/modules/inventario/HistorialCostos";
+import { LotesProducto } from "@/modules/inventario/LotesProducto";
+import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
 
 const BRAND = clienteConfig.color;
@@ -42,6 +44,7 @@ export function ProductoForm({
   onSaved: () => void;
 }) {
   const editando = !!producto;
+  const esAdmin = useUsuario()?.rol === "ADMIN";
   const soloLectura = producto?.activo === false;
   const [f, setF] = useState({
     nombre: producto?.nombre ?? "",
@@ -59,6 +62,7 @@ export function ProductoForm({
     stock_actual: String(producto?.stock_actual ?? ""),
     stock_minimo: String(producto?.stock_minimo ?? ""),
     controla_stock: producto?.controla_stock ?? true,
+    controla_lotes: producto?.controla_lotes ?? false,
     es_vendible: producto?.es_vendible ?? true,
   });
   const [imagenUrl, setImagenUrl] = useState<string | null>(producto?.imagen_url ?? null);
@@ -105,7 +109,8 @@ export function ProductoForm({
   const desc = Math.min(100, Math.max(0, Number(f.descuento_pct) || 0));
   const precioFinal = Math.round(f.precio_venta * (1 - desc / 100));
   const margenFinal = precioFinal ? ((precioFinal - f.costo_promedio) / precioFinal) * 100 : null;
-  const stockCambio = editando && f.stock_actual !== "" && Number(f.stock_actual) !== Number(producto?.stock_actual ?? 0);
+  const conLotes = f.controla_stock && f.controla_lotes;
+  const stockCambio = !conLotes && editando && f.stock_actual !== "" && Number(f.stock_actual) !== Number(producto?.stock_actual ?? 0);
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -139,9 +144,11 @@ export function ProductoForm({
       precio_mayorista: f.precio_mayorista || null,
       precio_distribuidor: f.precio_distribuidor || null,
       descuento_pct: desc,
-      stock_actual: num(f.stock_actual) ?? 0,
+      // Con lotes el stock no se edita a mano (se mueve por compras, movimientos y bajas).
+      stock_actual: f.controla_stock && f.controla_lotes ? undefined : num(f.stock_actual) ?? 0,
       stock_minimo: num(f.stock_minimo) ?? 0,
       controla_stock: f.controla_stock,
+      controla_lotes: f.controla_stock && f.controla_lotes,
       es_vendible: f.es_vendible,
       imagen_url: imagenUrl ?? undefined,
     };
@@ -343,13 +350,17 @@ export function ProductoForm({
           {/* ── Stock ────────────────────────────────────────────────────── */}
           <Bloque titulo="Stock">
             <div className="space-y-2">
-              <Interruptor checked={f.controla_stock} onChange={(v) => set("controla_stock", v)} label="Controla stock" detalle="Descuenta al vender y avisa cuando queda por debajo del mínimo." />
+              <Interruptor checked={f.controla_stock} onChange={(v) => setF((p) => ({ ...p, controla_stock: v, controla_lotes: v ? p.controla_lotes : false }))} label="Controla stock" detalle="Descuenta al vender y avisa cuando queda por debajo del mínimo." />
+              {f.controla_stock ? (
+                <Interruptor checked={f.controla_lotes} onChange={(v) => set("controla_lotes", v)} label="Controla lotes y vencimiento"
+                  detalle="Perecibles: cada compra pide lote y vencimiento; la caja vende primero el que vence antes y no vende los vencidos." />
+              ) : null}
               <Interruptor checked={f.es_vendible} onChange={(v) => set("es_vendible", v)} label="Se vende en caja" detalle="Aparece en el buscador de la caja." />
             </div>
             <div className="mt-3 grid grid-cols-3 gap-3">
               <label className="block">
                 <span className={ET}>Stock actual</span>
-                <input inputMode="numeric" disabled={!f.controla_stock} value={f.stock_actual} onChange={(e) => set("stock_actual", e.target.value.replace(/\D/g, ""))} className={NUM} placeholder="0" />
+                <input inputMode="numeric" disabled={!f.controla_stock || conLotes} title={conLotes ? "Con lotes, el stock se mueve con compras, movimientos o bajas de lote" : undefined} value={f.stock_actual} onChange={(e) => set("stock_actual", e.target.value.replace(/\D/g, ""))} className={NUM} placeholder="0" />
               </label>
               <label className="block">
                 <span className={ET}>Stock mínimo</span>
@@ -361,12 +372,28 @@ export function ProductoForm({
                 <datalist id="unidades-medida">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
               </label>
             </div>
+            {conLotes ? (
+              <p className="mt-2 rounded-lg bg-[var(--brand-50)] px-3 py-2 text-xs text-slate-600">
+                Con lotes, el stock se carga con una <strong>compra</strong> o un <strong>movimiento de entrada</strong> (con lote y vencimiento)
+                {editando && !producto?.controla_lotes && Number(producto?.stock_actual ?? 0) > 0
+                  ? <>. Las {Number(producto?.stock_actual).toLocaleString("es-PY")} unidades que ya tiene quedan como <strong>sin lote</strong>.</>
+                  : "."}
+              </p>
+            ) : null}
             {stockCambio ? (
               <p className="mt-2 rounded-lg bg-[var(--brand-50)] px-3 py-2 text-xs text-slate-600">
                 El cambio de stock ({Number(producto?.stock_actual ?? 0).toLocaleString("es-PY")} → {Number(f.stock_actual).toLocaleString("es-PY")}) queda en el kardex como <strong>ajuste manual</strong>.
               </p>
             ) : null}
           </Bloque>
+
+          {/* ── Lotes (solo al editar un producto que ya controla lotes) ─────── */}
+          {editando && producto && producto.controla_lotes && f.controla_lotes ? (
+            <Bloque titulo="Lotes" extra={<Link href="/inventario/vencimientos" className="text-xs font-semibold text-[var(--brand)] hover:underline">Ver vencimientos</Link>}>
+              <LotesProducto productoId={producto.id} unidad={producto.unidad_medida ?? "Unidad"} puedeEditar={esAdmin && !soloLectura}
+                onStockCambiado={(n) => setF((p) => ({ ...p, stock_actual: String(n) }))} />
+            </Bloque>
+          ) : null}
         </fieldset>
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
       </form>

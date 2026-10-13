@@ -36,15 +36,22 @@ const nuevo = z.object({
   proveedor: z.string().trim().max(120).nullish(),
   proveedor_id: z.string().uuid().nullish(),
   numero_factura: z.string().trim().max(60).nullish(),
+  /** productos con lotes: lote (vacío → L-YYMMDD) y vencimiento de lo que entra */
+  lote: z.string().trim().max(40, "El número de lote es muy largo").nullish(),
+  vencimiento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Vencimiento inválido").nullish().or(z.literal("")),
 });
 
 /**
  * POST /api/inventario/movimientos — movimiento MANUAL (ADMIN): entrada, salida o ajuste por
- * conteo. Stock + kardex atómicos en la RPC registrar_movimiento_stock.
+ * conteo. Stock + kardex atómicos en la RPC registrar_movimiento_lotes (envoltorio de
+ * registrar_movimiento_stock: un producto sin lotes va directo a la original; con lotes,
+ * lo que entra va a su lote y lo que sale se descuenta FEFO).
  */
 export const POST = withTenant(
   async (ctx, _req, input) => {
-    const { data, error } = await ctx.db.rpc("registrar_movimiento_stock", {
+    const { data, error } = await ctx.db.rpc("registrar_movimiento_lotes", {
+      p_lote: input.lote || null,
+      p_vencimiento: input.vencimiento || null,
       p_producto_id: input.producto_id,
       p_tipo: input.tipo,
       p_cantidad: input.cantidad,

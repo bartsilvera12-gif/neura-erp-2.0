@@ -1,4 +1,6 @@
 -- =============================================================================
+-- Lotes con vencimiento: el consumo FEFO lo hace un trigger en ventas_items
+-- (44_lotes.sql); esta función no cambia.
 -- Función transaccional de VENTA (POS). PostgREST no hace transacciones multi-tabla,
 -- así que la venta (header + ítems + cobro en caja + descuento de stock) va en esta
 -- función: atómica y bajo RLS (SECURITY INVOKER → corre como el usuario).

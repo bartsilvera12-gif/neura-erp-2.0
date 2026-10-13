@@ -12,5 +12,8 @@ export const moduloInventario: Modulo = {
     { label: "Productos", href: "/inventario" },
     { label: "Categorías", href: "/inventario/categorias" },
     { label: "Movimientos", href: "/inventario/movimientos" },
+    // Lotes con vencimiento (perecibles). Siempre visible: sin productos con lotes muestra
+    // cómo activarlos.
+    { label: "Vencimientos", href: "/inventario/vencimientos" },
   ],
 };

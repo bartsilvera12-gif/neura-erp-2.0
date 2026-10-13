@@ -4,7 +4,9 @@
  * Panel lateral "Nuevo movimiento" (portado de Ferretería, adaptado al 2.0):
  * entrada, salida o AJUSTE POR CONTEO (se ingresa el stock real contado y se registra la
  * diferencia). Vista previa del impacto antes de guardar. Stock + kardex van atómicos en
- * la base (registrar_movimiento_stock); una entrada por compra recalcula el costo promedio.
+ * la base (registrar_movimiento_lotes → registrar_movimiento_stock); una entrada por compra
+ * recalcula el costo promedio. Producto con lotes: lo que entra pide lote (prellenado
+ * L-YYMMDD, editable) y vencimiento; lo que sale se descuenta del que vence primero.
  */
 import { useEffect, useRef, useState } from "react";
 import { ArrowDownToLine, ArrowUpFromLine, ClipboardCheck, Loader2, Search, X } from "lucide-react";
@@ -16,12 +18,14 @@ import MontoInput from "@/components/ui/MontoInput";
 import { parseNumero } from "@/lib/imports/consolidacion-productos";
 import { Variacion, type HistorialCostosData } from "@/modules/inventario/HistorialCostos";
 import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
+import { hoyPY } from "@/lib/fecha/paraguay";
+import { loteAutomatico } from "@/modules/inventario/vencimientos";
 
 const BRAND = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 const ET = "mb-1 block text-xs font-medium text-slate-600";
 
-type Prod = { id: string; nombre: string; sku: string; stock_actual: number; costo_promedio: number | null; unidad_medida: string; controla_stock: boolean; imagen_url: string | null; proveedor_principal_id?: string | null };
+type Prod = { id: string; nombre: string; sku: string; stock_actual: number; costo_promedio: number | null; unidad_medida: string; controla_stock: boolean; controla_lotes?: boolean; imagen_url: string | null; proveedor_principal_id?: string | null };
 type Tipo = "ENTRADA" | "SALIDA" | "AJUSTE";
 
 const fmt = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
@@ -46,6 +50,8 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
   const [referencia, setReferencia] = useState("");
   const [proveedorId, setProveedorId] = useState<string | null>(null);
   const [factura, setFactura] = useState("");
+  const [lote, setLote] = useState(() => loteAutomatico(hoyPY()));
+  const [vencimiento, setVencimiento] = useState("");
   const [ultimaCompra, setUltimaCompra] = useState<HistorialCostosData["compras"][number] | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -112,13 +118,19 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
   const stock = Number(prod?.stock_actual ?? 0);
   const delta = !prod || !Number.isFinite(cant) ? null : tipo === "ENTRADA" ? cant : tipo === "SALIDA" ? -cant : cant - stock;
   const resultante = delta == null ? null : stock + delta;
+  const conLotes = !!(prod?.controla_stock && prod.controla_lotes);
+  // Con lotes, lo que SUMA stock (entrada o ajuste hacia arriba) entra a un lote.
+  const pideLote = conLotes && (tipo === "ENTRADA" || (tipo === "AJUSTE" && delta != null && delta > 0));
+  const saleFefo = conLotes && delta != null && delta < 0;
   const invalido =
-    !prod || !prod.controla_stock || delta == null || cant < 0 || (tipo !== "AJUSTE" && cant <= 0) || delta === 0 || (resultante ?? 0) < 0;
+    !prod || !prod.controla_stock || delta == null || cant < 0 || (tipo !== "AJUSTE" && cant <= 0) || delta === 0 || (resultante ?? 0) < 0 ||
+    (pideLote && !vencimiento);
   const motivoInvalido =
     !prod ? null
     : !prod.controla_stock ? "Este producto no controla stock."
     : delta === 0 && tipo === "AJUSTE" ? "El stock contado es igual al actual: no hay nada que ajustar."
     : resultante != null && resultante < 0 ? `No hay stock suficiente: hay ${fmt(stock)}.`
+    : pideLote && !vencimiento ? "Cargá el vencimiento del lote."
     : null;
 
   async function guardar(e: React.FormEvent) {
@@ -138,6 +150,8 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
           referencia: referencia.trim() || null,
           proveedor_id: esCompra ? proveedorId : null,
           numero_factura: esCompra ? factura.trim() || null : null,
+          lote: pideLote ? lote.trim() || null : null,
+          vencimiento: pideLote ? vencimiento : null,
         }),
       });
       onGuardado();
@@ -275,6 +289,30 @@ export function NuevoMovimiento({ productoInicial, onClose, onGuardado }: { prod
               <input value={factura} onChange={(e) => setFactura(e.target.value)} maxLength={60} placeholder="Ej: 001-001-0000123" className={`${INPUT} font-mono`} />
             </label>
           </div>
+        ) : null}
+
+        {pideLote ? (
+          <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+            <p className="mb-2 text-xs font-semibold text-slate-700">Lote de lo que entra</p>
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className={ET}>N° de lote <span className="font-normal text-slate-400">(editable)</span></span>
+                <input value={lote} onChange={(e) => setLote(e.target.value.slice(0, 40))} placeholder={loteAutomatico(hoyPY())} className={`${INPUT} bg-white font-mono uppercase`} />
+              </label>
+              <label className="block">
+                <span className={ET}>Vencimiento *</span>
+                <input type="date" value={vencimiento} onChange={(e) => setVencimiento(e.target.value)} className={`${INPUT} bg-white`} />
+              </label>
+            </div>
+            <p className="mt-1.5 text-[11px] text-slate-500">
+              {lote.trim() ? "Si el lote ya existe con el mismo vencimiento, se suma a ese lote." : `Vacío se guarda como ${loteAutomatico(hoyPY())}.`}
+              {vencimiento && vencimiento < hoyPY() ? <span className="font-semibold text-rose-600"> Ojo: esa fecha ya pasó, el lote entra vencido.</span> : null}
+            </p>
+          </div>
+        ) : saleFefo ? (
+          <p className="rounded-xl border border-slate-200 bg-slate-50/50 px-3 py-2.5 text-[11px] text-slate-600">
+            Sale de los lotes que vencen primero (no toca los vencidos). Para sacar un lote puntual (vencido, roto) usá <strong>Dar de baja</strong> en la ficha del producto.
+          </p>
         ) : null}
 
         <label className="block">

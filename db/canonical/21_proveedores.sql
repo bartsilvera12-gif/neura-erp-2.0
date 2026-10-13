@@ -123,6 +123,8 @@ $$;
 grant execute on function :"schema".compras_por_proveedor() to authenticated, service_role;
 
 -- La compra manual (Nuevo movimiento) recibe el proveedor real.
+-- La pantalla llama a registrar_movimiento_lotes (44_lotes.sql), que envuelve a esta
+-- (sin cambiarla) para los productos con lotes y vencimiento.
 drop function if exists :"schema".registrar_movimiento_stock(uuid, text, numeric, numeric, text, text, text, text);
 create or replace function :"schema".registrar_movimiento_stock(
   p_producto_id uuid,

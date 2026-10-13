@@ -63,6 +63,9 @@ const cuerpo = z.object({
         costo_unitario: z.coerce.number().positive("Falta el costo"),
         precio_venta_nuevo: z.coerce.number().min(0).nullish(),
         oc_item_id: z.string().uuid().nullish(),
+        /** productos con lotes: número (vacío → L-YYMMDD) y vencimiento (obligatorio, lo valida la base) */
+        lote: z.string().trim().max(40, "El número de lote es muy largo").nullish(),
+        vencimiento: z.string().regex(RE_FECHA, "Vencimiento inválido").nullish().or(z.literal("")),
       }),
     )
     .min(1, "La compra no tiene productos")

@@ -18,6 +18,8 @@ export type ProductoInventario = {
   unidad_medida: string;
   tipo_iva: TipoIva;
   controla_stock: boolean;
+  /** lotes con vencimiento (perecibles): cada entrada lleva lote + vencimiento; salida FEFO */
+  controla_lotes?: boolean;
   es_vendible: boolean;
   activo: boolean;
   imagen_url: string | null;
