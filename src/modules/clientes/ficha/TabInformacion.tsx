@@ -224,7 +224,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         </div>
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <Tarjeta titulo="Identificación" icono={IdCard}>
           <Dato label="Tipo">{cliente.tipo_cliente === "empresa" ? "Empresa" : "Persona"}</Dato>
           <Dato label="Categoría">{cliente.categoria_nombre ?? null}</Dato>
@@ -481,7 +481,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
 
 function Tarjeta({ titulo, icono: Icono, children, ancho = false }: { titulo: string; icono: React.ComponentType<{ className?: string }>; children: React.ReactNode; ancho?: boolean }) {
   return (
-    <section className={`rounded-2xl border border-slate-200 bg-white shadow-sm ${ancho ? "lg:col-span-2" : ""}`}>
+    <section className={`h-full rounded-2xl border border-slate-200 bg-white shadow-sm ${ancho ? "lg:col-span-2" : ""}`}>
       <div className="flex items-center gap-2.5 border-b border-slate-100 px-5 py-3.5">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#4FAEB2]/12 text-[#3F8E91]"><Icono className="h-3.5 w-3.5" /></span>
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">{titulo}</h3>
