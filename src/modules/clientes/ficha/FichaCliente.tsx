@@ -7,36 +7,30 @@
  * Encabezado: avatar, nombre, código CL-…, estado, "Cliente desde", Dar de baja / Reactivar
  * y Eliminar (administrador); acciones Nueva suscripción, Venta al contado y Registrar pago;
  * franja de datos (origen, categoría, condición, suscripción activa, moneda, vendedor,
- * creado por). Pestañas: Información (edición), Estado de cuenta, Suscripciones (con su
- * estado de facturación, cambio de plan, pausa y cancelación), Compras, Contactos,
- * Actividad (historial automático) y Notas.
+ * creado por). Pestañas, iguales al sistema actual: Información (formulario editable en el
+ * lugar), Estado de cuenta (ventas, cobros y PDF), Suscripciones (facturación, cambio de
+ * plan, pausa y cancelación), Proyectos (si el módulo está activo) e Historial.
  */
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { ClipboardPen, FileText, Loader2, Plus, Trash2 } from "lucide-react";
+import { ClipboardPen, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
-import { descargarArchivo } from "@/lib/api/client-blob";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
-import { TZ_PY } from "@/lib/fecha/paraguay";
-import { CuentaCorriente } from "@/modules/clientes/CuentaCorriente";
 import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
-import type { Contacto, Detalle, Venta } from "@/modules/clientes/ficha/tipos";
+import type { Detalle } from "@/modules/clientes/ficha/tipos";
 import { TabInformacion } from "@/modules/clientes/ficha/TabInformacion";
-import { TabActividad } from "@/modules/clientes/ficha/TabActividad";
-import { TabNotas } from "@/modules/clientes/ficha/TabNotas";
+import { TabEstadoCuenta } from "@/modules/clientes/ficha/TabEstadoCuenta";
+import { TabHistorial } from "@/modules/clientes/ficha/TabHistorial";
 import { ModalEliminar, PanelBaja } from "@/modules/clientes/ficha/Modales";
 import { TabSuscripciones } from "@/modules/clientes/ficha/TabSuscripciones";
 import { ModalNuevaSuscripcion } from "@/modules/clientes/suscripciones/ModalNuevaSuscripcion";
 import type { SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos";
-import { Avatar, BadgeEstado, CategoriaChip, CodigoChip, TEAL, codigoCliente, estadoDe, fechaCorta, gs } from "@/modules/clientes/ui";
+import { Avatar, BadgeEstado, CategoriaChip, CodigoChip, TEAL, codigoCliente, estadoDe, fechaCorta } from "@/modules/clientes/ui";
 import { moduloEstaActivo } from "@/modules/registry";
 import { ProyectosDeCliente } from "@/modules/proyectos/ui/ProyectosDeCliente";
 
-const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
-const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric" });
-
-type Tab = "informacion" | "estado_cuenta" | "suscripciones" | "compras" | "contactos" | "proyectos" | "actividad" | "notas";
+type Tab = "informacion" | "estado_cuenta" | "suscripciones" | "proyectos" | "historial";
 const CON_PROYECTOS = moduloEstaActivo("proyectos");
 
 export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?: () => void; onCambio?: () => void }) {
@@ -51,14 +45,13 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("informacion");
-  const [cobrando, setCobrando] = useState(false);
+  // Registrar cobro: null = cerrado; "" = general; id = la cuenta de esa venta.
+  const [cobrando, setCobrando] = useState<string | null>(null);
   const [recargaCuenta, setRecargaCuenta] = useState(0);
   const [recargaHist, setRecargaHist] = useState(0);
   const [bajando, setBajando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   const [cambiando, setCambiando] = useState(false);
-  const [notasCount, setNotasCount] = useState(0);
-  const [proyectosCount, setProyectosCount] = useState<number | null>(null);
   const [subs, setSubs] = useState<SuscripcionCliente[]>([]);
   const [subsCargando, setSubsCargando] = useState(true);
   const [subsError, setSubsError] = useState<string | null>(null);
@@ -71,7 +64,6 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
       const d = await apiFetch<Detalle>(`/api/clientes/${id}`);
       setData(d);
       onCambio?.();
-      setNotasCount(d.notas_count ?? 0);
       setRecargaHist((k) => k + 1);
     } catch (e) {
       setError((e as Error).message);
@@ -132,20 +124,15 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
   if (!data) return null;
 
   const c = data.cliente;
-  const r = data.resumen;
   const estado = estadoDe(c);
   const credito = c.condicion_pago === "CREDITO";
-  const { limite_credito, disponible } = data.estado_cuenta;
   const activas = subs.filter((s) => s.estado === "activa");
-  const tabs: { id: Tab; label: string; badge?: number }[] = [
+  const tabs: { id: Tab; label: string }[] = [
     { id: "informacion", label: "Información" },
     { id: "estado_cuenta", label: "Estado de cuenta" },
-    { id: "suscripciones", label: "Suscripciones", badge: subs.filter((s) => s.estado !== "cancelada").length },
-    { id: "compras", label: "Compras", badge: r?.compras ?? data.ventas.length },
-    { id: "contactos", label: "Contactos", badge: data.contactos.length },
-    ...(CON_PROYECTOS ? [{ id: "proyectos" as Tab, label: "Proyectos", badge: proyectosCount ?? undefined }] : []),
-    { id: "actividad", label: "Actividad" },
-    { id: "notas", label: "Notas", badge: notasCount },
+    { id: "suscripciones", label: "Suscripciones" },
+    ...(CON_PROYECTOS ? [{ id: "proyectos" as Tab, label: "Proyectos" }] : []),
+    { id: "historial", label: "Historial" },
   ];
   const datos: { label: string; value: React.ReactNode }[] = [
     { label: "Origen", value: c.origen ?? "MANUAL" },
@@ -234,7 +221,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
               style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}14`, color: TEAL }}>
               Venta al contado
             </Link>
-            <button type="button" onClick={() => setCobrando(true)}
+            <button type="button" onClick={() => setCobrando("")}
               className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
               Registrar pago
             </button>
@@ -272,49 +259,40 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
       ) : null}
 
       {/* Pestañas */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex overflow-x-auto border-b border-slate-200">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div className="border-b border-gray-200 flex overflow-x-auto">
           {tabs.map((t) => (
             <button key={t.id} type="button" onClick={() => setTab(t.id)}
-              className={`whitespace-nowrap border-b-2 px-5 py-3.5 text-sm font-medium transition-colors ${tab === t.id ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"}`}>
+              className={`px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+                tab === t.id ? "border-gray-900 text-gray-900" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+              }`}>
               {t.label}
-              {t.badge ? <span className="ml-1.5 rounded-full bg-slate-200 px-1.5 py-0.5 text-xs text-slate-600">{t.badge}</span> : null}
             </button>
           ))}
         </div>
-        <div className="min-h-[220px] p-6">
-          {tab === "informacion" ? <TabInformacion cliente={c} esAdmin={esAdmin} onGuardado={() => void cargar()} /> : null}
-          {tab === "estado_cuenta" ? (
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="grid flex-1 grid-cols-2 gap-3 lg:grid-cols-4">
-                  <Kpi titulo="Total comprado" valor={gs(r?.total_comprado ?? 0)} sub={r?.ultima_compra ? `última ${fecha(r.ultima_compra)}` : "todavía no compró"} />
-                  <Kpi titulo="Compras" valor={String(r?.compras ?? 0)} sub={r?.compras ? `ticket promedio ${gs(r.ticket_promedio)}` : undefined} />
-                  <Kpi titulo="Debe" valor={gs(r?.deuda ?? 0)}
-                    sub={[(r?.vencido ?? 0) > 0 ? `vencido ${gs(r!.vencido)}` : (r?.deuda ?? 0) > 0 ? "al día" : "no debe nada", (r?.saldo_favor ?? 0) > 0 ? `a favor ${gs(r!.saldo_favor!)}` : null].filter(Boolean).join(" · ")}
-                    tono={(r?.vencido ?? 0) > 0 ? "rojo" : undefined} />
-                  <Kpi titulo="Crédito disponible" valor={!credito ? "Contado" : limite_credito > 0 ? gs(disponible ?? 0) : "Sin límite"}
-                    sub={credito ? (limite_credito > 0 ? `de ${gs(limite_credito)}` : `${c.plazo_dias ?? 30} días de plazo`) : "no compra a crédito"} />
-                </div>
-                <BotonPdf clienteId={c.id} />
-              </div>
-              <CuentaCorriente clienteId={c.id} recarga={recargaCuenta} onCambio={() => void cargar()} />
-            </div>
-          ) : null}
-          {tab === "suscripciones" ? (
-            <TabSuscripciones clienteNombre={c.razon_social || c.nombre} suscripciones={subs} cargando={subsCargando} error={subsError}
-              rol={me?.rol} onNueva={() => setNuevaSusc(true)} onCambio={suscripcionesCambiaron} />
-          ) : null}
-          {tab === "compras" ? <TabCompras ventas={data.ventas} /> : null}
-          {tab === "contactos" ? <TabContactos clienteId={c.id} contactos={data.contactos} onChange={() => void cargar()} /> : null}
-          {tab === "proyectos" && CON_PROYECTOS ? <ProyectosDeCliente clienteId={c.id} clienteNombre={c.razon_social || c.nombre} onConteo={setProyectosCount} /> : null}
-          {tab === "actividad" ? <TabActividad clienteId={c.id} recarga={recargaHist} /> : null}
-          {tab === "notas" ? <TabNotas clienteId={c.id} notaAnterior={c.notas} onCambio={setNotasCount} /> : null}
+        <div className="relative min-h-[220px]">
+          <div className="p-6">
+            {tab === "informacion" ? (
+              <TabInformacion cliente={c} esAdmin={esAdmin} suscripcionActiva={activas[0] ?? null} ventasCount={data.ventas.length}
+                onGuardado={() => void cargar()} />
+            ) : null}
+            {tab === "estado_cuenta" ? (
+              <TabEstadoCuenta clienteId={c.id} ventas={data.ventas} recarga={recargaCuenta} esAdmin={esAdmin}
+                onRegistrarPago={(cxc) => setCobrando(cxc ?? "")}
+                onCambio={() => { void cargar(); void cargarSubs(); }} />
+            ) : null}
+            {tab === "suscripciones" ? (
+              <TabSuscripciones clienteNombre={c.razon_social || c.nombre} suscripciones={subs} cargando={subsCargando} error={subsError}
+                rol={me?.rol} onNueva={() => setNuevaSusc(true)} onCambio={suscripcionesCambiaron} />
+            ) : null}
+            {tab === "proyectos" && CON_PROYECTOS ? <ProyectosDeCliente clienteId={c.id} /> : null}
+            {tab === "historial" ? <TabHistorial clienteId={c.id} recarga={recargaHist} /> : null}
+          </div>
         </div>
       </div>
 
-      {cobrando ? (
-        <RegistrarCobro clienteId={c.id} clienteNombre={c.razon_social || c.nombre} onClose={() => setCobrando(false)}
+      {cobrando !== null ? (
+        <RegistrarCobro clienteId={c.id} clienteNombre={c.razon_social || c.nombre} cxcInicial={cobrando || null} onClose={() => setCobrando(null)}
           onHecho={() => { void cargar(); void cargarSubs(); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); }} />
       ) : null}
       {nuevaSusc ? (
@@ -325,140 +303,6 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
         <ModalEliminar clienteId={c.id} onClose={() => setEliminando(false)} onEliminado={() => salir("/clientes")}
           onDarDeBaja={estado === "activo" ? () => { setEliminando(false); setBajando(true); } : undefined} />
       ) : null}
-    </div>
-  );
-}
-
-function BotonPdf({ clienteId }: { clienteId: string }) {
-  const [bajando, setBajando] = useState(false);
-  return (
-    <button type="button" disabled={bajando}
-      onClick={async () => { setBajando(true); try { await descargarArchivo(`/api/clientes/${clienteId}/estado-cuenta/pdf`, "estado-cuenta.pdf"); } catch { /* best-effort */ } finally { setBajando(false); } }}
-      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">
-      {bajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" />} Estado de cuenta PDF
-    </button>
-  );
-}
-
-function Kpi({ titulo, valor, sub, tono }: { titulo: string; valor: string; sub?: string; tono?: "rojo" }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-      <p className={`text-[11px] font-semibold uppercase tracking-wide ${tono === "rojo" ? "text-rose-600" : "text-slate-500"}`}>{titulo}</p>
-      <p className={`mt-1 text-xl font-bold tabular-nums ${tono === "rojo" ? "text-rose-600" : "text-slate-900"}`}>{valor}</p>
-      {sub ? <p className={`text-[11px] ${tono === "rojo" ? "font-semibold text-rose-600" : "text-slate-400"}`}>{sub}</p> : null}
-    </div>
-  );
-}
-
-function TabCompras({ ventas }: { ventas: Venta[] }) {
-  if (!ventas.length) return <p className="py-10 text-center text-sm italic text-slate-400">Este cliente todavía no compró.</p>;
-  return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
-      <table className="w-full text-sm">
-        <thead className="border-b border-slate-200 bg-slate-50/80">
-          <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-            <th className="px-4 py-2">Número</th>
-            <th className="px-4 py-2">Fecha</th>
-            <th className="px-4 py-2">Condición</th>
-            <th className="px-4 py-2 text-right">Total</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-slate-100">
-          {ventas.map((v) => {
-            const anulada = v.estado === "anulada";
-            return (
-              <tr key={v.id} className={anulada ? "opacity-50" : ""}>
-                <td className={`px-4 py-2.5 font-mono text-xs font-semibold text-slate-800 ${anulada ? "line-through" : ""}`}>{v.numero_control}</td>
-                <td className="px-4 py-2.5 text-xs text-slate-600">{fecha(v.fecha)}</td>
-                <td className="px-4 py-2.5">
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${v.tipo_venta === "CREDITO" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>
-                    {v.tipo_venta === "CREDITO" ? "Crédito" : "Contado"}
-                  </span>
-                  {anulada ? <span className="ml-1 rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-600">Anulada</span> : null}
-                </td>
-                <td className={`px-4 py-2.5 text-right font-semibold tabular-nums text-slate-900 ${anulada ? "line-through" : ""}`}>{gs(v.total)}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-      {ventas.length >= 50 ? <p className="border-t border-slate-100 px-4 py-2 text-center text-[11px] text-slate-400">Se muestran las últimas 50 compras.</p> : null}
-    </div>
-  );
-}
-
-function TabContactos({ clienteId, contactos, onChange }: { clienteId: string; contactos: Contacto[]; onChange: () => void }) {
-  const [nombre, setNombre] = useState("");
-  const [cargo, setCargo] = useState("");
-  const [telefono, setTelefono] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function agregar(e: React.FormEvent) {
-    e.preventDefault();
-    if (!nombre.trim()) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await apiFetch(`/api/clientes/${clienteId}/contactos`, {
-        method: "POST",
-        body: JSON.stringify({ nombre: nombre.trim(), cargo: cargo.trim() || undefined, telefono: telefono.trim() || undefined }),
-      });
-      setNombre(""); setCargo(""); setTelefono("");
-      onChange();
-    } catch (err) {
-      setError((err as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  async function quitar(cid: string) {
-    try {
-      await apiFetch(`/api/clientes/${clienteId}/contactos?contacto_id=${cid}`, { method: "DELETE" });
-      onChange();
-    } catch (err) {
-      setError((err as Error).message);
-    }
-  }
-
-  return (
-    <div className="max-w-3xl space-y-4">
-      <form onSubmit={agregar} className="flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 bg-slate-50/60 p-4">
-        <label className="min-w-[8rem] flex-1">
-          <span className="mb-1 block text-xs font-medium text-slate-600">Nombre</span>
-          <input className={INPUT} value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Ej: Juan, el encargado" />
-        </label>
-        <label className="min-w-[7rem] flex-1">
-          <span className="mb-1 block text-xs font-medium text-slate-600">Cargo</span>
-          <input className={INPUT} value={cargo} onChange={(e) => setCargo(e.target.value)} placeholder="Ej: Compras" />
-        </label>
-        <label className="min-w-[7rem] flex-1">
-          <span className="mb-1 block text-xs font-medium text-slate-600">Teléfono</span>
-          <input className={INPUT} value={telefono} onChange={(e) => setTelefono(e.target.value)} placeholder="Ej: 0981 000 000" />
-        </label>
-        <button type="submit" disabled={busy || !nombre.trim()} className="flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: TEAL }}>
-          <Plus className="h-4 w-4" /> Agregar
-        </button>
-      </form>
-      {error ? <p className="text-xs text-rose-600">{error}</p> : null}
-      {contactos.length === 0 ? (
-        <p className="py-6 text-center text-sm italic text-slate-400">Sin contactos cargados. Sirve para empresas: con quién hablar para cobrar o tomar pedidos.</p>
-      ) : (
-        <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200 bg-white">
-          {contactos.map((ct) => (
-            <li key={ct.id} className="flex items-center gap-3 px-4 py-3">
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-slate-800">{ct.nombre} {ct.cargo ? <span className="font-normal text-slate-400">· {ct.cargo}</span> : null}</div>
-                <div className="text-xs text-slate-500">{ct.telefono || ct.email || "—"}</div>
-              </div>
-              <button type="button" onClick={() => void quitar(ct.id)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs text-slate-400 transition hover:bg-rose-50 hover:text-rose-600">
-                <Trash2 className="h-3.5 w-3.5" /> Quitar
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

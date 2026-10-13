@@ -21,6 +21,7 @@ export function Select({
   minWidth,
   block = false,
   disabled = false,
+  compacto = false,
   className = "",
 }: {
   value: string;
@@ -32,6 +33,8 @@ export function Select({
   block?: boolean;
   /** gris y sin abrir (ej. subcategoría sin categoría elegida) */
   disabled?: boolean;
+  /** mismo tamaño que un input de formulario compacto (rounded-lg, px-3 py-2, texto normal) */
+  compacto?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -109,7 +112,7 @@ export function Select({
         onKeyDown={onTriggerKey}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-2 rounded-xl border bg-white py-2.5 pl-3.5 pr-3 text-sm font-medium text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:shadow-[0_0_0_4px_var(--brand-100)] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200"
+        className={`flex w-full items-center justify-between gap-2 border bg-white text-sm outline-none ${compacto ? "rounded-lg px-3 py-2 text-slate-800" : "rounded-xl py-2.5 pl-3.5 pr-3 font-medium text-slate-600"} transition hover:border-slate-300 focus:border-[var(--brand)] focus:shadow-[0_0_0_4px_var(--brand-100)] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200`}
         style={{ borderColor: open ? BRAND : "#e2e8f0", boxShadow: open ? `0 0 0 4px var(--brand-100)` : undefined }}
       >
         <span className="truncate">{current?.[1]}</span>

@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Pestaña "Actividad": historial de cambios del cliente (lo registra la base sola). Cada
+ * Pestaña "Historial": historial de cambios del cliente (lo registra la base sola). Cada
  * evento con su etiqueta de color, quién y cuándo; en las ediciones, campo por campo
  * "antes → después"; en bajas y eliminaciones, el motivo. Las suscripciones dejan su rastro
  * (alta, cuota emitida, cambio de plan, pausa, reactivación, cancelación) en una línea legible.
@@ -73,7 +73,7 @@ function textoTipificacion(d: NonNullable<EventoHistorial["detalle"]>): string {
 
 const valor = (v: string | null | undefined) => (v == null || v === "" ? "—" : v === "true" ? "Sí" : v === "false" ? "No" : v);
 
-export function TabActividad({ clienteId, recarga }: { clienteId: string; recarga: number }) {
+export function TabHistorial({ clienteId, recarga }: { clienteId: string; recarga: number }) {
   const [historial, setHistorial] = useState<EventoHistorial[]>([]);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -96,16 +96,16 @@ export function TabActividad({ clienteId, recarga }: { clienteId: string; recarg
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-slate-700">Historial de cambios</h3>
         <button type="button" onClick={() => void cargar()} disabled={cargando}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50">
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
           {cargando ? "Actualizando…" : "Actualizar"}
         </button>
       </div>
 
-      {error ? <p className="mb-3 text-sm text-rose-600">{error}</p> : null}
+      {error ? <p className="mb-3 text-sm text-red-600">{error}</p> : null}
       {cargando && historial.length === 0 ? (
         <p className="text-sm text-slate-400">Cargando historial…</p>
       ) : historial.length === 0 ? (
-        <p className="text-sm italic text-slate-400">No hay cambios registrados aún para este cliente.</p>
+        <p className="text-sm text-slate-400 italic">No hay cambios registrados aún para este cliente.</p>
       ) : (
         <ol className="space-y-3">
           {historial.map((h) => {

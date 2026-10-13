@@ -6,7 +6,7 @@
  *    actuar (Facturación, Cambio de plan); sin ninguna, "Sin suscripciones" con el atajo a la ficha.
  *  - ModalCambioVencimiento: nuevo día de vencimiento (≥ día de facturación) y, opcional,
  *    mover también la cuota de este mes si no tiene cobros.
- *  - ModalHistorial: la misma línea de tiempo que la pestaña Actividad de la ficha.
+ *  - ModalHistorial: la misma línea de tiempo que la pestaña Historial de la ficha.
  */
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -15,7 +15,7 @@ import { apiFetch } from "@/lib/api/client-fetch";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { TEAL } from "@/modules/clientes/ui";
-import { TabActividad } from "@/modules/clientes/ficha/TabActividad";
+import { TabHistorial } from "@/modules/clientes/ficha/TabHistorial";
 import type { SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos";
 import { BadgeSuscripcion, mesActual, monto, nombreMes } from "@/modules/clientes/suscripciones/ui";
 
@@ -179,7 +179,7 @@ export function ModalHistorial({ clienteId, clienteNombre, onClose }: { clienteI
   return (
     <Modal titulo={`Historial del cliente · ${clienteNombre}`} onClose={onClose} size="xl">
       <div className="max-h-[70vh] overflow-y-auto pr-1">
-        <TabActividad clienteId={clienteId} recarga={0} />
+        <TabHistorial clienteId={clienteId} recarga={0} />
       </div>
     </Modal>
   );
