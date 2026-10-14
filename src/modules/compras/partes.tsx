@@ -2,7 +2,7 @@
 
 /** Piezas compartidas por Nueva compra y Nueva orden de compra. */
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Search } from "lucide-react";
+import { Loader2, Plus, Search } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
@@ -21,7 +21,11 @@ export function sumarDias(fecha: string, dias: number) {
 }
 
 /** Buscador de productos con búsqueda inteligente; Enter agrega el primero (lector de códigos). */
-export function BuscadorProductos({ onElegir }: { onElegir: (p: ProductoInventario) => void }) {
+export function BuscadorProductos({ onElegir, onCrear }: {
+  onElegir: (p: ProductoInventario) => void;
+  /** Si viene, ofrece "+ Crear producto" con lo que se buscó (alta rápida en un modal). */
+  onCrear?: (texto: string) => void;
+}) {
   const [q, setQ] = useState("");
   const [res, setRes] = useState<ProductoInventario[]>([]);
   const [hi, setHi] = useState(0);
@@ -66,8 +70,17 @@ export function BuscadorProductos({ onElegir }: { onElegir: (p: ProductoInventar
     ref.current?.focus();
   }
 
+  function crear() {
+    const t = q.trim();
+    setQ("");
+    setRes([]);
+    setResDe("");
+    onCrear?.(t);
+  }
+
   return (
-    <div className="relative">
+    <div className="flex items-start gap-2">
+    <div className="relative min-w-0 flex-1">
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
       <input ref={ref} value={q} onChange={(e) => setQ(e.target.value)}
         onKeyDown={(e) => {
@@ -94,8 +107,32 @@ export function BuscadorProductos({ onElegir }: { onElegir: (p: ProductoInventar
               </button>
             </li>
           ))}
+          {onCrear ? (
+            <li className="border-t border-slate-100">
+              <button type="button" onClick={crear} className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand-50)]">
+                <Plus className="h-4 w-4" /> Crear producto «{q.trim()}»
+              </button>
+            </li>
+          ) : null}
         </ul>
-      ) : q.trim() && !buscando ? <p className="mt-1 px-1 text-xs text-slate-400">Ningún producto coincide.</p> : null}
+      ) : q.trim() && !buscando && resDe === q.trim() ? (
+        <div className="absolute z-20 mt-1 w-full rounded-xl border border-slate-200 bg-white p-3 shadow-lg">
+          <p className="text-xs text-slate-500">Ningún producto coincide con «{q.trim()}».</p>
+          {onCrear ? (
+            <button type="button" onClick={crear}
+              className="mt-2 inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95" style={{ backgroundColor: TEAL }}>
+              <Plus className="h-3.5 w-3.5" /> Crear «{q.trim()}» como producto nuevo
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+    {onCrear ? (
+      <button type="button" onClick={crear} title="Crear un producto nuevo y agregarlo"
+        className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
+        <Plus className="h-4 w-4" /> Nuevo producto
+      </button>
+    ) : null}
     </div>
   );
 }

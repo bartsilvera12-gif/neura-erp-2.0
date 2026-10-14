@@ -21,6 +21,7 @@ import type { ProductoInventario } from "@/modules/inventario/tipos";
 import type { ProveedorMin } from "@/modules/proveedores/tipos";
 import { cargarProveedores } from "@/modules/proveedores/cache";
 import type { OrdenCompra } from "@/modules/compras/ordenes";
+import { ProductoForm } from "@/modules/inventario/ProductoForm";
 import { BuscadorProductos, ET, Fila, gs, INPUT, Segmentado, Tarjeta, usd } from "@/modules/compras/partes";
 
 const TEAL = clienteConfig.color;
@@ -45,6 +46,7 @@ function NuevaOrden() {
   const [moneda, setMoneda] = useState<"GS" | "USD">("GS");
   const [cambio, setCambio] = useState(0);
   const [observacion, setObservacion] = useState("");
+  const [creandoProd, setCreandoProd] = useState<string | null>(null);
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -231,7 +233,16 @@ function NuevaOrden() {
           </Tarjeta>
 
           <Tarjeta numero={2} titulo="Productos a pedir" extra={lineas.length ? <span className="text-xs text-slate-500">{lineas.length} {lineas.length === 1 ? "producto" : "productos"}</span> : null}>
-            <BuscadorProductos onElegir={agregar} />
+            <BuscadorProductos onElegir={agregar} onCrear={(t) => setCreandoProd(t)} />
+            {creandoProd !== null ? (
+              <ProductoForm modal inicial={{ nombre: creandoProd, proveedor_principal_id: proveedorId }}
+                onClose={() => setCreandoProd(null)}
+                onSaved={async (c) => {
+                  setCreandoProd(null);
+                  // El producto recién creado entra solo a la lista.
+                  if (c?.id) { try { void agregar(await apiFetch<ProductoInventario>(`/api/productos/${c.id}`)); } catch { /* lo busca a mano */ } }
+                }} />
+            ) : null}
             {lineas.length === 0 ? (
               <div className="mt-4 rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center">
                 <Package className="mx-auto h-7 w-7 text-slate-300" />

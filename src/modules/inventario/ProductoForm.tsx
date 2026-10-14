@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { History, ImagePlus, Loader2, Wand2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Drawer } from "@/components/Drawer";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
+import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { Select } from "@/components/Select";
 import MontoInput from "@/components/ui/MontoInput";
 import { subirImagenProducto } from "@/modules/caja/upload-imagen";
@@ -32,26 +34,36 @@ const gs = (v: number) => `Gs. ${Math.round(v || 0).toLocaleString("es-PY")}`;
  * Si `producto` viene, edita; si no, crea. Un producto inactivo se abre en solo lectura
  * (como Ferretería): primero hay que reactivarlo.
  */
+// Constante: un [] nuevo en cada render dispararía el efecto que trae las categorías una y otra vez.
+const SIN_CATEGORIAS: Categoria[] = [];
+
 export function ProductoForm({
   producto,
-  categorias = [],
+  categorias = SIN_CATEGORIAS,
   onClose,
   onSaved,
+  modal = false,
+  inicial,
 }: {
   producto?: ProductoInventario | null;
   categorias?: Categoria[];
   onClose: () => void;
-  onSaved: () => void;
+  /** Al crear recibe el producto nuevo (para elegirlo enseguida, ej. en una compra). */
+  onSaved: (creado?: { id: string }) => void;
+  /** Modal centrado en vez del panel lateral (alta rápida desde Compras / Órdenes). */
+  modal?: boolean;
+  /** Datos con los que arranca un alta: lo que se buscó y el proveedor de la compra. */
+  inicial?: { nombre?: string; proveedor_principal_id?: string | null };
 }) {
   const editando = !!producto;
   const esAdmin = useUsuario()?.rol === "ADMIN";
   const soloLectura = producto?.activo === false;
   const [f, setF] = useState({
-    nombre: producto?.nombre ?? "",
+    nombre: producto?.nombre ?? inicial?.nombre ?? "",
     sku: producto?.sku ?? "",
     codigo_barras: producto?.codigo_barras ?? "",
     categoria_principal_id: producto?.categoria_principal_id ?? "",
-    proveedor_principal_id: producto?.proveedor_principal_id ?? null,
+    proveedor_principal_id: producto?.proveedor_principal_id ?? inicial?.proveedor_principal_id ?? null,
     unidad_medida: producto?.unidad_medida ?? "Unidad",
     tipo_iva: (producto?.tipo_iva ?? "10%") as TipoIva,
     costo_promedio: Number(producto?.costo_promedio ?? 0),
@@ -71,6 +83,12 @@ export function ProductoForm({
   const [error, setError] = useState<string | null>(null);
   const [generando, setGenerando] = useState<"" | "sku" | "barras">("");
   const fileRef = useRef<HTMLInputElement>(null);
+  // Fuera de Inventario nadie le pasa las categorías: las trae (cacheadas).
+  const [cats, setCats] = useState<Categoria[]>(categorias);
+  useEffect(() => {
+    if (categorias.length) { setCats(categorias); return; }
+    apiFetchCache<{ categorias: Categoria[] }>("/api/inventario/categorias").then((r) => setCats(r.categorias ?? [])).catch(() => {});
+  }, [categorias]);
 
   /** Botón "Generar": SKU armado desde el nombre (COC-COL-2L) o un EAN-13 interno. */
   async function generar(tipo: "sku" | "barras") {
@@ -94,11 +112,11 @@ export function ProductoForm({
   }
 
   // Categoría → subcategoría: el producto guarda la hoja (la sub si se eligió, si no la categoría).
-  const porId = useMemo(() => new Map(categorias.map((c) => [c.id, c])), [categorias]);
+  const porId = useMemo(() => new Map(cats.map((c) => [c.id, c])), [cats]);
   const cat = partesCategoria(f.categoria_principal_id, porId);
   const visible = (c: Categoria) => c.activo || c.id === cat.madre?.id || c.id === cat.sub?.id;
-  const madres = categorias.filter((c) => !c.parent_id && visible(c));
-  const subs = cat.madre ? categorias.filter((c) => c.parent_id === cat.madre!.id && visible(c)) : [];
+  const madres = cats.filter((c) => !c.parent_id && visible(c));
+  const subs = cat.madre ? cats.filter((c) => c.parent_id === cat.madre!.id && visible(c)) : [];
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const num = (v: string) => (v === "" ? undefined : Number(v));
@@ -156,7 +174,9 @@ export function ProductoForm({
       if (editando) {
         await apiFetch(`/api/productos/${producto!.id}`, { method: "PATCH", body: JSON.stringify(body) });
       } else {
-        await apiFetch("/api/productos", { method: "POST", body: JSON.stringify(body) });
+        const creado = await apiFetch<{ id: string }>("/api/productos", { method: "POST", body: JSON.stringify(body) });
+        onSaved(creado);
+        return;
       }
       onSaved();
     } catch (err) {
@@ -166,7 +186,7 @@ export function ProductoForm({
   }
 
   return (
-    <Drawer
+    <Contenedor modal={modal}
       titulo={soloLectura ? "Producto inactivo" : editando ? "Editar producto" : "Nuevo producto"}
       subtitulo={editando ? producto?.sku : "Cargá los datos del producto"}
       onClose={onClose}
@@ -397,7 +417,7 @@ export function ProductoForm({
         </fieldset>
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
       </form>
-    </Drawer>
+    </Contenedor>
   );
 }
 
@@ -439,5 +459,31 @@ function Interruptor({ checked, onChange, label, detalle }: { checked: boolean; 
         <span className="absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all" style={{ left: checked ? 18 : 2 }} />
       </span>
     </button>
+  );
+}
+
+/** Panel lateral (Inventario) o modal centrado (alta rápida desde Compras). */
+function Contenedor({ modal, titulo, subtitulo, onClose, footer, children }: {
+  modal: boolean; titulo: string; subtitulo?: string; onClose: () => void; footer?: React.ReactNode; children: React.ReactNode;
+}) {
+  if (!modal) return <Drawer titulo={titulo} subtitulo={subtitulo} onClose={onClose} footer={footer}>{children}</Drawer>;
+  return (
+    <CapaModal onClose={onClose} z="z-[120]">
+      <div role="dialog" aria-modal="true" aria-label={titulo}
+        className={`flex w-full max-w-2xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[#4FAEB2]/15`}
+        style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-slate-900">{titulo}</h2>
+            {subtitulo ? <p className="mt-0.5 text-xs text-slate-500">{subtitulo}</p> : null}
+          </div>
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
+        {footer ? <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-6 py-3.5">{footer}</div> : null}
+      </div>
+    </CapaModal>
   );
 }
