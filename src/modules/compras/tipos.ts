@@ -27,6 +27,9 @@ export type Compra = {
   nro_timbrado: string | null;
   numero_factura: string;
   tipo_pago: "contado" | "credito";
+  /** contado: cómo se pagó (efectivo = salió de la caja) */
+  medio_pago?: "efectivo" | "transferencia" | "cheque" | "tarjeta" | "otro" | null;
+  referencia_pago?: string | null;
   plazo_dias: number | null;
   vencimiento: string | null;
   moneda: "GS" | "USD";
@@ -40,7 +43,12 @@ export type Compra = {
   anulada_at: string | null;
   anulada_por: string | null;
   anulada_motivo: string | null;
+  /** recepción de una orden de compra */
+  orden_compra_id?: string | null;
+  oc?: { numero_oc: string } | null;
   items?: CompraItem[];
+  /** en la lista: la deuda de una compra a crédito */
+  deuda?: { saldo: number; estado: "pendiente" | "parcial" | "pagada" | "anulada"; moneda: "GS" | "USD" } | null;
   cantidad_items?: number;
   /** Solo en el detalle de una compra a crédito: su cuenta a pagar y los pagos aplicados. */
   cuenta_pagar?: CuentaPagarCompra | null;
@@ -60,7 +68,8 @@ export type CuentaPagarCompra = {
 };
 
 export const COLS_COMPRA =
-  "id, numero_control, proveedor_id, proveedor_nombre, fecha, fecha_factura, nro_timbrado, numero_factura, tipo_pago, plazo_dias, vencimiento, moneda, tipo_cambio, subtotal, monto_iva, total, estado, observacion, usuario_nombre, anulada_at, anulada_por, anulada_motivo";
+  "id, numero_control, proveedor_id, proveedor_nombre, fecha, fecha_factura, nro_timbrado, numero_factura, tipo_pago, plazo_dias, vencimiento, moneda, tipo_cambio, subtotal, monto_iva, total, estado, observacion, usuario_nombre, anulada_at, anulada_por, anulada_motivo, " +
+  "medio_pago, referencia_pago, orden_compra_id, oc:ordenes_compra(numero_oc)";
 
 export const COLS_ITEM =
   "id, producto_id, producto_nombre, producto_sku, cantidad, costo_unitario_original, costo_unitario, tipo_iva, subtotal, monto_iva, total, precio_venta_nuevo, lote_numero, lote_vencimiento";

@@ -38,7 +38,7 @@ export const GET = withTenant(async (ctx, req) => {
   const [url, url_descarga] = await Promise.all([urlComprobante(c.storage_path), urlComprobante(c.storage_path, c.nombre)]);
   if (!url) return ERR.server();
   return ok({ url, url_descarga });
-});
+}, { roles: ["ADMIN"] });
 
 export const DELETE = withTenant(
   async (ctx, req) => {

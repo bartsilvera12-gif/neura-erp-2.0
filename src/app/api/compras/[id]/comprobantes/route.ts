@@ -32,7 +32,7 @@ export const GET = withTenant(async (ctx, req) => {
     .order("created_at", { ascending: true });
   if (error) return ERR.server();
   return ok({ comprobantes: data ?? [] });
-});
+}, { roles: ["ADMIN"] });
 
 export const POST = withTenant(
   async (ctx, req) => {

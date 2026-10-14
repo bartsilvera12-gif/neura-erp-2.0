@@ -34,4 +34,4 @@ export const GET = withTenant(async (ctx) => {
   } catch {
     return new Response("No se pudo generar el Excel", { status: 500 });
   }
-});
+}, { roles: ["ADMIN"] });

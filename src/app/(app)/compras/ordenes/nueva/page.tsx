@@ -50,6 +50,8 @@ function NuevaOrden() {
   const [error, setError] = useState<string | null>(null);
   const [hecha, setHecha] = useState<{ id: string; numero: string } | null>(null);
   const [numeroEditando, setNumeroEditando] = useState<string | null>(null);
+  // Al crear: un doble clic o un reintento devuelve la misma orden (no dos).
+  const [idem] = useState(() => crypto.randomUUID());
 
   useEffect(() => {
     // Misma lista (y misma llamada) que usa el SelectorProveedor.
@@ -145,6 +147,7 @@ function NuevaOrden() {
         moneda,
         tipo_cambio: moneda === "USD" ? cambio : null,
         observacion: observacion.trim() || null,
+        idempotency_key: editarId ? null : idem,
         items: lineas.map((l) => ({ producto_id: l.prod.id, cantidad: Number(l.cantidad.replace(",", ".")), costo_unitario: l.costo || 0 })),
       });
       const r = editarId

@@ -117,4 +117,4 @@ export const GET = withTenant(async (ctx, req) => {
 
   pieDePagina(doc, `Orden de compra ${oc.numero_oc}`);
   return respuestaPdf(doc, `orden-compra-${oc.numero_oc}.pdf`);
-});
+}, { roles: ["ADMIN"] });

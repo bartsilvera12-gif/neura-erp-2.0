@@ -24,7 +24,7 @@ export const GET = withTenant(async (ctx, req) => {
   if (o.error || i.error || c.error) return ERR.server();
   if (!o.data?.length) return ERR.notFound("orden de compra");
   return ok({ ...(o.data[0] as unknown as Record<string, unknown>), items: i.data ?? [], compras: c.data ?? [] });
-});
+}, { roles: ["ADMIN"] });
 
 export const PATCH = withTenant(
   async (ctx, req, input) => {

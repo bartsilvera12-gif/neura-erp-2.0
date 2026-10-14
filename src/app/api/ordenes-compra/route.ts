@@ -34,7 +34,7 @@ export const GET = withTenant(async (ctx, req) => {
     recibidas: it.reduce((a, x) => a + Math.min(Number(x.cantidad_recibida), Number(x.cantidad)), 0),
   }));
   return ok({ rows, total: res.count ?? 0 });
-});
+}, { roles: ["ADMIN"] });
 
 export const POST = withTenant(
   async (ctx, _req, input) => {

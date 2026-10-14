@@ -43,6 +43,9 @@ export default function OrdenesPage() {
   useEffect(() => {
     // Solo para el filtro: la lista liviana compartida (sin rubros ni compras).
     void cargarProveedores().then(setProveedores);
+    // /compras/ordenes?ver=<id> (desde una compra o desde "Recibir"): abre esa orden.
+    const ver = new URLSearchParams(window.location.search).get("ver");
+    if (ver && /^[0-9a-f-]{36}$/i.test(ver)) { setViendo(ver); window.history.replaceState(null, "", "/compras/ordenes"); }
   }, []);
   useEffect(() => {
     const t = setTimeout(() => { setQ(borrador.trim()); setPagina(1); }, 350);
@@ -258,7 +261,9 @@ function DetalleOrden({ id, onClose, onCambio }: { id: string; onClose: () => vo
                     {falta > 0 && o.estado !== "cancelada" ? (
                       <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Faltan {num(falta)}</span>
                     ) : falta === 0 ? (
-                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">Completo</span>
+                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                        {Number(i.cantidad_recibida) > Number(i.cantidad) ? `Completo · ${num(Number(i.cantidad_recibida) - Number(i.cantidad))} de más` : "Completo"}
+                      </span>
                     ) : null}
                   </li>
                 );
@@ -271,9 +276,12 @@ function DetalleOrden({ id, onClose, onCambio }: { id: string; onClose: () => vo
               <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Recibida con</p>
               <ul className="space-y-1.5">
                 {o.compras.map((c) => (
-                  <li key={c.id} className={`flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm ${c.estado === "anulada" ? "opacity-50 line-through" : ""}`}>
-                    <span><span className="font-mono text-xs font-semibold text-slate-800">{c.numero_control}</span> <span className="text-xs text-slate-500">· factura {c.numero_factura} · {fecha(c.fecha)}</span></span>
-                    <span className="font-semibold tabular-nums text-slate-800">{gs(c.total)}</span>
+                  <li key={c.id}>
+                    <Link href={`/compras?ver=${c.id}`} title="Ver la compra"
+                      className={`flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm transition hover:bg-[var(--brand-50)] ${c.estado === "anulada" ? "opacity-50 line-through" : ""}`}>
+                      <span><span className="font-mono text-xs font-semibold text-slate-800">{c.numero_control}</span> <span className="text-xs text-slate-500">· factura {c.numero_factura} · {fecha(c.fecha)}{c.estado === "anulada" ? " · anulada" : ""}</span></span>
+                      <span className="font-semibold tabular-nums text-slate-800">{gs(c.total)}</span>
+                    </Link>
                   </li>
                 ))}
               </ul>
@@ -301,7 +309,9 @@ function DetalleOrden({ id, onClose, onCambio }: { id: string; onClose: () => vo
             <div className="rounded-xl border border-rose-200 p-4">
               <p className="text-sm font-semibold text-slate-800">¿Por qué la cancelás?</p>
               <p className="mt-0.5 text-xs text-slate-500">
-                {o.estado === "recibida_parcial" ? "Lo que ya llegó queda como está; lo que falta deja de esperarse." : "La orden queda cancelada y no se puede recibir."}
+                {o.estado === "recibida_parcial"
+                  ? "Lo que ya llegó queda como está (sus compras siguen vigentes); lo que falta deja de esperarse y la orden ya no se puede recibir."
+                  : "La orden queda cancelada y no se puede recibir."}
               </p>
               <textarea autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={2} maxLength={500} placeholder="Ej: el proveedor no tiene stock"
                 className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />

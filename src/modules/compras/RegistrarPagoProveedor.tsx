@@ -47,6 +47,8 @@ export function RegistrarPagoProveedor({ proveedorId, proveedorNombre, moneda: m
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const iniciado = useRef(false);
+  // Un doble clic o un reintento tras un corte devuelve la misma orden de pago (no dos).
+  const [idem] = useState(() => crypto.randomUUID());
 
   useEffect(() => {
     apiFetch<EstadoCuentaProveedor>(`/api/proveedores/${proveedorId}/estado-cuenta`).then(setEc).catch((e) => setError((e as Error).message));
@@ -145,6 +147,7 @@ export function RegistrarPagoProveedor({ proveedorId, proveedorNombre, moneda: m
           medios: medios.filter((p) => p.monto > 0).map((p) => ({ metodo: p.metodo, monto: redondear(p.monto, moneda), referencia: p.referencia.trim() || null })),
           aplicaciones: abiertas.filter((c) => montos.has(c.id)).map((c) => ({ cxp_id: c.id, monto: redondear(montos.get(c.id) ?? 0, moneda) })),
           observacion: observacion.trim() || null,
+          idempotency_key: idem,
         }),
       });
       onHecho({ ...r, total: Number(r.total), moneda: (r.moneda ?? moneda) as Moneda });

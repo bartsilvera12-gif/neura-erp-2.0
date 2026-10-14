@@ -19,7 +19,7 @@ import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos"
 import { cargarProveedores } from "@/modules/proveedores/cache";
 import { ComprobantesCompra } from "@/modules/compras/Comprobantes";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
-import { ESTADO_CXP, dinero } from "@/modules/compras/pagos";
+import { ESTADO_CXP, dinero, nombreMetodoPago } from "@/modules/compras/pagos";
 import { RegistrarPagoProveedor, imprimirOrdenPago, useAvisoPago } from "@/modules/compras/RegistrarPagoProveedor";
 
 const TEAL = clienteConfig.color;
@@ -148,6 +148,7 @@ export default function ComprasPage() {
                       <td className="px-5 py-3">
                         <p className={`font-mono text-xs font-semibold ${anulada ? "text-slate-400 line-through" : "text-slate-800"}`}>{c.numero_control}</p>
                         {anulada ? <span className="rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600">Anulada</span> : null}
+                        {c.oc?.numero_oc ? <p className="mt-0.5 font-mono text-[10px] text-sky-700" title="Recepción de una orden de compra">{c.oc.numero_oc}</p> : null}
                       </td>
                       <td className="px-3 py-3 text-xs text-slate-600">{fecha(c.fecha)}</td>
                       <td className="px-3 py-3 font-semibold text-slate-800">{c.proveedor_nombre}</td>
@@ -157,7 +158,12 @@ export default function ComprasPage() {
                         <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.tipo_pago === "credito" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
                           {c.tipo_pago === "credito" ? "Crédito" : "Contado"}
                         </span>
-                        {c.tipo_pago === "credito" && c.vencimiento ? <p className="mt-0.5 text-[11px] text-slate-400">vence {fechaDia(c.vencimiento)}</p> : null}
+                        {c.tipo_pago === "credito" && !anulada && c.deuda ? (
+                          c.deuda.estado === "pagada"
+                            ? <p className="mt-0.5 text-[11px] font-semibold text-emerald-600">Pagada</p>
+                            : <p className="mt-0.5 text-[11px] text-slate-500">debés {dinero(c.deuda.saldo, c.deuda.moneda)}{c.vencimiento ? ` · vence ${fechaDia(c.vencimiento)}` : ""}</p>
+                        ) : c.tipo_pago === "credito" && c.vencimiento ? <p className="mt-0.5 text-[11px] text-slate-400">vence {fechaDia(c.vencimiento)}</p> : null}
+                        {c.tipo_pago === "contado" && c.medio_pago ? <p className="mt-0.5 text-[11px] text-slate-400">{nombreMetodoPago(c.medio_pago)}</p> : null}
                       </td>
                       <td className={`whitespace-nowrap px-5 py-3 text-right font-bold tabular-nums ${anulada ? "text-slate-400 line-through" : "text-slate-900"}`}>{gs(c.total)}</td>
                     </tr>
@@ -251,8 +257,16 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
             <Dato l="Cargada" v={`${fecha(c.fecha)}${c.usuario_nombre ? ` · ${c.usuario_nombre}` : ""}`} />
             <Dato l="Fecha de la factura" v={c.fecha_factura ? fechaDia(c.fecha_factura) : "—"} />
             <Dato l="Timbrado" v={c.nro_timbrado ?? "—"} mono />
-            <Dato l="Condición" v={c.tipo_pago === "credito" ? `Crédito${c.plazo_dias ? ` ${c.plazo_dias} días` : ""}${c.vencimiento ? ` · vence ${fechaDia(c.vencimiento)}` : ""}` : "Contado"} />
+            <Dato l="Condición" v={c.tipo_pago === "credito"
+              ? `Crédito${c.plazo_dias ? ` ${c.plazo_dias} días` : ""}${c.vencimiento ? ` · vence ${fechaDia(c.vencimiento)}` : ""}`
+              : `Contado${c.medio_pago ? ` · ${nombreMetodoPago(c.medio_pago)}${c.medio_pago === "efectivo" ? " (salió de la caja)" : ""}` : ""}${c.referencia_pago ? ` · ${c.referencia_pago}` : ""}`} />
             {c.moneda === "USD" ? <Dato l="Moneda" v={`Dólares · 1 US$ = ${gs(c.tipo_cambio)}`} /> : null}
+            {c.orden_compra_id ? (
+              <div>
+                <dt className="text-[11px] text-slate-500">Orden de compra</dt>
+                <dd><Link href={`/compras/ordenes?ver=${c.orden_compra_id}`} className="font-mono text-sm font-semibold text-sky-700 hover:underline">{c.oc?.numero_oc ?? "Ver la orden"}</Link></dd>
+              </div>
+            ) : null}
           </dl>
 
           <div>
@@ -289,7 +303,12 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
           {anulando ? (
             <div className="rounded-xl border border-rose-200 p-4">
               <p className="text-sm font-semibold text-slate-800">¿Por qué la anulás?</p>
-              <p className="mt-0.5 text-xs text-slate-500">Se descuenta del stock lo que entró con esta compra y se recalcula el costo promedio. Queda registrado en el kardex.</p>
+              <p className="mt-0.5 text-xs text-slate-500">
+                Se descuenta del stock lo que entró con esta compra y se recalcula el costo promedio. Queda registrado en el kardex.
+                {c.orden_compra_id ? ` Lo recibido vuelve a quedar pendiente en la ${c.oc?.numero_oc ?? "orden de compra"}.` : ""}
+                {c.tipo_pago === "contado" && c.medio_pago === "efectivo" ? " El egreso de caja se anula (solo si esa caja sigue abierta)." : ""}
+                {c.tipo_pago === "credito" ? " Su cuenta a pagar se anula." : ""}
+              </p>
               {cxp && Number(cxp.pagado) > 0 ? (
                 <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Esta compra ya tiene pagos al proveedor ({dinero(cxp.pagado, cxp.moneda)}): para anularla primero anulá esas órdenes de pago.</p>
               ) : null}

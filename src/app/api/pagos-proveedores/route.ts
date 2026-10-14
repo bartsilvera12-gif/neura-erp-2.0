@@ -52,6 +52,8 @@ const cuerpo = z.object({
     .max(10),
   aplicaciones: z.array(z.object({ cxp_id: z.string().uuid(), monto: z.coerce.number().positive() })).max(200).nullish(),
   observacion: z.string().trim().max(1000).nullish(),
+  /** doble clic / reintento: devuelve la orden de pago ya registrada */
+  idempotency_key: z.string().uuid().nullish(),
 });
 
 export const POST = withTenant(

@@ -63,6 +63,8 @@ export const cuerpoOrden = z.object({
   moneda: z.enum(["GS", "USD"]).default("GS"),
   tipo_cambio: z.coerce.number().positive().nullish(),
   observacion: z.string().trim().max(2000).nullish(),
+  /** al crear: un doble clic / reintento devuelve la orden ya creada */
+  idempotency_key: z.string().uuid().nullish(),
   items: z
     .array(
       z.object({

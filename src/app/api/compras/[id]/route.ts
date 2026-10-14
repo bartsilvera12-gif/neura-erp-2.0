@@ -38,4 +38,4 @@ export const GET = withTenant(async (ctx, req) => {
       }
     : null;
   return ok({ ...(c.data[0] as unknown as Record<string, unknown>), items: i.data ?? [], cuenta_pagar });
-});
+}, { roles: ["ADMIN"] });

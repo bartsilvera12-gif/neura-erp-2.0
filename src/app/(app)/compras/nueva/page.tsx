@@ -10,6 +10,9 @@
  * Todo se guarda junto en la base (registrar_compra): stock, costo promedio, precio y kardex.
  * Productos con lotes: cada línea lleva lote (prellenado L-YYMMDD, editable) y vencimiento
  * (obligatorio). Una línea = un lote: para dos lotes del mismo producto, dos líneas.
+ * Al contado se elige el medio de pago: en efectivo sale de la caja abierta (solo Gs.).
+ * Recibiendo una orden (?oc=ID): no deja pasar de lo pendiente de cada línea sin confirmar
+ * la recepción excedente. Un doble clic no duplica la compra (idempotency_key).
  */
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
@@ -17,7 +20,9 @@ import { useSearchParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, ClipboardList, Loader2, Package, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
+import { Select } from "@/components/Select";
 import MontoInput from "@/components/ui/MontoInput";
+import { METODOS_PAGO_PROV, type MetodoPagoProv } from "@/modules/compras/pagos";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
 import { Variacion, type HistorialCostosData } from "@/modules/inventario/HistorialCostos";
@@ -72,13 +77,22 @@ function NuevaCompra() {
   const [lineas, setLineas] = useState<Linea[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hecha, setHecha] = useState<{ numero: string; total: number; adjuntos: number; fallidos: string[] } | null>(null);
+  const [hecha, setHecha] = useState<{ id: string; numero: string; total: number; adjuntos: number; fallidos: string[] } | null>(null);
   const [adjuntos, setAdjuntos] = useState<File[]>([]);
   const [subiendoAdjuntos, setSubiendoAdjuntos] = useState(false);
+  // Contado: cómo se pagó. El efectivo sale de la caja abierta (solo en Gs.).
+  const [medioPago, setMedioPago] = useState<MetodoPagoProv | "">("");
+  const [referenciaPago, setReferenciaPago] = useState("");
+  const [cajaAbierta, setCajaAbierta] = useState<boolean | null>(null);
+  // Recepción de una orden: llegó más de lo pendiente y el usuario lo confirma.
+  const [excedenteOk, setExcedenteOk] = useState(false);
+  // Un doble clic o un reintento devuelve la misma compra (no dos). Nueva por cada compra.
+  const [idem, setIdem] = useState(() => crypto.randomUUID());
 
   useEffect(() => {
     // Misma lista (y misma llamada) que usa el SelectorProveedor.
     void cargarProveedores().then(setProveedores);
+    apiFetch<{ caja: { id: string } | null }>("/api/caja").then((r) => setCajaAbierta(!!r.caja)).catch(() => setCajaAbierta(false));
   }, []);
 
   // Recibir una orden de compra: proveedor, condición y moneda de la orden, y sus
@@ -153,7 +167,12 @@ function NuevaCompra() {
       return;
     }
     const key = `${prod.id}-${Date.now()}`;
-    setLineas((ls) => [...ls, { key, prod, cantidad: "1", costo: 0, precioNuevo: 0, ultima: null, lote: loteAutomatico(hoyPY()), vencimiento: "" }]);
+    // Recibiendo una orden: si el producto está en la orden (p. ej. otro lote del mismo
+    // producto), la línea nueva también cuenta como recibido de esa orden.
+    const oi = orden?.items?.find((i) => i.producto_id === prod.id);
+    const deOrden = oi ? { ocItemId: oi.id, pedido: Number(oi.cantidad), recibidoAntes: Number(oi.cantidad_recibida) } : {};
+    const costoOrden = oi ? Number(oi.costo_unitario_original) || 0 : 0;
+    setLineas((ls) => [...ls, { key, prod, cantidad: "1", costo: costoOrden, precioNuevo: 0, ultima: null, lote: loteAutomatico(hoyPY()), vencimiento: "", ...deOrden }]);
     // Última compra: se muestra al lado del costo y se propone el mismo costo.
     try {
       const h = await apiFetch<HistorialCostosData>(`/api/productos/${prod.id}/costos`);
@@ -186,9 +205,31 @@ function NuevaCompra() {
     return { total, iva10, iva5, subtotal: total - iva10 - iva5, unidades, totalOrig };
   }, [lineas, factor]);
 
+  // Recibiendo una orden: lo que llega de cada línea (puede venir en varias, una por lote)
+  // contra lo que quedaba pendiente. Pasarse pide confirmación explícita.
+  const excedidas = useMemo(() => {
+    const suma = new Map<string, { recibe: number; pendiente: number }>();
+    for (const l of lineas) {
+      if (!l.ocItemId || l.pedido == null) continue;
+      const x = suma.get(l.ocItemId) ?? { recibe: 0, pendiente: Math.max(l.pedido - (l.recibidoAntes ?? 0), 0) };
+      x.recibe += Number(l.cantidad.replace(",", ".")) || 0;
+      suma.set(l.ocItemId, x);
+    }
+    return new Set([...suma].filter(([, x]) => x.recibe > x.pendiente).map(([k]) => k));
+  }, [lineas]);
+  const hayExcedente = excedidas.size > 0;
+  const efectivo = tipoPago === "contado" && medioPago === "efectivo";
+
+  const ordenCerrada = !!orden && orden.estado !== "pendiente" && orden.estado !== "recibida_parcial";
   const faltan = [
+    ordenCerrada && `una orden abierta (la ${orden?.numero_oc} ${orden?.estado === "cancelada" ? "está cancelada" : "ya se recibió completa"})`,
     !proveedorId && "el proveedor",
     !factura.trim() && "el número de factura",
+    fechaFactura > hoyPY() && "una fecha de factura que no sea futura",
+    tipoPago === "contado" && !medioPago && "el medio de pago",
+    efectivo && moneda === "USD" && "otro medio de pago (el efectivo de la caja es en guaraníes)",
+    efectivo && moneda === "GS" && cajaAbierta === false && "abrir la caja (el efectivo sale de la caja)",
+    hayExcedente && !excedenteOk && "confirmar que llegó más de lo pedido",
     moneda === "USD" && !(cambio > 0) && "la cotización del dólar",
     lineas.length === 0 && "al menos un producto",
     lineas.some((l) => !(Number(l.cantidad.replace(",", ".")) > 0)) && "la cantidad de algún producto",
@@ -210,10 +251,14 @@ function NuevaCompra() {
           fecha_factura: fechaFactura || null,
           tipo_pago: tipoPago,
           plazo_dias: tipoPago === "credito" ? Number(plazo) || null : null,
+          medio_pago: tipoPago === "contado" && medioPago ? medioPago : null,
+          referencia_pago: tipoPago === "contado" && medioPago !== "efectivo" ? referenciaPago.trim() || null : null,
           moneda,
           tipo_cambio: moneda === "USD" ? cambio : null,
           observacion: observacion.trim() || null,
           orden_compra_id: orden?.id ?? null,
+          permitir_excedente: hayExcedente && excedenteOk,
+          idempotency_key: idem,
           items: lineas.map((l) => ({
             producto_id: l.prod.id,
             cantidad: Number(l.cantidad.replace(",", ".")),
@@ -233,7 +278,7 @@ function NuevaCompra() {
         fallidos = await subirComprobantes(r.id, adjuntos);
         setSubiendoAdjuntos(false);
       }
-      setHecha({ numero: r.numero_control, total: r.total, adjuntos: adjuntos.length - fallidos.length, fallidos });
+      setHecha({ id: r.id, numero: r.numero_control, total: r.total, adjuntos: adjuntos.length - fallidos.length, fallidos });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -249,6 +294,9 @@ function NuevaCompra() {
     setLineas([]);
     setAdjuntos([]);
     setFechaFactura(hoyPY());
+    setReferenciaPago("");
+    setExcedenteOk(false);
+    setIdem(crypto.randomUUID());
   }
 
   if (hecha) {
@@ -269,9 +317,9 @@ function NuevaCompra() {
           </div>
         ) : null}
         <div className="mt-6 flex justify-center gap-2">
-          <Link href="/compras" className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Ver compras</Link>
+          <Link href={`/compras?ver=${hecha.id}`} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Ver la compra</Link>
           {orden ? (
-            <Link href="/compras/ordenes" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Ver órdenes de compra</Link>
+            <Link href={`/compras/ordenes?ver=${orden.id}`} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Ver la orden {orden.numero_oc}</Link>
           ) : (
             <button onClick={otra} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Cargar otra compra</button>
           )}
@@ -324,7 +372,7 @@ function NuevaCompra() {
                 </label>
                 <label className="block">
                   <span className={ET}>Fecha de la factura</span>
-                  <input type="date" value={fechaFactura} onChange={(e) => setFechaFactura(e.target.value)} className={INPUT} />
+                  <input type="date" value={fechaFactura} max={hoyPY()} onChange={(e) => setFechaFactura(e.target.value)} className={INPUT} />
                 </label>
               </div>
               <div>
@@ -338,7 +386,22 @@ function NuevaCompra() {
                       <span className="ml-auto rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">Vence el {sumarDias(fechaFactura, Number(plazo))}</span>
                     ) : null}
                   </div>
-                ) : null}
+                ) : (
+                  <div className="mt-2 space-y-2">
+                    <Select value={medioPago} onChange={(v) => setMedioPago(v as MetodoPagoProv)} block
+                      options={[["", "¿Cómo le pagaste?"], ...METODOS_PAGO_PROV.map((m): [string, string] => [m.v, m.l])]} />
+                    {medioPago && medioPago !== "efectivo" ? (
+                      <input value={referenciaPago} onChange={(e) => setReferenciaPago(e.target.value.slice(0, 120))} placeholder="N° de operación o de cheque (opcional)" className={`${INPUT} py-2`} />
+                    ) : null}
+                    {medioPago === "efectivo" ? (
+                      <p className={`text-[11px] ${moneda === "USD" || cajaAbierta === false ? "font-semibold text-rose-600" : "text-slate-500"}`}>
+                        {moneda === "USD" ? "El efectivo de la caja es en guaraníes: una factura en dólares va por transferencia u otro medio."
+                          : cajaAbierta === false ? "No hay caja abierta: el efectivo sale de la caja, abrila primero."
+                          : "El total sale de la caja abierta como egreso."}
+                      </p>
+                    ) : null}
+                  </div>
+                )}
               </div>
               <div>
                 <span className={ET}>Moneda de la factura</span>
@@ -365,7 +428,7 @@ function NuevaCompra() {
             ) : (
               <ul className="mt-4 space-y-3">
                 {lineas.map((l) => (
-                  <LineaCompra key={l.key} l={l} moneda={moneda} factor={factor} onCambiar={(p) => cambiar(l.key, p)} onQuitar={() => setLineas((ls) => ls.filter((x) => x.key !== l.key))} />
+                  <LineaCompra key={l.key} l={l} moneda={moneda} factor={factor} excede={!!l.ocItemId && excedidas.has(l.ocItemId)} onCambiar={(p) => cambiar(l.key, p)} onQuitar={() => setLineas((ls) => ls.filter((x) => x.key !== l.key))} />
                 ))}
               </ul>
             )}
@@ -389,7 +452,9 @@ function NuevaCompra() {
             </div>
             {moneda === "USD" ? <p className="text-right text-xs text-slate-500">{usd(calc.totalOrig)} a {gs(cambio)}</p> : null}
             <p className="mt-1 text-right text-xs text-slate-500">
-              {tipoPago === "credito" ? `A crédito${Number(plazo) > 0 && fechaFactura ? ` · vence el ${sumarDias(fechaFactura, Number(plazo))}` : ""}` : "Al contado"}
+              {tipoPago === "credito"
+                ? `A crédito${Number(plazo) > 0 && fechaFactura ? ` · vence el ${sumarDias(fechaFactura, Number(plazo))}` : ""} · queda en Pagos a proveedores`
+                : `Al contado${medioPago ? ` · ${METODOS_PAGO_PROV.find((m) => m.v === medioPago)?.l.toLowerCase()}` : ""}${efectivo ? " (sale de la caja)" : ""}`}
             </p>
 
             <label className="mt-4 block">
@@ -401,6 +466,12 @@ function NuevaCompra() {
               <AdjuntosPendientes files={adjuntos} onChange={setAdjuntos} disabled={busy} />
             </div>
 
+            {hayExcedente ? (
+              <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                <input type="checkbox" checked={excedenteOk} onChange={(e) => setExcedenteOk(e.target.checked)} className="mt-0.5" />
+                <span>Estás recibiendo <strong>más de lo que falta</strong> de {excedidas.size === 1 ? "un producto" : `${excedidas.size} productos`} de la orden. Confirmo que llegó de más y lo quiero ingresar.</span>
+              </label>
+            ) : null}
             {faltan.length ? (
               <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">Falta: {faltan.join(", ")}.</p>
             ) : null}
@@ -419,8 +490,11 @@ function NuevaCompra() {
 }
 
 /** Una línea de la compra: cantidad, costo (con la última compra) y precio de venta nuevo. */
-function LineaCompra({ l, moneda, factor, onCambiar, onQuitar }: {
-  l: Linea; moneda: "GS" | "USD"; factor: number; onCambiar: (p: Partial<Linea>) => void; onQuitar: () => void;
+function LineaCompra({ l, moneda, factor, excede, onCambiar, onQuitar }: {
+  l: Linea; moneda: "GS" | "USD"; factor: number;
+  /** recibiendo una orden: entre todas sus líneas se pasa de lo pendiente */
+  excede: boolean;
+  onCambiar: (p: Partial<Linea>) => void; onQuitar: () => void;
 }) {
   const cant = Number(l.cantidad.replace(",", ".")) || 0;
   const costoGs = l.costo * factor;
@@ -445,7 +519,8 @@ function LineaCompra({ l, moneda, factor, onCambiar, onQuitar }: {
           {l.pedido != null ? (
             <p className="mt-0.5 text-[11px] font-medium text-sky-700">
               Pedido {l.pedido.toLocaleString("es-PY")}{l.recibidoAntes ? ` · ya llegaron ${l.recibidoAntes.toLocaleString("es-PY")}` : ""}
-              {cant > (l.pedido - (l.recibidoAntes ?? 0)) ? <span className="text-amber-600"> · estás recibiendo más de lo pedido</span> : null}
+              {` · faltan ${Math.max(l.pedido - (l.recibidoAntes ?? 0), 0).toLocaleString("es-PY")}`}
+              {excede ? <span className="text-amber-600"> · estás recibiendo más de lo que falta</span> : null}
             </p>
           ) : null}
         </div>

@@ -5,7 +5,9 @@
  *        q = búsqueda inteligente (número, proveedor, factura, timbrado, productos).
  *   POST /api/compras → registra la compra (ADMIN): cabecera + ítems + stock, costo
  *        promedio, precio de venta y kardex en una sola transacción (registrar_compra).
- *        Con orden_compra_id (+ oc_item_id por línea) es la recepción de esa orden.
+ *        Con orden_compra_id (+ oc_item_id por línea) es la recepción de esa orden (no más
+ *        de lo pendiente salvo permitir_excedente). Contado con medio_pago "efectivo": egreso
+ *        de la caja abierta. idempotency_key evita duplicados por doble clic.
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
@@ -26,7 +28,8 @@ export const GET = withTenant(async (ctx, req) => {
   const estado = sp.get("estado") ?? "";
   const grupos = await variantesBusqueda(ctx.db, sp.get("q"));
 
-  let query = ctx.db.select("compras", `${COLS_COMPRA}, compras_items(count)`, { count: "exact" });
+  // + cuántos productos y, si es a crédito, cómo está su deuda (saldo / estado).
+  let query = ctx.db.select("compras", `${COLS_COMPRA}, compras_items(count), cxp:cuentas_por_pagar(saldo, estado, moneda)`, { count: "exact" });
   if (RE_FECHA.test(desde)) query = query.gte("fecha", `${desde}T00:00:00-03:00`);
   if (RE_FECHA.test(hasta)) query = query.lte("fecha", `${hasta}T23:59:59.999-03:00`);
   if (/^[0-9a-f-]{36}$/i.test(proveedor)) query = query.eq("proveedor_id", proveedor);
@@ -37,11 +40,14 @@ export const GET = withTenant(async (ctx, req) => {
   const desdeFila = (pagina - 1) * porPagina;
   const res = await query.order("fecha", { ascending: false }).order("id", { ascending: false }).range(desdeFila, desdeFila + porPagina - 1);
   if (res.error && (res.error as { code?: string }).code !== "PGRST103") return ERR.server();
-  const rows = ((res.data ?? []) as unknown as (Record<string, unknown> & { compras_items?: { count: number }[] })[]).map(
-    ({ compras_items, ...c }) => ({ ...c, cantidad_items: compras_items?.[0]?.count ?? 0 }),
-  );
+  type Fila = Record<string, unknown> & { compras_items?: { count: number }[]; cxp?: { saldo: number; estado: string; moneda: string }[] | null };
+  const rows = ((res.data ?? []) as unknown as Fila[]).map(({ compras_items, cxp, ...c }) => ({
+    ...c,
+    cantidad_items: compras_items?.[0]?.count ?? 0,
+    deuda: cxp?.[0] ?? null,
+  }));
   return ok({ rows, total: res.count ?? 0 });
-});
+}, { roles: ["ADMIN"] });
 
 const cuerpo = z.object({
   proveedor_id: z.string().uuid("Elegí el proveedor"),
@@ -49,12 +55,19 @@ const cuerpo = z.object({
   nro_timbrado: z.string().trim().max(20).nullish(),
   fecha_factura: z.string().regex(RE_FECHA).nullish().or(z.literal("")),
   tipo_pago: z.enum(["contado", "credito"]).default("contado"),
+  /** contado: cómo se pagó (el efectivo sale de la caja abierta, solo en Gs.) */
+  medio_pago: z.enum(["efectivo", "transferencia", "cheque", "tarjeta", "otro"]).nullish(),
+  referencia_pago: z.string().trim().max(120).nullish(),
   plazo_dias: z.coerce.number().int().min(0).max(3650).nullish(),
   moneda: z.enum(["GS", "USD"]).default("GS"),
   tipo_cambio: z.coerce.number().positive().nullish(),
   observacion: z.string().trim().max(2000).nullish(),
   /** si viene: se está recibiendo esa orden de compra */
   orden_compra_id: z.string().uuid().nullish(),
+  /** recibir más de lo pendiente en la orden (confirmado por el usuario) */
+  permitir_excedente: z.boolean().nullish(),
+  /** doble clic / reintento: devuelve la compra ya registrada */
+  idempotency_key: z.string().uuid().nullish(),
   items: z
     .array(
       z.object({
