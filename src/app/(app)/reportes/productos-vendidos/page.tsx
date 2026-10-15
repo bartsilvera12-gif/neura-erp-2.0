@@ -7,7 +7,8 @@
  * inmovilizado, atajos de fecha, Excel y PDF.
  */
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowLeft, ArrowUp, Boxes, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, Loader2, Search, X } from "lucide-react";
 import { filtrar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -55,9 +56,18 @@ const ATAJOS: [string, string][] = [["hoy", "Hoy"], ["7d", "7 días"], ["mes", "
 type Orden = "unidades" | "total" | "ganancia" | "margen" | "nombre" | "stock";
 
 export default function ProductosVendidosPage() {
-  const [desde, setDesde] = useState(() => rangoAtajo("mes").desde);
-  const [hasta, setHasta] = useState(hoy);
-  const [atajo, setAtajo] = useState<string | null>("mes");
+  return <Suspense fallback={null}><Contenido /></Suspense>;
+}
+
+// Acepta ?desde&hasta en la URL (enlaces del Inicio, Estado de cuenta y Ventas por mes).
+const FECHA_URL = /^\d{4}-\d{2}-\d{2}$/;
+
+function Contenido() {
+  const sp = useSearchParams();
+  const rangoUrl = FECHA_URL.test(sp.get("desde") ?? "") && FECHA_URL.test(sp.get("hasta") ?? "");
+  const [desde, setDesde] = useState(() => (rangoUrl ? sp.get("desde")! : rangoAtajo("mes").desde));
+  const [hasta, setHasta] = useState(() => (rangoUrl ? sp.get("hasta")! : hoy()));
+  const [atajo, setAtajo] = useState<string | null>(rangoUrl ? null : "mes");
   const [categoria, setCategoria] = useState("");
   const [modo, setModo] = useState<"resumido" | "detallado">("resumido");
   const [sinVentas, setSinVentas] = useState(false);

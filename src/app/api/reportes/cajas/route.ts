@@ -1,17 +1,21 @@
 /**
- * Reporte de cierres de caja (portado de Ferretería República).
- *   GET /api/reportes/cajas?desde=YYYY-MM-DD&hasta=YYYY-MM-DD → turnos del período + totales.
- * Sin fechas: del 1° del mes en curso hasta hoy (hora de Asunción).
+ * Cierre de caja por día (reporte_cierres_dias, receta 54): un renglón por día con lo vendido
+ * (contado por forma de pago + crédito), cobros, egresos, retiros y diferencias de arqueo.
+ * Un turno cuenta para el día en que se ABRIÓ.
+ *   GET /api/reportes/cajas?desde&hasta&sucursal
+ * ADMIN: todas las sucursales; SUPERVISOR: la suya (lo fuerza la base).
  */
 import { withTenant } from "@/lib/api/with-tenant";
-import { ok, ERR } from "@/lib/api/responses";
-import { getReporteCajas, resolverRango } from "@/modules/caja/reporte-cajas";
+import { ok } from "@/lib/api/responses";
+import { argsRango, filtrosRango, leerReporte } from "@/modules/reportes/server/rpc";
+import type { CierresDias } from "@/modules/reportes/tipos";
 
-export const GET = withTenant(async (ctx, req) => {
-  const sp = new URL(req.url).searchParams;
-  try {
-    return ok(await getReporteCajas(ctx.db, resolverRango(sp.get("desde"), sp.get("hasta"))));
-  } catch {
-    return ERR.server();
-  }
-});
+export const dynamic = "force-dynamic";
+
+export const GET = withTenant(
+  async (ctx, req) => {
+    const r = await leerReporte<CierresDias>(ctx.db, "reporte_cierres_dias", argsRango(filtrosRango(new URL(req.url).searchParams)));
+    return r.ok ? ok(r.data) : r.res;
+  },
+  { roles: ["ADMIN", "SUPERVISOR"] },
+);

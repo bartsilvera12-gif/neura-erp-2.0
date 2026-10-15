@@ -217,21 +217,7 @@ export type Resumen = {
   sucursales: { id: string; nombre: string }[];
 };
 
-// ── Formato ──────────────────────────────────────────────────────────────────
-export const gs = (n: number | null | undefined) => `Gs. ${Math.round(Number(n) || 0).toLocaleString("es-PY")}`;
-export const usd = (n: number | null | undefined) =>
-  `USD ${(Number(n) || 0).toLocaleString("es-PY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+// ── Formato (compartido con los gráficos y los reportes: src/components/graficos/formato.ts) ──
+import { gs, usd } from "@/components/graficos/formato";
+export { gs, usd, corto, fechaCorta, MESES, MESES_CORTOS, nombreMes, mesCorto } from "@/components/graficos/formato";
 export const monto = (n: number | null | undefined, moneda: Moneda | string | null | undefined) => (moneda === "USD" ? usd(n) : gs(n));
-/** Monto corto para ejes y etiquetas: 1,2 M · 850 k. */
-export function corto(n: number): string {
-  const a = Math.abs(n);
-  if (a >= 1e9) return `${(n / 1e9).toLocaleString("es-PY", { maximumFractionDigits: 1 })} mil M`;
-  if (a >= 1e6) return `${(n / 1e6).toLocaleString("es-PY", { maximumFractionDigits: 1 })} M`;
-  if (a >= 1e3) return `${Math.round(n / 1e3).toLocaleString("es-PY")} k`;
-  return Math.round(n).toLocaleString("es-PY");
-}
-export const fechaCorta = (d: string | null | undefined) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : "—");
-export const MESES = ["enero", "febrero", "marzo", "abril", "mayo", "junio", "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre"];
-export const MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
-export const nombreMes = (ymd: string) => `${MESES[Number(ymd.slice(5, 7)) - 1]} ${ymd.slice(0, 4)}`;
-export const mesCorto = (ymd: string) => `${MESES_CORTOS[Number(ymd.slice(5, 7)) - 1]} ${ymd.slice(2, 4)}`;

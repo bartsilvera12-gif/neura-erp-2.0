@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Lock, Mail } from "lucide-react";
 import { browserClient } from "@/lib/supabase/browser";
@@ -14,6 +14,11 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [expirada, setExpirada] = useState(false);
+  // Llegó acá porque la sesión se cerró en el servidor (ver apiFetch): se avisa.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("sesion") === "expirada") setExpirada(true);
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -99,6 +104,9 @@ export default function LoginPage() {
             />
           </div>
 
+          {expirada && !error ? (
+            <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">Tu sesión se cerró. Volvé a ingresar para seguir.</div>
+          ) : null}
           {error ? (
             <div className="mb-4 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2.5 text-xs text-rose-700">{error}</div>
           ) : null}

@@ -1,38 +1,20 @@
 /**
- * Inicio (dashboard) — solo los números de las tarjetas, sin bajar listas.
- *   GET /api/dashboard → { caja, productos, sin_stock, clientes }
- *     caja      → la caja abierta (o null), igual que GET /api/caja
- *     productos → vendibles y activos (lo mismo que lista GET /api/productos)
- *     sin_stock → de esos, los que controlan stock y están en 0 o menos
- *     clientes  → clientes sin borrar
- * Antes la pantalla bajaba el catálogo entero y 500 clientes para mostrar un .length.
+ * Inicio (dashboard) — una sola función de agregados (dashboard_inicio, receta 54):
+ * ventas por día (30 días vs los 30 anteriores, por sucursal), hoy / semana / mes contra el
+ * período anterior a la misma altura, ticket, top productos, medios de pago e inventario.
+ *   GET /api/dashboard?sucursal=<id>
+ * ADMIN ve todas las sucursales (o la elegida) con costos y valores de inventario; el resto
+ * de los roles ve solo su sucursal y sin costos ni márgenes (lo resuelve la base).
  */
 import { withTenant } from "@/lib/api/with-tenant";
-import { ok, ERR } from "@/lib/api/responses";
+import { ok } from "@/lib/api/responses";
+import { uuidONull } from "@/modules/inventario/server/rpc";
+import { leerReporte } from "@/modules/reportes/server/rpc";
+import type { Dashboard } from "@/modules/reportes/tipos";
 
 export const dynamic = "force-dynamic";
 
-export const GET = withTenant(async (ctx) => {
-  const [caja, productos, sinStock, clientes] = await Promise.all([
-    ctx.db
-      .select("cajas", "numero_caja, monto_apertura")
-      .eq("estado", "abierta")
-      .order("fecha_apertura", { ascending: false })
-      .limit(1),
-    ctx.db.select("productos", "id", { count: "exact", head: true }).eq("activo", true).eq("es_vendible", true),
-    ctx.db
-      .select("productos", "id", { count: "exact", head: true })
-      .eq("activo", true)
-      .eq("es_vendible", true)
-      .eq("controla_stock", true)
-      .lte("stock_actual", 0),
-    ctx.db.select("clientes", "id", { count: "exact", head: true }).is("deleted_at", null),
-  ]);
-  if (caja.error || productos.error || sinStock.error || clientes.error) return ERR.server();
-  return ok({
-    caja: caja.data?.[0] ?? null,
-    productos: productos.count ?? 0,
-    sin_stock: sinStock.count ?? 0,
-    clientes: clientes.count ?? 0,
-  });
+export const GET = withTenant(async (ctx, req) => {
+  const r = await leerReporte<Dashboard>(ctx.db, "dashboard_inicio", { p_sucursal: uuidONull(new URL(req.url).searchParams.get("sucursal")) });
+  return r.ok ? ok(r.data) : r.res;
 });

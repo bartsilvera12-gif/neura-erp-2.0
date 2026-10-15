@@ -1,9 +1,9 @@
 import type { Modulo } from "@/modules/types";
 
 /**
- * Manifiesto del módulo Reportes (familia propia en el menú, como Ferretería República).
- * Un solo ítem, sin submenú: abre /reportes, que lista los reportes disponibles
- * (src/modules/reportes/catalogo.ts).
+ * Manifiesto del módulo Reportes (familia Finanzas). Un solo ítem, sin submenú: abre
+ * /reportes, que lista los reportes por sección (src/modules/reportes/catalogo.ts).
+ * ADMIN ve todos; SUPERVISOR solo el cierre de caja de su sucursal.
  */
 export const moduloReportes: Modulo = {
   id: "reportes",
@@ -11,5 +11,5 @@ export const moduloReportes: Modulo = {
   href: "/reportes",
   icon: "chart",
   familia: "Finanzas",
-  roles: ["ADMIN"],
+  roles: ["ADMIN", "SUPERVISOR"],
 };

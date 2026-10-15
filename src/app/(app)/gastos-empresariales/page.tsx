@@ -14,7 +14,7 @@ import { AlertTriangle, ArrowDownRight, ArrowUpRight, CalendarClock, Plus, Targe
 import { apiFetchSWR, invalidar } from "@/lib/api/cache-cliente";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { Select } from "@/components/Select";
-import { BarrasH, C_FIJO, C_MERCADERIA, C_OPERATIVOS, C_VARIABLE, ColumnasMes, Dona, Leyenda } from "@/modules/gastos/Graficos";
+import { BarrasH, C_FIJO, C_MERCADERIA, C_OPERATIVOS, C_VARIABLE, ColumnasMes, Dona, Leyenda } from "@/components/graficos/Graficos";
 import { PresupuestoModal } from "@/modules/gastos/Presupuesto";
 import { corto, fechaCorta, gs, nombreMes, type Resumen } from "@/modules/gastos/tipos";
 
