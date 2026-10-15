@@ -1,8 +1,8 @@
 /**
  * Dar de baja un lote (vencido, roto, devuelto) — ADMIN.
- *   POST /api/inventario/lotes/[id]/baja { cantidad?, motivo } → { lote_id, numero, cantidad, stock_descontado, quedan }
- * Sin cantidad = todo lo que queda del lote. Sale del lote ESPECÍFICO y queda en el kardex
- * como ajuste manual con el lote y el motivo (dar_baja_lote, receta 44_lotes.sql).
+ *   POST /api/inventario/lotes/[id]/baja { cantidad?, motivo } → { lote_id, numero, cantidad, quedan, documento, estado }
+ * Sin cantidad = todo lo que queda del lote. Sale del lote ESPECÍFICO como una PÉRDIDA
+ * documentada (PE-, motivo vencimiento/rotura/…) valorizada al costo (dar_baja_lote, receta 50).
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";

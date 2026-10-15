@@ -88,8 +88,11 @@ export type ProductoExistente = {
   stock_actual: number;
 };
 
-/** Todos los productos de la empresa (activos o no), en tandas de 1000 (tope de PostgREST). */
-export async function traerCatalogo(db: TenantDb): Promise<ProductoExistente[]> {
+/**
+ * Todos los productos de la empresa (activos o no), en tandas de 1000 (tope de PostgREST).
+ * Con `depositoId`, stock_actual es el stock EN ESE depósito (lo que compara la importación).
+ */
+export async function traerCatalogo(db: TenantDb, depositoId?: string | null): Promise<ProductoExistente[]> {
   const out: ProductoExistente[] = [];
   for (let desde = 0; ; desde += 1000) {
     const { data, error } = await db
@@ -100,6 +103,21 @@ export async function traerCatalogo(db: TenantDb): Promise<ProductoExistente[]> 
     const tanda = (data ?? []) as unknown as ProductoExistente[];
     out.push(...tanda.map((p) => ({ ...p, stock_actual: Number(p.stock_actual) || 0 })));
     if (tanda.length < 1000) break;
+  }
+  if (depositoId) {
+    const enDep = new Map<string, number>();
+    for (let desde = 0; ; desde += 1000) {
+      const { data, error } = await db
+        .select("stock_depositos", "producto_id, cantidad")
+        .eq("deposito_id", depositoId)
+        .order("producto_id", { ascending: true })
+        .range(desde, desde + 999);
+      if (error) throw new Error("db");
+      const tanda = (data ?? []) as unknown as { producto_id: string; cantidad: number }[];
+      for (const r of tanda) enDep.set(r.producto_id, Number(r.cantidad) || 0);
+      if (tanda.length < 1000) break;
+    }
+    for (const p of out) p.stock_actual = enDep.get(p.id) ?? 0;
   }
   return out;
 }
@@ -153,17 +171,25 @@ export type ResultadoRpc = {
   movimientos_generados: number;
   unidades_entrada: number;
   unidades_salida: number;
+  /** documento AJ- con las diferencias de stock (null si no hubo) */
+  ajuste_id?: string | null;
+  ajuste_numero?: string | null;
+  deposito?: string | null;
 };
 
-/** Aplica la importación en tandas de 1000 (cada tanda = una transacción en la base). */
+/**
+ * Aplica la importación en tandas de 1000 (cada tanda = una transacción en la base). Las
+ * diferencias de stock de TODAS las tandas van al mismo documento AJ- en `deposito`.
+ */
 export async function aplicarEnTandas(
   db: TenantDb,
   filas: FilaRpc[],
-  opts: { modo: "excel" | "inicial"; crearCategorias: boolean; origen: string; referencia: string },
+  opts: { modo: "excel" | "inicial"; crearCategorias: boolean; origen: string; referencia: string; deposito?: string | null },
 ): Promise<ResultadoRpc> {
   const total: ResultadoRpc = {
     creados: 0, actualizados: 0, errores: 0, mensajes_error: [],
     categorias_creadas: 0, movimientos_generados: 0, unidades_entrada: 0, unidades_salida: 0,
+    ajuste_id: null, ajuste_numero: null, deposito: null,
   };
   for (let i = 0; i < filas.length; i += 1000) {
     const { data, error } = await db.rpc<ResultadoRpc>("aplicar_importacion_productos", {
@@ -172,6 +198,8 @@ export async function aplicarEnTandas(
       p_crear_categorias: opts.crearCategorias,
       p_origen: opts.origen,
       p_referencia: opts.referencia,
+      p_deposito: opts.deposito ?? null,
+      p_documento: total.ajuste_id ?? null,
     });
     if (error || !data) throw new Error(error?.message ?? "No se pudo aplicar la importación");
     total.creados += data.creados;
@@ -181,6 +209,8 @@ export async function aplicarEnTandas(
     total.movimientos_generados += data.movimientos_generados;
     total.unidades_entrada += Number(data.unidades_entrada) || 0;
     total.unidades_salida += Number(data.unidades_salida) || 0;
+    if (data.ajuste_id) { total.ajuste_id = data.ajuste_id; total.ajuste_numero = data.ajuste_numero ?? null; }
+    total.deposito = data.deposito ?? total.deposito;
     total.mensajes_error.push(...(data.mensajes_error ?? []));
   }
   total.mensajes_error = total.mensajes_error.slice(0, 50);

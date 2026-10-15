@@ -11,10 +11,36 @@ export type LoteProducto = {
   cantidad: number;
   cantidad_inicial: number;
   costo_unitario: number;
-  origen: "compra" | "ajuste_manual";
+  origen: "compra" | "ajuste_manual" | "traslado" | "ajuste" | "inventario_inicial";
   created_at: string;
   compra_numero: string | null;
   proveedor_nombre: string | null;
+  deposito_id?: string;
+  deposito_nombre?: string;
+};
+
+/** Stock de un producto por depósito (GET /api/productos/[id]/stock). */
+export type StockDeposito = {
+  deposito_id: string;
+  deposito: string;
+  sucursal_id: string;
+  sucursal: string;
+  es_principal: boolean;
+  activo: boolean;
+  cantidad: number;
+  en_lotes: number;
+  sin_lote: number;
+  lotes: LoteProducto[];
+};
+export type StockProducto = {
+  producto_id: string;
+  stock_total: number;
+  en_transito: number;
+  controla_lotes: boolean;
+  controla_stock: boolean;
+  unidad_medida: string;
+  hoy: string;
+  depositos: StockDeposito[];
 };
 
 export type LotesDeProducto = {
@@ -40,6 +66,9 @@ export type FilaVencimiento = {
   costo: number;
   valor: number;
   estado: "vencido" | "por_vencer";
+  deposito_id?: string;
+  deposito?: string;
+  sucursal?: string;
 };
 
 export type ReporteVencimientos = {

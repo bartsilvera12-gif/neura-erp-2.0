@@ -9,6 +9,9 @@ import Link from "next/link";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { useMemo, useState } from "react";
 import { apiForm } from "@/lib/api/client-fetch";
+import { Select } from "@/components/Select";
+import { invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
+import { invalidarLista } from "@/modules/inventario/lista-cache";
 
 type Fuente = "productos" | "stock_general" | "stock_valorizado";
 
@@ -77,6 +80,11 @@ export function ImportInicialWizard() {
   const [actualizarExistentes, setActualizarExistentes] = useState(true);
   const [crearCategorias, setCrearCategorias] = useState(true);
   const [expandido, setExpandido] = useState<string | null>(null);
+  // Depósito donde está el stock inicial (por defecto el del usuario / Casa central).
+  const deps = useDepositos();
+  const [deposito, setDeposito] = useState("");
+  const depositoEf = deposito || deps.datos?.mi_deposito_id || "";
+  const opcDepositos = opcionesDepositos(deps.datos);
 
   const algunArchivo = Object.values(files).some(Boolean);
 
@@ -107,8 +115,13 @@ export function ImportInicialWizard() {
       const fd = buildForm();
       fd.append("actualizar_existentes", actualizarExistentes ? "1" : "0");
       fd.append("crear_categorias", crearCategorias ? "1" : "0");
+      if (depositoEf) fd.append("deposito_id", depositoEf);
       setResultado(await apiForm<Record<string, unknown>>("/api/inventario/productos/import-inicial/commit", fd));
       invalidar("/api/inventario/categorias");
+      invalidarLista("/api/productos");
+      invalidarLista("/api/inventario/movimientos");
+      invalidarLista("/api/inventario/ajustes");
+      invalidarDepositos();
       setPreview(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo importar.");
@@ -149,6 +162,12 @@ export function ImportInicialWizard() {
             </div>
           ))}
         </div>
+        {resultado.ajuste_numero ? (
+          <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+            El stock inicial quedó en <strong>{String(resultado.deposito ?? "el depósito")}</strong> como el ajuste de inventario{" "}
+            <Link href="/inventario/ajustes" className="font-mono font-semibold text-[var(--brand)] hover:underline">{String(resultado.ajuste_numero)}</Link>.
+          </p>
+        ) : null}
         {Array.isArray(resultado.mensajes_error) && (resultado.mensajes_error as string[]).length > 0 && (
           <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3">
             <p className="text-xs font-semibold text-rose-700">Errores</p>
@@ -394,9 +413,15 @@ export function ImportInicialWizard() {
                 Actualizar los productos que ya existen ({num(preview.resumen.existentes)})
               </label>
             </div>
+            {opcDepositos.length > 1 ? (
+              <div className="mt-3 max-w-sm">
+                <span className="mb-1 block text-xs font-medium text-slate-600">El stock de los reportes está en</span>
+                <Select value={depositoEf} onChange={setDeposito} block options={opcDepositos} />
+              </div>
+            ) : null}
             <p className="mt-3 text-xs text-slate-500">
-              Se crearán los productos y se registrará el stock inicial como movimiento de inventario
-              (cada diferencia de stock queda en el kardex).
+              Se crearán los productos y el stock de los reportes quedará como un <strong>ajuste de inventario inicial</strong> (AJ-)
+              en ese depósito: cada diferencia queda en el kardex con su documento.
             </p>
             <button
               onClick={importar}

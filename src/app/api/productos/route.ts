@@ -10,13 +10,34 @@
  *          SKU/código de barras exacto primero, ordenado por relevancia).
  *          OJO: q / pagina / por_pagina solo valen CON paginado=1 (sin él se ignoran y
  *          devuelve la lista de vendibles de arriba).
- *   POST /api/productos                → alta (ADMIN); si arranca con stock, queda en el kardex
+ *        Cada fila del paginado trae stock_depositos: [{ d: deposito_id, c: cantidad }] (los
+ *        depósitos donde tiene unidades) para la columna/expansión por depósito.
+ *   POST /api/productos                → alta (ADMIN). El stock NO se carga a mano: si viene
+ *        stock_inicial { cantidad, deposito_id, lote?, vencimiento? } se registra como un
+ *        AJUSTE de inventario inicial (AJ-) en ese depósito; si el ajuste falla, el alta se
+ *        deshace (el producto recién creado no tiene historial).
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
+import type { TenantDb } from "@/lib/api/tenant-db";
 import { ok, created, fail, ERR } from "@/lib/api/responses";
-import { registrarMovimiento } from "@/modules/inventario/server/kardex";
 import { faltaFuncion } from "@/modules/inventario/server/ids";
+import { falloRpc } from "@/modules/inventario/server/rpc";
+
+/** Agrega a cada fila sus cantidades por depósito (una consulta para toda la página). */
+async function conStockPorDeposito(db: TenantDb, rows: Record<string, unknown>[]) {
+  const ids = rows.map((r) => r.id as string).filter(Boolean);
+  if (!ids.length) return rows;
+  const { data, error } = await db.select("stock_depositos", "producto_id, deposito_id, cantidad").in("producto_id", ids).neq("cantidad", 0);
+  if (error) return rows; // la lista igual se muestra (sin el detalle por depósito)
+  const por = new Map<string, { d: string; c: number }[]>();
+  for (const s of (data ?? []) as unknown as { producto_id: string; deposito_id: string; cantidad: number }[]) {
+    const l = por.get(s.producto_id) ?? [];
+    l.push({ d: s.deposito_id, c: Number(s.cantidad) });
+    por.set(s.producto_id, l);
+  }
+  return rows.map((r) => ({ ...r, stock_depositos: por.get(r.id as string) ?? [] }));
+}
 
 const COLS =
   "id, nombre, sku, codigo_barras, categoria_principal_id, proveedor_principal_id, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, controla_lotes, es_vendible, activo, imagen_url";
@@ -46,7 +67,7 @@ export const GET = withTenant(async (ctx, req) => {
         p_offset: desde,
       });
       if (error || !data) return ERR.server();
-      return ok({ rows: data.rows ?? [], total: data.total ?? 0 });
+      return ok({ rows: await conStockPorDeposito(ctx.db, (data.rows ?? []) as Record<string, unknown>[]), total: data.total ?? 0 });
     }
 
     // Una sola llamada (listar_productos_inventario, receta 47): página + total salen del
@@ -60,7 +81,9 @@ export const GET = withTenant(async (ctx, req) => {
       p_limit: porPagina,
       p_offset: desde,
     });
-    if (!rpc.error && rpc.data) return ok({ rows: rpc.data.rows ?? [], total: Number(rpc.data.total) || 0 });
+    if (!rpc.error && rpc.data) {
+      return ok({ rows: await conStockPorDeposito(ctx.db, (rpc.data.rows ?? []) as Record<string, unknown>[]), total: Number(rpc.data.total) || 0 });
+    }
     if (!faltaFuncion(rpc.error)) return ERR.server();
 
     let query = ctx.db.select("productos", COLS, { count: "exact" });
@@ -76,7 +99,7 @@ export const GET = withTenant(async (ctx, req) => {
       .order("id", { ascending: true })
       .range(desde, desde + porPagina - 1);
     if (error && (error as { code?: string }).code !== "PGRST103") return ERR.server();
-    return ok({ rows: data ?? [], total: count ?? 0 });
+    return ok({ rows: await conStockPorDeposito(ctx.db, (data ?? []) as unknown as Record<string, unknown>[]), total: count ?? 0 });
   }
 
   // ?pos=1 → catálogo LIVIANO de la caja: solo vendibles activos, solo las columnas que usa
@@ -161,7 +184,15 @@ const crearProducto = z.object({
   precio_mayorista: z.coerce.number().min(0).nullish(),
   precio_distribuidor: z.coerce.number().min(0).nullish(),
   descuento_pct: z.coerce.number().min(0).max(100).default(0),
-  stock_actual: z.coerce.number().default(0),
+  /** stock con el que arranca: queda como ajuste de inventario inicial en ese depósito */
+  stock_inicial: z
+    .object({
+      cantidad: z.coerce.number().positive("El stock inicial tiene que ser mayor a 0"),
+      deposito_id: z.string().uuid("Elegí el depósito del stock inicial"),
+      lote: z.string().trim().max(40, "El número de lote es muy largo").nullish(),
+      vencimiento: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Vencimiento inválido").nullish().or(z.literal("")),
+    })
+    .nullish(),
   stock_minimo: z.coerce.number().min(0).default(0),
   unidad_medida: z.string().trim().default("Unidad"),
   tipo_iva: z.enum(["EXENTA", "5%", "10%"]).default("10%"),
@@ -173,26 +204,44 @@ const crearProducto = z.object({
 
 export const POST = withTenant(
   async (ctx, _req, input) => {
+    const { stock_inicial, ...campos } = input;
+    if (stock_inicial && !campos.controla_stock) return fail("Un producto que no controla stock no lleva stock inicial.", 400);
     // Lotes solo tiene sentido si controla stock.
     const { data, error } = await ctx.db.insert("productos", {
-      ...input,
-      codigo_barras: input.codigo_barras || null,
-      controla_lotes: input.controla_stock && input.controla_lotes,
+      ...campos,
+      codigo_barras: campos.codigo_barras || null,
+      controla_lotes: campos.controla_stock && campos.controla_lotes,
     });
     if (error || !data?.[0]) {
       if (error && /duplicate|unique/i.test(error.message)) return fail("Ya existe un producto con ese SKU o código.", 409);
       return ERR.server();
     }
     const p = data[0] as { id: string; nombre: string; sku: string };
-    const stock = input.stock_actual ?? 0;
-    if (stock > 0) {
-      await registrarMovimiento(ctx, {
-        producto_id: p.id, producto_nombre: p.nombre, producto_sku: p.sku,
-        delta: stock, costo_unitario: input.costo_promedio ?? 0,
-        origen: "inventario_inicial", referencia: "Alta de producto",
-      });
+    if (!stock_inicial) return created(p);
+
+    // Stock inicial = ajuste de inventario inicial (AJ-) en el depósito elegido.
+    const aj = await ctx.db.rpc<{ id: string; numero: string }>("registrar_ajuste", {
+      p: {
+        tipo: "ajuste",
+        deposito_id: stock_inicial.deposito_id,
+        motivo: "inventario_inicial",
+        detalle: `Alta de producto ${p.sku}`,
+        items: [{
+          producto_id: p.id,
+          modo: "diferencia",
+          cantidad: stock_inicial.cantidad,
+          lote: stock_inicial.lote || null,
+          vencimiento: stock_inicial.vencimiento || null,
+          costo_unitario: campos.costo_promedio ?? 0,
+        }],
+      },
+    });
+    if (aj.error) {
+      // El producto recién creado no tiene historial: se deshace el alta para no dejarlo a medias.
+      await ctx.db.delete("productos").eq("id", p.id);
+      return falloRpc(aj.error);
     }
-    return created(p);
+    return created({ ...p, ajuste: aj.data });
   },
   { roles: ["ADMIN"], body: crearProducto },
 );

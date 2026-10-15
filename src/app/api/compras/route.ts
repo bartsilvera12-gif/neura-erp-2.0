@@ -7,7 +7,8 @@
  *        promedio, precio de venta y kardex en una sola transacción (registrar_compra).
  *        Con orden_compra_id (+ oc_item_id por línea) es la recepción de esa orden (no más
  *        de lo pendiente salvo permitir_excedente). Contado con medio_pago "efectivo": egreso
- *        de la caja abierta. idempotency_key evita duplicados por doble clic.
+ *        de la caja abierta. idempotency_key evita duplicados por doble clic. deposito_id: a
+ *        qué depósito entra (por defecto el principal de la sucursal del usuario).
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
@@ -68,6 +69,8 @@ const cuerpo = z.object({
   permitir_excedente: z.boolean().nullish(),
   /** doble clic / reintento: devuelve la compra ya registrada */
   idempotency_key: z.string().uuid().nullish(),
+  /** depósito al que entra la mercadería (vacío: el principal de la sucursal del usuario) */
+  deposito_id: z.string().uuid().nullish(),
   items: z
     .array(
       z.object({

@@ -21,10 +21,12 @@ export function sumarDias(fecha: string, dias: number) {
 }
 
 /** Buscador de productos con búsqueda inteligente; Enter agrega el primero (lector de códigos). */
-export function BuscadorProductos({ onElegir, onCrear }: {
+export function BuscadorProductos({ onElegir, onCrear, mostrarPrecio = false }: {
   onElegir: (p: ProductoInventario) => void;
   /** Si viene, ofrece "+ Crear producto" con lo que se buscó (alta rápida en un modal). */
   onCrear?: (texto: string) => void;
+  /** Muestra el precio de venta en vez del costo (ej. Presupuestos). */
+  mostrarPrecio?: boolean;
 }) {
   const [q, setQ] = useState("");
   const [res, setRes] = useState<ProductoInventario[]>([]);
@@ -102,7 +104,7 @@ export function BuscadorProductos({ onElegir, onCrear }: {
                   <span className="font-mono text-[11px] text-slate-400">{p.sku}{p.codigo_barras ? ` · ${p.codigo_barras}` : ""}</span>
                 </span>
                 <span className="shrink-0 text-right text-xs text-slate-500">
-                  stock {Number(p.stock_actual).toLocaleString("es-PY")}<br />costo {gs(Number(p.costo_promedio))}
+                  stock {Number(p.stock_actual).toLocaleString("es-PY")}<br />{mostrarPrecio ? `precio ${gs(Number(p.precio_venta))}` : `costo ${gs(Number(p.costo_promedio))}`}
                 </span>
               </button>
             </li>

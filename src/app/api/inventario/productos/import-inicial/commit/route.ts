@@ -6,6 +6,7 @@
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, fail } from "@/lib/api/responses";
 import { commitInicial, leerReportes } from "@/modules/inventario/server/import-inicial";
+import { uuidONull } from "@/modules/inventario/server/rpc";
 
 export const POST = withTenant(
   async (ctx, req) => {
@@ -22,6 +23,7 @@ export const POST = withTenant(
         await commitInicial(ctx.db, archivos, {
           actualizarExistentes: form.get("actualizar_existentes") === "1",
           crearCategorias: (form.get("crear_categorias") ?? "1") === "1",
+          deposito: uuidONull(String(form.get("deposito_id") ?? "")),
         }),
       );
     } catch (e) {

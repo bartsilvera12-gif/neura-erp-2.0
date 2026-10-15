@@ -105,15 +105,18 @@ export type ResultadoInicial = {
   movimientos_generados: number;
   unidades_iniciales: number;
   mensajes_error: string[];
+  /** documento AJ- del inventario inicial y depósito donde quedó el stock */
+  ajuste_numero: string | null;
+  deposito: string | null;
 };
 
 export async function commitInicial(
   db: TenantDb,
   archivos: ArchivoEntrada[],
-  opts: { actualizarExistentes: boolean; crearCategorias: boolean },
+  opts: { actualizarExistentes: boolean; crearCategorias: boolean; deposito?: string | null },
 ): Promise<ResultadoInicial> {
   // El catálogo entero se lee UNA vez: sirve para marcar existentes y para generar SKUs.
-  const catalogo = await traerCatalogo(db);
+  const catalogo = await traerCatalogo(db, opts.deposito);
   const { items } = await previewInicial(db, archivos, catalogo);
   const nuevoSku = generadorSku(catalogo);
 
@@ -148,6 +151,7 @@ export async function commitInicial(
     crearCategorias: opts.crearCategorias,
     origen: "inventario_inicial",
     referencia,
+    deposito: opts.deposito ?? null,
   });
   return {
     creados: r.creados,
@@ -158,5 +162,7 @@ export async function commitInicial(
     movimientos_generados: r.movimientos_generados,
     unidades_iniciales: r.unidades_entrada,
     mensajes_error: r.mensajes_error,
+    ajuste_numero: r.ajuste_numero ?? null,
+    deposito: r.deposito ?? null,
   };
 }

@@ -15,9 +15,12 @@ import type { TipoIva } from "@/modules/caja/lib";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 import { partesCategoria, type Categoria } from "@/modules/inventario/categorias";
 import { HistorialCostos } from "@/modules/inventario/HistorialCostos";
-import { LotesProducto } from "@/modules/inventario/LotesProducto";
+import { StockDepositosProducto } from "@/modules/inventario/LotesProducto";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
+import { opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
+import { loteAutomatico } from "@/modules/inventario/vencimientos";
+import { hoyPY } from "@/lib/fecha/paraguay";
 
 const BRAND = clienteConfig.color;
 const INPUT =
@@ -71,12 +74,15 @@ export function ProductoForm({
     precio_mayorista: Number(producto?.precio_mayorista ?? 0),
     precio_distribuidor: Number(producto?.precio_distribuidor ?? 0),
     descuento_pct: producto?.descuento_pct ? String(producto.descuento_pct) : "",
-    stock_actual: String(producto?.stock_actual ?? ""),
     stock_minimo: String(producto?.stock_minimo ?? ""),
     controla_stock: producto?.controla_stock ?? true,
     controla_lotes: producto?.controla_lotes ?? false,
     es_vendible: producto?.es_vendible ?? true,
   });
+  // Alta: stock con el que arranca → ajuste de inventario inicial (AJ-) en un depósito.
+  const deps = useDepositos();
+  const [stockIni, setStockIni] = useState({ cantidad: "", deposito: "", lote: loteAutomatico(hoyPY()), vencimiento: "" });
+  const depositoInicial = stockIni.deposito || deps.datos?.mi_deposito_id || "";
   const [imagenUrl, setImagenUrl] = useState<string | null>(producto?.imagen_url ?? null);
   const [subiendo, setSubiendo] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -120,7 +126,9 @@ export function ProductoForm({
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const num = (v: string) => (v === "" ? undefined : Number(v));
-  const puede = !soloLectura && f.nombre.trim() !== "" && f.sku.trim() !== "";
+  const cantInicial = !editando && f.controla_stock ? Number(stockIni.cantidad) || 0 : 0;
+  const faltaInicial = cantInicial > 0 && (!depositoInicial || (f.controla_lotes && !stockIni.vencimiento));
+  const puede = !soloLectura && f.nombre.trim() !== "" && f.sku.trim() !== "" && !faltaInicial;
 
   // Cálculos en vivo (IVA incluido en precio y costo, igual que el listado).
   const margen = f.precio_venta ? ((f.precio_venta - f.costo_promedio) / f.precio_venta) * 100 : null;
@@ -128,7 +136,6 @@ export function ProductoForm({
   const precioFinal = Math.round(f.precio_venta * (1 - desc / 100));
   const margenFinal = precioFinal ? ((precioFinal - f.costo_promedio) / precioFinal) * 100 : null;
   const conLotes = f.controla_stock && f.controla_lotes;
-  const stockCambio = !conLotes && editando && f.stock_actual !== "" && Number(f.stock_actual) !== Number(producto?.stock_actual ?? 0);
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -162,8 +169,10 @@ export function ProductoForm({
       precio_mayorista: f.precio_mayorista || null,
       precio_distribuidor: f.precio_distribuidor || null,
       descuento_pct: desc,
-      // Con lotes el stock no se edita a mano (se mueve por compras, movimientos y bajas).
-      stock_actual: f.controla_stock && f.controla_lotes ? undefined : num(f.stock_actual) ?? 0,
+      // El stock no se edita: en el alta, el inicial queda como ajuste de inventario (AJ-).
+      stock_inicial: cantInicial > 0
+        ? { cantidad: cantInicial, deposito_id: depositoInicial, lote: conLotes ? stockIni.lote.trim() || null : null, vencimiento: conLotes ? stockIni.vencimiento : null }
+        : undefined,
       stock_minimo: num(f.stock_minimo) ?? 0,
       controla_stock: f.controla_stock,
       controla_lotes: f.controla_stock && f.controla_lotes,
@@ -377,11 +386,7 @@ export function ProductoForm({
               ) : null}
               <Interruptor checked={f.es_vendible} onChange={(v) => set("es_vendible", v)} label="Se vende en caja" detalle="Aparece en el buscador de la caja." />
             </div>
-            <div className="mt-3 grid grid-cols-3 gap-3">
-              <label className="block">
-                <span className={ET}>Stock actual</span>
-                <input inputMode="numeric" disabled={!f.controla_stock || conLotes} title={conLotes ? "Con lotes, el stock se mueve con compras, movimientos o bajas de lote" : undefined} value={f.stock_actual} onChange={(e) => set("stock_actual", e.target.value.replace(/\D/g, ""))} className={NUM} placeholder="0" />
-              </label>
+            <div className="mt-3 grid grid-cols-2 gap-3">
               <label className="block">
                 <span className={ET}>Stock mínimo</span>
                 <input inputMode="numeric" disabled={!f.controla_stock} value={f.stock_minimo} onChange={(e) => set("stock_minimo", e.target.value.replace(/\D/g, ""))} className={NUM} placeholder="0" />
@@ -392,26 +397,52 @@ export function ProductoForm({
                 <datalist id="unidades-medida">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
               </label>
             </div>
-            {conLotes ? (
-              <p className="mt-2 rounded-lg bg-[var(--brand-50)] px-3 py-2 text-xs text-slate-600">
-                Con lotes, el stock se carga con una <strong>compra</strong> o un <strong>movimiento de entrada</strong> (con lote y vencimiento)
-                {editando && !producto?.controla_lotes && Number(producto?.stock_actual ?? 0) > 0
-                  ? <>. Las {Number(producto?.stock_actual).toLocaleString("es-PY")} unidades que ya tiene quedan como <strong>sin lote</strong>.</>
-                  : "."}
-              </p>
+
+            {/* Alta: stock inicial documentado (ajuste de inventario inicial en un depósito). */}
+            {!editando && f.controla_stock ? (
+              <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3">
+                <p className="text-xs font-semibold text-slate-700">Stock inicial <span className="font-normal text-slate-400">(opcional)</span></p>
+                <div className="mt-2 grid grid-cols-[110px_1fr] gap-3">
+                  <label className="block">
+                    <span className={ET}>Cantidad</span>
+                    <input inputMode="decimal" value={stockIni.cantidad} onChange={(e) => setStockIni((p) => ({ ...p, cantidad: e.target.value.replace(/[^\d.]/g, "") }))} className={`${NUM} bg-white`} placeholder="0" />
+                  </label>
+                  <div>
+                    <span className={ET}>Depósito</span>
+                    <Select value={depositoInicial} onChange={(v) => setStockIni((p) => ({ ...p, deposito: v }))} block
+                      options={deps.datos ? opcionesDepositos(deps.datos) : [["", "Cargando depósitos…"]]} />
+                  </div>
+                </div>
+                {conLotes && cantInicial > 0 ? (
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <label className="block">
+                      <span className={ET}>N° de lote <span className="font-normal text-slate-400">(editable)</span></span>
+                      <input value={stockIni.lote} onChange={(e) => setStockIni((p) => ({ ...p, lote: e.target.value.slice(0, 40) }))} className={`${INPUT} font-mono uppercase`} />
+                    </label>
+                    <label className="block">
+                      <span className={ET}>Vencimiento *</span>
+                      <input type="date" value={stockIni.vencimiento} onChange={(e) => setStockIni((p) => ({ ...p, vencimiento: e.target.value }))} className={INPUT} />
+                    </label>
+                  </div>
+                ) : null}
+                <p className="mt-2 text-[11px] text-slate-500">
+                  {cantInicial > 0
+                    ? <>Queda registrado como <strong>ajuste de inventario inicial</strong> (AJ-) en ese depósito, con fecha, usuario y costo.</>
+                    : "Si ya tenés unidades, cargalas acá: quedan como ajuste de inventario inicial. Si no, el stock entra con la primera compra."}
+                </p>
+              </div>
             ) : null}
-            {stockCambio ? (
+            {editando && conLotes && !producto?.controla_lotes && Number(producto?.stock_actual ?? 0) > 0 ? (
               <p className="mt-2 rounded-lg bg-[var(--brand-50)] px-3 py-2 text-xs text-slate-600">
-                El cambio de stock ({Number(producto?.stock_actual ?? 0).toLocaleString("es-PY")} → {Number(f.stock_actual).toLocaleString("es-PY")}) queda en el kardex como <strong>ajuste manual</strong>.
+                Las {Number(producto?.stock_actual).toLocaleString("es-PY")} unidades que ya tiene quedan como <strong>sin lote</strong> en cada depósito. Desde ahora, cada compra pide lote y vencimiento.
               </p>
             ) : null}
           </Bloque>
 
-          {/* ── Lotes (solo al editar un producto que ya controla lotes) ─────── */}
-          {editando && producto && producto.controla_lotes && f.controla_lotes ? (
-            <Bloque titulo="Lotes" extra={<Link href="/inventario/vencimientos" className="text-xs font-semibold text-[var(--brand)] hover:underline">Ver vencimientos</Link>}>
-              <LotesProducto productoId={producto.id} unidad={producto.unidad_medida ?? "Unidad"} puedeEditar={esAdmin && !soloLectura}
-                onStockCambiado={(n) => setF((p) => ({ ...p, stock_actual: String(n) }))} />
+          {/* ── Stock por depósito (al editar): solo lectura; se mueve con documentos ── */}
+          {editando && producto && producto.controla_stock && f.controla_stock ? (
+            <Bloque titulo="Stock por depósito" extra={producto.controla_lotes ? <Link href="/inventario/vencimientos" className="text-xs font-semibold text-[var(--brand)] hover:underline">Ver vencimientos</Link> : null}>
+              <StockDepositosProducto productoId={producto.id} unidad={producto.unidad_medida ?? "Unidad"} puedeEditar={esAdmin && !soloLectura} />
             </Bloque>
           ) : null}
         </fieldset>

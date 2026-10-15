@@ -257,6 +257,7 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
             <Dato l="Cargada" v={`${fecha(c.fecha)}${c.usuario_nombre ? ` · ${c.usuario_nombre}` : ""}`} />
             <Dato l="Fecha de la factura" v={c.fecha_factura ? fechaDia(c.fecha_factura) : "—"} />
             <Dato l="Timbrado" v={c.nro_timbrado ?? "—"} mono />
+            {c.deposito?.nombre ? <Dato l="Entró al depósito" v={c.deposito.nombre} /> : null}
             <Dato l="Condición" v={c.tipo_pago === "credito"
               ? `Crédito${c.plazo_dias ? ` ${c.plazo_dias} días` : ""}${c.vencimiento ? ` · vence ${fechaDia(c.vencimiento)}` : ""}`
               : `Contado${c.medio_pago ? ` · ${nombreMetodoPago(c.medio_pago)}${c.medio_pago === "efectivo" ? " (salió de la caja)" : ""}` : ""}${c.referencia_pago ? ` · ${c.referencia_pago}` : ""}`} />

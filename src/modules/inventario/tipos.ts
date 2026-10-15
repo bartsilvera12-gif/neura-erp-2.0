@@ -23,4 +23,6 @@ export type ProductoInventario = {
   es_vendible: boolean;
   activo: boolean;
   imagen_url: string | null;
+  /** lista paginada de Inventario: unidades por depósito (solo los que tienen) */
+  stock_depositos?: { d: string; c: number }[];
 };

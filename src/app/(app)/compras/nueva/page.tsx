@@ -35,6 +35,7 @@ import { AdjuntosPendientes, subirComprobantes } from "@/modules/compras/Comprob
 import { ProductoForm } from "@/modules/inventario/ProductoForm";
 import { BuscadorProductos, ET, Fila, gs, INPUT, ivaDe, Segmentado, sumarDias, Tarjeta, usd } from "@/modules/compras/partes";
 import { loteAutomatico } from "@/modules/inventario/vencimientos";
+import { invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
 
 const TEAL = clienteConfig.color;
 type Linea = {
@@ -80,6 +81,11 @@ function NuevaCompra() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hecha, setHecha] = useState<{ id: string; numero: string; total: number; adjuntos: number; fallidos: string[] } | null>(null);
+  // Depósito al que entra la mercadería (por defecto, el principal de la sucursal del usuario).
+  const deps = useDepositos();
+  const [deposito, setDeposito] = useState("");
+  const depositoEf = deposito || deps.datos?.mi_deposito_id || "";
+  const opcDepositos = opcionesDepositos(deps.datos);
   const [adjuntos, setAdjuntos] = useState<File[]>([]);
   const [subiendoAdjuntos, setSubiendoAdjuntos] = useState(false);
   // Contado: cómo se pagó. El efectivo sale de la caja abierta (solo en Gs.).
@@ -261,6 +267,7 @@ function NuevaCompra() {
           orden_compra_id: orden?.id ?? null,
           permitir_excedente: hayExcedente && excedenteOk,
           idempotency_key: idem,
+          deposito_id: depositoEf || null,
           items: lineas.map((l) => ({
             producto_id: l.prod.id,
             cantidad: Number(l.cantidad.replace(",", ".")),
@@ -281,6 +288,7 @@ function NuevaCompra() {
         setSubiendoAdjuntos(false);
       }
       setHecha({ id: r.id, numero: r.numero_control, total: r.total, adjuntos: adjuntos.length - fallidos.length, fallidos });
+      invalidarDepositos(); // cambió el stock de un depósito
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -468,6 +476,13 @@ function NuevaCompra() {
                 : `Al contado${medioPago ? ` · ${METODOS_PAGO_PROV.find((m) => m.v === medioPago)?.l.toLowerCase()}` : ""}${efectivo ? " (sale de la caja)" : ""}`}
             </p>
 
+            {opcDepositos.length > 1 ? (
+              <div className="mt-4">
+                <span className={ET}>Entra al depósito</span>
+                <Select value={depositoEf} onChange={setDeposito} block options={opcDepositos} />
+              </div>
+            ) : null}
+
             <label className="mt-4 block">
               <span className={ET}>Observación <span className="font-normal text-slate-400">(opcional)</span></span>
               <textarea value={observacion} onChange={(e) => setObservacion(e.target.value)} rows={2} maxLength={2000} placeholder="Ej: faltó 1 caja, la traen el lunes" className={INPUT} />
@@ -492,7 +507,9 @@ function NuevaCompra() {
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
               {subiendoAdjuntos ? "Subiendo comprobantes…" : busy ? "Registrando…" : "Registrar compra"}
             </button>
-            <p className="mt-2 text-center text-[11px] text-slate-400">Suma el stock, recalcula el costo promedio y queda en el kardex.</p>
+            <p className="mt-2 text-center text-[11px] text-slate-400">
+              Suma el stock{opcDepositos.length > 1 ? ` en ${opcDepositos.find(([id]) => id === depositoEf)?.[1] ?? "el depósito elegido"}` : ""}, recalcula el costo promedio y queda en el kardex como recarga de stock.
+            </p>
           </div>
         </aside>
       </div>

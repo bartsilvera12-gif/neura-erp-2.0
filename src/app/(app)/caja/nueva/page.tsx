@@ -11,7 +11,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, Package, Search, Trash2 } from "lucide-react";
+import { CheckCircle2, FileSignature, Package, Search, Trash2, X } from "lucide-react";
 import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { browserClient } from "@/lib/supabase/browser";
@@ -31,8 +31,14 @@ import {
   type TipoIva,
   type TipoPrecio,
 } from "@/modules/caja/lib";
+import { analizarConversion, type AnalisisConversion, type ConversionPresupuesto } from "@/modules/presupuestos/caja";
 
 const TEAL = clienteConfig.color;
+
+/** Presupuesto que se está cobrando (?presupuesto=<id>): líneas precargadas y sus avisos. */
+type PresupuestoEnCaja =
+  | { id: string; etiqueta: string; prospecto: string | null; a: AnalisisConversion; lineaDe: Record<string, string> }
+  | { error: string };
 
 // Escalonado por cantidad (regla del negocio): ≥10 mayorista, ≥20 distribuidor.
 const UMBRAL_MAYORISTA = 10;
@@ -205,6 +211,46 @@ function CajaPageContenido() {
       .catch(() => {});
   }, [clientePre]);
 
+  // ?presupuesto=<id> (Presupuestos → "Convertir a venta"): carga cliente, condición, líneas,
+  // cantidades, precios y descuentos del presupuesto. No cambia nada solo: si cambió el precio
+  // de lista o hay líneas que no pasan, lo avisa arriba. Al cobrar, la venta queda ligada.
+  const presupuestoPre = searchParams.get("presupuesto");
+  const [presu, setPresu] = useState<PresupuestoEnCaja | null>(null);
+  const [ventaPresu, setVentaPresu] = useState<string | null>(null);
+  const presuHecho = useRef<string | null>(null);
+  useEffect(() => {
+    if (!presupuestoPre || presuHecho.current === presupuestoPre) return;
+    presuHecho.current = presupuestoPre;
+    apiFetch<ConversionPresupuesto>(`/api/presupuestos/${encodeURIComponent(presupuestoPre)}/conversion`)
+      .then((conv) => {
+        const p = conv.presupuesto;
+        const etiqueta = p.revision > 1 ? `${p.numero} rev ${p.revision}` : p.numero;
+        if (p.estado === "convertido" || p.estado === "rechazado") {
+          setPresu({ error: `El presupuesto ${etiqueta} está ${p.estado === "convertido" ? "ya convertido en venta" : "rechazado"}: no se cargó.` });
+          return;
+        }
+        const a = analizarConversion(conv);
+        const t = Date.now();
+        const lineaDe: Record<string, string> = {};
+        setCart(a.lineas.map((l, i) => {
+          const id = `pre_${l.item_id}_${t}_${i}`;
+          lineaDe[l.item_id] = id;
+          // Precio del presupuesto fijado (tier_manual: no lo pisa el escalonado por cantidad).
+          return { cart_line_id: id, producto: l.producto, cantidad: l.cantidad, tipo_iva: l.tipo_iva, precio_override: l.precio_override, tier_manual: true, tipo_precio: "minorista", descuento_pct: l.descuento_pct };
+        }));
+        setUltimo(a.lineas.length ? a.lineas[a.lineas.length - 1].producto : null);
+        if (conv.cliente) {
+          const c = conv.cliente;
+          setClientes((prev) => (prev.some((x) => x.id === c.id) ? prev : [c, ...prev]));
+          setClienteId(c.id);
+        }
+        if (p.condicion === "credito") { setTipoVenta("CREDITO"); setPlazoDias(p.plazo_dias ? String(p.plazo_dias) : ""); }
+        else { setTipoVenta("CONTADO"); setPlazoDias(""); }
+        setPresu({ id: p.id, etiqueta, prospecto: conv.cliente ? null : `${p.cliente_nombre}${p.cliente_ruc ? ` (${p.cliente_ruc})` : ""}`, a, lineaDe });
+      })
+      .catch((e) => setPresu({ error: `No se pudo cargar el presupuesto: ${(e as Error).message}` }));
+  }, [presupuestoPre]);
+
   useEffect(() => { inputRef.current?.focus(); }, []);
 
   // Búsqueda de clientes en la base (debounce 250 ms).
@@ -367,6 +413,20 @@ function CajaPageContenido() {
   const faltaEfectivo = hayEfectivo && recibidoNum > 0 ? Math.max(0, efectivoAplicado - recibidoNum) : 0;
   const cobroListo = tipoVenta === "CREDITO" || restante === 0;
 
+  // Presupuesto: se liga a la venta solo si en el carrito queda alguna de sus líneas.
+  const presuOk = presu && !("error" in presu) ? presu : null;
+  const presuActivo = presuOk && cart.some((l) => Object.values(presuOk.lineaDe).includes(l.cart_line_id)) ? presuOk : null;
+  function usarPreciosDeHoy() {
+    if (!presuOk) return;
+    const ids = new Set(presuOk.a.cambiosPrecio.map((c) => presuOk.lineaDe[c.item_id]));
+    setCart((prev) => prev.map((l) => (ids.has(l.cart_line_id) ? { ...l, precio_override: null, tier_manual: false } : l)));
+    setPresu({ ...presuOk, a: { ...presuOk.a, cambiosPrecio: [] } });
+  }
+  function desvincularPresupuesto() {
+    setPresu(null);
+    router.replace("/caja/nueva", { scroll: false });
+  }
+
   // ── Acciones carrito ───────────────────────────────────────────────────────
   const addToCart = useCallback((p: Producto) => {
     setCart((prev) => {
@@ -489,7 +549,7 @@ function CajaPageContenido() {
           ...(l.precio_override != null && l.precio_override > 0 ? { precio_unitario: l.precio_override } : {}),
         };
       });
-      const venta = await apiFetch<{ venta_id: string; numero_control: string; total: number }>("/api/caja/venta", {
+      const venta = await apiFetch<{ venta_id: string; numero_control: string; total: number; aviso_presupuesto?: string }>("/api/caja/venta", {
         method: "POST",
         body: JSON.stringify({
           cliente_id: clienteId || null,
@@ -502,9 +562,17 @@ function CajaPageContenido() {
           items,
           // Detalle de pagos (solo contado). La RPC valida que sume el total.
           pagos: tipoVenta === "CREDITO" ? undefined : pagos.map((p) => ({ metodo_pago: p.metodo, monto: p.monto })),
+          presupuesto_id: presuActivo?.id,
         }),
       });
       idempotencyKeyRef.current = null;
+      if (presuActivo) {
+        setVentaPresu(venta.aviso_presupuesto ?? `Presupuesto ${presuActivo.etiqueta} convertido en venta.`);
+        setPresu(null);
+        router.replace("/caja/nueva", { scroll: false });
+      } else {
+        setVentaPresu(null);
+      }
       // Stock: se descuenta en pantalla lo recién vendido (antes se volvía a bajar TODO el
       // catálogo después de cada venta). La base igual valida el stock al vender.
       const vendido = new Map<string, number>();
@@ -560,8 +628,44 @@ function CajaPageContenido() {
       {ventaOk && (
         <div className="flex shrink-0 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 shadow-sm">
           <CheckCircle2 className="h-5 w-5" /> Venta <strong>{ventaOk}</strong> registrada. Ticket enviado a imprimir.
+          {ventaPresu ? <span className="font-normal">{ventaPresu}</span> : null}
         </div>
       )}
+
+      {/* Venta desde un presupuesto: qué se cargó y qué revisar antes de cobrar. */}
+      {presu ? (
+        "error" in presu ? (
+          <div className="flex shrink-0 items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-800">
+            <span>{presu.error}</span>
+            <button type="button" onClick={desvincularPresupuesto} aria-label="Cerrar" className="text-rose-400 hover:text-rose-700"><X className="h-4 w-4" /></button>
+          </div>
+        ) : (
+          <div className="shrink-0 space-y-1 rounded-xl border px-4 py-2.5 text-sm" style={{ borderColor: `${TEAL}55`, backgroundColor: `${TEAL}10` }}>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-2 text-slate-800">
+                <FileSignature className="h-4 w-4 shrink-0" style={{ color: TEAL }} />
+                {presuActivo
+                  ? <span>Venta del presupuesto <Link href={`/presupuestos/${presu.id}`} className="font-mono font-semibold hover:underline">{presu.etiqueta}</Link>: al cobrar queda como <b>convertido</b>.</span>
+                  : <span>Sacaste todas las líneas del presupuesto <b className="font-mono">{presu.etiqueta}</b>: esta venta no se va a ligar a él.</span>}
+              </p>
+              <button type="button" onClick={desvincularPresupuesto} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-white/70 hover:text-slate-800">Desvincular</button>
+            </div>
+            {presu.prospecto ? <p className="text-xs text-amber-800">Es para un prospecto: {presu.prospecto}. Elegí o cargá el cliente si vas a facturar o vender a crédito.</p> : null}
+            {presu.a.enDolares ? <p className="text-xs text-slate-600">Estaba en dólares: los precios se pasaron a guaraníes con la cotización del presupuesto.</p> : null}
+            {presu.a.cambiosPrecio.length ? (
+              <p className="text-xs text-amber-800">
+                Cambió el precio de lista desde que se cotizó: {presu.a.cambiosPrecio.map((c) => `${c.nombre} (cotizado ${formatGs(c.cotizado)}, hoy ${formatGs(c.hoy)})`).join(" · ")}. Se cobra lo cotizado.{" "}
+                <button type="button" onClick={usarPreciosDeHoy} className="font-semibold underline underline-offset-2 hover:text-amber-950">Usar precios de hoy</button>
+              </p>
+            ) : null}
+            {presu.a.libres.length || presu.a.inactivos.length ? (
+              <p className="text-xs text-rose-700">
+                No se cargaron (no son productos vendibles del catálogo): {[...presu.a.libres.map((l) => l.descripcion), ...presu.a.inactivos.map((x) => x.nombre)].join(", ")}.
+              </p>
+            ) : null}
+          </div>
+        )
+      ) : null}
 
       {!cajaAbierta ? (
         <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">

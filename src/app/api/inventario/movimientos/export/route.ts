@@ -1,6 +1,6 @@
 /**
  * Exportar movimientos de inventario a Excel, con los mismos filtros de la pantalla.
- *   GET /api/inventario/movimientos/export?q&tipo&origen&desde&hasta&producto → movimientos-….xlsx
+ *   GET /api/inventario/movimientos/export?q&tipo&origen&desde&hasta&producto&deposito&sucursal → movimientos-….xlsx
  * Tope de 50.000 filas por archivo (para períodos más largos, filtrar por fecha).
  * Las filas se piden de a 5000 (4 en paralelo), no de a 1000 en serie.
  */
@@ -26,6 +26,10 @@ type Mov = {
   numero_factura: string | null;
   usuario_nombre: string | null;
   fecha: string;
+  deposito_nombre?: string | null;
+  sucursal_nombre?: string | null;
+  documento_numero?: string | null;
+  contraparte_nombre?: string | null;
 };
 
 // listar_movimientos (receta 47) devuelve hasta 5000 por llamada (no le aplica el tope
@@ -76,6 +80,10 @@ export const GET = withTenant(async (ctx, req) => {
         { header: "Costo unit.", value: (m) => Number(m.costo_unitario) || 0, width: 13 },
         { header: "Valor", value: (m) => (m.tipo === "SALIDA" ? -1 : 1) * Number(m.cantidad) * (Number(m.costo_unitario) || 0), width: 14 },
         { header: "Origen", value: (m) => ORIGEN_LABEL[m.origen] ?? m.origen, width: 18 },
+        { header: "Documento", value: (m) => m.documento_numero ?? "", width: 16 },
+        { header: "Sucursal", value: (m) => m.sucursal_nombre ?? "", width: 18 },
+        { header: "Depósito", value: (m) => m.deposito_nombre ?? "", width: 20 },
+        { header: "Desde / hacia", value: (m) => m.contraparte_nombre ?? "", width: 20 },
         { header: "Referencia", value: (m) => m.referencia ?? "", width: 36 },
         { header: "Proveedor", value: (m) => m.proveedor ?? "", width: 26 },
         { header: "Factura", value: (m) => m.numero_factura ?? "", width: 18 },

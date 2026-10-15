@@ -1,9 +1,10 @@
 /**
- * Consulta de la pantalla Vencimientos (reporte_vencimientos, receta 44_lotes.sql),
- * compartida por el listado y la exportación a Excel. Solo servidor.
+ * Consulta de la pantalla Vencimientos (reporte_vencimientos, recetas 44 y 50), compartida
+ * por el listado y la exportación a Excel. Solo servidor.
  */
 import type { TenantDb } from "@/lib/api/tenant-db";
 import type { ReporteVencimientos } from "@/modules/inventario/vencimientos";
+import { uuidONull } from "@/modules/inventario/server/rpc";
 
 export const DIAS_VENCIMIENTO = [7, 15, 30, 60] as const;
 
@@ -15,6 +16,7 @@ export function filtrosVencimientos(sp: URLSearchParams) {
     dias,
     q: (sp.get("q") ?? "").trim().slice(0, 100),
     estado: estado === "vencido" || estado === "por_vencer" ? estado : null,
+    deposito: uuidONull(sp.get("deposito")),
   };
 }
 
@@ -23,6 +25,7 @@ export async function consultarVencimientos(db: TenantDb, f: ReturnType<typeof f
     p_dias: f.dias,
     p_q: f.q || null,
     p_estado: f.estado,
+    p_deposito: f.deposito,
   });
   if (error || !data) throw new Error("db");
   return data;

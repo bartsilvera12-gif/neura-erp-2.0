@@ -15,7 +15,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ClipboardPen, Plus, Trash2 } from "lucide-react";
+import { ClipboardPen, FileSignature, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchSWR, guardadoAlInstante } from "@/lib/api/cache-cliente";
 import { urlFicha } from "@/modules/clientes/ficha/url";
@@ -34,9 +34,12 @@ import type { SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos"
 import { Avatar, BadgeEstado, CategoriaChip, CodigoChip, TEAL, codigoCliente, estadoDe, fechaCorta } from "@/modules/clientes/ui";
 import { moduloEstaActivo } from "@/modules/registry";
 import { ProyectosDeCliente } from "@/modules/proyectos/ui/ProyectosDeCliente";
+import { PresupuestosDeCliente } from "@/modules/presupuestos/PresupuestosDeCliente";
 
-type Tab = "informacion" | "estado_cuenta" | "suscripciones" | "proyectos" | "historial";
+type Tab = "informacion" | "estado_cuenta" | "suscripciones" | "presupuestos" | "proyectos" | "historial";
 const CON_PROYECTOS = moduloEstaActivo("proyectos");
+const CON_PRESUPUESTOS = moduloEstaActivo("presupuestos");
+const ROLES_PRESUPUESTOS = ["ADMIN", "SUPERVISOR", "VENDEDOR", "CAJERO"];
 
 export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?: () => void; onCambio?: () => void }) {
   const router = useRouter();
@@ -68,6 +71,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
   const [nuevaSusc, setNuevaSusc] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const puedeSuscribir = me?.rol === "ADMIN" || me?.rol === "VENDEDOR";
+  const puedePresupuestar = CON_PRESUPUESTOS && !!me?.rol && ROLES_PRESUPUESTOS.includes(me.rol);
 
   // UNA llamada trae lo que se ve de entrada (cliente, resumen, suscripciones + facturación).
   // Con cache en memoria (stale-while-revalidate): si viene del prefetch de la lista se usa
@@ -150,6 +154,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
     { id: "informacion", label: "Información" },
     { id: "estado_cuenta", label: "Estado de cuenta" },
     { id: "suscripciones", label: "Suscripciones" },
+    ...(puedePresupuestar ? [{ id: "presupuestos" as Tab, label: "Presupuestos" }] : []),
     ...(CON_PROYECTOS ? [{ id: "proyectos" as Tab, label: "Proyectos" }] : []),
     { id: "historial", label: "Historial" },
   ];
@@ -235,6 +240,13 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
                 <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Nueva suscripción
               </button>
             </span>
+            {puedePresupuestar ? (
+              <Link href={`/presupuestos/nuevo?cliente=${encodeURIComponent(c.id)}`}
+                className="inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition hover:brightness-95"
+                style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}14`, color: TEAL }}>
+                <FileSignature className="h-3.5 w-3.5" /> Nuevo presupuesto
+              </Link>
+            ) : null}
             <button type="button" onClick={() => setFacturaContado(true)}
               className="rounded-xl border px-3 py-1.5 text-xs font-semibold transition hover:brightness-95"
               style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}14`, color: TEAL }}>
@@ -305,6 +317,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
               <TabSuscripciones clienteNombre={c.razon_social || c.nombre} suscripciones={subs} cargando={subsCargando} error={subsError}
                 rol={me?.rol} onNueva={() => setNuevaSusc(true)} onCambio={suscripcionesCambiaron} />
             ) : null}
+            {tab === "presupuestos" && puedePresupuestar ? <PresupuestosDeCliente clienteId={c.id} clienteNombre={c.razon_social || c.nombre} /> : null}
             {tab === "proyectos" && CON_PROYECTOS ? <ProyectosDeCliente clienteId={c.id} /> : null}
             {tab === "historial" ? <TabHistorial clienteId={c.id} recarga={recargaHist} /> : null}
           </div>

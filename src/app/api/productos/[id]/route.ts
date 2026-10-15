@@ -2,7 +2,8 @@
  * Producto — detalle, edición y borrado.
  *   GET    /api/productos/[id]  → un producto
  *   PATCH  /api/productos/[id]  → edita (ADMIN). Desactivar/reactivar = PATCH { activo }.
- *                                 Si cambia el stock, la diferencia queda en el kardex.
+ *                                 El stock NO se edita acá: se mueve con documentos (compra,
+ *                                 venta, traslado, ajuste o pérdida). stock_actual se ignora.
  *   DELETE /api/productos/[id]  → borrado PERMANENTE (ADMIN). Si tiene historial (ventas o
  *                                 movimientos de stock) no se borra: 409, hay que desactivarlo
  *                                 (mismo criterio que Ferretería República).
@@ -10,7 +11,6 @@
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, fail, ERR } from "@/lib/api/responses";
-import { registrarMovimiento } from "@/modules/inventario/server/kardex";
 import { COLS_PRODUCTO_DETALLE } from "@/modules/inventario/server/productos-lote";
 import { UUID_RE, idDeRuta, idInvalido } from "@/modules/inventario/server/ids";
 
@@ -43,7 +43,6 @@ const editar = z.object({
   precio_mayorista: z.coerce.number().min(0).nullish(),
   precio_distribuidor: z.coerce.number().min(0).nullish(),
   descuento_pct: z.coerce.number().min(0).max(100).optional(),
-  stock_actual: z.coerce.number().optional(),
   stock_minimo: z.coerce.number().optional(),
   unidad_medida: z.string().trim().optional(),
   tipo_iva: z.enum(["EXENTA", "5%", "10%"]).optional(),
@@ -59,19 +58,6 @@ export const PATCH = withTenant(
     const id = prodId(req);
     if (!id) return ERR.invalid("Falta el id del producto");
     if (!UUID_RE.test(id)) return idInvalido();
-  // "undefined" u otro texto: 400 (antes iba a la base y volvía 500).
-  if (!UUID_RE.test(id)) return idInvalido();
-    // Stock anterior, para dejar la diferencia en el kardex.
-    const antes = input.stock_actual !== undefined
-      ? await ctx.db.select("productos", "nombre, sku, stock_actual, costo_promedio, controla_lotes").eq("id", id).limit(1)
-      : null;
-    const previo = antes?.data?.[0] as { stock_actual: number; controla_lotes: boolean } | undefined;
-    // Con lotes, el stock se mueve por compras, movimientos o bajas de lote (cada unidad
-    // tiene su lote): editarlo a mano dejaría los lotes descuadrados.
-    if (previo && input.stock_actual !== undefined && Number(input.stock_actual) !== Number(previo.stock_actual)
-        && (input.controla_lotes ?? previo.controla_lotes)) {
-      return fail("Este producto controla lotes: cambiá el stock con una compra, un movimiento o dando de baja un lote.", 400);
-    }
     const patch: Record<string, unknown> = { ...input, updated_at: new Date().toISOString() };
     if (input.codigo_barras !== undefined) patch.codigo_barras = input.codigo_barras || null;
     // Lotes solo tiene sentido si controla stock.
@@ -80,18 +66,6 @@ export const PATCH = withTenant(
     if (error) {
       if (/duplicate key|unique/i.test(error.message)) return fail("Ya existe un producto con ese SKU.", 409);
       return ERR.server();
-    }
-    const prev = antes?.data?.[0] as { nombre: string; sku: string; stock_actual: number; costo_promedio: number } | undefined;
-    if (prev && input.stock_actual !== undefined) {
-      await registrarMovimiento(ctx, {
-        producto_id: id,
-        producto_nombre: input.nombre ?? prev.nombre,
-        producto_sku: input.sku ?? prev.sku,
-        delta: input.stock_actual - Number(prev.stock_actual),
-        costo_unitario: input.costo_promedio ?? Number(prev.costo_promedio),
-        origen: "ajuste_manual",
-        referencia: "Edición manual del producto",
-      });
     }
     return ok({ id });
   },

@@ -3,6 +3,7 @@ import { withTenant } from "@/lib/api/with-tenant";
 import { ok, fail } from "@/lib/api/responses";
 import { MAX_BYTES_EXCEL } from "@/modules/inventario/server/excel-io";
 import { previewExcel } from "@/modules/inventario/server/import-excel";
+import { uuidONull } from "@/modules/inventario/server/rpc";
 
 export const POST = withTenant(
   async (ctx, req) => {
@@ -16,7 +17,7 @@ export const POST = withTenant(
     if (!(f instanceof File) || f.size === 0) return fail("Falta el archivo.", 400);
     if (f.size > MAX_BYTES_EXCEL) return fail("Archivo demasiado grande (máx. 5 MB).", 400);
     try {
-      const { _filas, ...preview } = await previewExcel(ctx.db, await f.arrayBuffer());
+      const { _filas, ...preview } = await previewExcel(ctx.db, await f.arrayBuffer(), uuidONull(String(form.get("deposito_id") ?? "")));
       void _filas; // lo que se mandaría a la base no viaja al navegador
       return ok(preview);
     } catch (e) {

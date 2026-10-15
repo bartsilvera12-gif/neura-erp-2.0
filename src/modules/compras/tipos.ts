@@ -46,6 +46,9 @@ export type Compra = {
   /** recepción de una orden de compra */
   orden_compra_id?: string | null;
   oc?: { numero_oc: string } | null;
+  /** depósito al que entró la mercadería (Fase 1: sucursales y depósitos) */
+  deposito_id?: string | null;
+  deposito?: { nombre: string } | null;
   items?: CompraItem[];
   /** en la lista: la deuda de una compra a crédito */
   deuda?: { saldo: number; estado: "pendiente" | "parcial" | "pagada" | "anulada"; moneda: "GS" | "USD" } | null;
@@ -69,7 +72,7 @@ export type CuentaPagarCompra = {
 
 export const COLS_COMPRA =
   "id, numero_control, proveedor_id, proveedor_nombre, fecha, fecha_factura, nro_timbrado, numero_factura, tipo_pago, plazo_dias, vencimiento, moneda, tipo_cambio, subtotal, monto_iva, total, estado, observacion, usuario_nombre, anulada_at, anulada_por, anulada_motivo, " +
-  "medio_pago, referencia_pago, orden_compra_id, oc:ordenes_compra(numero_oc)";
+  "medio_pago, referencia_pago, orden_compra_id, oc:ordenes_compra(numero_oc), deposito_id, deposito:depositos(nombre)";
 
 export const COLS_ITEM =
   "id, producto_id, producto_nombre, producto_sku, cantidad, costo_unitario_original, costo_unitario, tipo_iva, subtotal, monto_iva, total, precio_venta_nuevo, lote_numero, lote_vencimiento";

@@ -3,7 +3,8 @@
  *   - Cruce con lo existente: primero código de barras, después SKU (activos o no).
  *   - Con cruce → UPDATE (pisa todos los campos, como Ferretería); sin cruce → INSERT.
  *   - Categorías por nombre; las que falten se crean solo si el usuario lo pide.
- *   - Toda diferencia de stock queda en el kardex (movimientos_inventario).
+ *   - STOCK_ACTUAL es el stock real en el depósito elegido: la diferencia entra en UN
+ *     documento de ajuste (AJ-) y en el kardex. Vacío = el stock no se toca.
  * Diferencias con el original: números robustos (12,5 / 12.5 / 1.234), SKU generado si
  * falta (el 2.0 lo exige), columna IVA opcional, categorías inactivas también cuentan.
  */
@@ -56,7 +57,7 @@ type Parseada = {
   unidad: string;
   costo: number;
   precio: number;
-  stock: number;
+  stock: number | null;
   stock_minimo: number;
   tipo_iva: string | null;
   activo: boolean;
@@ -76,7 +77,8 @@ function parsearFila(f: FilaPlanilla, i: number): Parseada {
     unidad: String(tomar(f, "UNIDAD_MEDIDA", "UNIDADMEDIDA", "UNIDAD") || "Unidad").trim(),
     costo: numero(tomar(f, "COSTO_PROMEDIO", "COSTO")),
     precio: numero(tomar(f, "PRECIO_VENTA", "PRECIO")),
-    stock: numero(tomar(f, "STOCK_ACTUAL", "STOCK")),
+    // Vacío = no tocar el stock (con depósitos, pisarlo con 0 sería un error grave).
+    stock: tomar(f, "STOCK_ACTUAL", "STOCK") === "" ? null : numero(tomar(f, "STOCK_ACTUAL", "STOCK")),
     stock_minimo: numero(tomar(f, "STOCK_MINIMO")),
     tipo_iva: null,
     activo: booleano(tomar(f, "ACTIVO")),
@@ -93,11 +95,11 @@ function parsearFila(f: FilaPlanilla, i: number): Parseada {
   return p;
 }
 
-export async function previewExcel(db: TenantDb, buf: ArrayBuffer): Promise<PreviewExcel> {
+export async function previewExcel(db: TenantDb, buf: ArrayBuffer, depositoId?: string | null): Promise<PreviewExcel> {
   const crudas = leerPlanilla(buf);
   if (crudas.length > MAX_FILAS_EXCEL) throw new Error(`Demasiadas filas (máx. ${MAX_FILAS_EXCEL.toLocaleString("es-PY")}).`);
 
-  const [catalogo, categorias] = await Promise.all([traerCatalogo(db), traerCategorias(db)]);
+  const [catalogo, categorias] = await Promise.all([traerCatalogo(db, depositoId), traerCategorias(db)]);
   const porBarras = new Map<string, (typeof catalogo)[number]>();
   const porSku = new Map<string, (typeof catalogo)[number]>();
   for (const p of catalogo) {
@@ -139,7 +141,7 @@ export async function previewExcel(db: TenantDb, buf: ArrayBuffer): Promise<Prev
     }
 
     const prev = existente?.stock_actual ?? 0;
-    const delta = p.stock - prev;
+    const delta = p.stock == null ? 0 : p.stock - prev;
     let movimiento = "SIN MOVIMIENTO";
     if (action !== "ERROR" && delta !== 0) {
       movs++;
@@ -160,7 +162,7 @@ export async function previewExcel(db: TenantDb, buf: ArrayBuffer): Promise<Prev
         CATEGORIA: p.categoria,
         COSTO: String(p.costo),
         PRECIO: String(p.precio),
-        STOCK: String(p.stock),
+        STOCK: p.stock == null ? "(sin cambio)" : String(p.stock),
         STOCK_ANTERIOR: existente ? String(prev) : "",
         MOVIMIENTO: movimiento,
       },

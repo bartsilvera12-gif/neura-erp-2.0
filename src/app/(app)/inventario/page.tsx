@@ -11,9 +11,10 @@ import dynamic from "next/dynamic";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import {
-  ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, Eye, EyeOff, Loader2,
-  Package, Pencil, Plus, RotateCcw, Search, Trash2, Upload, X,
+  ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, Eye, EyeOff, Loader2,
+  Package, Pencil, Plus, RotateCcw, Search, Trash2, Upload, Warehouse, X,
 } from "lucide-react";
+import { depositosPlanos, hayVariosDepositos, invalidarDepositos, opcionesAlcance, opcionesDepositos, partesAlcance, useDepositos, type DepositoPlano } from "@/modules/inventario/depositos";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
@@ -65,6 +66,27 @@ export default function InventarioPage() {
   const [verInactivos, setVerInactivos] = useState(false);
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState<number>(25);
+
+  // Stock por depósito: "Ver stock de" (todos / una sucursal / un depósito) y la fila
+  // expandida con las cantidades de cada depósito.
+  const deps = useDepositos();
+  const [alcance, setAlcance] = useState("");
+  const [expandidos, setExpandidos] = useState<Set<string>>(() => new Set());
+  const depPorId = useMemo(() => new Map(depositosPlanos(deps.datos).map((d) => [d.id, d])), [deps.datos]);
+  const variosDepositos = hayVariosDepositos(deps.datos);
+  const [depositoImportSel, setDepositoImport] = useState("");
+  const depositoImport = depositoImportSel || deps.datos?.mi_deposito_id || "";
+  const alcanceSel = useMemo(() => partesAlcance(alcance), [alcance]);
+  // /inventario?deposito=<id> (desde Depósitos): arranca mirando ese depósito.
+  useEffect(() => {
+    const d = new URLSearchParams(window.location.search).get("deposito");
+    if (d && /^[0-9a-f-]{36}$/i.test(d)) setAlcance(`d:${d}`);
+  }, []);
+  const toggleExpandido = useCallback((id: string) => setExpandidos((s) => {
+    const n = new Set(s);
+    if (n.has(id)) n.delete(id); else n.add(id);
+    return n;
+  }), []);
 
   // Panel lateral (crear / editar) y modales
   const [form, setForm] = useState<{ open: boolean; prod: ProductoInventario | null }>({ open: false, prod: null });
@@ -250,6 +272,9 @@ export default function InventarioPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Select value={categoriaId} onChange={(v) => { setCategoriaId(v); setPagina(1); }} options={opcionesCategoria} minWidth={190} />
+              {variosDepositos ? (
+                <Select value={alcance} onChange={setAlcance} options={opcionesAlcance(deps.datos, "Stock: todos los depósitos")} minWidth={220} />
+              ) : null}
               <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600" title="Mostrar también los productos inactivos (para reactivarlos)">
                 <input type="checkbox" checked={verInactivos} onChange={(e) => { setVerInactivos(e.target.checked); setPagina(1); }} className="h-4 w-4 rounded border-slate-300" />
                 Ver inactivos
@@ -282,7 +307,9 @@ export default function InventarioPage() {
                 <th className="hidden px-3 py-3 md:table-cell">Categoría</th>
                 <th className="px-3 py-3 text-right">Costo</th>
                 <th className="px-3 py-3 text-right">Precio</th>
-                <th className="px-3 py-3 text-center">Stock</th>
+                <th className="px-3 py-3 text-center" title={alcance ? "Stock en lo elegido en «Stock»" : "Stock total (todos los depósitos)"}>
+                  {alcance ? `Stock · ${alcanceSel.deposito ? depPorId.get(alcanceSel.deposito)?.nombre ?? "depósito" : "sucursal"}` : "Stock"}
+                </th>
                 <th className="hidden px-3 py-3 text-right lg:table-cell" title="Qué parte del precio de venta es ganancia: (precio − costo) ÷ precio">Margen</th>
                 <th className="w-px px-5 py-3 text-center">Acción</th>
               </tr>
@@ -306,7 +333,9 @@ export default function InventarioPage() {
               ) : (
                 productos.map((p) => (
                   <FilaProducto key={p.id} p={p} cargando={cargando} toggling={togglingId === p.id} categoriaPorId={categoriaPorId} colores={colores}
-                    onEditar={abrirForm} onToggle={toggleActivo} onEliminar={setEliminando} onPrecargar={precargarFicha} />
+                    onEditar={abrirForm} onToggle={toggleActivo} onEliminar={setEliminando} onPrecargar={precargarFicha}
+                    depPorId={depPorId} variosDepositos={variosDepositos} alcanceDeposito={alcanceSel.deposito} alcanceSucursal={alcanceSel.sucursal}
+                    expandido={expandidos.has(p.id)} onExpandir={toggleExpandido} />
                 ))
               )}
             </tbody>
@@ -356,8 +385,18 @@ export default function InventarioPage() {
           commitUrl="/api/inventario/productos/import/commit"
           templateUrl="/api/inventario/productos/import/template"
           permiteCrearFaltantes
+          camposExtra={depositoImport ? { deposito_id: depositoImport } : undefined}
+          opcionesExtra={opcionesDepositos(deps.datos).length > 1 ? (
+            <div className="max-w-sm">
+              <span className="mb-1 block text-xs font-medium text-slate-600">La columna STOCK_ACTUAL es el stock de</span>
+              <Select value={depositoImport} onChange={setDepositoImport} block options={opcionesDepositos(deps.datos)} />
+              <p className="mt-1 text-[11px] text-slate-500">Las diferencias quedan en un ajuste de inventario (AJ-) de ese depósito. STOCK_ACTUAL vacío = el stock no se toca.</p>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-500">La columna STOCK_ACTUAL es el stock real: las diferencias quedan en un ajuste de inventario (AJ-). Vacía = el stock no se toca.</p>
+          )}
           onClose={() => setImportando(false)}
-          onCompleted={() => { invalidar("/api/inventario/categorias"); refrescar(); }}
+          onCompleted={() => { invalidar("/api/inventario/categorias"); invalidarLista("/api/inventario/ajustes"); invalidarDepositos(); refrescar(); }}
         />
       ) : null}
 
@@ -372,6 +411,7 @@ export default function InventarioPage() {
  */
 const FilaProducto = memo(function FilaProducto({
   p, cargando, toggling, categoriaPorId, colores, onEditar, onToggle, onEliminar, onPrecargar,
+  depPorId, variosDepositos, alcanceDeposito, alcanceSucursal, expandido, onExpandir,
 }: {
   p: ProductoInventario;
   cargando: boolean;
@@ -382,16 +422,31 @@ const FilaProducto = memo(function FilaProducto({
   onToggle: (p: ProductoInventario) => void;
   onEliminar: (p: ProductoInventario) => void;
   onPrecargar: (p: ProductoInventario) => void;
+  depPorId: Map<string, DepositoPlano>;
+  variosDepositos: boolean;
+  alcanceDeposito: string | null;
+  alcanceSucursal: string | null;
+  expandido: boolean;
+  onExpandir: (id: string) => void;
 }) {
   const costo = Number(p.costo_promedio) || 0;
-  // Misma regla que el reporte de Stock mínimo: mínimo cargado y stock por debajo.
+  const porDep = p.stock_depositos ?? [];
+  // Stock que se muestra: el total, o el del depósito / la sucursal elegidos en "Stock".
+  const stock = alcanceDeposito
+    ? porDep.find((x) => x.d === alcanceDeposito)?.c ?? 0
+    : alcanceSucursal
+      ? porDep.filter((x) => depPorId.get(x.d)?.sucursal_id === alcanceSucursal).reduce((a, x) => a + Number(x.c), 0)
+      : Number(p.stock_actual);
+  // Misma regla que el reporte de Stock mínimo: mínimo cargado y stock (total) por debajo.
   const stockBajo = Number(p.stock_minimo) > 0 && Number(p.stock_actual) < Number(p.stock_minimo);
   const margen = margenVenta(costo, Number(p.precio_venta));
   const sinControl = p.controla_stock === false;
   const { madre: catMadre, sub: catSub } = partesCategoria(p.categoria_principal_id, categoriaPorId);
   const inactivo = p.activo === false;
+  const expandible = variosDepositos && !sinControl;
   return (
-    <tr className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
+    <>
+    <tr className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""} ${expandido ? "bg-[var(--brand-50)]/60" : ""}`}>
       <td className="px-5 py-3">
         <div className="flex items-center gap-3">
           <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
@@ -437,10 +492,14 @@ const FilaProducto = memo(function FilaProducto({
         {sinControl ? (
           <span className="text-xs font-medium text-slate-500">— sin control</span>
         ) : (
-          <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums ${stockBajo ? "bg-red-50 text-red-700 ring-1 ring-red-100" : Number(p.stock_actual) > 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" : "bg-slate-50 text-slate-500 ring-1 ring-slate-200"}`}>
-            {formatStock(Number(p.stock_actual))}
+          <button type="button" disabled={!expandible} onClick={() => onExpandir(p.id)}
+            title={expandible ? (expandido ? "Ocultar el stock por depósito" : "Ver el stock por depósito") : undefined}
+            aria-expanded={expandible ? expandido : undefined}
+            className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums transition ${expandible ? "cursor-pointer hover:brightness-95" : "cursor-default"} ${!alcanceDeposito && !alcanceSucursal && stockBajo ? "bg-red-50 text-red-700 ring-1 ring-red-100" : stock > 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" : "bg-slate-50 text-slate-500 ring-1 ring-slate-200"}`}>
+            {formatStock(stock)}
             <span className="text-[10px] font-normal opacity-80">{p.unidad_medida}</span>
-          </span>
+            {expandible ? <ChevronDown className={`h-3 w-3 opacity-70 transition-transform ${expandido ? "rotate-180" : ""}`} /> : null}
+          </button>
         )}
       </td>
       <td className={`hidden px-3 py-3 text-right font-semibold tabular-nums lg:table-cell ${margenColor(margen)}`}>{margen.toFixed(1)}%</td>
@@ -459,6 +518,32 @@ const FilaProducto = memo(function FilaProducto({
         </div>
       </td>
     </tr>
+    {expandible && expandido ? (
+      <tr className="bg-[var(--brand-50)]/40">
+        <td colSpan={8} className="px-5 pb-3 pt-0">
+          <div className="flex flex-wrap items-center gap-2 pl-11">
+            <Warehouse className="h-3.5 w-3.5 text-slate-400" />
+            {porDep.length === 0 ? (
+              <span className="text-xs text-slate-500">Sin unidades en ningún depósito.</span>
+            ) : (
+              [...porDep]
+                .sort((a, b) => Number(b.c) - Number(a.c))
+                .map((x) => {
+                  const d = depPorId.get(x.d);
+                  return (
+                    <Link key={x.d} href={`/inventario/movimientos?producto=${p.id}&deposito=${x.d}`} title="Ver el kardex en este depósito"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs shadow-sm transition hover:border-[var(--brand)]">
+                      <span className="text-slate-500">{d ? (d.sucursal_principal && d.es_principal ? d.nombre : `${d.sucursal} › ${d.nombre}`) : "Depósito"}</span>
+                      <strong className="tabular-nums text-slate-900">{formatStock(x.c)}</strong>
+                    </Link>
+                  );
+                })
+            )}
+          </div>
+        </td>
+      </tr>
+    ) : null}
+    </>
   );
 });
 

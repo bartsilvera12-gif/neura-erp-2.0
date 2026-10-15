@@ -1,132 +1,171 @@
 "use client";
 
 /**
- * Sección "Lotes" de la ficha del producto (solo productos que controlan lotes):
- * tabla Lote · Vence · Unidades · Estado (Vencido rojo / Vence pronto ámbar / OK) y la
- * acción "Dar de baja" (vencido, roto…) que saca las unidades de ESE lote y queda en el
- * kardex. Abajo, si el stock no coincide con los lotes, se muestra lo que está sin lote.
+ * Sección "Stock por depósito" de la ficha del producto: cuánto hay en cada depósito (y en
+ * tránsito), y para productos con lotes, los lotes de CADA depósito (Lote · Vence ·
+ * Unidades · Estado) con "Dar de baja" (queda como pérdida PE-). Desde cada depósito:
+ * ajustar, trasladar o ver su kardex. El stock no se edita acá: solo con documentos.
  */
-import { useEffect, useRef, useState } from "react";
-import { Loader2, PackageX } from "lucide-react";
+import Link from "next/link";
+import { useEffect, useState } from "react";
+import { ArrowLeftRight, ClipboardCheck, History, Loader2, PackageX, Truck } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
-import { useListaCacheada } from "@/modules/inventario/lista-cache";
-import { urlLotes } from "@/modules/inventario/ficha-cache";
+import { invalidarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
+import { urlStock } from "@/modules/inventario/ficha-cache";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { Select } from "@/components/Select";
 import { parseNumero } from "@/lib/imports/consolidacion-productos";
 import {
   chipEstado, diasAlerta, diasHasta, fechaCorta, textoDias,
-  type LoteProducto, type LotesDeProducto,
+  type StockProducto,
 } from "@/modules/inventario/vencimientos";
 
 const fmt = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
 const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 const ET = "mb-1 block text-xs font-medium text-slate-600";
 
-export function LotesProducto({
+export function StockDepositosProducto({
   productoId,
   unidad,
   puedeEditar,
-  onStockCambiado,
 }: {
   productoId: string;
   unidad: string;
+  /** ADMIN y producto activo: ajustar, trasladar, dar de baja */
   puedeEditar: boolean;
-  /** después de una baja: el stock nuevo del producto */
-  onStockCambiado?: (stock: number) => void;
 }) {
-  const [baja, setBaja] = useState<LoteProducto | null>(null);
+  const [baja, setBaja] = useState<{ id: string; numero: string; vencimiento: string; cantidad: number; deposito: string } | null>(null);
   const [alerta, setAlerta] = useState(30);
-  // Cacheado (y precargado al pasar el mouse por "editar"); después de una baja se pide
-  // de nuevo (recarga) y se avisa el stock nuevo cuando llega.
   const [recarga, setRecarga] = useState(0);
-  const avisarStock = useRef(false);
-  const lista = useListaCacheada<LotesDeProducto>(urlLotes(productoId), recarga);
-  // Al recargar después de una baja la tabla queda visible hasta que llegan los datos nuevos.
+  const lista = useListaCacheada<StockProducto>(urlStock(productoId), recarga);
   const datos = lista.cargando && recarga === 0 ? null : lista.datos;
-  const error = lista.error;
 
   useEffect(() => setAlerta(diasAlerta()), []);
-  useEffect(() => {
-    if (!avisarStock.current || lista.cargando) return;
-    avisarStock.current = false;
-    if (lista.datos && !lista.error) onStockCambiado?.(Number(lista.datos.stock_actual));
-  }, [lista.datos, lista.cargando, lista.error, onStockCambiado]);
 
-  if (error) return <p className="text-xs text-rose-600">No se pudieron cargar los lotes.</p>;
-  if (!datos) return <p className="flex items-center gap-2 text-xs text-slate-400"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando lotes…</p>;
+  if (lista.error) return <p className="text-xs text-rose-600">No se pudo cargar el stock por depósito.</p>;
+  if (!datos) return <p className="flex items-center gap-2 text-xs text-slate-400"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando stock…</p>;
 
   const u = unidad === "Unidad" ? "u." : unidad;
+  const varias = new Set(datos.depositos.map((d) => d.sucursal_id)).size > 1;
   return (
-    <div>
-      {datos.lotes.length === 0 ? (
-        <p className="rounded-xl border border-dashed border-slate-200 px-3 py-4 text-center text-xs text-slate-500">
-          No hay lotes con unidades. Cargá una compra o un movimiento de entrada con lote y vencimiento.
-        </p>
-      ) : (
-        <div className="overflow-hidden rounded-xl border border-slate-200">
-          <table className="w-full text-left text-sm">
-            <thead>
-              <tr className="border-b border-slate-200 bg-slate-50/70 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                <th className="px-3 py-2">Lote</th>
-                <th className="px-3 py-2">Vence</th>
-                <th className="px-3 py-2 text-right">Unidades</th>
-                <th className="px-3 py-2 text-center">Estado</th>
-                {puedeEditar ? <th className="w-px px-3 py-2" /> : null}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {datos.lotes.map((l) => {
-                const dias = diasHasta(l.vencimiento, datos.hoy);
-                const chip = chipEstado(dias, alerta);
-                return (
-                  <tr key={l.id}>
-                    <td className="px-3 py-2">
-                      <p className="font-mono text-xs font-semibold text-slate-800">{l.numero}</p>
-                      <p className="text-[10px] text-slate-400">{l.compra_numero ? `${l.compra_numero}${l.proveedor_nombre ? ` · ${l.proveedor_nombre}` : ""}` : "Movimiento manual"}</p>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-700">
-                      {fechaCorta(l.vencimiento)}
-                      <span className="block text-[10px] text-slate-400">{textoDias(dias)}</span>
-                    </td>
-                    <td className="px-3 py-2 text-right text-sm font-semibold tabular-nums text-slate-900">{fmt(l.cantidad)} <span className="text-[10px] font-normal text-slate-400">{u}</span></td>
-                    <td className="px-3 py-2 text-center">
-                      <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold ${chip.clase}`}>{chip.texto}</span>
-                    </td>
-                    {puedeEditar ? (
-                      <td className="px-3 py-2 text-right">
-                        <button type="button" onClick={() => setBaja(l)} className="whitespace-nowrap rounded-lg border border-slate-200 px-2 py-1 text-[11px] font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700">
-                          Dar de baja
-                        </button>
-                      </td>
-                    ) : null}
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
-      )}
-      <p className="mt-2 text-[11px] text-slate-500">
-        En lotes: <strong className="tabular-nums text-slate-700">{fmt(datos.en_lotes)} {u}</strong> · stock {fmt(datos.stock_actual)} {u}
-        {datos.sin_lote > 0 ? <> · <span className="font-semibold text-slate-700">{fmt(datos.sin_lote)} {u} sin lote</span> (stock que tenía antes de activar lotes o de un ajuste)</> : null}
-        {datos.sin_lote < 0 ? <> · <span className="font-semibold text-amber-700">{fmt(-datos.sin_lote)} {u} vendidas sin lote vigente</span> (los lotes dicen más de lo que hay: revisá y dá de baja lo que falte)</> : null}
-        . La caja descuenta primero el que vence antes y no vende los vencidos.
+    <div className="space-y-3">
+      <div className="flex flex-wrap items-center gap-2 text-xs">
+        <span className="rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700">
+          Total <span className="tabular-nums">{fmt(datos.stock_total)}</span> {u}
+        </span>
+        {Number(datos.en_transito) > 0 ? (
+          <Link href="/inventario/traslados?estado=en_transito" className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 font-semibold text-amber-700 ring-1 ring-amber-200 hover:bg-amber-100">
+            <Truck className="h-3 w-3" /> {fmt(datos.en_transito)} {u} en tránsito
+          </Link>
+        ) : null}
+      </div>
+
+      <div className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
+        {datos.depositos.map((d) => {
+          const lotes = d.lotes;
+          return (
+            <div key={d.deposito_id} className={`px-3 py-2.5 ${!d.activo ? "bg-slate-50/60" : ""}`}>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-800">
+                    {d.deposito}
+                    {d.es_principal ? <span className="ml-1.5 rounded bg-[var(--brand-50)] px-1.5 py-0.5 align-middle text-[10px] font-semibold text-[var(--brand)]">Principal</span> : null}
+                    {!d.activo ? <span className="ml-1.5 rounded bg-slate-200 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500">Inactivo</span> : null}
+                  </p>
+                  {varias ? <p className="text-[11px] text-slate-400">{d.sucursal}</p> : null}
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  <span className={`mr-1 text-base font-bold tabular-nums ${Number(d.cantidad) > 0 ? "text-slate-900" : "text-slate-300"}`}>
+                    {fmt(d.cantidad)} <span className="text-[11px] font-normal text-slate-400">{u}</span>
+                  </span>
+                  <Accion href={`/inventario/movimientos?producto=${productoId}&deposito=${d.deposito_id}`} titulo="Kardex de este depósito"><History className="h-3.5 w-3.5" /></Accion>
+                  {puedeEditar && d.activo ? (
+                    <>
+                      <Accion href={`/inventario/ajustes/nuevo?tipo=ajuste&deposito=${d.deposito_id}&producto=${productoId}`} titulo="Ajustar (conteo físico)"><ClipboardCheck className="h-3.5 w-3.5" /></Accion>
+                      {Number(d.cantidad) > 0 ? (
+                        <Accion href={`/inventario/traslados/nuevo?origen=${d.deposito_id}&producto=${productoId}`} titulo="Trasladar a otro depósito"><ArrowLeftRight className="h-3.5 w-3.5" /></Accion>
+                      ) : null}
+                    </>
+                  ) : null}
+                </div>
+              </div>
+
+              {datos.controla_lotes && (lotes.length > 0 || Number(d.sin_lote) !== 0) ? (
+                <div className="mt-2 overflow-hidden rounded-lg border border-slate-100">
+                  <table className="w-full text-left text-xs">
+                    <tbody className="divide-y divide-slate-100">
+                      {lotes.map((l) => {
+                        const dias = diasHasta(l.vencimiento, datos.hoy);
+                        const chip = chipEstado(dias, alerta);
+                        return (
+                          <tr key={l.id}>
+                            <td className="px-2.5 py-1.5">
+                              <p className="font-mono font-semibold text-slate-800">{l.numero}</p>
+                              <p className="text-[10px] text-slate-400">{l.compra_numero ? `${l.compra_numero}${l.proveedor_nombre ? ` · ${l.proveedor_nombre}` : ""}` : l.origen === "traslado" ? "Llegó por traslado" : "Ajuste de inventario"}</p>
+                            </td>
+                            <td className="whitespace-nowrap px-2.5 py-1.5 text-slate-700">
+                              {fechaCorta(l.vencimiento)}
+                              <span className="block text-[10px] text-slate-400">{textoDias(dias)}</span>
+                            </td>
+                            <td className="px-2.5 py-1.5 text-right font-semibold tabular-nums text-slate-900">{fmt(l.cantidad)}</td>
+                            <td className="px-2.5 py-1.5 text-center">
+                              <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold ${chip.clase}`}>{chip.texto}</span>
+                            </td>
+                            {puedeEditar ? (
+                              <td className="w-px px-2.5 py-1.5 text-right">
+                                <button type="button" onClick={() => setBaja({ id: l.id, numero: l.numero, vencimiento: l.vencimiento, cantidad: l.cantidad, deposito: d.deposito })}
+                                  className="whitespace-nowrap rounded-md border border-slate-200 px-2 py-0.5 text-[11px] font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700">
+                                  Dar de baja
+                                </button>
+                              </td>
+                            ) : null}
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {Number(d.sin_lote) > 0 ? (
+                    <p className="border-t border-slate-100 bg-slate-50/60 px-2.5 py-1.5 text-[11px] text-slate-600"><strong>{fmt(d.sin_lote)} {u} sin lote</strong> (stock de antes de activar lotes, de una importación o de un ajuste)</p>
+                  ) : Number(d.sin_lote) < 0 ? (
+                    <p className="border-t border-slate-100 bg-amber-50/60 px-2.5 py-1.5 text-[11px] text-amber-800"><strong>{fmt(-d.sin_lote)} {u} vendidas sin lote vigente</strong>: los lotes dicen más de lo que hay. Revisá y dá de baja lo que falte.</p>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+      </div>
+      <p className="text-[11px] text-slate-500">
+        El stock no se edita a mano: entra con compras y ajustes, sale con ventas y pérdidas, y se mueve entre depósitos con traslados.
+        {datos.controla_lotes ? " La caja vende primero el lote que vence antes (del depósito de la caja) y no vende los vencidos." : ""}
       </p>
 
       {baja ? (
         <DarDeBajaLote
-          lote={baja}
+          lote={{ ...baja, producto: undefined }}
+          deposito={baja.deposito}
           unidad={u}
           onClose={() => setBaja(null)}
           onHecho={() => {
             setBaja(null);
-            avisarStock.current = true;
+            invalidarLista("/api/productos");
+            invalidarLista("/api/inventario/movimientos");
+            invalidarLista("/api/inventario/vencimientos");
+            invalidarLista("/api/inventario/ajustes");
             setRecarga((k) => k + 1);
           }}
         />
       ) : null}
     </div>
+  );
+}
+
+function Accion({ href, titulo, children }: { href: string; titulo: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} title={titulo} aria-label={titulo}
+      className="inline-flex h-7 w-7 items-center justify-center rounded-md text-slate-400 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)]">
+      {children}
+    </Link>
   );
 }
 
@@ -137,13 +176,23 @@ const MOTIVOS: [string, string][] = [
   ["Otro", "Otro motivo"],
 ];
 
-/** Modal "Dar de baja lote": cantidad (por defecto todo el lote) y motivo. */
-export function DarDeBajaLote({ lote, unidad, onClose, onHecho }: { lote: { id: string; numero: string; vencimiento: string; cantidad: number; producto?: string }; unidad: string; onClose: () => void; onHecho: () => void }) {
+/**
+ * Modal "Dar de baja lote": cantidad (por defecto todo el lote) y motivo. Queda como una
+ * PÉRDIDA documentada (PE-) del lote puntual, valorizada al costo del lote.
+ */
+export function DarDeBajaLote({ lote, deposito, unidad, onClose, onHecho }: {
+  lote: { id: string; numero: string; vencimiento: string; cantidad: number; producto?: string };
+  deposito?: string;
+  unidad: string;
+  onClose: () => void;
+  onHecho: () => void;
+}) {
   const [cantidad, setCantidad] = useState(String(Number(lote.cantidad)));
   const [motivo, setMotivo] = useState("Vencido");
   const [detalle, setDetalle] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hecho, setHecho] = useState<{ documento: string; estado: string } | null>(null);
 
   const cant = parseNumero(cantidad) ?? NaN;
   const motivoFinal = motivo === "Otro" ? detalle.trim() : detalle.trim() ? `${motivo} — ${detalle.trim()}` : motivo;
@@ -154,57 +203,70 @@ export function DarDeBajaLote({ lote, unidad, onClose, onHecho }: { lote: { id: 
     setBusy(true);
     setError(null);
     try {
-      await apiFetch(`/api/inventario/lotes/${lote.id}/baja`, {
+      const r = await apiFetch<{ documento: string; estado: string }>(`/api/inventario/lotes/${lote.id}/baja`, {
         method: "POST",
         body: JSON.stringify({ cantidad: cant, motivo: motivoFinal }),
       });
-      onHecho();
+      setHecho(r);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
       setBusy(false);
     }
   }
 
   return (
-    <CapaModal onClose={busy ? undefined : onClose} z="z-[120]" fondo="bg-slate-900/40 backdrop-blur-sm">
+    <CapaModal onClose={busy ? undefined : hecho ? onHecho : onClose} z="z-[120]" fondo="bg-slate-900/40 backdrop-blur-sm">
       <div className={`flex w-full max-w-md ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5`} onClick={(e) => e.stopPropagation()} style={{ animation: "rb-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
         <div className="flex shrink-0 items-center gap-3 border-b border-slate-100 px-5 py-4">
           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-50 text-rose-600"><PackageX className="h-4 w-4" /></div>
           <div className="min-w-0">
             <h3 className="text-base font-semibold text-slate-900">Dar de baja lote</h3>
             <p className="truncate text-xs text-slate-500">
-              {lote.producto ? `${lote.producto} · ` : ""}Lote <span className="font-mono font-semibold">{lote.numero}</span> · vence {fechaCorta(lote.vencimiento)} · quedan {fmt(lote.cantidad)} {unidad}
+              {lote.producto ? `${lote.producto} · ` : ""}Lote <span className="font-mono font-semibold">{lote.numero}</span> · vence {fechaCorta(lote.vencimiento)} · quedan {fmt(lote.cantidad)} {unidad}{deposito ? ` en ${deposito}` : ""}
             </p>
           </div>
         </div>
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className={ET}>Unidades a dar de baja</span>
-              <input autoFocus inputMode="decimal" value={cantidad} onChange={(e) => setCantidad(e.target.value.replace(/[^\d.,]/g, ""))} className={`${INPUT} text-right tabular-nums`} />
-            </label>
-            <div>
-              <span className={ET}>Motivo</span>
-              <Select value={motivo} onChange={setMotivo} options={MOTIVOS} block />
-            </div>
+        {hecho ? (
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-6 text-center">
+            <p className="text-sm font-semibold text-slate-900">Baja registrada como pérdida <span className="font-mono">{hecho.documento}</span></p>
+            <p className="mt-1 text-xs text-slate-500">Bajó el stock del depósito y quedó en Movimientos y en Ajustes y pérdidas, valorizada al costo del lote.</p>
           </div>
-          <label className="block">
-            <span className={ET}>{motivo === "Otro" ? "Contá el motivo *" : <>Detalle <span className="font-normal text-slate-400">(opcional)</span></>}</span>
-            <input value={detalle} onChange={(e) => setDetalle(e.target.value)} maxLength={90} placeholder="Ej: se cortó la cadena de frío" className={INPUT} />
-          </label>
-          {cant > Number(lote.cantidad) ? <p className="text-xs font-medium text-rose-600">Del lote quedan {fmt(lote.cantidad)}.</p> : null}
-          <p className="text-xs text-slate-500">Baja el stock y queda en Movimientos como ajuste manual, con el lote y el motivo.</p>
-          {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p> : null}
-        </div>
+        ) : (
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className={ET}>Unidades a dar de baja</span>
+                <input autoFocus inputMode="decimal" value={cantidad} onChange={(e) => setCantidad(e.target.value.replace(/[^\d.,]/g, ""))} className={`${INPUT} text-right tabular-nums`} />
+              </label>
+              <div>
+                <span className={ET}>Motivo</span>
+                <Select value={motivo} onChange={setMotivo} options={MOTIVOS} block />
+              </div>
+            </div>
+            <label className="block">
+              <span className={ET}>{motivo === "Otro" ? "Contá el motivo *" : <>Detalle <span className="font-normal text-slate-400">(opcional)</span></>}</span>
+              <input value={detalle} onChange={(e) => setDetalle(e.target.value)} maxLength={90} placeholder="Ej: se cortó la cadena de frío" className={INPUT} />
+            </label>
+            {cant > Number(lote.cantidad) ? <p className="text-xs font-medium text-rose-600">Del lote quedan {fmt(lote.cantidad)}.</p> : null}
+            <p className="text-xs text-slate-500">Queda como <strong>pérdida</strong> (PE-) con el lote y el motivo, valorizada al costo. Se puede anular desde Ajustes y pérdidas.</p>
+            {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p> : null}
+          </div>
+        )}
         <div className="flex shrink-0 gap-2 border-t border-slate-100 bg-slate-50/40 px-5 py-3">
-          <button type="button" onClick={onClose} disabled={busy} className="flex-1 rounded-lg border-2 border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
-          <button type="button" onClick={confirmar} disabled={busy || invalido} className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50">
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {busy ? "Dando de baja…" : `Dar de baja ${Number.isFinite(cant) && cant > 0 ? fmt(cant) : ""} ${unidad}`}
-          </button>
+          {hecho ? (
+            <button type="button" onClick={onHecho} className="flex-1 rounded-lg bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95">Listo</button>
+          ) : (
+            <>
+              <button type="button" onClick={onClose} disabled={busy} className="flex-1 rounded-lg border-2 border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
+              <button type="button" onClick={confirmar} disabled={busy || invalido} className="inline-flex flex-1 items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50">
+                {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+                {busy ? "Dando de baja…" : `Dar de baja ${Number.isFinite(cant) && cant > 0 ? fmt(cant) : ""} ${unidad}`}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </CapaModal>
   );
 }
-

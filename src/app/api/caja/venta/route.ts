@@ -25,6 +25,9 @@ const ventaSchema = z.object({
   descuento_pct: z.coerce.number().min(0).max(100).default(0),
   // Plazo de crédito (días). Solo se usa cuando tipo_venta === "CREDITO".
   plazo_dias: z.coerce.number().int().positive().nullish(),
+  // Venta que sale de un presupuesto (Presupuestos → "Convertir a venta"): al registrarse,
+  // el presupuesto queda "convertido" y la venta guarda presupuesto_id.
+  presupuesto_id: z.string().uuid().nullish(),
   items: z
     .array(
       z.object({
@@ -61,6 +64,12 @@ const ventaSchema = z.object({
 
 export const POST = withTenant(
   async (ctx, _req, input) => {
+    // Presupuesto: se valida ANTES de cobrar (ya convertido o rechazado → no se cobra).
+    if (input.presupuesto_id) {
+      const pre = await ctx.db.rpc("presupuesto_puede_convertir", { p_id: input.presupuesto_id });
+      if (pre.error) return fail(pre.error.message.replace(/^.*?ERROR:\s*/, ""), 409);
+    }
+
     const { data, error } = await ctx.db.rpc<{
       venta_id: string;
       numero_control: string;
@@ -84,6 +93,15 @@ export const POST = withTenant(
       return fail(error.message || "No se pudo registrar la venta.", 409);
     }
     if (!data) return ERR.server();
+
+    // La venta ya quedó registrada: se marca el presupuesto (idempotente). Si esto fallara,
+    // la venta NO se pierde: se avisa para vincularlo de nuevo desde el presupuesto.
+    if (input.presupuesto_id) {
+      const conv = await ctx.db.rpc("presupuesto_marcar_convertido", { p_id: input.presupuesto_id, p_venta_id: data.venta_id });
+      if (conv.error) {
+        return created({ ...data, aviso_presupuesto: `La venta quedó registrada, pero no se pudo marcar el presupuesto: ${conv.error.message.replace(/^.*?ERROR:\s*/, "")}` });
+      }
+    }
     return created(data);
   },
   { roles: ROLES_CAJA, body: ventaSchema },

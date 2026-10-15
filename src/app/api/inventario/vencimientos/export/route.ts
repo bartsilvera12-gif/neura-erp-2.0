@@ -1,6 +1,6 @@
 /**
  * Exportar Vencimientos a Excel, con los mismos filtros de la pantalla.
- *   GET /api/inventario/vencimientos/export?dias&q&estado → vencimientos-….xlsx
+ *   GET /api/inventario/vencimientos/export?dias&q&estado&deposito → vencimientos-….xlsx
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { buildXlsx, hoja, xlsxHeaders } from "@/lib/excel/xlsx";
@@ -16,6 +16,8 @@ export const GET = withTenant(async (ctx, req) => {
         { header: "Producto", value: (f) => f.producto, width: 36 },
         { header: "SKU", value: (f) => f.sku, width: 16 },
         { header: "Lote", value: (f) => f.numero, width: 16 },
+        { header: "Sucursal", value: (f) => f.sucursal ?? "", width: 18 },
+        { header: "Depósito", value: (f) => f.deposito ?? "", width: 20 },
         { header: "Vence", value: (f) => fechaCorta(f.vencimiento), width: 12 },
         { header: "Días", value: (f) => Number(f.dias), width: 8 },
         { header: "Estado", value: (f) => (f.estado === "vencido" ? "Vencido" : "Por vencer"), width: 12 },

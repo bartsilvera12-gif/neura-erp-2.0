@@ -30,6 +30,7 @@ type Commit = {
   summary: {
     total: number; inserted: number; updated: number; skipped: number; errors: number; warnings: number;
     movimientos_generados?: number; unidades_entrada?: number; unidades_salida?: number; categorias_creadas?: number;
+    ajuste_numero?: string | null; deposito?: string | null;
   };
   errors: string[];
 };
@@ -42,6 +43,8 @@ export function ExcelImportWizard({
   permiteCrearFaltantes = false,
   etiquetas,
   textoConfirmar,
+  camposExtra,
+  opcionesExtra,
   onClose,
   onCompleted,
 }: {
@@ -54,6 +57,10 @@ export function ExcelImportWizard({
   etiquetas?: Partial<Record<Accion, string>>;
   /** texto del botón de confirmar según la vista previa (por defecto "Confirmar e importar") */
   textoConfirmar?: (s: Preview["summary"]) => string;
+  /** campos que se mandan con la vista previa y la confirmación (ej. deposito_id) */
+  camposExtra?: Record<string, string>;
+  /** controles propios de la entidad en el paso 1 (ej. a qué depósito entra el stock) */
+  opcionesExtra?: React.ReactNode;
   onClose: () => void;
   onCompleted?: () => void;
 }) {
@@ -73,6 +80,7 @@ export function ExcelImportWizard({
     try {
       const fd = new FormData();
       fd.append("file", file);
+      for (const [k, v] of Object.entries(camposExtra ?? {})) fd.append(k, v);
       setPreview(await apiForm<Preview>(previewUrl, fd));
       setPaso("preview");
     } catch (e) {
@@ -89,6 +97,7 @@ export function ExcelImportWizard({
     try {
       const fd = new FormData();
       fd.append("file", file);
+      for (const [k, v] of Object.entries(camposExtra ?? {})) fd.append(k, v);
       if (permiteCrearFaltantes) fd.append("crear_faltantes", crearFaltantes ? "1" : "0");
       setCommit(await apiForm<Commit>(commitUrl, fd));
       setPaso("done");
@@ -118,6 +127,7 @@ export function ExcelImportWizard({
 
             {paso === "upload" ? (
               <div className="space-y-4">
+                {opcionesExtra}
                 <div className="text-sm text-slate-600">
                   Subí un archivo Excel (.xlsx) o CSV. Máx. 5 MB / 5.000 filas.
                   <button
@@ -202,6 +212,7 @@ export function ExcelImportWizard({
                   <div className="rounded border border-indigo-200 bg-indigo-50 p-2 text-xs text-indigo-800">
                     <strong>Movimientos generados:</strong> {commit.summary.movimientos_generados} · +{commit.summary.unidades_entrada ?? 0} entrada(s) · −{commit.summary.unidades_salida ?? 0} salida(s)
                     {commit.summary.categorias_creadas ? ` · ${commit.summary.categorias_creadas} categoría(s) creada(s)` : ""}
+                    {commit.summary.ajuste_numero ? ` · ajuste ${commit.summary.ajuste_numero}${commit.summary.deposito ? ` en ${commit.summary.deposito}` : ""}` : ""}
                   </div>
                 ) : commit.summary.categorias_creadas ? (
                   <div className="rounded border border-sky-200 bg-sky-50 p-2 text-xs text-sky-800">{commit.summary.categorias_creadas} rubro(s) nuevo(s) creado(s)</div>
