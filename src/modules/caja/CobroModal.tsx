@@ -1,0 +1,359 @@
+"use client";
+
+/**
+ * Cobro de la venta en el POS.
+ *   · Contado: una o varias formas de pago (efectivo, débito, crédito, transferencia, QR /
+ *     billetera, cheque). La PRIMERA línea se ajusta sola con lo que falta (agregás "Débito
+ *     20.000" y el efectivo pasa a ser el resto); si la editás a mano, queda fija.
+ *     Efectivo: lo que entrega el cliente → vuelto (solo sobre el efectivo). Tarjeta /
+ *     transferencia / QR: referencia (y banco) opcionales.
+ *   · Crédito: cliente, plazo, vencimiento y cuánto le queda de su límite.
+ * Teclado: Alt+1…6 cambia la forma de pago de la línea activa · Alt+M agrega otra forma
+ * (pago mixto) · Enter confirma · Esc cancela.
+ */
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Banknote, CreditCard, Landmark, Loader2, Plus, QrCode, ScrollText, Trash2, Wallet } from "lucide-react";
+import MontoInput from "@/components/ui/MontoInput";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
+import { apiFetch } from "@/lib/api/client-fetch";
+import { formatGs, type Cliente } from "@/modules/caja/lib";
+import { METODOS_VENTA, type MetodoVenta } from "@/modules/caja/turno";
+import type { EstadoCuenta } from "@/modules/clientes/cobros";
+import { clienteConfig } from "@/cliente.config";
+
+const TEAL = clienteConfig.color;
+const ICONO: Record<MetodoVenta, React.ComponentType<{ className?: string }>> = {
+  efectivo: Banknote,
+  tarjeta_debito: CreditCard,
+  tarjeta_credito: CreditCard,
+  transferencia: Landmark,
+  qr: QrCode,
+  cheque: ScrollText,
+};
+
+export type PagoEnviar = { metodo_pago: MetodoVenta; monto: number; recibido?: number | null; referencia?: string | null; banco?: string | null };
+
+type Linea = { id: string; metodo: MetodoVenta; monto: number; manual: boolean; referencia: string; banco: string };
+const nuevoId = () => `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
+/** Billetes "redondos" que el cliente probablemente entregue (para el vuelto). */
+function sugerencias(monto: number): number[] {
+  if (monto <= 0) return [];
+  const out = new Set<number>();
+  for (const paso of [1000, 5000, 10000, 50000, 100000]) {
+    const v = Math.ceil(monto / paso) * paso;
+    if (v > monto) out.add(v);
+  }
+  return [...out].sort((a, b) => a - b).slice(0, 4);
+}
+
+export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, cobrando, error, onClose, onConfirmar }: {
+  total: number;
+  cantItems: number;
+  tipoVenta: "CONTADO" | "CREDITO";
+  plazoDias: number;
+  cliente: Cliente | null;
+  cobrando: boolean;
+  error: string | null;
+  onClose: () => void;
+  onConfirmar: (pagos: PagoEnviar[]) => void;
+}) {
+  const [lineas, setLineas] = useState<Linea[]>([{ id: nuevoId(), metodo: "efectivo", monto: total, manual: false, referencia: "", banco: "" }]);
+  const [activa, setActiva] = useState<string>(() => lineas[0].id);
+  const [recibido, setRecibido] = useState<number | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
+  const [cuenta, setCuenta] = useState<EstadoCuenta | null>(null);
+  const recibidoRef = useRef<HTMLInputElement>(null);
+  const montoRefs = useRef<Record<string, HTMLInputElement | null>>({});
+
+  // La primera línea, mientras no se toque, absorbe lo que falta.
+  const efectivas = useMemo(() => {
+    const otras = lineas.slice(1).reduce((a, l) => a + (l.monto || 0), 0);
+    return lineas.map((l, i) => (i === 0 && !l.manual ? { ...l, monto: Math.max(0, total - otras) } : l));
+  }, [lineas, total]);
+  const pagado = efectivas.reduce((a, l) => a + (l.monto || 0), 0);
+  const restante = total - pagado;
+  const efectivo = efectivas.filter((l) => l.metodo === "efectivo").reduce((a, l) => a + (l.monto || 0), 0);
+  const vuelto = recibido != null && efectivo > 0 ? recibido - efectivo : null;
+  const lineasConMonto = efectivas.filter((l) => l.monto > 0);
+
+  // Crédito: deuda del cliente y su límite.
+  useEffect(() => {
+    if (tipoVenta !== "CREDITO" || !cliente) return;
+    apiFetch<EstadoCuenta>(`/api/clientes/${cliente.id}/estado-cuenta`).then(setCuenta).catch(() => {});
+  }, [tipoVenta, cliente]);
+  const limite = Number(cliente?.limite_credito ?? 0);
+  const deuda = Number(cuenta?.deuda ?? 0);
+  const disponible = limite > 0 ? limite - deuda : null;
+  const superaLimite = tipoVenta === "CREDITO" && disponible != null && cuenta != null && total > disponible;
+  const vence = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + (plazoDias || 0));
+    return d.toLocaleDateString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric" });
+  }, [plazoDias]);
+
+  const problema =
+    tipoVenta === "CREDITO"
+      ? superaLimite ? "Supera el límite de crédito del cliente." : null
+      : restante > 0 ? `Falta asignar ${formatGs(restante)}.`
+      : restante < 0 ? `Las formas de pago se pasan por ${formatGs(-restante)}.`
+      : lineasConMonto.length === 0 ? "Cargá cómo paga."
+      : recibido != null && efectivo > 0 && recibido < efectivo ? `Con ${formatGs(recibido)} no alcanza el efectivo (${formatGs(efectivo)}).`
+      : null;
+
+  function confirmar() {
+    if (cobrando) return;
+    if (problema) { setAviso(problema); return; }
+    if (tipoVenta === "CREDITO") { onConfirmar([]); return; }
+    let recibidoUsado = false;
+    onConfirmar(lineasConMonto.map((l) => {
+      const p: PagoEnviar = { metodo_pago: l.metodo, monto: l.monto };
+      if (l.metodo === "efectivo") {
+        // Lo recibido va en la primera línea de efectivo (el vuelto es por todo el efectivo).
+        if (!recibidoUsado && recibido != null && recibido > 0) {
+          const otrasEf = efectivo - l.monto;
+          p.recibido = Math.max(l.monto, recibido - otrasEf);
+          recibidoUsado = true;
+        }
+      } else {
+        p.referencia = l.referencia.trim() || null;
+        p.banco = l.banco.trim() || null;
+      }
+      return p;
+    }));
+  }
+
+  function setMetodo(id: string, metodo: MetodoVenta) {
+    setLineas((ls) => ls.map((l) => (l.id === id ? { ...l, metodo } : l)));
+    setAviso(null);
+  }
+  function setMonto(id: string, monto: number) {
+    setLineas((ls) => ls.map((l, i) => (l.id === id ? { ...l, monto: Math.max(0, Math.round(monto)), manual: i === 0 ? true : l.manual } : l)));
+    setAviso(null);
+  }
+  function agregar(metodo?: MetodoVenta) {
+    const usados = new Set(lineas.map((l) => l.metodo));
+    const m = metodo ?? METODOS_VENTA.find((x) => !usados.has(x.value))?.value ?? "tarjeta_debito";
+    const id = nuevoId();
+    // Si la primera se ajusta sola, la nueva arranca en 0 (lo que escribas sale de la primera);
+    // si no, toma lo que falta.
+    const monto = lineas[0].manual ? Math.max(0, restante) : 0;
+    setLineas((ls) => [...ls, { id, metodo: m, monto, manual: true, referencia: "", banco: "" }]);
+    setActiva(id);
+    setTimeout(() => montoRefs.current[id]?.focus(), 0);
+  }
+  function quitar(id: string) {
+    setLineas((ls) => (ls.length <= 1 || ls[0].id === id ? ls : ls.filter((l) => l.id !== id)));
+    setActiva((a) => (a === id ? lineas[0].id : a));
+  }
+
+  // Teclado del modal (el POS le deja Enter/Esc mientras está abierto).
+  const kb = useRef({ confirmar, setMetodo, agregar, activa, onClose, cobrando });
+  kb.current = { confirmar, setMetodo, agregar, activa, onClose, cobrando };
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const s = kb.current;
+      const el = document.activeElement as HTMLElement | null;
+      if (e.key === "Escape") {
+        if (document.querySelector("[role=listbox]")) return;
+        e.preventDefault();
+        if (!s.cobrando) s.onClose();
+        return;
+      }
+      if (e.altKey && /^[1-6]$/.test(e.key)) {
+        e.preventDefault();
+        s.setMetodo(s.activa, METODOS_VENTA[Number(e.key) - 1].value);
+        return;
+      }
+      if (e.altKey && (e.key === "m" || e.key === "M" || e.key === "+")) {
+        e.preventDefault();
+        s.agregar();
+        return;
+      }
+      if (e.key === "Enter") {
+        const tag = el?.tagName;
+        if (tag === "BUTTON" || tag === "TEXTAREA" || el?.getAttribute("role") === "option" || el?.closest("[role=listbox]")) return;
+        e.preventDefault();
+        s.confirmar();
+      }
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
+
+  useEffect(() => {
+    if (tipoVenta === "CONTADO") setTimeout(() => recibidoRef.current?.focus(), 30);
+  }, [tipoVenta]);
+
+  const lineaActiva = efectivas.find((l) => l.id === activa) ?? efectivas[0];
+
+  return (
+    <CapaModal onClose={cobrando ? undefined : onClose} fondo="bg-slate-900/50 backdrop-blur-[2px]" cerrarConEscape={false}>
+      <div role="dialog" aria-modal className={`flex w-full max-w-2xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`}
+        style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
+        {/* Total */}
+        <div className="flex shrink-0 items-end justify-between gap-4 px-6 pb-4 pt-5" style={{ background: `linear-gradient(to right, ${TEAL}14, transparent)` }}>
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEAL }}>{tipoVenta === "CREDITO" ? "Venta a crédito" : "Cobrar"}</p>
+            <p className="mt-0.5 text-xs text-slate-500">{cantItems} ítem{cantItems === 1 ? "" : "s"}{cliente ? ` · ${cliente.nombre}` : ""}</p>
+          </div>
+          <p className="text-3xl font-extrabold tabular-nums tracking-tight text-slate-900">{formatGs(total)}</p>
+        </div>
+
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">
+          {tipoVenta === "CREDITO" ? (
+            <div className="space-y-3">
+              <div className="grid grid-cols-3 gap-3">
+                <Dato label="Cliente" valor={cliente?.nombre ?? "—"} />
+                <Dato label="Plazo" valor={`${plazoDias} día${plazoDias === 1 ? "" : "s"}`} />
+                <Dato label="Vence" valor={vence} />
+              </div>
+              {limite > 0 ? (
+                <div className={`rounded-xl border px-4 py-3 text-sm ${superaLimite ? "border-rose-200 bg-rose-50 text-rose-800" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
+                  <div className="flex justify-between"><span>Límite de crédito</span><span className="font-semibold tabular-nums">{formatGs(limite)}</span></div>
+                  <div className="flex justify-between"><span>Debe hoy</span><span className="tabular-nums">{cuenta ? formatGs(deuda) : "…"}</span></div>
+                  <div className="mt-1 flex justify-between border-t border-current/10 pt-1 font-semibold"><span>Disponible</span><span className="tabular-nums">{disponible != null && cuenta ? formatGs(disponible) : "…"}</span></div>
+                  {superaLimite ? <p className="mt-1.5 text-xs font-semibold">Esta venta supera el límite: no se puede dar a crédito.</p> : null}
+                </div>
+              ) : (
+                <p className="rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-600">El cliente no tiene límite de crédito cargado.{cuenta ? ` Hoy debe ${formatGs(deuda)}.` : ""}</p>
+              )}
+              <p className="text-xs text-slate-500">Queda en la cuenta corriente del cliente; no entra plata a la caja ahora. Se cobra después desde Cobranzas o la ficha del cliente.</p>
+            </div>
+          ) : (
+            <>
+              {/* Formas de pago (Alt+1…6 sobre la línea activa) */}
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
+                  Forma de pago {lineas.length > 1 ? <span className="normal-case tracking-normal text-slate-400">· de la línea marcada</span> : null}
+                </p>
+                <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                  {METODOS_VENTA.map((m) => {
+                    const Icono = ICONO[m.value];
+                    const sel = lineaActiva?.metodo === m.value;
+                    return (
+                      <button key={m.value} type="button" onClick={() => setMetodo(lineaActiva.id, m.value)} title={`${m.label} (Alt+${m.tecla})`}
+                        className="relative flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-[11px] font-semibold transition"
+                        style={sel ? { borderColor: TEAL, backgroundColor: `${TEAL}12`, color: TEAL } : { borderColor: "#e2e8f0", color: "#475569" }}>
+                        <Icono className="h-4 w-4" />
+                        <span className="leading-tight">{m.corto}</span>
+                        <kbd className="absolute right-1 top-1 text-[9px] font-medium text-slate-300">{m.tecla}</kbd>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Líneas de pago */}
+              <ul className="space-y-2">
+                {efectivas.map((l, i) => {
+                  const def = METODOS_VENTA.find((m) => m.value === l.metodo)!;
+                  const Icono = ICONO[l.metodo];
+                  const esActiva = l.id === lineaActiva?.id;
+                  return (
+                    <li key={l.id} onMouseDown={() => setActiva(l.id)}
+                      className={`rounded-xl border p-3 transition ${esActiva && efectivas.length > 1 ? "ring-2" : ""}`}
+                      style={{ borderColor: esActiva && efectivas.length > 1 ? TEAL : "#e2e8f0", ["--tw-ring-color" as string]: `${TEAL}30` }}>
+                      <div className="flex items-center gap-3">
+                        <Icono className="h-4 w-4 shrink-0 text-slate-400" />
+                        <span className="min-w-0 flex-1 text-sm font-semibold text-slate-800">
+                          {def.label}
+                          {i === 0 && !l.manual && efectivas.length > 1 ? <span className="ml-2 text-[10px] font-medium text-slate-400">(el resto)</span> : null}
+                        </span>
+                        <MontoInput value={l.monto} onChange={(n) => setMonto(l.id, n)} decimals={false} onFocus={() => setActiva(l.id)}
+                          ref={(el: HTMLInputElement | null) => { montoRefs.current[l.id] = el; }}
+                          className="w-36 rounded-lg border border-slate-200 px-3 py-1.5 text-right text-base font-bold tabular-nums outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]" />
+                        {i > 0 ? (
+                          <button type="button" onClick={() => quitar(l.id)} aria-label="Quitar forma de pago" className="rounded-lg p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
+                        ) : <span className="w-7" />}
+                      </div>
+                      {l.metodo !== "efectivo" ? (
+                        <div className="mt-2 flex gap-2 pl-7">
+                          <input value={l.referencia} onFocus={() => setActiva(l.id)} onChange={(e) => setLineas((ls) => ls.map((x) => (x.id === l.id ? { ...x, referencia: e.target.value } : x)))}
+                            maxLength={120} placeholder={`${def.referencia ?? "Referencia"} (opcional)`}
+                            className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-[var(--brand)]" />
+                          {def.banco ? (
+                            <input value={l.banco} onFocus={() => setActiva(l.id)} onChange={(e) => setLineas((ls) => ls.map((x) => (x.id === l.id ? { ...x, banco: e.target.value } : x)))}
+                              maxLength={80} placeholder="Banco (opcional)" className="w-40 rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-[var(--brand)]" />
+                          ) : null}
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+              <button type="button" onClick={() => agregar()} className="inline-flex items-center gap-1 text-xs font-semibold hover:underline" style={{ color: TEAL }}>
+                <Plus className="h-3.5 w-3.5" /> Agregar otra forma de pago (mixto) <kbd className="ml-1 rounded border border-slate-200 px-1 font-mono text-[10px] text-slate-400">Alt+M</kbd>
+              </button>
+
+              {restante !== 0 ? (
+                <p className={`rounded-lg px-3 py-2 text-sm font-semibold ${restante > 0 ? "bg-amber-50 text-amber-800" : "bg-rose-50 text-rose-700"}`}>
+                  {restante > 0 ? `Falta asignar ${formatGs(restante)}` : `Te pasaste por ${formatGs(-restante)}`}
+                </p>
+              ) : null}
+
+              {/* Efectivo recibido → vuelto */}
+              {efectivo > 0 ? (
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                  <div className="flex flex-wrap items-end gap-4">
+                    <label className="min-w-[200px] flex-1">
+                      <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-slate-600"><Wallet className="h-3.5 w-3.5" /> Efectivo que entrega <span className="text-slate-400">(para el vuelto)</span></span>
+                      <MontoInput value={recibido ?? ""} onChange={(n) => { setRecibido(n > 0 ? Math.round(n) : null); setAviso(null); }} decimals={false}
+                        ref={recibidoRef} placeholder={`${efectivo.toLocaleString("es-PY")} (justo)`}
+                        className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-right text-xl font-bold tabular-nums outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]" />
+                    </label>
+                    <div className="min-w-[150px] text-right">
+                      <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Vuelto</p>
+                      <p className={`text-3xl font-extrabold tabular-nums ${vuelto != null && vuelto < 0 ? "text-rose-600" : "text-emerald-600"}`}>
+                        {vuelto == null ? formatGs(0) : vuelto < 0 ? `Faltan ${formatGs(-vuelto)}` : formatGs(vuelto)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <Chip on={recibido === efectivo} onClick={() => setRecibido(efectivo)}>Justo</Chip>
+                    {sugerencias(efectivo).map((v) => <Chip key={v} on={recibido === v} onClick={() => setRecibido(v)}>{formatGs(v)}</Chip>)}
+                  </div>
+                </div>
+              ) : null}
+            </>
+          )}
+
+          {aviso || error ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{aviso ?? error}</p> : null}
+        </div>
+
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-3.5">
+          <p className="hidden text-[11px] text-slate-400 sm:block">
+            <kbd className="rounded border border-slate-200 bg-white px-1 font-mono">Enter</kbd> confirmar · <kbd className="rounded border border-slate-200 bg-white px-1 font-mono">Esc</kbd> volver
+            {tipoVenta === "CONTADO" ? <> · <kbd className="rounded border border-slate-200 bg-white px-1 font-mono">Alt+1…6</kbd> forma de pago</> : null}
+          </p>
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} disabled={cobrando} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">Volver</button>
+            <button type="button" onClick={confirmar} disabled={cobrando || !!problema}
+              className="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40" style={{ backgroundColor: TEAL }}>
+              {cobrando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {cobrando ? "Registrando…" : tipoVenta === "CREDITO" ? "Confirmar crédito e imprimir" : "Cobrar e imprimir"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </CapaModal>
+  );
+}
+
+function Dato({ label, valor }: { label: string; valor: string }) {
+  return (
+    <div className="rounded-xl bg-slate-50 px-3 py-2">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</p>
+      <p className="mt-0.5 truncate text-sm font-semibold text-slate-800">{valor}</p>
+    </div>
+  );
+}
+
+function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick}
+      className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${on ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand)]" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}>
+      {children}
+    </button>
+  );
+}

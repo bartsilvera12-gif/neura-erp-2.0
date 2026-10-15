@@ -13,7 +13,7 @@ export const nombreMetodoPago = (m: string) => METODOS_PAGO_PROV.find((x) => x.v
 
 /** Pantalla del documento que originó la deuda: la compra o el gasto (Gastos y Servicios). */
 export const hrefOrigenCxp = (c: { compra_id?: string | null; gasto_id?: string | null }) =>
-  c.gasto_id ? `/gastos?ver=${c.gasto_id}` : `/compras?ver=${c.compra_id ?? ""}`;
+  c.gasto_id ? `/gastos-empresariales/operativos?ver=${c.gasto_id}` : `/compras?ver=${c.compra_id ?? ""}`;
 
 /** Gs. 1.250.000 · US$ 1.250,50 */
 export function dinero(v: number, moneda: Moneda | string = "GS") {

@@ -89,3 +89,6 @@ export function calcIva(tipo: TipoIva, importe: number): number {
 export function formatGs(valor: number): string {
   return `Gs. ${Math.round(valor).toLocaleString("es-PY")}`;
 }
+
+/** Roles que operan la caja (abrir, vender, cobrar, retirar, cerrar). */
+export const ROLES_CAJA = ["ADMIN", "SUPERVISOR", "CAJERO", "VENDEDOR"];

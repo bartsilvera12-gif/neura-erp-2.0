@@ -1,23 +1,27 @@
 /**
  * Venta (POS) — registra una venta de la caja. Portado de distribuidorajm, re-plomado a 2.0.
- *   POST /api/caja/venta  → crea una venta { cliente_id?, tipo_venta, metodo_pago, items[], pagos[]? }
+ *   POST /api/caja/venta  → crea una venta { caja_id?, cliente_id?, tipo_venta, items[], pagos[]? }
  *
  * La venta es TRANSACCIONAL (header + ítems + descuento de stock + cobro en caja), y PostgREST
  * no hace transacciones multi-tabla, así que la escritura va por la función `crear_venta`
- * (plpgsql, SECURITY INVOKER, bajo RLS). Precio e IVA salen del catálogo en la base — el cliente
- * no los manda — así no se puede falsear el total. `idempotency_key` evita duplicar la venta si
- * el POS reintenta.
+ * (SECURITY DEFINER, valida empresa y rol). Precio e IVA salen del catálogo en la base — el
+ * cliente no los manda — así no se puede falsear el total. `idempotency_key` evita duplicar la
+ * venta si el POS reintenta.
+ *
+ * Caja (receta 51): la venta va al turno abierto `caja_id` (o al que le toca al usuario) y el
+ * stock sale del depósito de esa caja. Formas de pago: una o varias (mixto), cada una con su
+ * monto, referencia y banco; en efectivo, lo recibido (el vuelto es solo sobre el efectivo).
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { created, fail, ERR } from "@/lib/api/responses";
-
-const ROLES_CAJA = ["ADMIN", "CAJERO", "VENDEDOR"];
+import { ROLES_CAJA } from "@/modules/caja/lib";
 
 const ventaSchema = z.object({
+  caja_id: z.string().uuid().nullish(),
   cliente_id: z.string().uuid().nullish(),
   tipo_venta: z.enum(["CONTADO", "CREDITO"]).default("CONTADO"),
-  metodo_pago: z.enum(["efectivo", "transferencia", "tarjeta", "pos", "cheque", "qr", "billetera", "mixto", "otro"]).default("efectivo"),
+  metodo_pago: z.string().trim().max(30).nullish(),
   moneda: z.enum(["GS", "USD"]).default("GS"),
   observaciones: z.string().trim().max(500).nullish(),
   idempotency_key: z.string().trim().max(120).nullish(),
@@ -43,9 +47,8 @@ const ventaSchema = z.object({
       }),
     )
     .min(1, "La venta debe tener al menos un ítem"),
-  // Pago (simple o MIXTO). Cada entrada es un medio con su monto; la suma debe
-  // cuadrar con el total (lo valida la RPC). Los métodos con tipo (tarjeta/POS
-  // débito/crédito) se guardan detallados; la RPC deriva la categoría de caja.
+  // Pago (una forma o MIXTO). Cada entrada es una forma de pago con su monto; la suma debe
+  // cuadrar con el total (lo valida la base). `recibido` solo en efectivo (para el vuelto).
   pagos: z
     .array(
       z.object({
@@ -54,11 +57,14 @@ const ventaSchema = z.object({
           "tarjeta_debito", "tarjeta_credito", "pos_debito", "pos_credito",
           "tarjeta", "pos", "qr", "billetera", "otro",
         ]),
-        monto: z.coerce.number().positive(),
+        monto: z.coerce.number().positive("Hay una forma de pago con monto en cero"),
+        recibido: z.coerce.number().positive().nullish(),
         referencia: z.string().trim().max(120).nullish(),
+        banco: z.string().trim().max(80).nullish(),
         titular: z.string().trim().max(120).nullish(),
       }),
     )
+    .max(10, "Demasiadas formas de pago")
     .optional(),
 });
 
@@ -75,22 +81,26 @@ export const POST = withTenant(
       numero_control: string;
       total: number;
       reusada: boolean;
+      vuelto?: number;
+      caja_id?: string;
     }>("crear_venta", {
       p_cliente_id: input.cliente_id ?? null,
       p_tipo_venta: input.tipo_venta,
-      p_metodo_pago: input.metodo_pago,
+      p_metodo_pago: input.metodo_pago ?? null,
       p_moneda: input.moneda,
       p_observaciones: input.observaciones ?? null,
       p_items: input.items,
-      p_pagos: input.pagos ?? null,
+      p_pagos: input.tipo_venta === "CREDITO" ? null : (input.pagos ?? null),
       p_idempotency_key: input.idempotency_key ?? null,
       p_descuento_pct: input.descuento_pct ?? 0,
       p_plazo_dias: input.tipo_venta === "CREDITO" ? (input.plazo_dias ?? null) : null,
+      p_deposito_id: null,
+      p_caja_id: input.caja_id ?? null,
     });
 
     if (error) {
-      // La función levanta excepciones de negocio (stock, caja, etc.) con mensaje claro.
-      return fail(error.message || "No se pudo registrar la venta.", 409);
+      // La función levanta excepciones de negocio (stock, caja, límite…) con mensaje claro.
+      return fail(error.message.replace(/^.*?ERROR:\s*/, "") || "No se pudo registrar la venta.", 409);
     }
     if (!data) return ERR.server();
 

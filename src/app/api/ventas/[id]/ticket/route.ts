@@ -20,7 +20,11 @@ const gs = (n: number) => `Gs. ${Math.round(Number(n) || 0).toLocaleString("es-P
 
 const metodoLabel = (m: string) => {
   const t = m.trim().toLowerCase();
-  return ({ efectivo: "Efectivo", transferencia: "Transferencia", tarjeta: "Tarjeta", cheque: "Cheque", qr: "QR", billetera: "Billetera", otro: "Otro" }[t] ?? (t ? t[0].toUpperCase() + t.slice(1) : "—"));
+  return ({
+    efectivo: "Efectivo", transferencia: "Transferencia", tarjeta: "Tarjeta", pos: "Tarjeta", cheque: "Cheque",
+    tarjeta_debito: "Tarjeta débito", tarjeta_credito: "Tarjeta crédito", pos_debito: "Tarjeta débito", pos_credito: "Tarjeta crédito",
+    qr: "QR / billetera", billetera: "QR / billetera", mixto: "Mixto", otro: "Otro",
+  }[t] ?? (t ? t[0].toUpperCase() + t.slice(1) : "—"));
 };
 
 export const GET = withTenant(async (ctx, req) => {
@@ -38,6 +42,8 @@ export const GET = withTenant(async (ctx, req) => {
       "ventas",
       "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, metodo_pago, cliente_id, usuario_nombre, " +
         "ventas_items(producto_nombre, sku, cantidad, precio_venta, tipo_iva, monto_iva, total_linea), " +
+        "pagos:ventas_pagos_detalle(metodo_pago, monto, referencia, recibido, vuelto, created_at), " +
+        "punto:puntos_venta(nombre), sucursal:sucursales(nombre), " +
         "cliente:clientes!cliente_id(nombre)",
     )
     .eq("id", id)
@@ -51,6 +57,25 @@ export const GET = withTenant(async (ctx, req) => {
   const fecha = v.fecha ? new Date(v.fecha as string).toLocaleString("es-PY", { timeZone: TZ_PY, dateStyle: "short", timeStyle: "short" }) : "";
   const metodo = v.tipo_venta === "CREDITO" ? `Crédito${v.plazo_dias ? ` (${v.plazo_dias} días)` : ""}` : metodoLabel(String(v.metodo_pago ?? "efectivo"));
   const anulada = v.estado === "anulada";
+  const pagos = ((v.pagos ?? []) as { metodo_pago: string; monto: number; referencia: string | null; recibido: number | null; vuelto: number | null; created_at: string }[])
+    .slice()
+    .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
+  const cajaTxt = [(v.punto as { nombre?: string } | null)?.nombre, (v.sucursal as { nombre?: string } | null)?.nombre].filter(Boolean).join(" · ");
+  // Forma de pago: crédito, una sola, o el detalle del pago mixto; efectivo con lo recibido y el vuelto.
+  const filasPago =
+    v.tipo_venta === "CREDITO" || pagos.length === 0
+      ? `<tr><td class="lbl">Pago</td><td class="val">${esc(metodo)}</td></tr>`
+      : pagos
+          .map((pg) => {
+            const ref = pg.referencia ? ` <span style="font-size:calc(var(--fs) - 2px)">(${esc(pg.referencia)})</span>` : "";
+            let fila = `<tr><td class="lbl">${esc(metodoLabel(pg.metodo_pago))}${ref}</td><td class="val">${gs(Number(pg.monto) || 0)}</td></tr>`;
+            if (pg.metodo_pago === "efectivo" && Number(pg.recibido) > 0) {
+              fila += `<tr class="sub"><td class="lbl">Recibido</td><td class="val">${gs(Number(pg.recibido))}</td></tr>`;
+              fila += `<tr><td class="lbl"><strong>Vuelto</strong></td><td class="val"><strong>${gs(Number(pg.vuelto) || 0)}</strong></td></tr>`;
+            }
+            return fila;
+          })
+          .join("");
 
   // Formato de ticket copiado de Reserva Caacupé (térmico 80mm, monoespaciado),
   // SIN el logo. Cada ítem: cantidad × nombre … total; abajo el desglose unitario.
@@ -112,7 +137,7 @@ export const GET = withTenant(async (ctx, req) => {
     ${anulada ? `<div class="anulado-banner">ANULADO</div>` : ""}
     <h1>${esc(clienteConfig.nombre)}</h1>
     <hr>
-    <div class="meta">${esc(v.numero_control)}<br>${esc(fecha)}</div>
+    <div class="meta">${esc(v.numero_control)}<br>${esc(fecha)}${cajaTxt ? `<br>${esc(cajaTxt)}` : ""}${v.usuario_nombre ? ` · ${esc(v.usuario_nombre)}` : ""}</div>
     <hr>
     <div class="cliente">Cliente: ${esc(clienteNombre)}</div>
     <hr>
@@ -122,7 +147,7 @@ export const GET = withTenant(async (ctx, req) => {
       <tr><td class="lbl">Subtotal</td><td class="val">${gs(Number(v.subtotal) || 0)}</td></tr>
       <tr><td class="lbl">IVA</td><td class="val">${gs(Number(v.monto_iva) || 0)}</td></tr>
       <tr class="total-row"><td class="lbl">TOTAL</td><td class="val">${gs(Number(v.total) || 0)}</td></tr>
-      <tr><td class="lbl">Pago</td><td class="val">${esc(metodo)}</td></tr>
+      ${filasPago}
     </table>
     <hr>
     <div class="footer">¡Gracias por tu compra!<br>Comprobante interno — no válido como factura legal.</div>

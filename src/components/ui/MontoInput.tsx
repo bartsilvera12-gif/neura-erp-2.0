@@ -33,6 +33,8 @@ type MontoInputProps = Omit<React.InputHTMLAttributes<HTMLInputElement>, "type" 
   onChange: (value: number) => void;
   /** Si true, permite decimales. Default: true */
   decimals?: boolean;
+  /** React 19: el ref llega como prop y se pasa al <input> (para enfocarlo desde afuera). */
+  ref?: React.Ref<HTMLInputElement>;
 };
 
 /**

@@ -1,23 +1,34 @@
 /**
- * POST /api/ventas/[id]/anular — anula la venta (devuelve stock + revierte el cobro).
- * Transaccional, vía la función `anular_venta`.
+ * POST /api/ventas/[id]/anular { motivo?, caja_id? } — anula la venta (devuelve el stock al
+ * depósito de la venta + revierte el cobro). Transaccional, vía `anular_venta` (receta 51):
+ *   · turno abierto: el cobro sale del arqueo de ese turno (como siempre)
+ *   · turno CERRADO: solo ADMIN o SUPERVISOR y con motivo; el turno cerrado no se toca y el
+ *     efectivo que se devuelve sale de una caja abierta (`caja_id` o la del usuario)
  */
+import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
-import { ok, fail, ERR } from "@/lib/api/responses";
+import { ok, fail } from "@/lib/api/responses";
+import { UUID_RE, idDeRuta, idInvalido } from "@/modules/inventario/server/ids";
+import { ROLES_CAJA } from "@/modules/caja/lib";
 
-function ventaId(req: { url: string }): string | null {
-  const segs = new URL(req.url).pathname.split("/").filter(Boolean);
-  const i = segs.indexOf("ventas");
-  return i >= 0 ? (segs[i + 1] ?? null) : null;
-}
+const cuerpo = z
+  .object({
+    motivo: z.string().trim().max(500).nullish(),
+    caja_id: z.string().uuid().nullish(),
+  })
+  .default({});
 
 export const POST = withTenant(
-  async (ctx, req) => {
-    const id = ventaId(req);
-    if (!id) return ERR.invalid("Falta el id de la venta");
-    const { data, error } = await ctx.db.rpc<{ estado: string }>("anular_venta", { p_venta_id: id });
-    if (error) return fail(error.message || "No se pudo anular la venta.", 409);
+  async (ctx, req, input) => {
+    const id = idDeRuta(req.url, "ventas");
+    if (!UUID_RE.test(id ?? "")) return idInvalido("venta");
+    const { data, error } = await ctx.db.rpc<{ estado: string; devolucion_efectivo?: number }>("anular_venta", {
+      p_venta_id: id,
+      p_motivo: input?.motivo ?? null,
+      p_caja_id: input?.caja_id ?? null,
+    });
+    if (error) return fail(error.message.replace(/^.*?ERROR:\s*/, "") || "No se pudo anular la venta.", 409);
     return ok(data);
   },
-  { roles: ["ADMIN", "CAJERO", "VENDEDOR"] },
+  { roles: ROLES_CAJA, body: cuerpo },
 );

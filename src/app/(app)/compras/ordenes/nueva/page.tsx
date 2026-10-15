@@ -190,7 +190,7 @@ function NuevaOrden() {
           <ArrowLeft className="h-4 w-4" />
         </Link>
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Operaciones · Compras</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Gastos empresariales · Compras</p>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{numeroEditando ? `Editar ${numeroEditando}` : "Nueva orden de compra"}</h1>
           <p className="mt-1 text-sm text-slate-500">El pedido al proveedor. No mueve el stock: eso pasa cuando recibís la mercadería.</p>
         </div>

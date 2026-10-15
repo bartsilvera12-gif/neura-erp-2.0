@@ -17,6 +17,7 @@ import { Drawer } from "@/components/Drawer";
 import { Select } from "@/components/Select";
 import MontoInput from "@/components/ui/MontoInput";
 import { METODOS_COBRO, type EstadoCuenta, type MetodoCobro } from "@/modules/clientes/cobros";
+import { SelectorCaja } from "@/modules/caja/SelectorCaja";
 
 const BRAND = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
@@ -37,6 +38,8 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
   const [modo, setModo] = useState<"auto" | "elegir">("auto");
   const [elegidas, setElegidas] = useState<Set<string>>(new Set());
   const [observacion, setObservacion] = useState("");
+  // Caja a la que entra lo cobrado (la base valida que siga abierta y sea de su sucursal).
+  const [cajaId, setCajaId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hecho, setHecho] = useState<{ id: string; numero: string; total: number; aFavor: number } | null>(null);
@@ -102,6 +105,7 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
         method: "POST",
         body: JSON.stringify({
           cliente_id: clienteId,
+          caja_id: cajaId,
           pagos: pagos.filter((p) => p.monto > 0).map((p) => ({ metodo: p.metodo, monto: p.monto, referencia: p.referencia.trim() || null })),
           aplicaciones: modo === "elegir" ? [...aplicacion.m.entries()].map(([cxc_id, monto]) => ({ cxc_id, monto })) : null,
           observacion: observacion.trim() || null,
@@ -232,9 +236,9 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
                 <span className="text-xs font-semibold text-amber-600">{diferencia > 0 ? `Falta asignar ${gs(diferencia)}` : `Sobran ${gs(-diferencia)}`}</span>
               ) : null}
             </div>
-            {pagos.some((p) => p.metodo === "efectivo" && p.monto > 0) ? (
-              <p className="mt-1 text-[11px] text-slate-400">El efectivo entra a la caja abierta.</p>
-            ) : null}
+            <div className="mt-3">
+              <SelectorCaja value={cajaId} onChange={setCajaId} etiqueta="Entra a la caja" />
+            </div>
           </div>
 
           {abiertas.length ? (

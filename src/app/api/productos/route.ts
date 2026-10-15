@@ -107,11 +107,13 @@ export const GET = withTenant(async (ctx, req) => {
   // lotes (el primero trae el total; el resto en paralelo). &campos=nombre → solo nombres.
   if (sp.get("pos") === "1") {
     const soloNombre = sp.get("campos") === "nombre";
+    // &deposito=<id> → el stock de ESE depósito (el de la caja abierta). Sin él, el de siempre.
+    const depositoPos = /^[0-9a-f-]{36}$/i.test(sp.get("deposito") ?? "") ? sp.get("deposito") : null;
     // UNA llamada (productos_pos, receta 47) en vez de 1 + N lotes de 1000 con OFFSET
     // creciente: mismas columnas, mismo orden y el mismo aviso de vencidos. Lo de abajo
     // queda de respaldo si la receta no está aplicada en este schema.
     const rpc = await ctx.db.rpc<{ productos: Record<string, unknown>[]; vencidos: { producto_id: string; vencido: number }[] }>(
-      "productos_pos", { p_solo_nombre: soloNombre });
+      "productos_pos", { p_solo_nombre: soloNombre, p_deposito: soloNombre ? null : depositoPos });
     if (!rpc.error && rpc.data) {
       const filas = rpc.data.productos ?? [];
       if (rpc.data.vencidos?.length) {

@@ -1,11 +1,12 @@
 /**
- * Un gasto o servicio.
- *   GET    /api/gastos/[id] → { gasto, items, cxp: { …, pagos } | null, caja: { … } | null }
- *   DELETE /api/gastos/[id] → elimina un BORRADOR (y su comprobante adjunto)
+ * Un gasto operativo.
+ *   GET    /api/gastos/[id] → { gasto, items, adjuntos, cxp: { …, pagos } | null, caja: { … } | null }
+ *   DELETE /api/gastos/[id] → elimina un BORRADOR (y sus adjuntos del bucket)
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, fail, ERR } from "@/lib/api/responses";
 import { borrarComprobante, prefijoComprobantes } from "@/lib/compras/storage";
+import { mensajeDb } from "@/lib/gastos/esquema";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -23,7 +24,7 @@ export const GET = withTenant(
     const id = gastoId(req);
     if (!id) return ERR.invalid("Falta el id del gasto");
     const { data, error } = await ctx.db.rpc("gasto_detalle", { p_id: id });
-    if (error) return ERR.server();
+    if (error) return fail(mensajeDb(error.message), 422);
     if (!data) return ERR.notFound("gasto");
     return ok(data);
   },
@@ -34,10 +35,10 @@ export const DELETE = withTenant(
   async (ctx, req) => {
     const id = gastoId(req);
     if (!id) return ERR.invalid("Falta el id del gasto");
-    const { data, error } = await ctx.db.rpc<{ id: string; comprobante_path: string | null }>("eliminar_gasto", { p_id: id });
-    if (error) return fail(error.message.replace(/^.*?ERROR:\s*/, ""), 422);
-    const path = data?.comprobante_path;
-    if (path && path.startsWith(prefijoComprobantes(ctx.empresaId, id))) await borrarComprobante(path);
+    const { data, error } = await ctx.db.rpc<{ id: string; paths: string[] | null }>("eliminar_gasto", { p_id: id });
+    if (error) return fail(mensajeDb(error.message), 422);
+    const prefijo = prefijoComprobantes(ctx.empresaId, id);
+    for (const path of data?.paths ?? []) if (path.startsWith(prefijo)) await borrarComprobante(path);
     return ok({ id });
   },
   { roles: ["ADMIN"] },

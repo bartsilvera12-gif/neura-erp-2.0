@@ -4,7 +4,8 @@
  *                      aplicaciones?: [{ cxc_id, monto }], observacion? }
  *        → { id, numero_recibo, total, a_favor }. Sin aplicaciones paga lo más viejo primero.
  *        Lo cobrado de más (o sin deuda) queda como saldo a favor del cliente (anticipo).
- *        Todo lo cobrado entra a la caja abierta (el efectivo la necesita abierta).
+ *        Todo lo cobrado entra a la caja abierta del usuario, o a `caja_id` si eligió una
+ *        (el efectivo la necesita abierta; receta 51, caja_abierta_para).
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
@@ -12,6 +13,7 @@ import { created, fail } from "@/lib/api/responses";
 
 const cuerpo = z.object({
   cliente_id: z.string().uuid(),
+  caja_id: z.string().uuid().nullish(),
   pagos: z
     .array(z.object({
       metodo: z.enum(["efectivo", "transferencia", "tarjeta", "pos", "cheque", "otro", "saldo_favor"]),

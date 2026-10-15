@@ -72,11 +72,7 @@ export default function OrdenesPage() {
     <div className="space-y-6 pb-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Operaciones · Compras</p>
-          </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Órdenes de compra</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Órdenes de compra</h1>
           <p className="mt-1 text-sm text-slate-500">Lo que le pediste a cada proveedor y cuánto ya llegó.</p>
         </div>
         <Link href="/compras/ordenes/nueva" className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95" style={{ backgroundColor: TEAL }}>

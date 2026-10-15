@@ -20,18 +20,32 @@ export const GET = withTenant(async (ctx, req) => {
   const vq = await ctx.db
     .select(
       "ventas",
-      "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, metodo_pago, moneda, cliente_id, observaciones, " +
+      "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, metodo_pago, moneda, cliente_id, observaciones, " +
+        "usuario_nombre, caja_id, anulada_at, anulada_motivo, " +
         "ventas_items(id, producto_nombre, sku, cantidad, precio_venta, tipo_precio, tipo_iva, monto_iva, total_linea), " +
-        "cliente:clientes!cliente_id(nombre)",
+        "pagos:ventas_pagos_detalle(id, metodo_pago, monto, referencia, banco, recibido, vuelto, created_at), " +
+        "turno:cajas(numero_caja, estado), punto:puntos_venta(nombre), sucursal:sucursales(nombre), deposito:depositos(nombre), " +
+        "cliente:clientes!cliente_id(nombre), cuenta:cuentas_por_cobrar(vencimiento, cobrado, saldo, estado)",
     )
     .eq("id", id)
     .limit(1);
   if (vq.error) return ERR.server();
   const fila = (vq.data?.[0] ?? null) as unknown as
-    | (Record<string, unknown> & { ventas_items?: unknown[] | null; cliente?: { nombre?: string | null } | null })
+    | (Record<string, unknown> & {
+        ventas_items?: unknown[] | null;
+        pagos?: { created_at: string }[] | null;
+        cliente?: { nombre?: string | null } | null;
+        cuenta?: unknown[] | Record<string, unknown> | null;
+      })
     | null;
   if (!fila) return ERR.notFound();
-  const { ventas_items, cliente, ...venta } = fila;
+  const { ventas_items, cliente, pagos, cuenta, ...venta } = fila;
 
-  return ok({ venta, items: ventas_items ?? [], cliente_nombre: cliente?.nombre || "Sin nombre" });
+  return ok({
+    venta,
+    items: ventas_items ?? [],
+    pagos: (pagos ?? []).slice().sort((a, b) => (a.created_at < b.created_at ? -1 : 1)),
+    cuenta: Array.isArray(cuenta) ? (cuenta[0] ?? null) : (cuenta ?? null),
+    cliente_nombre: cliente?.nombre || "Sin nombre",
+  });
 });

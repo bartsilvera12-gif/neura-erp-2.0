@@ -2,9 +2,12 @@
  * Ventas — listado paginado EN EL SERVIDOR para el dashboard de Caja (ÓRDENES DE VENTA).
  *
  *   GET /api/ventas?pagina=1&por_pagina=25&q=&tipo=&iva=&estado=&producto=&desde=&hasta=&caja=
+ *                   &sucursal=&punto=&metodo=
  *     → { rows, total, total_general }
- *     caja=<id> | caja=abierta (la abierta si hay, si no todas); contar=0 → sin contar
- *     (total y total_general en null: el navegador ya los tiene para esos filtros)
+ *     caja=<turno> | caja=abierta (la del usuario si hay, si no todas); sucursal=<id>;
+ *     punto=<caja / punto de venta>; metodo=efectivo|tarjeta_debito|tarjeta_credito|tarjeta|
+ *     transferencia|qr|cheque|mixto (una venta mixta aparece en cada uno de sus métodos);
+ *     contar=0 → sin contar (total y total_general en null: el navegador ya los tiene)
  *
  * Antes se bajaban TODAS las ventas con sus ítems y se filtraba en el navegador: con
  * miles de ventas eran MB y segundos por cada apertura de la pantalla. Ahora la base
@@ -18,7 +21,21 @@ import { withTenant } from "@/lib/api/with-tenant";
 import { ok, ERR } from "@/lib/api/responses";
 import { condicionGrupo, variantesBusqueda } from "@/lib/api/busqueda-servidor";
 
-const COLS = "id, numero_control, fecha, total, tipo_venta, estado, ventas_items(producto_nombre, sku, cantidad, tipo_iva)";
+const COLS =
+  "id, numero_control, fecha, total, tipo_venta, estado, metodo_pago, sucursal_id, punto_venta_id, " +
+  "ventas_items(producto_nombre, sku, cantidad, tipo_iva), pagos:ventas_pagos_detalle(metodo_pago, monto), " +
+  "punto:puntos_venta(nombre), sucursal:sucursales(nombre)";
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+// Forma de pago del filtro → los valores guardados en el detalle (POS viejos incluidos).
+const METODOS: Record<string, string[]> = {
+  efectivo: ["efectivo"],
+  tarjeta_debito: ["tarjeta_debito", "pos_debito"],
+  tarjeta_credito: ["tarjeta_credito", "pos_credito"],
+  tarjeta: ["tarjeta", "pos"],
+  transferencia: ["transferencia"],
+  qr: ["qr", "billetera"],
+  cheque: ["cheque"],
+};
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 const TIPOS = ["CONTADO", "CREDITO"];
 const ESTADOS = ["pendiente", "completada", "anulada", "parcialmente_devuelta", "devuelta_total"];
@@ -38,6 +55,10 @@ export const GET = withTenant(async (ctx, req) => {
   const desde = sp.get("desde") ?? "";
   const hasta = sp.get("hasta") ?? "";
   const qCruda = (sp.get("q") ?? "").trim();
+  const sucursal = UUID_RE.test(sp.get("sucursal") ?? "") ? (sp.get("sucursal") as string) : "";
+  const punto = UUID_RE.test(sp.get("punto") ?? "") ? (sp.get("punto") as string) : "";
+  const metodo = sp.get("metodo") ?? "";
+  const filtroMetodo = Object.prototype.hasOwnProperty.call(METODOS, metodo) ? METODOS[metodo] : null;
   // contar=0 → el navegador ya tiene los totales de estos mismos filtros (solo cambió de
   // página): no se vuelve a contar todo. Viajan total/total_general en null.
   const contar = sp.get("contar") !== "0";
@@ -47,12 +68,9 @@ export const GET = withTenant(async (ctx, req) => {
     variantesBusqueda(ctx.db, qCruda),
     sp.get("caja") === "abierta"
       ? ctx.db
-          .select("cajas", "id")
-          .eq("estado", "abierta")
-          .order("fecha_apertura", { ascending: false })
-          .limit(1)
-          .then((r) => ((r.data?.[0] as unknown as { id: string } | undefined)?.id ?? null))
-      : Promise.resolve(sp.get("caja")),
+          .rpc<string | null>("caja_abierta_para", {})
+          .then((r) => (r.error ? null : (r.data ?? null)))
+      : Promise.resolve(UUID_RE.test(sp.get("caja") ?? "") ? sp.get("caja") : null),
   ]);
   // Totales escritos tal cual ("12.000" o "12000") se comparan exactos.
   const numeros = qCruda.split(/\s+/).map((t) => t.replace(/\./g, "")).filter((n) => /^\d{1,15}$/.test(n));
@@ -61,10 +79,15 @@ export const GET = withTenant(async (ctx, req) => {
   let cols = COLS;
   if (IVAS.includes(iva)) cols += ", fi:ventas_items!inner(id)";
   if (producto) cols += ", fp:ventas_items!inner(id)";
+  if (filtroMetodo) cols += ", fm:ventas_pagos_detalle!inner(id)";
 
   let query = ctx.db.select("ventas", cols, contar ? { count: "exact" } : undefined);
   if (cajaId) query = query.eq("caja_id", cajaId);
   if (TIPOS.includes(tipo)) query = query.eq("tipo_venta", tipo);
+  if (sucursal) query = query.eq("sucursal_id", sucursal);
+  if (punto) query = query.eq("punto_venta_id", punto);
+  if (filtroMetodo) query = query.in("fm.metodo_pago", filtroMetodo);
+  else if (metodo === "mixto") query = query.eq("metodo_pago", "mixto");
   if (ESTADOS.includes(estado)) query = query.eq("estado", estado);
   if (IVAS.includes(iva)) query = query.eq("fi.tipo_iva", iva);
   if (producto) query = query.eq("fp.producto_nombre", producto);
@@ -80,6 +103,7 @@ export const GET = withTenant(async (ctx, req) => {
   // ninguno es el mismo número que el total de la consulta.
   const hayFiltros =
     TIPOS.includes(tipo) || ESTADOS.includes(estado) || IVAS.includes(iva) || !!producto ||
+    !!sucursal || !!punto || !!filtroMetodo || metodo === "mixto" ||
     RE_FECHA.test(desde) || RE_FECHA.test(hasta) || grupos.length > 0;
   // (el builder no sale a la base hasta que se lo espera)
   let general = ctx.db.select("ventas", "id", { count: "exact", head: true });
@@ -97,9 +121,10 @@ export const GET = withTenant(async (ctx, req) => {
 
   const rows = ((res.data ?? []) as unknown as Record<string, unknown>[]).map((v) => {
     // Los embebidos de filtro (fi, fp) no viajan al navegador.
-    const { fi, fp, ...resto } = v;
+    const { fi, fp, fm, ...resto } = v;
     void fi;
     void fp;
+    void fm;
     return resto;
   });
   if (!contar) return ok({ rows, total: null, total_general: null });

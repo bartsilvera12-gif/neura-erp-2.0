@@ -4,8 +4,10 @@
  * Caja (POS) — portada de neura-erp-oymcomercial (/ventas), re-plomada al 2.0.
  * Layout de dos paneles: izquierda buscador/escaneo + carrito; derecha panel de
  * marca con el último producto + totales + descuento + "Aceptar y cobrar".
- * Fase 1: venta de contado/crédito, descuento global, IVA por línea, edición de
- * precio, ticket imprimible. (Sin caja-por-turno / pedidos / multi-cobro todavía.)
+ * Venta de contado/crédito, descuento global, IVA por línea, edición de precio, ticket.
+ * Caja por sucursal (receta 51): se vende en la caja abierta elegida (caja · sucursal ·
+ * turno); el stock que se ve y se descuenta es el del depósito de ESA caja. Cobro con una
+ * o varias formas de pago (efectivo con vuelto, débito, crédito, transferencia, QR…).
  */
 
 import Link from "next/link";
@@ -15,13 +17,17 @@ import { CheckCircle2, FileSignature, Package, Search, Trash2, X } from "lucide-
 import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { browserClient } from "@/lib/supabase/browser";
-import CajaControlPanel from "@/components/caja/CajaControlPanel";
+import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
-import MontoInput, { parseMontoInput } from "@/components/ui/MontoInput";
 import { QtyInput } from "@/components/ui/QtyInput";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
-import { Select } from "@/components/Select";
-import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
+import { CajaBarra } from "@/modules/caja/CajaBarra";
+import { AperturaModal } from "@/modules/caja/AperturaModal";
+import { MovimientoModal } from "@/modules/caja/MovimientoModal";
+import { CierreModal } from "@/modules/caja/CierreModal";
+import { TurnoModal } from "@/modules/caja/TurnoModal";
+import { CobroModal, type PagoEnviar } from "@/modules/caja/CobroModal";
+import { cajaEnUso, cajaGuardada, etiquetaCaja, guardarCaja, invalidarCajas, useEstadoCajas } from "@/modules/caja/turno";
 import {
   calcIva,
   formatGs,
@@ -51,25 +57,6 @@ function tierPorCantidad(c: number): TipoPrecio {
 
 const IVAS_SEG: TipoIva[] = ["EXENTA", "5%", "10%"];
 const ivaCorto = (t: TipoIva) => (t === "EXENTA" ? "Ex" : t);
-
-// Métodos de pago (con tipo débito/crédito para tarjeta y POS). Soportan pago mixto.
-type MetodoDetalle = "efectivo" | "transferencia" | "tarjeta_debito" | "tarjeta_credito" | "pos_debito" | "pos_credito";
-const METODOS_PAGO: { value: MetodoDetalle; label: string }[] = [
-  { value: "efectivo", label: "Efectivo" },
-  { value: "transferencia", label: "Transferencia" },
-  { value: "tarjeta_debito", label: "Tarjeta débito" },
-  { value: "tarjeta_credito", label: "Tarjeta crédito" },
-  { value: "pos_debito", label: "POS débito" },
-  { value: "pos_credito", label: "POS crédito" },
-];
-/** Categoría para la cabecera de la venta (la RPC deriva la del cajón). */
-function categoriaPago(m: MetodoDetalle): "efectivo" | "transferencia" | "tarjeta" | "pos" {
-  if (m === "efectivo") return "efectivo";
-  if (m === "transferencia") return "transferencia";
-  return m.startsWith("tarjeta") ? "tarjeta" : "pos";
-}
-type PagoLinea = { id: string; metodo: MetodoDetalle; monto: number };
-const nuevoPagoId = () => `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
 type CartLine = {
   cart_line_id: string;
@@ -118,16 +105,28 @@ export default function CajaPage() {
 }
 
 function CajaPageContenido() {
-  // ?cerrar=1 → abre la ventana de cierre (menú "Arqueo / Cierre", botones de Órdenes).
   const searchParams = useSearchParams();
   const router = useRouter();
+  const me = useUsuario();
+
+  // ── Caja (turno abierto) en la que se vende ────────────────────────────────
+  // La elegida en este navegador (si sigue abierta), si no la que le toca al usuario.
+  const [recargaCajas, setRecargaCajas] = useState(0);
+  const { datos: estadoCajas } = useEstadoCajas(recargaCajas);
+  const [elegida, setElegida] = useState<string | null>(null);
+  useEffect(() => { setElegida(cajaGuardada(me?.usuarioId)); }, [me?.usuarioId]);
+  const caja = useMemo(() => cajaEnUso(estadoCajas, elegida), [estadoCajas, elegida]);
+  const elegirCaja = useCallback((id: string) => { setElegida(id); guardarCaja(me?.usuarioId, id); }, [me?.usuarioId]);
+  const refrescarCajas = useCallback(() => { invalidarCajas(); setRecargaCajas((k) => k + 1); }, []);
+  const [modalCaja, setModalCaja] = useState<null | "abrir" | "mov" | "cerrar" | "ver">(null);
+
+  // ?cerrar=1 → abre la ventana de cierre de la caja en uso (links viejos de "Arqueo y cierre").
   const pedirCierre = searchParams.get("cerrar") === "1";
-  const [cierreTick, setCierreTick] = useState(0);
   useEffect(() => {
-    if (!pedirCierre) return;
-    setCierreTick((t) => t + 1);
+    if (!pedirCierre || !estadoCajas) return;
+    if (caja) setModalCaja("cerrar");
     router.replace("/caja/nueva", { scroll: false });
-  }, [pedirCierre, router]);
+  }, [pedirCierre, estadoCajas, caja, router]);
 
   // ── Datos ──────────────────────────────────────────────────────────────────
   const [productos, setProductos] = useState<Producto[]>([]);
@@ -154,26 +153,19 @@ function CajaPageContenido() {
   const [modalNuevoCliente, setModalNuevoCliente] = useState(false);
   const clienteContainerRef = useRef<HTMLDivElement>(null);
 
-  // ── Cobro (soporta pago mixto) ──────────────────────────────────────────────
+  // ── Cobro (una o varias formas de pago: CobroModal) ─────────────────────────
   const [cobroOpen, setCobroOpen] = useState(false);
-  const [pagos, setPagos] = useState<PagoLinea[]>([]);
-  const [efectivoRecibido, setEfectivoRecibido] = useState("");
   const [cobrando, setCobrando] = useState(false);
   const [cobroError, setCobroError] = useState<string | null>(null);
-  const [ventaOk, setVentaOk] = useState<string | null>(null);
+  const [ventaOk, setVentaOk] = useState<{ numero: string; vuelto: number } | null>(null);
   const isSubmittingRef = useRef(false);
   const idempotencyKeyRef = useRef<string | null>(null);
-
-  // ── Caja por turno (gate de la venta) ───────────────────────────────────────
-  const [cajaAbierta, setCajaAbierta] = useState(false);
-  const [refreshCaja, setRefreshCaja] = useState(0);
 
   // Espejo del estado para los atajos de teclado (se asigna en cada render).
   const kbRef = useRef<{
     abrirCobro: () => void;
-    confirmarCobro: () => Promise<void> | void;
     cobroOpen: boolean;
-    cobrando: boolean;
+    modalAbierto: boolean;
     cart: CartLine[];
     q: string;
     inputRef: React.RefObject<HTMLInputElement | null>;
@@ -188,8 +180,15 @@ function CajaPageContenido() {
   // Catálogo liviano para la caja (?pos=1: solo lo que usa el POS, sin costos, y COMPLETO
   // aunque pase de 1000). Clientes: solo unos pocos para las sugerencias; al escribir se
   // busca en la base.
+  // Stock del depósito de la caja en uso (cambia si se cambia de caja).
+  const depositoCaja = caja?.deposito_id ?? null;
   useEffect(() => {
-    apiFetch<Producto[]>("/api/productos?pos=1").then(setProductos).catch(() => {});
+    if (!depositoCaja) return;
+    let vivo = true;
+    apiFetch<Producto[]>(`/api/productos?pos=1&deposito=${depositoCaja}`).then((p) => { if (vivo) setProductos(p); }).catch(() => {});
+    return () => { vivo = false; };
+  }, [depositoCaja]);
+  useEffect(() => {
     // Se suma a lo que ya haya (p. ej. el cliente que llega preelegido con ?cliente=).
     apiFetch<Cliente[]>("/api/clientes?limit=20")
       .then((r) => setClientes((prev) => [...prev.filter((p) => !r.some((x) => x.id === p.id)), ...r]))
@@ -286,24 +285,8 @@ function CajaPageContenido() {
       const tag = el?.tagName;
       const esTexto = tag === "INPUT" || tag === "TEXTAREA" || el?.isContentEditable === true;
 
-      // Dentro del modal de cobro: Esc cierra; Enter confirma, PERO no cuando el
-      // foco está en un botón/select/opción (ahí Enter lo maneja el propio control:
-      // abrir el método, elegir opción, o activar Cancelar/Confirmar).
-      if (s.cobroOpen) {
-        if (e.key === "Escape") {
-          // Si hay un dropdown de método abierto, que Escape lo cierre a él (no al modal).
-          if (document.querySelector("[role=listbox]")) return;
-          if (!s.cobrando) s.setCobroOpen(false);
-          return;
-        }
-        if (e.key === "Enter") {
-          const esControl = tag === "BUTTON" || tag === "SELECT" || el?.getAttribute("role") === "option" || !!el?.closest("[role=listbox]");
-          if (esControl) return; // dejar que el control haga lo suyo
-          e.preventDefault();
-          if (!s.cobrando) void s.confirmarCobro();
-        }
-        return;
-      }
+      // Con el cobro (o una ventana de la caja) abierto, el teclado es de esa ventana.
+      if (s.cobroOpen || s.modalAbierto) return;
 
       // Espacio: abrir cobro. Desde el buscador VACÍO (para no romper nombres con
       // espacios) o desde una zona neutra (no un campo de texto / botón / link).
@@ -402,17 +385,6 @@ function CajaPageContenido() {
   const clienteObligatorio = tipoDocumento === "factura" || tipoVenta === "CREDITO";
   const plazoDiasNum = parseInt(plazoDias) || 0;
 
-  // Pago mixto: la suma de los montos debe igualar el total.
-  const totalPagos = pagos.reduce((a, p) => a + (p.monto || 0), 0);
-  const restante = total - totalPagos;
-  const hayEfectivo = pagos.some((p) => p.metodo === "efectivo");
-  const efectivoAplicado = pagos.filter((p) => p.metodo === "efectivo").reduce((a, p) => a + (p.monto || 0), 0);
-  // Vuelto: solo sobre la parte en efectivo (si el cliente entrega más).
-  const recibidoNum = parseMontoInput(efectivoRecibido);
-  const vuelto = hayEfectivo && recibidoNum > 0 ? Math.max(0, recibidoNum - efectivoAplicado) : 0;
-  const faltaEfectivo = hayEfectivo && recibidoNum > 0 ? Math.max(0, efectivoAplicado - recibidoNum) : 0;
-  const cobroListo = tipoVenta === "CREDITO" || restante === 0;
-
   // Presupuesto: se liga a la venta solo si en el carrito queda alguna de sus líneas.
   const presuOk = presu && !("error" in presu) ? presu : null;
   const presuActivo = presuOk && cart.some((l) => Object.values(presuOk.lineaDe).includes(l.cart_line_id)) ? presuOk : null;
@@ -491,6 +463,10 @@ function CajaPageContenido() {
   function abrirCobro() {
     setCobroError(null);
     if (cart.length === 0 || haySinStock) return;
+    if (!caja) {
+      setCobroError("Abrí (o elegí) la caja en la que vas a vender.");
+      return;
+    }
     if (clienteObligatorio && !clienteId) {
       setCobroError(tipoDocumento === "factura" ? "Para emitir factura elegí un cliente." : "La venta a crédito requiere un cliente.");
       return;
@@ -499,40 +475,11 @@ function CajaPageContenido() {
       setCobroError("Ingresá un plazo de crédito de al menos 1 día.");
       return;
     }
-    setEfectivoRecibido("");
-    // Arranca con un solo pago en efectivo por el total (camino rápido).
-    setPagos(tipoVenta === "CREDITO" ? [] : [{ id: nuevoPagoId(), metodo: "efectivo", monto: total }]);
     setCobroOpen(true);
   }
 
-  // ── Handlers de pago mixto ──────────────────────────────────────────────────
-  const setPagoMetodo = useCallback((id: string, metodo: MetodoDetalle) => {
-    setPagos((prev) => prev.map((p) => (p.id === id ? { ...p, metodo } : p)));
-  }, []);
-  const setPagoMonto = useCallback((id: string, monto: number) => {
-    setPagos((prev) => prev.map((p) => (p.id === id ? { ...p, monto: Math.max(0, Math.round(monto)) } : p)));
-  }, []);
-  const quitarPago = useCallback((id: string) => {
-    setPagos((prev) => (prev.length <= 1 ? prev : prev.filter((p) => p.id !== id)));
-  }, []);
-  // Agrega un método nuevo y le asigna el monto que falta.
-  const agregarPago = useCallback(() => {
-    setPagos((prev) => {
-      const sum = prev.reduce((a, p) => a + (p.monto || 0), 0);
-      const falta = Math.max(0, total - sum);
-      const usados = new Set(prev.map((p) => p.metodo));
-      const siguiente = (METODOS_PAGO.find((m) => !usados.has(m.value)) ?? METODOS_PAGO[1]).value;
-      return [...prev, { id: nuevoPagoId(), metodo: siguiente, monto: falta }];
-    });
-  }, [total]);
-
-  async function confirmarCobro() {
-    if (isSubmittingRef.current) return;
-    // Pago mixto: la suma debe cuadrar con el total (salvo crédito).
-    if (tipoVenta !== "CREDITO" && restante !== 0) {
-      setCobroError(restante > 0 ? `Falta asignar ${formatGs(restante)}.` : `Te pasaste por ${formatGs(-restante)}.`);
-      return;
-    }
+  async function confirmarCobro(pagos: PagoEnviar[]) {
+    if (isSubmittingRef.current || !caja) return;
     isSubmittingRef.current = true;
     setCobrando(true);
     setCobroError(null);
@@ -549,19 +496,18 @@ function CajaPageContenido() {
           ...(l.precio_override != null && l.precio_override > 0 ? { precio_unitario: l.precio_override } : {}),
         };
       });
-      const venta = await apiFetch<{ venta_id: string; numero_control: string; total: number; aviso_presupuesto?: string }>("/api/caja/venta", {
+      const venta = await apiFetch<{ venta_id: string; numero_control: string; total: number; vuelto?: number; aviso_presupuesto?: string }>("/api/caja/venta", {
         method: "POST",
         body: JSON.stringify({
+          caja_id: caja.id,
           cliente_id: clienteId || null,
           tipo_venta: tipoVenta,
-          // Cabecera: 'mixto' si hay varios medios; si no, la categoría del único.
-          metodo_pago: tipoVenta === "CREDITO" ? "otro" : (pagos.length > 1 ? "mixto" : categoriaPago(pagos[0]?.metodo ?? "efectivo")),
           moneda: "GS",
           idempotency_key: idempotencyKeyRef.current,
           plazo_dias: tipoVenta === "CREDITO" ? plazoDiasNum : undefined,
           items,
-          // Detalle de pagos (solo contado). La RPC valida que sume el total.
-          pagos: tipoVenta === "CREDITO" ? undefined : pagos.map((p) => ({ metodo_pago: p.metodo, monto: p.monto })),
+          // Formas de pago (solo contado). La base valida que sumen el total.
+          pagos: tipoVenta === "CREDITO" ? undefined : pagos,
           presupuesto_id: presuActivo?.id,
         }),
       });
@@ -582,18 +528,19 @@ function CajaPageContenido() {
       // 2.0 es por Bearer, así que una pestaña nueva no lleva el token: traemos el
       // HTML con el token y lo abrimos como blob (el auto-print corre igual).
       void imprimirTicket(venta.venta_id);
-      setVentaOk(venta.numero_control);
+      setVentaOk({ numero: venta.numero_control, vuelto: Number(venta.vuelto) || 0 });
       setCobroOpen(false);
       vaciarCarrito();
       setClienteId("");
       setClienteQuery("");
       setTipoVenta("CONTADO");
       setPlazoDias("");
-      // refrescar el resumen de caja (el turno acaba de cobrar)
-      setRefreshCaja((t) => t + 1);
-      setTimeout(() => setVentaOk(null), 6000);
+      setTimeout(() => inputRef.current?.focus(), 0);
     } catch (e) {
-      setCobroError((e as Error).message);
+      const msg = (e as Error).message;
+      setCobroError(msg);
+      // La caja se cerró (u otra cosa cambió) mientras se vendía: se refresca el estado.
+      if (/caja/i.test(msg)) refrescarCajas();
     } finally {
       isSubmittingRef.current = false;
       setCobrando(false);
@@ -602,9 +549,16 @@ function CajaPageContenido() {
 
   // Espejo del estado para los atajos de teclado (siempre el último valor).
   kbRef.current = {
-    abrirCobro, confirmarCobro, cobroOpen, cobrando, cart, q, inputRef,
+    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente, cart, q, inputRef,
     updateCant, removeFromCart, setCobroOpen, setQ, setClienteOpen,
   };
+
+  // El aviso de "venta registrada" se va solo (con vuelto queda más tiempo, para leerlo).
+  useEffect(() => {
+    if (!ventaOk) return;
+    const t = setTimeout(() => setVentaOk(null), ventaOk.vuelto > 0 ? 12000 : 6000);
+    return () => clearTimeout(t);
+  }, [ventaOk]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -615,20 +569,32 @@ function CajaPageContenido() {
           <h1 className="text-lg font-semibold tracking-tight text-slate-900">Caja</h1>
           <span className="hidden text-xs text-slate-400 sm:inline">· Escaneá y cobrá directo</span>
         </div>
-        <Link href="/caja" className="shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
-          Ver órdenes del día →
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link href="/caja/turnos" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+            Apertura y cierre
+          </Link>
+          <Link href="/caja" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
+            Órdenes de venta →
+          </Link>
+        </div>
       </div>
 
-      {/* Caja por turno: gate de la venta. Sin caja abierta no se puede cobrar. */}
+      {/* Caja en la que se vende: sin caja abierta no se puede cobrar. */}
       <div className="shrink-0">
-        <CajaControlPanel key={`caja-${cierreTick}`} onStateChange={setCajaAbierta} defaultCollapsed refreshTick={refreshCaja} abrirCierre={cierreTick > 0} />
+        <CajaBarra estado={estadoCajas} caja={caja} onElegir={elegirCaja}
+          onAbrir={() => setModalCaja("abrir")} onMov={() => setModalCaja("mov")}
+          onVer={() => setModalCaja("ver")} onCerrar={() => setModalCaja("cerrar")} />
       </div>
 
       {ventaOk && (
-        <div className="flex shrink-0 items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 shadow-sm">
-          <CheckCircle2 className="h-5 w-5" /> Venta <strong>{ventaOk}</strong> registrada. Ticket enviado a imprimir.
+        <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 shadow-sm">
+          <CheckCircle2 className="h-5 w-5" />
+          <span>Venta <strong>{ventaOk.numero}</strong> registrada. Ticket enviado a imprimir.</span>
+          {ventaOk.vuelto > 0 ? (
+            <span className="rounded-lg bg-white px-3 py-1 text-base font-extrabold tabular-nums text-emerald-700 ring-1 ring-emerald-200">Vuelto {formatGs(ventaOk.vuelto)}</span>
+          ) : null}
           {ventaPresu ? <span className="font-normal">{ventaPresu}</span> : null}
+          <button type="button" onClick={() => setVentaOk(null)} aria-label="Cerrar aviso" className="ml-auto text-emerald-500 hover:text-emerald-800"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -667,9 +633,9 @@ function CajaPageContenido() {
         )
       ) : null}
 
-      {!cajaAbierta ? (
+      {!caja ? (
         <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
-          Abrí la caja para empezar a cobrar.
+          {estadoCajas ? (estadoCajas.abiertas.length > 1 ? "Elegí arriba la caja en la que vas a vender." : "Abrí la caja para empezar a cobrar.") : "Cargando la caja…"}
         </div>
       ) : (
       <>
@@ -953,73 +919,29 @@ function CajaPageContenido() {
       </>
       )}
 
-      {/* Modal de cobro */}
+      {/* Cobro: formas de pago (mixto, vuelto) o crédito */}
       {cobroOpen && (
-        <CapaModal onClose={cobrando ? undefined : () => setCobroOpen(false)} fondo="bg-black/40" cerrarConEscape={false}>
-          <div role="dialog" aria-modal className={`flex w-full max-w-md ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`}>
-            <div className="shrink-0 px-6 pt-6 pb-4">
-              <h3 className="text-lg font-semibold text-slate-900">Cobrar</h3>
-              <p className="mt-1 text-sm text-slate-500">Total: <strong className="text-slate-900">{formatGs(total)}</strong> · {cantTotal} ítem{cantTotal === 1 ? "" : "s"}</p>
-            </div>
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-6 py-1">
-            {tipoVenta === "CREDITO" ? (
-              <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3 text-sm text-amber-800">
-                Venta <strong>a crédito</strong>{plazoDiasNum ? ` a ${plazoDiasNum} días` : ""}. Se registra en la cuenta corriente del cliente; no entra dinero a la caja ahora.
-              </div>
-            ) : (
-              <>
-                {/* Pago mixto: una fila por medio (método + monto). Suma = total. */}
-                <div className="space-y-2">
-                  {pagos.map((p) => (
-                    <div key={p.id} className="flex items-center gap-2">
-                      <div className="min-w-0 flex-1">
-                        <Select value={p.metodo} onChange={(v) => setPagoMetodo(p.id, v as MetodoDetalle)} options={METODOS_PAGO.map((m) => [m.value, m.label])} block />
-                      </div>
-                      <MontoInput value={p.monto} onChange={(n) => setPagoMonto(p.id, n)} decimals={false}
-                        className="w-32 shrink-0 rounded-md border border-slate-200 px-3 py-2 text-right text-sm font-semibold tabular-nums outline-none focus:ring-2" />
-                      {pagos.length > 1 && (
-                        <button type="button" onClick={() => quitarPago(p.id)} aria-label="Quitar método" className="shrink-0 rounded-md p-2 text-slate-300 transition-colors hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                <button type="button" onClick={agregarPago} className="text-xs font-semibold transition-colors hover:brightness-90" style={{ color: TEAL }}>
-                  + Agregar método (pago mixto)
-                </button>
-
-                {/* Pagado / restante */}
-                <div className="space-y-1 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
-                  <div className="flex justify-between text-slate-500"><span>Pagado</span><span className="tabular-nums">{formatGs(totalPagos)}</span></div>
-                  <div className={`flex justify-between font-semibold ${restante === 0 ? "text-emerald-700" : restante > 0 ? "text-amber-700" : "text-rose-700"}`}>
-                    <span>{restante === 0 ? "✓ Cuadra" : restante > 0 ? "Falta asignar" : "Te pasaste"}</span>
-                    <span className="tabular-nums">{formatGs(Math.abs(restante))}</span>
-                  </div>
-                </div>
-
-                {/* Vuelto de la parte en efectivo (opcional) */}
-                {hayEfectivo && (
-                  <label className="block text-sm">
-                    <span className="mb-1 block font-medium text-slate-700">Efectivo recibido <span className="font-normal text-slate-400">(para el vuelto)</span></span>
-                    <MontoInput value={efectivoRecibido} onChange={(n) => setEfectivoRecibido(String(n))} placeholder={`${efectivoAplicado.toLocaleString("es-PY")} (exacto)`} decimals={false} autoFocus
-                      className="w-full rounded-md border border-slate-200 px-3 py-2 text-lg tabular-nums outline-none focus:ring-2" />
-                    {recibidoNum > 0 && (
-                      faltaEfectivo > 0
-                        ? <span className="mt-1 block text-xs font-medium text-rose-600">Falta {formatGs(faltaEfectivo)} en efectivo</span>
-                        : <span className="mt-1 block text-xs font-medium text-emerald-700">Vuelto: {formatGs(vuelto)}</span>
-                    )}
-                  </label>
-                )}
-              </>
-            )}
-            {cobroError && <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{cobroError}</div>}
-            </div>
-            <div className="flex shrink-0 justify-end gap-2 px-6 pt-5 pb-6">
-              <button type="button" onClick={() => setCobroOpen(false)} disabled={cobrando} className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
-              <button type="button" onClick={() => void confirmarCobro()} disabled={cobrando || !cobroListo} className="rounded-lg px-5 py-2 text-sm font-semibold text-white transition-opacity disabled:cursor-not-allowed disabled:opacity-40" style={{ backgroundColor: TEAL }}>{cobrando ? "Cobrando…" : "Confirmar e imprimir"}</button>
-            </div>
-          </div>
-        </CapaModal>
+        <CobroModal total={total} cantItems={cantTotal} tipoVenta={tipoVenta} plazoDias={plazoDiasNum} cliente={clienteSel}
+          cobrando={cobrando} error={cobroError} onClose={() => { setCobroOpen(false); setCobroError(null); }}
+          onConfirmar={(p) => void confirmarCobro(p)} />
       )}
+
+      {/* Ventanas de la caja (abrir, retiro / ingreso, turno, cierre) */}
+      {modalCaja === "abrir" && estadoCajas ? (
+        <AperturaModal estado={estadoCajas} onClose={() => setModalCaja(null)}
+          onAbierta={(id) => { setModalCaja(null); elegirCaja(id); refrescarCajas(); setTimeout(() => inputRef.current?.focus(), 0); }} />
+      ) : null}
+      {modalCaja === "mov" && caja ? (
+        <MovimientoModal cajaId={caja.id} etiqueta={`${etiquetaCaja(caja)} · Turno N° ${caja.numero_caja}`}
+          efectivoDisponible={estadoCajas?.sucursales.flatMap((s) => s.cajas).find((c) => c.turno?.id === caja.id)?.turno?.efectivo_esperado ?? null}
+          onClose={() => setModalCaja(null)} onHecho={() => { setModalCaja(null); refrescarCajas(); }} />
+      ) : null}
+      {modalCaja === "ver" && caja ? (
+        <TurnoModal turnoId={caja.id} onClose={() => setModalCaja(null)} onCambio={refrescarCajas} onCerrar={() => setModalCaja("cerrar")} />
+      ) : null}
+      {modalCaja === "cerrar" && caja ? (
+        <CierreModal turnoId={caja.id} onClose={() => setModalCaja(null)} onCerrada={refrescarCajas} />
+      ) : null}
 
       {modalNuevoCliente && (
         <NuevoCliente

@@ -1,39 +1,22 @@
 "use client";
 
+/**
+ * Caja › Órdenes de venta: las ventas (contado y crédito) con filtros por sucursal, caja,
+ * forma de pago, condición, IVA, estado, producto y fechas. Arriba, las cajas abiertas
+ * (cada una lleva a Apertura y cierre).
+ */
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  ArrowDownLeft,
-  Check,
-  ChevronLeft,
-  ChevronRight,
-  Clock,
-  CreditCard,
-  Landmark,
-  Lock,
-  Plus,
-  Search,
-  SlidersHorizontal,
-  Wallet,
-  X,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight, Search, SlidersHorizontal, Wallet, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
-import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
 import { formatGs } from "@/modules/caja/lib";
+import { etiquetaCaja, hora, metodoLabel, METODOS_VENTA, useEstadoCajas, type EstadoCajas } from "@/modules/caja/turno";
 
 const TEAL = clienteConfig.color;
 
-type Caja = { id: string; numero_caja: number; fecha_apertura: string; monto_apertura: number };
-type PorMedio = { medio: string; label: string; cantidad: number; total: number };
-type Arqueo = {
-  caja: { id: string; numero_caja: number; fecha_apertura: string };
-  monto_apertura: number;
-  ingresos: { total: number; por_medio: PorMedio[] };
-  efectivo_esperado: number;
-};
 type VentaItem = { producto_nombre: string; sku?: string | null; cantidad: number; tipo_iva: string };
 type Venta = {
   id: string;
@@ -42,201 +25,68 @@ type Venta = {
   total: number;
   tipo_venta: string;
   estado: string;
+  metodo_pago: string | null;
   ventas_items: VentaItem[];
+  pagos: { metodo_pago: string; monto: number }[] | null;
+  punto: { nombre: string } | null;
+  sucursal: { nombre: string } | null;
 };
 
-const fechaLarga = (iso: string) =>
-  new Date(iso).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
-const medioTotal = (a: Arqueo | null, m: string) => a?.ingresos.por_medio.find((p) => p.medio === m)?.total ?? 0;
-
 export default function CajaDashboard() {
-  const [caja, setCaja] = useState<Caja | null>(null);
-  const [arqueo, setArqueo] = useState<Arqueo | null>(null);
-
-  const cargar = useCallback(async () => {
-    // El arqueo ya trae la caja abierta (o null si no hay): un solo pedido, no dos que
-    // buscaban la misma caja.
-    const a = await apiFetch<{ arqueo: Arqueo | null }>("/api/caja/cierre").catch(() => null);
-    if (!a) return;
-    setArqueo(a.arqueo);
-    setCaja(a.arqueo ? { ...a.arqueo.caja, monto_apertura: a.arqueo.monto_apertura } : null);
-  }, []);
-
-  useEffect(() => {
-    void cargar();
-  }, [cargar]);
-
+  const { datos } = useEstadoCajas();
   return (
     <div className="space-y-6 pb-10">
       {/* Encabezado estilo dashboard */}
       <div>
         <div className="flex items-center gap-2">
           <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Comercial</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Finanzas · Caja</p>
         </div>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Caja</h1>
-        <p className="mt-1 text-sm text-slate-500">Caja de ventas y despacho de productos</p>
+        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Órdenes de venta</h1>
+        <p className="mt-1 text-sm text-slate-500">Todas las ventas de las cajas, con su forma de pago</p>
       </div>
 
-      {/* Estado de la caja: solo si hay un turno abierto. Abrir caja se hace desde
-          Nueva venta (panel del turno), no desde Órdenes de venta. */}
-      {caja ? (
-        <section>
-          <h2 className="mb-3 flex items-center gap-2 text-base font-semibold text-slate-900">
-            <Wallet className="h-4 w-4" style={{ color: TEAL }} /> Caja abierta
-          </h2>
-          <TarjetaCaja caja={caja} arqueo={arqueo} onCambio={cargar} />
-        </section>
-      ) : null}
+      <CajasAbiertas estado={datos} />
 
-      {/* Órdenes de venta: arrancan junto con la caja (piden las de la caja abierta). */}
-      <Ordenes />
+      <Ordenes cajas={datos} />
     </div>
   );
 }
 
-// ── Tarjeta de caja abierta + KPIs ──────────────────────────────────────────
-function TarjetaCaja({ caja, arqueo, onCambio }: { caja: Caja; arqueo: Arqueo | null; onCambio: () => void }) {
-  const [mov, setMov] = useState(false);
-  const apertura = arqueo?.monto_apertura ?? caja.monto_apertura;
-  const ventas = arqueo?.ingresos.por_medio.reduce((s, m) => s + m.cantidad, 0) ?? 0;
-  const esperado = arqueo?.efectivo_esperado ?? apertura;
-
+// ── Cajas abiertas (tira) ───────────────────────────────────────────────────
+function CajasAbiertas({ estado }: { estado: EstadoCajas | null }) {
+  if (!estado) return null;
+  const abiertas = estado.sucursales.flatMap((s) => s.cajas.filter((c) => c.turno).map((c) => ({ c, s })));
   return (
-    <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${TEAL}1f`, color: TEAL }}>
-            <Wallet className="h-5 w-5" />
-          </span>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold text-slate-900">Caja {caja.numero_caja}</h3>
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-700">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Abierta
-              </span>
-            </div>
-            <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
-              <Clock className="h-3 w-3" /> Abierta el {fechaLarga(caja.fecha_apertura)}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => setMov(true)} className="inline-flex h-10 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50">
-            <Plus className="h-4 w-4" /> Movimiento
-          </button>
-          <Link href="/caja/nueva?cerrar=1" className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition-colors hover:bg-red-700">
-            <Lock className="h-4 w-4" /> Cerrar
-          </Link>
-        </div>
+    <section className="flex flex-wrap items-stretch gap-3">
+      {abiertas.length === 0 ? (
+        <Link href="/caja/turnos" className="flex items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
+          <Wallet className="h-4 w-4" /> No hay cajas abiertas · Abrir caja
+        </Link>
+      ) : abiertas.map(({ c, s }) => (
+        <Link key={c.id} href="/caja/turnos" className="min-w-[220px] rounded-2xl border border-emerald-100 bg-white px-4 py-3 shadow-sm transition hover:border-emerald-200 hover:shadow">
+          <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" /> {etiquetaCaja({ punto_nombre: c.nombre, sucursal_nombre: s.nombre })}
+          </p>
+          <p className="mt-0.5 text-[11px] text-slate-500">Turno N° {c.turno!.numero_caja} · {c.turno!.abierta_por_nombre ?? "—"} · desde {hora(c.turno!.fecha_apertura)}</p>
+          <p className="mt-1.5 flex items-baseline justify-between gap-3 text-xs">
+            <span className="text-slate-500">{c.turno!.ventas_cantidad} venta{c.turno!.ventas_cantidad === 1 ? "" : "s"}</span>
+            <span className="font-bold tabular-nums text-slate-900">{formatGs(c.turno!.ventas_total)}</span>
+          </p>
+        </Link>
+      ))}
+      <div className="ml-auto flex items-center gap-2">
+        <Link href="/caja/turnos" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Apertura y cierre</Link>
+        <Link href="/caja/credito" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Ventas a crédito</Link>
+        <Link href="/caja/nueva" className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:brightness-95" style={{ backgroundColor: TEAL }}>+ Nueva venta</Link>
       </div>
-
-      <div className="grid grid-cols-2 divide-x divide-y divide-slate-100 border-t border-slate-100 sm:grid-cols-3 sm:divide-y-0 xl:grid-cols-6">
-        <Cifra label="Apertura" valor={formatGs(apertura)} icono={Wallet} />
-        <Cifra label="Ventas" valor={String(ventas)} icono={Check} />
-        <Cifra label="Efectivo" valor={formatGs(medioTotal(arqueo, "efectivo"))} icono={ArrowDownLeft} />
-        <Cifra label="Transfer" valor={formatGs(medioTotal(arqueo, "transferencia"))} icono={Landmark} />
-        <Cifra label="Tarjeta" valor={formatGs(medioTotal(arqueo, "tarjeta"))} icono={CreditCard} />
-        <Cifra label="Esperado efectivo" valor={formatGs(esperado)} icono={Wallet} destacado />
-      </div>
-
-      {mov ? <MovimientoModal onClose={() => setMov(false)} onListo={() => { setMov(false); onCambio(); }} /> : null}
-    </div>
-  );
-}
-
-function Cifra({ label, valor, icono: Icono, destacado }: { label: string; valor: string; icono: React.ComponentType<{ className?: string }>; destacado?: boolean }) {
-  return (
-    <div className="min-w-0 px-4 py-3.5" style={destacado ? { backgroundColor: `${TEAL}14` } : undefined}>
-      <p className="flex items-start gap-1.5 text-[10px] font-semibold uppercase leading-tight tracking-[0.08em] text-slate-500">
-        <Icono className="mt-px h-3 w-3 shrink-0" /> <span>{label}</span>
-      </p>
-      <p className="mt-1 whitespace-nowrap text-lg font-bold tabular-nums tracking-tight" style={destacado ? { color: TEAL } : { color: "#0f172a" }}>{valor}</p>
-    </div>
-  );
-}
-
-// ── Modal movimiento ──────────────────────────────────────────────────────────
-const TIPOS = [
-  { v: "ingreso", l: "Ingreso" },
-  { v: "egreso", l: "Egreso" },
-  { v: "retiro", l: "Retiro" },
-  { v: "ajuste", l: "Ajuste" },
-] as const;
-
-function MovimientoModal({ onClose, onListo }: { onClose: () => void; onListo: () => void }) {
-  const [tipo, setTipo] = useState<(typeof TIPOS)[number]["v"]>("ingreso");
-  const [concepto, setConcepto] = useState("");
-  const [monto, setMonto] = useState("");
-  const [medio, setMedio] = useState("efectivo");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const puede = concepto.trim() !== "" && Number(monto) > 0;
-
-  async function guardar() {
-    if (!puede || busy) return;
-    setBusy(true); setError(null);
-    try {
-      await apiFetch("/api/caja/movimientos", {
-        method: "POST",
-        body: JSON.stringify({ tipo, concepto: concepto.trim(), monto: Number(monto), medio_pago: medio }),
-      });
-      onListo();
-    } catch (e) { setError((e as Error).message); setBusy(false); }
-  }
-
-  const CAMPO = "h-11 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]";
-  const ET = "mb-1.5 block text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-500";
-
-  return (
-    <Modal titulo="Registrar movimiento" onClose={onClose}>
-      <div className="space-y-4">
-        <div>
-          <span className={ET}>Tipo</span>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            {TIPOS.map((t) => (
-              <button key={t.v} type="button" onClick={() => setTipo(t.v)}
-                className="h-11 rounded-lg border text-sm font-semibold transition-colors"
-                style={tipo === t.v ? { borderColor: "transparent", backgroundColor: TEAL, color: "#fff" } : { borderColor: "#e2e8f0", color: "#475569" }}>
-                {t.l}
-              </button>
-            ))}
-          </div>
-        </div>
-        <label className="block">
-          <span className={ET}>Concepto</span>
-          <input value={concepto} onChange={(e) => { setError(null); setConcepto(e.target.value); }} placeholder="Ej: Pago de delivery, vuelto…" className={CAMPO} />
-        </label>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <label className="block">
-            <span className={ET}>Monto (Gs.)</span>
-            <input inputMode="numeric" value={monto ? Number(monto).toLocaleString("es-PY") : ""} onChange={(e) => setMonto(e.target.value.replace(/\D/g, ""))} placeholder="0" className={`${CAMPO} tabular-nums`} />
-          </label>
-          <label className="block">
-            <span className={ET}>Medio de pago</span>
-            <Select
-              value={medio}
-              onChange={setMedio}
-              block
-              options={[["efectivo", "Efectivo"], ["transferencia", "Transferencia"], ["tarjeta", "Tarjeta"], ["cheque", "Cheque"], ["otro", "Otro"]]}
-            />
-          </label>
-        </div>
-        {error ? <p className="rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p> : null}
-        <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className="h-11 rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-100">Cancelar</button>
-          <button onClick={guardar} disabled={!puede || busy} className="h-11 rounded-lg px-6 text-sm font-semibold text-white transition-opacity disabled:opacity-40" style={{ backgroundColor: TEAL }}>
-            {busy ? "Guardando…" : "Registrar"}
-          </button>
-        </div>
-      </div>
-    </Modal>
+    </section>
   );
 }
 
 // ── Órdenes de venta ──────────────────────────────────────────────────────────
 
-function Ordenes() {
+function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
   const [ventas, setVentas] = useState<Venta[]>([]);
   const [total, setTotal] = useState(0); // ventas que cumplen los filtros
   const [totalGeneral, setTotalGeneral] = useState(0); // ventas sin filtrar
@@ -247,6 +97,9 @@ function Ordenes() {
   const [iva, setIva] = useState("");
   const [estado, setEstado] = useState("");
   const [producto, setProducto] = useState("");
+  const [sucursal, setSucursal] = useState("");
+  const [punto, setPunto] = useState("");
+  const [metodo, setMetodo] = useState("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
@@ -273,17 +126,18 @@ function Ordenes() {
   }, [busqueda, q]);
 
   const cargar = useCallback((recontar = false) => {
-    // caja=abierta: el servidor usa la caja abierta si hay (si no, todas), así no se espera
-    // a saber cuál es la caja antes de pedir las ventas.
-    const sp = new URLSearchParams({ pagina: String(pagina), por_pagina: String(porPagina), caja: "abierta" });
+    const sp = new URLSearchParams({ pagina: String(pagina), por_pagina: String(porPagina) });
     if (q) sp.set("q", q);
     if (tipo) sp.set("tipo", tipo);
     if (iva) sp.set("iva", iva);
     if (estado) sp.set("estado", estado);
     if (producto) sp.set("producto", producto);
+    if (sucursal) sp.set("sucursal", sucursal);
+    if (punto) sp.set("punto", punto);
+    if (metodo) sp.set("metodo", metodo);
     if (desde) sp.set("desde", desde);
     if (hasta) sp.set("hasta", hasta);
-    const firma = JSON.stringify([porPagina, q, tipo, iva, estado, producto, desde, hasta]);
+    const firma = JSON.stringify([porPagina, q, tipo, iva, estado, producto, desde, hasta, sucursal, punto, metodo]);
     if (!recontar && contados.current === firma) sp.set("contar", "0");
     const n = ++pedido.current;
     setBuscando(true);
@@ -299,7 +153,7 @@ function Ordenes() {
       })
       .catch(() => { if (n === pedido.current) { setVentas([]); setTotal(0); contados.current = null; } })
       .finally(() => { if (n === pedido.current) setBuscando(false); });
-  }, [pagina, porPagina, q, tipo, iva, estado, producto, desde, hasta]);
+  }, [pagina, porPagina, q, tipo, iva, estado, producto, desde, hasta, sucursal, punto, metodo]);
 
   useEffect(() => {
     cargar();
@@ -313,7 +167,19 @@ function Ordenes() {
       .catch(() => {});
   }, []);
 
-  const filtrosActivos = (tipo ? 1 : 0) + (iva ? 1 : 0) + (estado ? 1 : 0) + (producto ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0);
+  const filtrosActivos = (tipo ? 1 : 0) + (iva ? 1 : 0) + (estado ? 1 : 0) + (producto ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0) +
+    (sucursal ? 1 : 0) + (punto ? 1 : 0) + (metodo ? 1 : 0);
+  // Opciones de sucursal y caja (las que ve el usuario).
+  const sucursalesOpts = useMemo<[string, string][]>(
+    () => [["", "Todas las sucursales"], ...(cajas?.sucursales ?? []).map((s): [string, string] => [s.id, s.nombre])],
+    [cajas],
+  );
+  const cajasOpts = useMemo<[string, string][]>(
+    () => [["", "Todas las cajas"], ...(cajas?.sucursales ?? [])
+      .filter((s) => !sucursal || s.id === sucursal)
+      .flatMap((s) => s.cajas.map((c): [string, string] => [c.id, `${c.nombre} · ${s.nombre}`]))],
+    [cajas, sucursal],
+  );
 
   const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
   const paginaActual = Math.min(pagina, totalPaginas);
@@ -325,11 +191,7 @@ function Ordenes() {
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <span className="block h-5 w-1 rounded-full" style={{ backgroundColor: TEAL }} />
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Órdenes de venta</h2>
-        </div>
-        <div className="flex items-center gap-2">
-          <Link href="/caja/nueva?cerrar=1" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Arqueo y cierre</Link>
-          <Link href="/caja/nueva" className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:brightness-95" style={{ backgroundColor: TEAL }}>+ Nueva venta</Link>
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Ventas</h2>
         </div>
       </div>
 
@@ -365,7 +227,13 @@ function Ordenes() {
 
         {filtrosAbiertos ? (
           <div className="mt-3 flex flex-wrap items-end gap-2.5 rounded-xl bg-slate-50 p-3" style={{ animation: "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)" }}>
-            <Select value={tipo} onChange={conPagina1(setTipo)} options={[["", "Todos los tipos"], ["CONTADO", "Contado"], ["CREDITO", "Crédito"]]} minWidth={150} />
+            {sucursalesOpts.length > 2 ? (
+              <Select value={sucursal} onChange={conPagina1((v: string) => { setSucursal(v); setPunto(""); })} options={sucursalesOpts} minWidth={180} />
+            ) : null}
+            <Select value={punto} onChange={conPagina1(setPunto)} options={cajasOpts} minWidth={190} />
+            <Select value={tipo} onChange={conPagina1(setTipo)} options={[["", "Contado y crédito"], ["CONTADO", "Contado"], ["CREDITO", "Crédito"]]} minWidth={150} />
+            <Select value={metodo} onChange={conPagina1(setMetodo)} minWidth={180}
+              options={[["", "Todas las formas de pago"], ...METODOS_VENTA.map((m): [string, string] => [m.value, m.label]), ["mixto", "Pago mixto"]]} />
             <Select value={iva} onChange={conPagina1(setIva)} options={[["", "Todos los IVA"], ["10%", "IVA 10%"], ["5%", "IVA 5%"], ["EXENTA", "Exenta"]]} minWidth={140} />
             <Select value={estado} onChange={conPagina1(setEstado)} options={[["", "Todos los estados"], ["completada", "Completada"], ["anulada", "Anulada"]]} minWidth={160} />
             <Select value={producto} onChange={conPagina1(setProducto)} options={productosOpts} minWidth={190} />
@@ -380,7 +248,7 @@ function Ordenes() {
             {filtrosActivos ? (
               <button
                 type="button"
-                onClick={() => { setTipo(""); setIva(""); setEstado(""); setProducto(""); setDesde(""); setHasta(""); setPagina(1); }}
+                onClick={() => { setTipo(""); setIva(""); setEstado(""); setProducto(""); setDesde(""); setHasta(""); setSucursal(""); setPunto(""); setMetodo(""); setPagina(1); }}
                 className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:text-rose-600"
               >
                 <X className="h-3.5 w-3.5" /> Limpiar
@@ -400,13 +268,14 @@ function Ordenes() {
               <th className="px-4 py-3 text-right">Cant. total</th>
               <th className="px-4 py-3">IVA</th>
               <th className="px-4 py-3 text-right">Total</th>
-              <th className="px-4 py-3">Tipo</th>
+              <th className="px-4 py-3">Condición / pago</th>
+              <th className="px-4 py-3">Caja</th>
               <th className="rounded-r-lg px-4 py-3">Fecha</th>
             </tr>
           </thead>
           <tbody>
             {visibles.length === 0 ? (
-              <tr><td colSpan={8} className="py-12 text-center text-slate-400">{buscando ? "Buscando…" : totalGeneral === 0 ? "No hay ventas registradas" : "Ninguna venta coincide con los filtros"}</td></tr>
+              <tr><td colSpan={9} className="py-12 text-center text-slate-400">{buscando ? "Buscando…" : totalGeneral === 0 ? "No hay ventas registradas" : "Ninguna venta coincide con los filtros"}</td></tr>
             ) : (
               visibles.map((v) => {
                 const items = v.ventas_items ?? [];
@@ -438,6 +307,15 @@ function Ordenes() {
                       <span className="rounded-full px-2 py-1 text-xs font-semibold" style={v.tipo_venta === "CREDITO" ? { backgroundColor: "#fff7ed", color: "#ea580c" } : { backgroundColor: "#f1f5f9", color: "#475569" }}>
                         {v.tipo_venta === "CREDITO" ? "Crédito" : "Contado"}
                       </span>
+                      {v.tipo_venta !== "CREDITO" ? (
+                        <span className="mt-1 block max-w-[180px] truncate text-[11px] text-slate-500" title={(v.pagos ?? []).map((p) => `${metodoLabel(p.metodo_pago)} ${formatGs(p.monto)}`).join(" + ")}>
+                          {(v.pagos ?? []).length ? [...new Set((v.pagos ?? []).map((p) => metodoLabel(p.metodo_pago)))].join(" + ") : metodoLabel(v.metodo_pago)}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="px-4 py-4 text-xs text-slate-600">
+                      {v.punto?.nombre ?? "—"}
+                      {v.sucursal?.nombre ? <span className="block text-[11px] text-slate-400">{v.sucursal.nombre}</span> : null}
                     </td>
                     <td className="px-4 py-4 text-xs tabular-nums text-slate-500">{new Date(v.fecha).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
                   </tr>

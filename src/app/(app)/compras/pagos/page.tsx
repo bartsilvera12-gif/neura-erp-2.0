@@ -54,11 +54,7 @@ export default function PagosProveedoresPage() {
     <div className="space-y-6 pb-10">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Finanzas · Compras</p>
-          </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Pagos a proveedores</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Pagos a proveedores</h1>
           <p className="mt-1 text-sm text-slate-500">Lo que les debés a tus proveedores por compras y gastos a crédito, empezando por lo más urgente.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">

@@ -11,6 +11,8 @@ const nextConfig: NextConfig = {
     return [
       { source: "/caja/cierres", destination: "/reportes/cajas", permanent: true },
       { source: "/caja/cierres/:id", destination: "/reportes/cajas/:id", permanent: true },
+      // Gastos y Servicios ahora es Gastos empresariales › Gastos operativos (se conserva ?ver=<id>).
+      { source: "/gastos", destination: "/gastos-empresariales/operativos", permanent: false },
     ];
   },
 };
