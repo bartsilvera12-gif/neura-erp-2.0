@@ -17,7 +17,7 @@ import { CheckCircle2, FileSignature, Package, Search, Trash2, X } from "lucide-
 import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { browserClient } from "@/lib/supabase/browser";
-import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
 import { QtyInput } from "@/components/ui/QtyInput";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
@@ -108,6 +108,8 @@ function CajaPageContenido() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const me = useUsuario();
+  // Perfil: vender a crédito (la base lo vuelve a exigir, igual que los descuentos y el precio manual).
+  const puedeCredito = tienePermiso(me, "vender_credito");
 
   // ── Caja (turno abierto) en la que se vende ────────────────────────────────
   // La elegida en este navegador (si sigue abierta), si no la que le toca al usuario.
@@ -685,7 +687,7 @@ function CajaPageContenido() {
           {/* Condición */}
           <div>
             <label className="mb-1.5 block text-sm font-medium text-slate-700">Condición</label>
-            <Segmented value={tipoVenta} onChange={(v) => { setTipoVenta(v); if (v === "CONTADO") setPlazoDias(""); }} options={[{ value: "CONTADO", label: "Contado" }, { value: "CREDITO", label: "Crédito" }]} />
+            <Segmented value={tipoVenta} onChange={(v) => { setTipoVenta(v); if (v === "CONTADO") setPlazoDias(""); }} options={[{ value: "CONTADO", label: "Contado" }, { value: "CREDITO", label: "Crédito", disabled: !!me && !puedeCredito, title: "Tu perfil no permite vender a crédito" }]} />
             {tipoVenta === "CREDITO" && (
               <div className="mt-2">
                 <input type="number" min={1} value={plazoDias} onChange={(e) => setPlazoDias(e.target.value)} placeholder="Plazo (días)"
@@ -964,14 +966,14 @@ function Atajo({ k, t }: { k: string; t: string }) {
   );
 }
 
-function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { value: T; label: string }[]; onChange: (v: T) => void }) {
+function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { value: T; label: string; disabled?: boolean; title?: string }[]; onChange: (v: T) => void }) {
   return (
     <div className="flex overflow-hidden rounded-lg border border-slate-200">
       {options.map((opt) => {
         const sel = value === opt.value;
         return (
-          <button key={opt.value} type="button" onClick={() => onChange(opt.value)}
-            className={`flex-1 py-2 text-sm font-medium transition-colors ${sel ? "text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+          <button key={opt.value} type="button" onClick={() => onChange(opt.value)} disabled={opt.disabled && !sel} title={opt.disabled ? opt.title : undefined}
+            className={`flex-1 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:text-slate-300 ${sel ? "text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
             style={sel ? { backgroundColor: TEAL } : undefined}>
             {opt.label}
           </button>

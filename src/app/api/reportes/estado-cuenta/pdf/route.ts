@@ -85,5 +85,5 @@ export const GET = withTenant(
     pieDePagina(doc, "Estado de cuenta · Documento no fiscal");
     return respuestaPdf(doc, `${nombreArchivo("estado-de-cuenta", d.desde, d.hasta)}.pdf`);
   },
-  { roles: ["ADMIN"] },
+  { permiso: ["ver_reportes_financieros", "exportar"] },
 );

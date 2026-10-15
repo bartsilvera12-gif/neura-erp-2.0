@@ -54,5 +54,5 @@ export const POST = withTenant(
     }
     return ok({ productos_actualizados: actualizados, lineas_completadas: lineas });
   },
-  { roles: ["ADMIN"], body: cuerpo },
+  { permiso: ["ver_costos", "editar_productos"], body: cuerpo },
 );

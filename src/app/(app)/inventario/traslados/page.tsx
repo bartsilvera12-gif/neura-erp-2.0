@@ -13,7 +13,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowRight, CheckCircle2, FileDown, Loader2, PackageCheck, Plus, Search, Truck, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
-import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Select } from "@/components/Select";
 import { invalidarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { hayVariosDepositos, invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
@@ -38,7 +38,7 @@ function Traslados() {
   const router = useRouter();
   const sp = useSearchParams();
   const ver = sp.get("ver");
-  const esAdmin = useUsuario()?.rol === "ADMIN";
+  const esAdmin = tienePermiso(useUsuario(), "crear_traslados"); // perfil: crear traslados
   const deps = useDepositos();
   const [estado, setEstado] = useState(sp.get("estado") ?? "");
   const [deposito, setDeposito] = useState("");

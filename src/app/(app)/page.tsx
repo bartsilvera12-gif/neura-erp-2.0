@@ -16,7 +16,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { AlertTriangle, ArrowRight, Boxes, CalendarClock, PackageMinus, PackageX, Truck, Wallet } from "lucide-react";
 import { clienteConfig } from "@/cliente.config";
-import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Select } from "@/components/Select";
 import { BarrasH, Columnas, Dona, Leyenda, SERIES, C_ANTERIOR, colorMetodo } from "@/components/graficos/Graficos";
 import { corto, diaLargo, mayuscula, diaSemana, gs, num, pct, variacion } from "@/components/graficos/formato";
@@ -30,7 +30,8 @@ export default function Inicio() {
   const { data: d, error, cargando } = useReporte<Dashboard>(`/api/dashboard${sucursal ? `?sucursal=${sucursal}` : ""}`);
 
   const esAdmin = !!d?.es_admin;
-  const veCierres = me?.rol === "ADMIN" || me?.rol === "SUPERVISOR";
+  const veCierres = tienePermiso(me, "ver_cierres_caja") || tienePermiso(me, "ver_reportes_financieros");
+  const veReportes = tienePermiso(me, "ver_reportes_financieros");
   const hora = new Date().getHours();
   const saludo = hora < 12 ? "Buen día" : hora < 19 ? "Buenas tardes" : "Buenas noches";
 
@@ -51,7 +52,7 @@ export default function Inicio() {
   const ticketAnt = k && k.mes.anterior_cantidad ? k.mes.anterior / k.mes.anterior_cantidad : 0;
   const totalMedios = (d?.medios ?? []).reduce((a, m) => a + Number(m.total), 0);
   const inv = d?.inventario;
-  const linkVentas = (desde: string, hasta: string) => (esAdmin ? `/reportes/ventas?desde=${desde}&hasta=${hasta}` : undefined);
+  const linkVentas = (desde: string, hasta: string) => (veReportes ? `/reportes/ventas?desde=${desde}&hasta=${hasta}` : undefined);
   const mesIni = d ? `${d.hoy.slice(0, 7)}-01` : "";
 
   return (
@@ -119,7 +120,7 @@ export default function Inicio() {
 
           <div className={`grid gap-6 ${porSucursal ? "xl:grid-cols-3" : "lg:grid-cols-2"}`}>
             <Tarjeta titulo="Lo más vendido del mes" sub="por monto vendido"
-              extra={esAdmin ? <Link href={`/reportes/productos-vendidos?desde=${mesIni}&hasta=${d.hoy}`} className="text-xs font-semibold text-[var(--brand)] hover:underline">Ver todo</Link> : null}>
+              extra={veReportes ? <Link href={`/reportes/productos-vendidos?desde=${mesIni}&hasta=${d.hoy}`} className="text-xs font-semibold text-[var(--brand)] hover:underline">Ver todo</Link> : null}>
               <BarrasH vacio="Todavía no hubo ventas este mes" max={8}
                 filas={d.top_productos.map((p) => ({
                   key: p.producto_id ?? p.nombre,

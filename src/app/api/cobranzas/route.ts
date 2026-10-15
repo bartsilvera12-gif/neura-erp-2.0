@@ -7,7 +7,7 @@
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, ERR } from "@/lib/api/responses";
-import { ROLES_REGISTRAR, type Seguimiento } from "@/modules/cobranzas/tipos";
+import type { Seguimiento } from "@/modules/cobranzas/tipos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,5 +18,5 @@ export const GET = withTenant(async (ctx) => {
     console.error("[cobranzas]", error?.message);
     return ERR.server();
   }
-  return ok({ ...data, puede_registrar: ROLES_REGISTRAR.includes(ctx.rol), es_admin: ctx.rol === "ADMIN" });
+  return ok({ ...data, puede_registrar: ctx.puede("registrar_transferencias"), es_admin: ctx.rol === "ADMIN", puede_aprobar: ctx.puede("aprobar_transferencias") });
 });

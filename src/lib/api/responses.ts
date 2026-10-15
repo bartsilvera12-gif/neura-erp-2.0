@@ -1,5 +1,6 @@
 /** Respuestas de API con una forma consistente: { ok, data } | { ok:false, error }. */
 import { NextResponse } from "next/server";
+import { permisoDef } from "@/modules/usuarios/permisos";
 
 export function ok<T>(data: T, init?: ResponseInit) {
   return NextResponse.json({ ok: true, data }, { status: 200, ...init });
@@ -17,6 +18,9 @@ export function fail(message: string, status = 400, code?: string) {
 export const ERR = {
   unauth: () => fail("No autenticado", 401, "no_session"),
   forbidden: () => fail("Sin permiso", 403, "forbidden"),
+  /** El perfil no tiene ese permiso (el mensaje dice cuál). */
+  sinPermiso: (permiso: string) =>
+    fail(`Tu perfil no tiene permiso para: ${(permisoDef(permiso)?.label ?? permiso).toLowerCase()}`, 403, "sin_permiso"),
   notFound: (what = "recurso") => fail(`${what} no encontrado`, 404, "not_found"),
   invalid: (detail: string) => fail(detail, 422, "invalid_input"),
   server: () => fail("Error interno", 500, "server_error"),

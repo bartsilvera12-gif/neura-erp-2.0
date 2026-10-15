@@ -11,7 +11,6 @@ import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, created, ERR } from "@/lib/api/responses";
 import { falloRpc } from "@/modules/inventario/server/rpc";
-import { ROLES_CAJA } from "@/modules/caja/lib";
 import type { EstadoCajas } from "@/modules/caja/turno";
 
 export const GET = withTenant(async (ctx) => {
@@ -38,5 +37,5 @@ export const POST = withTenant(
     if (!data) return ERR.server();
     return created(data);
   },
-  { roles: ROLES_CAJA, body: abrirSchema },
+  { permiso: "abrir_cerrar_caja", body: abrirSchema },
 );

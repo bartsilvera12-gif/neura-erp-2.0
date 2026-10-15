@@ -111,5 +111,5 @@ export const PUT = withTenant(
     if (!estados) return ERR.server();
     return ok(await conCantidad(ctx, estados));
   },
-  { roles: ["ADMIN"], body: guardar },
+  { permiso: "configuracion", body: guardar },
 );

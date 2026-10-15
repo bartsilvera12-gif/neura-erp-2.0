@@ -69,7 +69,7 @@ export const PATCH = withTenant(
     }
     return ok({ id });
   },
-  { roles: ["ADMIN"], body: editar },
+  { permiso: "editar_productos", body: editar },
 );
 
 const CON_HISTORIAL =
@@ -97,5 +97,5 @@ export const DELETE = withTenant(
     if (!data?.length) return ERR.notFound("producto");
     return ok({ id });
   },
-  { roles: ["ADMIN"] },
+  { permiso: "editar_productos" },
 );

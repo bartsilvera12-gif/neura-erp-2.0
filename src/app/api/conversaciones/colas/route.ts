@@ -20,7 +20,7 @@ export const GET = withTenant(
       return ERR.server();
     }
   },
-  { roles: ["ADMIN"] },
+  { permiso: "configuracion" },
 );
 
 export const POST = withTenant(
@@ -29,5 +29,5 @@ export const POST = withTenant(
     if (!r.ok) return fail(r.mensaje, r.status);
     return created({ id: r.id });
   },
-  { roles: ["ADMIN"], body: esquemaCola },
+  { permiso: "configuracion", body: esquemaCola },
 );

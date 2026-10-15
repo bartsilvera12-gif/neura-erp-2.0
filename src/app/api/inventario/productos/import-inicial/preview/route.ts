@@ -20,5 +20,5 @@ export const POST = withTenant(
       return fail("No se pudo generar la vista previa consolidada.", 500);
     }
   },
-  { roles: ["ADMIN"] },
+  { permiso: "editar_productos" },
 );

@@ -97,5 +97,5 @@ export const GET = withTenant(
       return new Response("No se pudo generar el Excel", { status: 500 });
     }
   },
-  { roles: ["ADMIN"] },
+  { permiso: ["ver_reportes_financieros", "exportar"] },
 );

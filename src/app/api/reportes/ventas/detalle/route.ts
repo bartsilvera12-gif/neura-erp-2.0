@@ -18,5 +18,5 @@ export const GET = withTenant(
       return ERR.server();
     }
   },
-  { roles: ["ADMIN"] },
+  { permiso: "ver_reportes_financieros" },
 );

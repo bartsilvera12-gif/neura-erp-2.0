@@ -43,5 +43,5 @@ export const POST = withTenant(
     }
     return created(ins.data?.[0] ?? null);
   },
-  { roles: ["ADMIN"], body: cuerpo },
+  { permiso: "configuracion", body: cuerpo },
 );

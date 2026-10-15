@@ -1,5 +1,6 @@
 /**
- * Acciones sobre un ajuste / pérdida (ADMIN):
+ * Acciones sobre un ajuste / pérdida (perfil: aprobar / rechazar → "aprobar ajustes y
+ * pérdidas"; anular → "ajustes de inventario"):
  *   POST /api/inventario/ajustes/[id]/aprobar             → aplica una pérdida pendiente
  *   POST /api/inventario/ajustes/[id]/rechazar { motivo } → la rechaza (no mueve stock)
  *   POST /api/inventario/ajustes/[id]/anular   { motivo } → revierte uno aplicado
@@ -24,9 +25,11 @@ export const POST = withTenant(
       : accion === "anular" ? ctx.db.rpc("anular_ajuste", { p_id: id, p_motivo: motivo })
       : null;
     if (!llamada) return ERR.notFound("acción");
+    const permiso = accion === "anular" ? "ajustes_inventario" : "aprobar_perdidas";
+    if (!ctx.puede(permiso)) return ERR.sinPermiso(permiso);
     const { data, error } = await llamada;
     if (error) return falloRpc(error);
     return ok(data);
   },
-  { roles: ["ADMIN"], body: cuerpo },
+  { body: cuerpo },
 );

@@ -19,5 +19,5 @@ export const POST = withTenant(
     if (error) return fail(error.message.replace(/^.*?ERROR:\s*/, ""), 422);
     return ok(data);
   },
-  { roles: ["ADMIN"], body: cuerpo },
+  { permiso: "anular_gastos", body: cuerpo },
 );

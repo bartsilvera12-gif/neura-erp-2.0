@@ -7,7 +7,6 @@ import { withTenant } from "@/lib/api/with-tenant";
 import { ok } from "@/lib/api/responses";
 import { falloRpc } from "@/modules/inventario/server/rpc";
 import { UUID_RE, idDeRuta, idInvalido } from "@/modules/inventario/server/ids";
-import { ROLES_CAJA } from "@/modules/caja/lib";
 
 const cuerpo = z.object({ motivo: z.string().trim().min(1, "Escribí el motivo").max(200) });
 
@@ -19,5 +18,5 @@ export const POST = withTenant(
     if (error) return falloRpc(error);
     return ok(data);
   },
-  { roles: ROLES_CAJA, body: cuerpo },
+  { permiso: "movimientos_caja", body: cuerpo },
 );

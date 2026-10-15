@@ -60,4 +60,4 @@ export const GET = withTenant(async (ctx, req) => {
   ]);
   const ahora = new Date().toLocaleString("sv-SE", { timeZone: TZ_PY }).replace(/[-:]/g, "").replace(" ", "-").slice(0, 13);
   return new Response(xlsx as unknown as BodyInit, { status: 200, headers: xlsxHeaders(`clientes-${ahora}`) });
-});
+}, { permiso: "exportar" });

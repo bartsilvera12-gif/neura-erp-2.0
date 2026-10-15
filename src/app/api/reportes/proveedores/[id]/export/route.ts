@@ -72,5 +72,5 @@ export const GET = withTenant(
     ]);
     return new Response(xlsx as unknown as BodyInit, { status: 200, headers: xlsxHeaders(nombreArchivo(`proveedor-${d.proveedor.nombre.slice(0, 30)}`, d.desde, d.hasta)) });
   },
-  { roles: ["ADMIN"] },
+  { permiso: ["ver_reportes_financieros", "exportar"] },
 );

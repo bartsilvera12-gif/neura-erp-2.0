@@ -140,5 +140,5 @@ export const GET = withTenant(
     pieDePagina(doc, "Reporte de ventas · Documento no fiscal");
     return respuestaPdf(doc, `ventas-${f.desde}_${f.hasta}.pdf`);
   },
-  { roles: ["ADMIN"] },
+  { permiso: ["ver_reportes_financieros", "exportar"] },
 );

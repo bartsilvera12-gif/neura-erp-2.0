@@ -19,5 +19,5 @@ export const GET = withTenant(
     if (!r.ok) return r.res;
     return respuestaPdf(await pdfCierreDia(r.data), `cierre-caja-dia-${r.data.fecha}.pdf`);
   },
-  { roles: ["ADMIN", "SUPERVISOR"] },
+  { permiso: ["ver_cierres_caja", "exportar"] },
 );

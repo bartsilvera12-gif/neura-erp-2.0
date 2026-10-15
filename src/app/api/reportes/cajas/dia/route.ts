@@ -17,5 +17,5 @@ export const GET = withTenant(
     const r = await leerReporte<CierreDiaDetalle>(ctx.db, "reporte_cierre_dia", { p_fecha: fechaONull(sp.get("fecha")), p_sucursal: uuidONull(sp.get("sucursal")) });
     return r.ok ? ok(r.data) : r.res;
   },
-  { roles: ["ADMIN", "SUPERVISOR"] },
+  { permiso: "ver_cierres_caja" },
 );

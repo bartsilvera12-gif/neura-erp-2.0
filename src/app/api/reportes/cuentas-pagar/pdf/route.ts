@@ -19,5 +19,5 @@ export const GET = withTenant(
     if (!r.ok) return r.res;
     return respuestaPdf(await pdfCxp(r.data), `${nombreArchivo("cuentas-por-pagar", r.data.hoy)}.pdf`);
   },
-  { roles: ["ADMIN"] },
+  { permiso: ["ver_reportes_financieros", "exportar"] },
 );

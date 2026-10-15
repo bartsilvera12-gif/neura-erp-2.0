@@ -10,7 +10,6 @@ import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { created, ERR } from "@/lib/api/responses";
 import { falloRpc } from "@/modules/inventario/server/rpc";
-import { ROLES_CAJA } from "@/modules/caja/lib";
 
 const cierreSchema = z.object({
   caja_id: z.string().uuid("Elegí la caja a cerrar"),
@@ -37,5 +36,5 @@ export const POST = withTenant(
     if (!data) return ERR.server();
     return created(data);
   },
-  { roles: ROLES_CAJA, body: cierreSchema },
+  { permiso: "abrir_cerrar_caja", body: cierreSchema },
 );

@@ -70,6 +70,11 @@ const ventaSchema = z.object({
 
 export const POST = withTenant(
   async (ctx, _req, input) => {
+    // Perfil: a crédito y con descuento hacen falta sus permisos (la base los vuelve a exigir,
+    // con el tope % del perfil, también para el precio manual de cada línea).
+    if (input.tipo_venta === "CREDITO" && !ctx.puede("vender_credito")) return ERR.sinPermiso("vender_credito");
+    if ((input.descuento_pct ?? 0) > 0 && !ctx.puede("descuentos_precio")) return ERR.sinPermiso("descuentos_precio");
+
     // Presupuesto: se valida ANTES de cobrar (ya convertido o rechazado → no se cobra).
     if (input.presupuesto_id) {
       const pre = await ctx.db.rpc("presupuesto_puede_convertir", { p_id: input.presupuesto_id });

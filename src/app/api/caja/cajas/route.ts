@@ -32,5 +32,5 @@ export const POST = withTenant(
     if (error) return falloRpc(error);
     return ok(data);
   },
-  { roles: ["ADMIN"], body: cuerpo },
+  { permiso: "configuracion", body: cuerpo },
 );

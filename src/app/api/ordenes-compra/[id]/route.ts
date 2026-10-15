@@ -34,5 +34,5 @@ export const PATCH = withTenant(
     if (error) return fail(error.message.replace(/^.*?ERROR:\s*/, ""), 400);
     return ok(data);
   },
-  { roles: ["ADMIN"], body: cuerpoOrden },
+  { permiso: "registrar_compras", body: cuerpoOrden },
 );

@@ -16,5 +16,5 @@ export const GET = withTenant(
     const r = await leerReporte<CuentasCobrar>(ctx.db, "reporte_cxc", argsRango(filtrosRango(new URL(req.url).searchParams)));
     return r.ok ? ok(r.data) : r.res;
   },
-  { roles: ["ADMIN"] },
+  { permiso: "ver_reportes_financieros" },
 );

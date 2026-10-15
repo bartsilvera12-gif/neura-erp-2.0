@@ -47,6 +47,17 @@ const COLS_POS =
 // Tope de filas por respuesta de PostgREST (max-rows).
 const LOTE = 1000;
 
+/** Perfil sin "ver costos y márgenes": los costos no salen del servidor. */
+function sinCostos(puede: (p: string) => boolean, rows: Record<string, unknown>[]): Record<string, unknown>[] {
+  if (puede("ver_costos")) return rows;
+  return rows.map((r) => {
+    const x = { ...r };
+    delete x.costo_promedio;
+    delete x.costo_mayorista;
+    return x;
+  });
+}
+
 export const GET = withTenant(async (ctx, req) => {
   const sp = new URL(req.url).searchParams;
 
@@ -67,7 +78,7 @@ export const GET = withTenant(async (ctx, req) => {
         p_offset: desde,
       });
       if (error || !data) return ERR.server();
-      return ok({ rows: await conStockPorDeposito(ctx.db, (data.rows ?? []) as Record<string, unknown>[]), total: data.total ?? 0 });
+      return ok({ rows: sinCostos(ctx.puede, await conStockPorDeposito(ctx.db, (data.rows ?? []) as Record<string, unknown>[])), total: data.total ?? 0 });
     }
 
     // Una sola llamada (listar_productos_inventario, receta 47): página + total salen del
@@ -82,7 +93,7 @@ export const GET = withTenant(async (ctx, req) => {
       p_offset: desde,
     });
     if (!rpc.error && rpc.data) {
-      return ok({ rows: await conStockPorDeposito(ctx.db, (rpc.data.rows ?? []) as Record<string, unknown>[]), total: Number(rpc.data.total) || 0 });
+      return ok({ rows: sinCostos(ctx.puede, await conStockPorDeposito(ctx.db, (rpc.data.rows ?? []) as Record<string, unknown>[])), total: Number(rpc.data.total) || 0 });
     }
     if (!faltaFuncion(rpc.error)) return ERR.server();
 
@@ -99,7 +110,7 @@ export const GET = withTenant(async (ctx, req) => {
       .order("id", { ascending: true })
       .range(desde, desde + porPagina - 1);
     if (error && (error as { code?: string }).code !== "PGRST103") return ERR.server();
-    return ok({ rows: await conStockPorDeposito(ctx.db, (data ?? []) as unknown as Record<string, unknown>[]), total: count ?? 0 });
+    return ok({ rows: sinCostos(ctx.puede, await conStockPorDeposito(ctx.db, (data ?? []) as unknown as Record<string, unknown>[])), total: count ?? 0 });
   }
 
   // ?pos=1 → catálogo LIVIANO de la caja: solo vendibles activos, solo las columnas que usa
@@ -172,7 +183,7 @@ export const GET = withTenant(async (ctx, req) => {
   if (sp.get("scope") !== "inventario") query = query.eq("es_vendible", true);
   const { data, error } = await query.order("nombre", { ascending: true });
   if (error) return ERR.server();
-  return ok(data ?? []);
+  return ok(sinCostos(ctx.puede, (data ?? []) as unknown as Record<string, unknown>[]));
 });
 
 const crearProducto = z.object({
@@ -245,5 +256,5 @@ export const POST = withTenant(
     }
     return created({ ...p, ajuste: aj.data });
   },
-  { roles: ["ADMIN"], body: crearProducto },
+  { permiso: "editar_productos", body: crearProducto },
 );

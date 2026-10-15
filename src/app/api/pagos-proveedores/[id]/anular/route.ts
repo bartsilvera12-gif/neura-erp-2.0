@@ -16,5 +16,5 @@ export const POST = withTenant(
     if (error) return fail(error.message.replace(/^.*?ERROR:\s*/, ""), 422);
     return ok(data);
   },
-  { roles: ["ADMIN"], body: z.object({ motivo: z.string().trim().min(1, "Escribí el motivo").max(500) }) },
+  { permiso: "pagar_proveedores", body: z.object({ motivo: z.string().trim().min(1, "Escribí el motivo").max(500) }) },
 );

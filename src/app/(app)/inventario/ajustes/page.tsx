@@ -12,7 +12,7 @@ import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { CheckCircle2, ClipboardCheck, Loader2, PackageMinus, Search, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
-import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Select } from "@/components/Select";
 import { invalidarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { hayVariosDepositos, invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
@@ -42,7 +42,10 @@ function Ajustes() {
   const router = useRouter();
   const sp = useSearchParams();
   const ver = sp.get("ver");
-  const esAdmin = useUsuario()?.rol === "ADMIN";
+  const me = useUsuario();
+  // Perfil: "Nuevo ajuste" pide ajustes de inventario; "Nueva pérdida", cargar pérdidas.
+  const puedeAjustar = tienePermiso(me, "ajustes_inventario");
+  const puedePerdida = tienePermiso(me, "registrar_perdidas");
   const deps = useDepositos();
   const [vista, setVista] = useState(sp.get("vista") ?? "");
   const [deposito, setDeposito] = useState("");
@@ -85,10 +88,12 @@ function Ajustes() {
   return (
     <div className="space-y-6 pb-10">
       <Cabecera kicker="Inventario · Documentos" titulo="Ajustes y pérdidas" subtitulo="Conteos, correcciones y bajas de mercadería, documentados y valorizados al costo">
-        <Link href="/inventario/ajustes/nuevo?tipo=perdida" className={BOTON_SECUNDARIO}>
-          <PackageMinus className="h-4 w-4" /> Nueva pérdida
-        </Link>
-        {esAdmin ? (
+        {puedePerdida ? (
+          <Link href="/inventario/ajustes/nuevo?tipo=perdida" className={BOTON_SECUNDARIO}>
+            <PackageMinus className="h-4 w-4" /> Nueva pérdida
+          </Link>
+        ) : null}
+        {puedeAjustar ? (
           <Link href="/inventario/ajustes/nuevo?tipo=ajuste" className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
             <ClipboardCheck className="h-4 w-4" /> Nuevo ajuste
           </Link>
@@ -212,6 +217,7 @@ function Cifra({ etiqueta, valor, detalle, tono }: { etiqueta: string; valor: st
 }
 
 function DetalleAjuste({ id, onClose, onCambio }: { id: string; onClose: () => void; onCambio: () => void }) {
+  const me = useUsuario();
   const [recarga, setRecarga] = useState(0);
   const det = useListaCacheada<AjusteDetalle>(`/api/inventario/ajustes/${id}`, recarga);
   const a = det.cargando && recarga === 0 ? null : det.datos;
@@ -241,7 +247,9 @@ function DetalleAjuste({ id, onClose, onCambio }: { id: string; onClose: () => v
   const perdida = a.tipo === "perdida";
   const aplicado = a.estado === "aplicado" || a.estado === "anulado";
   const conConteo = a.items.some((i) => i.modo === "conteo");
-  const puedeAnular = a.es_admin && a.estado === "aplicado" && a.motivo !== "apertura";
+  // Perfil: aprobar / rechazar → "aprobar ajustes y pérdidas"; anular → "ajustes de inventario".
+  const puedeAprobar = tienePermiso(me, "aprobar_perdidas");
+  const puedeAnular = tienePermiso(me, "ajustes_inventario") && a.estado === "aplicado" && a.motivo !== "apertura";
   return (
     <>
       <ModalDocumento
@@ -256,7 +264,7 @@ function DetalleAjuste({ id, onClose, onCambio }: { id: string; onClose: () => v
                 <X className="h-4 w-4" /> Anular
               </button>
             ) : null}
-            {a.es_admin && a.estado === "pendiente" ? (
+            {puedeAprobar && a.estado === "pendiente" ? (
               <>
                 <button onClick={() => setAccion("rechazar")} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50">Rechazar</button>
                 <button onClick={aprobar} disabled={aprobando} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
@@ -284,7 +292,7 @@ function DetalleAjuste({ id, onClose, onCambio }: { id: string; onClose: () => v
         {a.detalle ? <p className="mt-3 text-sm text-slate-700"><span className="text-slate-400">Detalle:</span> {a.detalle}</p> : null}
         {a.estado === "pendiente" ? (
           <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-800">
-            Todavía no movió stock. {a.es_admin ? "Al aprobarla se descuenta del depósito." : "Un administrador tiene que aprobarla."}
+            Todavía no movió stock. {puedeAprobar ? "Al aprobarla se descuenta del depósito." : "Alguien con permiso para aprobar pérdidas tiene que aprobarla."}
           </p>
         ) : null}
         {a.rechazado_motivo ? <p className="mt-3 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs text-rose-700"><strong>Rechazado:</strong> {a.rechazado_motivo}</p> : null}

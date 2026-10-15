@@ -17,7 +17,7 @@ import {
   borrarComprobanteCobro, pathComprobanteCobro, subirComprobanteCobro, validarComprobanteCobro,
 } from "@/lib/cobranzas/storage";
 import { falloRpc } from "@/modules/cobranzas/server";
-import { ROLES_REGISTRAR, type ListaConciliacion } from "@/modules/cobranzas/tipos";
+import { type ListaConciliacion } from "@/modules/cobranzas/tipos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -124,5 +124,5 @@ export const POST = withTenant(
     if (path && data.cobros.every((c) => c.repetido)) await borrarComprobanteCobro(path);
     return created(data);
   },
-  { roles: ROLES_REGISTRAR },
+  { permiso: "registrar_transferencias" },
 );

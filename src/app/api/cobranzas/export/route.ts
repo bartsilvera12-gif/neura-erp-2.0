@@ -51,4 +51,4 @@ export const GET = withTenant(async (ctx, req) => {
     ]),
   ]);
   return new Response(xlsx as unknown as BodyInit, { status: 200, headers: xlsxHeaders(`seguimiento-cobranzas-${hoyPY()}`) });
-});
+}, { permiso: "exportar" });

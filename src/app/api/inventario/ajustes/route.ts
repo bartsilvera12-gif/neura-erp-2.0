@@ -60,6 +60,10 @@ const cuerpo = z.object({
 
 export const POST = withTenant(
   async (ctx, _req, input) => {
+    // Perfil: una pérdida pide "cargar pérdidas"; un ajuste, "ajustes de inventario" (la base
+    // lo vuelve a exigir; aplicarlo al toque pide además "aprobar ajustes y pérdidas").
+    const permiso = input.tipo === "perdida" ? "registrar_perdidas" : "ajustes_inventario";
+    if (!ctx.puede(permiso)) return ERR.sinPermiso(permiso);
     const { data, error } = await ctx.db.rpc("registrar_ajuste", { p: input });
     if (error) return falloRpc(error);
     return created(data);

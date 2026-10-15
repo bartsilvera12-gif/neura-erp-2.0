@@ -2,18 +2,18 @@
 
 /**
  * /reportes — Panel de reportes: tarjetas agrupadas por sección (Finanzas, Ventas y caja,
- * Inventario). Salen del catálogo (src/modules/reportes/catalogo.ts) filtradas por rol:
- * ADMIN ve todo; SUPERVISOR, el cierre de caja de su sucursal.
+ * Inventario). Salen del catálogo (src/modules/reportes/catalogo.ts) filtradas por los
+ * permisos del perfil: "ver reportes financieros" ve todo; "ver cierres de caja", el cierre.
  */
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { reportesPara, SECCIONES } from "@/modules/reportes/catalogo";
 import { EncabezadoReporte } from "@/modules/reportes/ui";
 
 export default function ReportesPage() {
   const me = useUsuario();
-  const visibles = reportesPara(me?.rol);
+  const visibles = reportesPara((p) => tienePermiso(me, p));
 
   return (
     <div className="space-y-8 pb-10">

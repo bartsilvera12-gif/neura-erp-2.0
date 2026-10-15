@@ -17,5 +17,5 @@ export const GET = withTenant(
     const r = await leerReporte<CierresDias>(ctx.db, "reporte_cierres_dias", argsRango(filtrosRango(new URL(req.url).searchParams)));
     return r.ok ? ok(r.data) : r.res;
   },
-  { roles: ["ADMIN", "SUPERVISOR"] },
+  { permiso: "ver_cierres_caja" },
 );

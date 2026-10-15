@@ -103,6 +103,11 @@ export const REPORTES: Reporte[] = [
 ];
 
 /** Reportes que ve un rol. */
-export const reportesPara = (rol: string | null | undefined) =>
-  REPORTES.filter((r) => (r.roles ?? ["ADMIN"]).includes(rol ?? ""));
+/**
+ * Reportes que ve un perfil: "ver reportes financieros" abre todos; el cierre de caja (los que
+ * tienen SUPERVISOR en `roles`) también se abre con "ver cierres de caja". Lo mismo exigen
+ * la API (withTenant permiso) y la base (rep_sesion).
+ */
+export const reportesPara = (puede: (permiso: "ver_reportes_financieros" | "ver_cierres_caja") => boolean) =>
+  REPORTES.filter((r) => puede("ver_reportes_financieros") || (!!r.roles?.includes("SUPERVISOR") && puede("ver_cierres_caja")));
 

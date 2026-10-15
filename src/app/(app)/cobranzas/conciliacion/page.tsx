@@ -15,12 +15,12 @@ import { ArrowLeft, Building2, FileSpreadsheet, Loader2, Paperclip, Plus, Search
 import { apiFetch, apiForm } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { hoyPY, TZ_PY } from "@/lib/fecha/paraguay";
-import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { Select } from "@/components/Select";
 import { RegistrarTransferencia } from "@/modules/cobranzas/RegistrarTransferencia";
 import {
-  ESTADO_COBRO, fechaCorta, gs, ROLES_REGISTRAR,
+  ESTADO_COBRO, fechaCorta, gs,
   type Banco, type CobroPendiente, type EstadoCobroPendiente, type ListaConciliacion,
 } from "@/modules/cobranzas/tipos";
 import type { ReporteConciliacion } from "@/lib/cobranzas/extracto";
@@ -63,7 +63,9 @@ export default function ConciliacionPage() {
 function Conciliacion() {
   const me = useUsuario();
   const esAdmin = me?.rol === "ADMIN";
-  const puedeRegistrar = !!me && ROLES_REGISTRAR.includes(me.rol);
+  // Perfil: aprobar / rechazar / anular y cargar transferencias (la API y la base lo vuelven a exigir).
+  const puedeAprobar = tienePermiso(me, "aprobar_transferencias");
+  const puedeRegistrar = tienePermiso(me, "registrar_transferencias");
   const puedeExtracto = esAdmin || me?.rol === "SUPERVISOR";
   const destacado = useSearchParams().get("cobro");
 
@@ -195,7 +197,7 @@ function Conciliacion() {
           <Link href="/cobranzas" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">
             <ArrowLeft className="h-4 w-4" /> Seguimiento
           </Link>
-          {esAdmin ? (
+          {esAdmin && tienePermiso(me, "configuracion") ? (
             <button onClick={() => setBancosOpen(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 shadow-sm hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">
               <Building2 className="h-4 w-4" /> Bancos
             </button>
@@ -335,17 +337,17 @@ function Conciliacion() {
                           <Paperclip className="h-3.5 w-3.5" /> Ver
                         </button>
                       ) : null}
-                      {c.estado === "pendiente" && esAdmin ? (
+                      {c.estado === "pendiente" && puedeAprobar ? (
                         <>
                           <button onClick={() => void aprobar(c)} disabled={!!aprobandoId} className="rounded bg-emerald-600 px-2 py-1 font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">Aprobar</button>
                           <button onClick={() => setRechazando(c)} className="rounded px-2 py-1 text-red-600 hover:bg-red-50">Rechazar</button>
                         </>
                       ) : null}
-                      {c.estado === "aprobado" && esAdmin ? (
+                      {c.estado === "aprobado" && puedeAprobar ? (
                         <button onClick={() => setAnulando(c)} title="Anular la aprobación (anula el cobro y la deuda de la factura vuelve)"
                           className="rounded border border-red-200 px-2 py-1 font-semibold text-red-600 hover:bg-red-50">Anular</button>
                       ) : null}
-                      {c.estado === "pendiente" && !esAdmin ? <span className="text-[10px] text-slate-400">Espera aprobación</span> : null}
+                      {c.estado === "pendiente" && !puedeAprobar ? <span className="text-[10px] text-slate-400">Espera aprobación</span> : null}
                     </div>
                   </td>
                 </tr>

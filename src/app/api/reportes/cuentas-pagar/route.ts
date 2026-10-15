@@ -17,5 +17,5 @@ export const GET = withTenant(
     const r = await leerReporte<CuentasPagar>(ctx.db, "reporte_cxp", { ...argsRango(filtrosRango(sp)), p_proveedor: uuidONull(sp.get("proveedor")) });
     return r.ok ? ok(r.data) : r.res;
   },
-  { roles: ["ADMIN"] },
+  { permiso: "ver_reportes_financieros" },
 );

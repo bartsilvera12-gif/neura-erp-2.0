@@ -7,7 +7,7 @@
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, ERR, fail } from "@/lib/api/responses";
 import { idTras } from "@/modules/cobranzas/server";
-import { ROLES_REGISTRAR, type DetalleCobranza } from "@/modules/cobranzas/tipos";
+import type { DetalleCobranza } from "@/modules/cobranzas/tipos";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,5 +18,5 @@ export const GET = withTenant(async (ctx, req) => {
   const { data, error } = await ctx.db.rpc<Omit<DetalleCobranza, "puede_registrar">>("cobranza_detalle", { p_cliente: id });
   if (error) return /no encontrado/i.test(error.message) ? ERR.notFound("Cliente") : fail(error.message, 400);
   if (!data) return ERR.server();
-  return ok({ ...data, puede_registrar: ROLES_REGISTRAR.includes(ctx.rol) });
+  return ok({ ...data, puede_registrar: ctx.puede("registrar_transferencias") });
 });

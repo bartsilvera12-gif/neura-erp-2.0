@@ -62,5 +62,5 @@ export const POST = withTenant(
     if (error) return fail(mensajeDb(error.message), 422);
     return created(data);
   },
-  { roles: ["ADMIN"], body: cuerpoGasto },
+  { permiso: "registrar_gastos", body: cuerpoGasto },
 );

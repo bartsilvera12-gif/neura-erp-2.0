@@ -51,5 +51,5 @@ export const POST = withTenant(
     if (error) return fail(error.message);
     return created({ item: data?.[0] ?? null });
   },
-  { roles: ["ADMIN"], body: alta },
+  { permiso: "configuracion", body: alta },
 );

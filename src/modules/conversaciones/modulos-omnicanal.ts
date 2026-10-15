@@ -23,6 +23,7 @@ export const moduloMonitoreo: Modulo = {
   icon: "activity",
   familia: "Omnicanal",
   roles: ["ADMIN"],
+  accesoPropio: true,
 };
 
 export const moduloHistorialOmnicanal: Modulo = {

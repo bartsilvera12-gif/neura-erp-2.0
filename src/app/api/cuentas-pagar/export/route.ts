@@ -50,5 +50,5 @@ export const GET = withTenant(
     ]);
     return new Response(xlsx as unknown as BodyInit, { status: 200, headers: xlsxHeaders(`cuentas-a-pagar-${moneda.toLowerCase()}-${hoyPY()}`) });
   },
-  { roles: ["ADMIN"] },
+  { permiso: ["pagar_proveedores", "exportar"] },
 );

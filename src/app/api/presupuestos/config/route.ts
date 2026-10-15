@@ -19,5 +19,5 @@ export const PUT = withTenant(
     if (error) return fail(error.message.replace(/^.*?ERROR:\s*/, ""), 400);
     return ok(data);
   },
-  { roles: ["ADMIN"], body: cuerpoConfig },
+  { permiso: "configuracion", body: cuerpoConfig },
 );

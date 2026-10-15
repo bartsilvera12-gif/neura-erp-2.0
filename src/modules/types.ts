@@ -16,6 +16,14 @@ export type Modulo = {
   roles?: string[];
   /** sub-pantallas del módulo, para navegar directo desde el sidebar */
   children?: { label: string; href: string; /** roles que ven esta sub-pantalla (vacío = todos) */ roles?: string[] }[];
+  /** permiso del perfil que además hace falta para verlo (ej. "administrar_usuarios") */
+  permiso?: string;
+  /**
+   * La pantalla decide sola quién entra además del perfil (ej. Monitoreo: también los
+   * supervisores de una cola). El menú la muestra según el perfil, pero entrar por URL no
+   * corta con "Sin acceso".
+   */
+  accesoPropio?: boolean;
 };
 
 /** Config por cliente: lo ÚNICO que cambia entre clones (lo escribe setup.mjs). */

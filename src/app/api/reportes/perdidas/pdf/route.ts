@@ -40,5 +40,5 @@ export const GET = withTenant(
     pieDePagina(doc, "Pérdidas de producto · valorizadas al costo");
     return respuestaPdf(doc, `${nombreArchivo("perdidas", d.desde, d.hasta)}.pdf`);
   },
-  { roles: ["ADMIN"] },
+  { permiso: ["ver_reportes_financieros", "exportar"] },
 );

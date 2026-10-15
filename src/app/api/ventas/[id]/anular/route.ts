@@ -9,7 +9,6 @@ import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, fail } from "@/lib/api/responses";
 import { UUID_RE, idDeRuta, idInvalido } from "@/modules/inventario/server/ids";
-import { ROLES_CAJA } from "@/modules/caja/lib";
 
 const cuerpo = z
   .object({
@@ -30,5 +29,5 @@ export const POST = withTenant(
     if (error) return fail(error.message.replace(/^.*?ERROR:\s*/, "") || "No se pudo anular la venta.", 409);
     return ok(data);
   },
-  { roles: ROLES_CAJA, body: cuerpo },
+  { permiso: "anular_ventas", body: cuerpo },
 );

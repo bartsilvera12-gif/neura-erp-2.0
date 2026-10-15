@@ -18,5 +18,5 @@ export const GET = withTenant(
     if (!r.ok) return r.res;
     return new Response(xlsxCxp(r.data) as unknown as BodyInit, { status: 200, headers: xlsxHeaders(nombreArchivo("cuentas-por-pagar", r.data.hoy)) });
   },
-  { roles: ["ADMIN"] },
+  { permiso: ["ver_reportes_financieros", "exportar"] },
 );

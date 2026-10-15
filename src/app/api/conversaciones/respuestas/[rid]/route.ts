@@ -36,7 +36,7 @@ export const PATCH = withTenant(
     if (!data?.length) return ERR.notFound("Respuesta");
     return ok(data[0]);
   },
-  { roles: ["ADMIN"], body: cambios },
+  { permiso: "configuracion", body: cambios },
 );
 
 export const DELETE = withTenant(
@@ -47,5 +47,5 @@ export const DELETE = withTenant(
     if (error) return ERR.server();
     return noContent();
   },
-  { roles: ["ADMIN"] },
+  { permiso: "configuracion" },
 );

@@ -34,5 +34,5 @@ export const POST = withTenant(
     if (error) return falloRpc(error);
     return ok(data);
   },
-  { body: cuerpo },
+  { permiso: "recibir_traslados", body: cuerpo },
 );

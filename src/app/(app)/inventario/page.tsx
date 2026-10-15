@@ -17,7 +17,7 @@ import {
 import { depositosPlanos, hayVariosDepositos, invalidarDepositos, opcionesAlcance, opcionesDepositos, partesAlcance, useDepositos, type DepositoPlano } from "@/modules/inventario/depositos";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
-import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
@@ -55,7 +55,9 @@ const margenColor = (m: number) => (m >= 40 ? "text-green-600" : m >= 20 ? "text
 const formatStock = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
 
 export default function InventarioPage() {
-  const esAdmin = useUsuario()?.rol === "ADMIN";
+  const me = useUsuario();
+  // Perfil: importar productos pide "editar productos" (el costo lo oculta el servidor sin "ver costos").
+  const esAdmin = tienePermiso(me, "editar_productos");
   const [categorias, setCategorias] = useState<Categoria[]>(categoriasVistas);
   const [recarga, setRecarga] = useState(0);
 
@@ -430,6 +432,8 @@ const FilaProducto = memo(function FilaProducto({
   onExpandir: (id: string) => void;
 }) {
   const costo = Number(p.costo_promedio) || 0;
+  // Sin "ver costos y márgenes" el servidor no manda el costo: se muestra "—".
+  const conCosto = p.costo_promedio != null;
   const porDep = p.stock_depositos ?? [];
   // Stock que se muestra: el total, o el del depósito / la sucursal elegidos en "Stock".
   const stock = alcanceDeposito
@@ -486,7 +490,7 @@ const FilaProducto = memo(function FilaProducto({
           <span className="text-slate-400">— Sin categoría</span>
         )}
       </td>
-      <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-slate-700">{gs(costo)}</td>
+      <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-slate-700">{conCosto ? gs(costo) : <span className="text-slate-300">—</span>}</td>
       <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums text-slate-900">{gs(Number(p.precio_venta))}</td>
       <td className="px-3 py-3 text-center">
         {sinControl ? (
@@ -502,7 +506,7 @@ const FilaProducto = memo(function FilaProducto({
           </button>
         )}
       </td>
-      <td className={`hidden px-3 py-3 text-right font-semibold tabular-nums lg:table-cell ${margenColor(margen)}`}>{margen.toFixed(1)}%</td>
+      <td className={`hidden px-3 py-3 text-right font-semibold tabular-nums lg:table-cell ${conCosto ? margenColor(margen) : "text-slate-300"}`}>{conCosto ? `${margen.toFixed(1)}%` : "—"}</td>
       <td className="px-5 py-3">
         <div className="flex items-center justify-center gap-1">
           <button onClick={() => onEditar(p)} onMouseEnter={() => onPrecargar(p)} onFocus={() => onPrecargar(p)} title={inactivo ? "Ver producto (inactivo)" : "Editar producto"} aria-label={`${inactivo ? "Ver" : "Editar"} ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)]">

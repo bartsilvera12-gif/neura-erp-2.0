@@ -4,10 +4,13 @@
  *
  * es_tecnico / es_qa: puede quedar a cargo de un ticket ("Tomar"); QA recibe las revisiones.
  * usa_soporte: entra al módulo sin ser ADMIN.
+ * La tabla usuarios ya no se escribe directo (receta 55): va por usuario_flags_soporte, que
+ * valida el permiso y deja el cambio en el historial de usuarios.
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok } from "@/lib/api/responses";
+import { invalidarSesiones } from "@/lib/api/resolve-session";
 import { falla, invalidarEquipo, personasDeEmpresa } from "@/modules/soporte/server";
 
 const esquema = z.object({
@@ -24,10 +27,13 @@ export const PATCH = withTenant(
     if (typeof input.es_qa === "boolean") patch.es_qa = input.es_qa;
     if (typeof input.usa_soporte === "boolean") patch.usa_soporte = input.usa_soporte;
     if (Object.keys(patch).length === 0) return falla("Nada para actualizar");
-    const { data, error } = await ctx.db.update("usuarios", patch).eq("id", input.usuario_id).select("id");
-    if (error) return falla("No se pudo guardar el cambio");
-    if (!data?.length) return falla("Usuario no encontrado", 404);
+    const { error } = await ctx.db.rpc("usuario_flags_soporte", { p_usuario: input.usuario_id, p: patch });
+    if (error) {
+      const msg = error.message.replace(/^.*?ERROR:\s*/, "");
+      return falla(/no encontrado/i.test(msg) ? "Usuario no encontrado" : msg || "No se pudo guardar el cambio", /no encontrado/i.test(msg) ? 404 : 400);
+    }
     invalidarEquipo(ctx);
+    invalidarSesiones();
     return ok(await personasDeEmpresa(ctx));
   },
   { roles: ["ADMIN"], body: esquema },

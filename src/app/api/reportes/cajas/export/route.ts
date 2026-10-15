@@ -77,5 +77,5 @@ export const GET = withTenant(
     ]);
     return new Response(xlsx as unknown as BodyInit, { status: 200, headers: xlsxHeaders(nombreArchivo("cierres-caja", d.desde, d.hasta)) });
   },
-  { roles: ["ADMIN", "SUPERVISOR"] },
+  { permiso: ["ver_cierres_caja", "exportar"] },
 );

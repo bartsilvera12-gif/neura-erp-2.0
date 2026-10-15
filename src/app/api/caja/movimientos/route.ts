@@ -10,7 +10,6 @@ import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { created, ERR } from "@/lib/api/responses";
 import { falloRpc } from "@/modules/inventario/server/rpc";
-import { ROLES_CAJA } from "@/modules/caja/lib";
 
 const movSchema = z.object({
   caja_id: z.string().uuid("Elegí la caja"),
@@ -27,5 +26,5 @@ export const POST = withTenant(
     if (!data) return ERR.server();
     return created(data);
   },
-  { roles: ROLES_CAJA, body: movSchema },
+  { permiso: "movimientos_caja", body: movSchema },
 );

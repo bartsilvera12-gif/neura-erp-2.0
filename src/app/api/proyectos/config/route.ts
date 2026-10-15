@@ -59,5 +59,5 @@ export const PUT = withTenant(
     if (!c) return ERR.server();
     return ok({ ...c, soy_pm: pm });
   },
-  { roles: ["ADMIN"], body: guardar },
+  { permiso: "configuracion", body: guardar },
 );

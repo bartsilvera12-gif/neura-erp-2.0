@@ -51,5 +51,5 @@ export const PUT = withTenant(
     invalidarConfig(ctx);
     return ok(await leerConfig(ctx));
   },
-  { roles: ["ADMIN"], body: esquema },
+  { permiso: "configuracion", body: esquema },
 );

@@ -90,5 +90,5 @@ export const PUT = withTenant(
     const cant = await cantidades(ctx, etapas.map((e) => e.codigo));
     return ok(etapas.map((e) => ({ ...e, cantidad: cant.get(e.codigo) ?? 0 })));
   },
-  { roles: ["ADMIN"], body: guardar },
+  { permiso: "configuracion", body: guardar },
 );

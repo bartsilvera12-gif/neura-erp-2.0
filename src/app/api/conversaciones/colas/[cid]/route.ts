@@ -18,7 +18,7 @@ export const PATCH = withTenant(
     if (!r.ok) return fail(r.mensaje, r.status);
     return ok({ id: r.id });
   },
-  { roles: ["ADMIN"], body: esquemaCola },
+  { permiso: "configuracion", body: esquemaCola },
 );
 
 export const DELETE = withTenant(
@@ -33,5 +33,5 @@ export const DELETE = withTenant(
     if (!data?.length) return ERR.notFound("Cola");
     return ok({ id });
   },
-  { roles: ["ADMIN"] },
+  { permiso: "configuracion" },
 );

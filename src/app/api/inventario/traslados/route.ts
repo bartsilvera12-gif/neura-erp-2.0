@@ -71,5 +71,5 @@ export const POST = withTenant(
     if (error) return falloRpc(error);
     return created(data);
   },
-  { roles: ["ADMIN"], body: cuerpo },
+  { permiso: "crear_traslados", body: cuerpo },
 );

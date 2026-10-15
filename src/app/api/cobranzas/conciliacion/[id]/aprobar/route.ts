@@ -20,5 +20,5 @@ export const POST = withTenant(
     if (error) return falloRpc(error);
     return ok(data);
   },
-  { roles: ["ADMIN"] },
+  { permiso: "aprobar_transferencias" },
 );

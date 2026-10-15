@@ -13,7 +13,7 @@ import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { FileText, Trash2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { browserClient } from "@/lib/supabase/browser";
-import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
 import { formatGs } from "@/modules/caja/lib";
 import { metodoLabel, invalidarCajas } from "@/modules/caja/turno";
@@ -59,7 +59,7 @@ const PRECIO: Record<string, string> = { minorista: "Minorista", mayorista: "May
 const fechaCorta = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
 
 export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string; onClose: () => void; onAnulada: () => void }) {
-  const rol = useUsuario()?.rol ?? "";
+  const me = useUsuario();
   const [d, setD] = useState<Detalle | null>(null);
   const [cargando, setCargando] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -77,7 +77,8 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
   const credito = venta?.tipo_venta === "CREDITO";
   const turnoCerrado = !!venta?.turno && venta.turno.estado !== "abierta";
   const efectivo = (d?.pagos ?? []).filter((p) => p.metodo_pago === "efectivo").reduce((a, p) => a + Number(p.monto), 0);
-  const puedeAnular = !turnoCerrado || rol === "ADMIN" || rol === "SUPERVISOR";
+  // Perfil: anular pide "anular ventas"; si el turno ya se cerró, además "anular ventas de turnos cerrados".
+  const puedeAnular = tienePermiso(me, "anular_ventas") && (!turnoCerrado || tienePermiso(me, "anular_ventas_cerradas"));
 
   async function anular() {
     if (turnoCerrado && !motivo.trim()) { setError("Escribí el motivo de la anulación."); return; }
@@ -233,7 +234,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
         <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
           {!anulada && venta ? (
             !puedeAnular ? (
-              <span className="max-w-[60%] text-[11px] text-slate-400">Es de un turno cerrado: solo un administrador o supervisor la puede anular.</span>
+              <span className="max-w-[60%] text-[11px] text-slate-400">{!tienePermiso(me, "anular_ventas") ? "Tu perfil no permite anular ventas." : "Es de un turno cerrado: tu perfil no permite anularla."}</span>
             ) : confirmar ? (
               <div className="flex items-center gap-2">
                 <button onClick={anular} disabled={anulando} className="inline-flex h-10 items-center gap-1.5 whitespace-nowrap rounded-xl bg-rose-600 px-4 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50">

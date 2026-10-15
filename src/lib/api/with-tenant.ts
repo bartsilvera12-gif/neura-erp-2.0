@@ -5,11 +5,13 @@
  *
  *   export const GET = withTenant(async (ctx) => ok(await ctx.db.select("clientes")));
  *   export const POST = withTenant(handler, { roles: ["ADMIN"], body: miSchema });
+ *   export const POST = withTenant(handler, { permiso: "anular_ventas", body: miSchema });
  *
  * Garantías (no dependen de que el programador se acuerde):
  *   1. sin sesión válida → 401
  *   2. empresa_id / usuario / rol salen de la BASE, nunca del request
- *   3. rol insuficiente → 403
+ *   3. rol insuficiente o perfil sin el permiso → 403 (con `permiso`, el permiso del perfil
+ *      decide y `roles` no se mira: "si tiene el permiso, pasa")
  *   4. body inválido → 422 (validado con zod)
  *   5. ctx.db está atado a la empresa: imposible tocar datos de otra
  */
@@ -19,6 +21,7 @@ import type { ZodType } from "zod";
 import { authOnlyClient, userClient } from "@/lib/supabase/clients";
 import { tenantSchema } from "@/lib/tenant/schema";
 import { resolveTenantSession } from "@/lib/api/resolve-session";
+import type { PerfilSesion } from "@/modules/usuarios/permisos";
 import { TenantDb } from "@/lib/api/tenant-db";
 import { ERR } from "@/lib/api/responses";
 
@@ -27,11 +30,26 @@ export type TenantContext = {
   usuarioId: string;
   empresaId: string;
   rol: string;
+  /** nombre visible del usuario (usuarios.nombre) */
+  nombre: string;
+  sucursalId: string | null;
+  /** perfil efectivo: pantallas, permisos, alcance de sucursal y tope de descuento */
+  perfil: PerfilSesion;
+  /** ¿el perfil tiene el permiso? (Administrador: todos) */
+  puede: (permiso: string) => boolean;
   schema: string;
   db: TenantDb;
 };
 
-type Options<B> = { roles?: string[]; body?: ZodType<B> };
+type Options<B> = {
+  roles?: string[];
+  /**
+   * Permiso(s) del perfil que exige la ruta (todos los de la lista). Cuando está, REEMPLAZA a
+   * `roles`: si el perfil tiene el permiso, pasa (las funciones de la base lo vuelven a validar).
+   */
+  permiso?: string | string[];
+  body?: ZodType<B>;
+};
 type Handler<B> = (ctx: TenantContext, req: NextRequest, input: B) => Promise<Response> | Response;
 
 function extractBearer(req: NextRequest): string | null {
@@ -128,7 +146,13 @@ export function withTenant<B = unknown>(handler: Handler<B>, opts: Options<B> = 
       const session = sub === user.id && sessionAnticipada ? sessionAnticipada : await resolveTenantSession(user.id);
       if (!session) return ERR.forbidden();
 
-      if (opts.roles && !opts.roles.includes(session.rol)) return ERR.forbidden();
+      const puede = (p: string) => session.perfil.todo || session.perfil.permisos.includes(p);
+      if (opts.permiso) {
+        const faltan = (Array.isArray(opts.permiso) ? opts.permiso : [opts.permiso]).filter((p) => !puede(p));
+        if (faltan.length) return ERR.sinPermiso(faltan[0]);
+      } else if (opts.roles && !opts.roles.includes(session.rol)) {
+        return ERR.forbidden();
+      }
 
       let input = undefined as unknown as B;
       if (opts.body) {
@@ -149,6 +173,10 @@ export function withTenant<B = unknown>(handler: Handler<B>, opts: Options<B> = 
         usuarioId: session.usuarioId,
         empresaId: session.empresaId,
         rol: session.rol,
+        nombre: session.nombre,
+        sucursalId: session.sucursalId,
+        perfil: session.perfil,
+        puede,
         schema,
         db,
       };

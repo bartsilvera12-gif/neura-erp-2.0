@@ -31,5 +31,5 @@ export const POST = withTenant(
       return fail("No se pudo completar la importación.", 500);
     }
   },
-  { roles: ["ADMIN"] },
+  { permiso: "editar_productos" },
 );

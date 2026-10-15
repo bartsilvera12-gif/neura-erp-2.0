@@ -36,5 +36,5 @@ export const PATCH = withTenant(
     if (!data?.length) return ERR.notFound("Banco");
     return ok(data[0]);
   },
-  { roles: ["ADMIN"], body: cuerpo },
+  { permiso: "configuracion", body: cuerpo },
 );

@@ -12,11 +12,12 @@ import {
   LayoutDashboard,
   LogOut,
   Search,
+  ShieldAlert,
 } from "lucide-react";
 import { browserClient } from "@/lib/supabase/browser";
 import { apiFetchCache, limpiarCache } from "@/lib/api/cache-cliente";
 import { ProveedorUsuario, type Usuario } from "@/lib/sesion/ContextoUsuario";
-import { modulosActivos } from "@/modules/registry";
+import { modulosDelPerfil, ORDEN_FAMILIAS, pantallaDeRuta, perfilVePantalla } from "@/modules/registry";
 import { iconoModulo } from "@/modules/icons";
 import type { Modulo } from "@/modules/types";
 import { NotificacionesBell } from "@/modules/notificaciones/NotificacionesBell";
@@ -86,10 +87,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     };
   }, [router]);
 
-  // Los módulos visibles dependen del rol: hasta que llega /api/me no se lista ninguno
-  // (si no, aparecerían módulos que el rol no ve y después desaparecerían).
+  // Los módulos visibles dependen del rol y del PERFIL (sus pantallas): hasta que llega
+  // /api/me no se lista ninguno (si no, aparecerían módulos que no ve y después desaparecerían).
   const rol = me?.rol;
-  const modulos = useMemo(() => (rol === undefined ? [] : modulosActivos(rol)), [rol]);
+  const perfil = me?.perfil;
+  const modulos = useMemo(() => (rol === undefined ? [] : modulosDelPerfil(rol, perfil)), [rol, perfil]);
+
+  // Guard de página: entrar por URL a una pantalla que el perfil no tiene → "Sin acceso".
+  // (Las APIs y la base lo vuelven a validar; esto es para no mostrar una pantalla rota.)
+  const pantallaBloqueada = useMemo(() => {
+    if (!me || !perfil) return null;
+    const p = pantallaDeRuta(pathname);
+    if (!p || p.accesoPropio) return null;
+    return perfilVePantalla(p, rol, perfil) ? null : p;
+  }, [me, perfil, rol, pathname]);
 
   const itemActivo = useMemo(() => {
     const largo = (h: string) => { const base = h.split("?")[0]; return pathname === base || pathname.startsWith(`${base}/`) ? base.length : -1; };
@@ -105,7 +116,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // Búsqueda inteligente: sin tildes, errores de tipeo; también por la familia ("finanzas").
     // Busca en el módulo, su familia y sus sub-pantallas ("arqueo" → Caja › Arqueo / Cierre).
     const visibles = filtrar(modulos, q, (m) => ({ principal: m.label, otros: [m.familia, ...(m.children ?? []).map((c) => c.label)] }));
-    const orden = ["Comercial", "Finanzas", "Operaciones", "Omnicanal", "Soporte", "Administración", "General"];
+    const orden = ORDEN_FAMILIAS;
     const map = new Map<string, Modulo[]>();
     for (const m of visibles) {
       const fam = m.familia ?? "General";
@@ -259,10 +270,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         />
         <main className="min-w-0 flex-1 overflow-y-auto bg-[#f6f8fa] p-6">
           <ProveedorUsuario value={me}>
-            <div className="animate-in mx-auto max-w-[1400px]">{children}</div>
+            <div className="animate-in mx-auto max-w-[1400px]">
+              {pantallaBloqueada ? <SinAcceso pantalla={`${pantallaBloqueada.moduloLabel}${pantallaBloqueada.label !== pantallaBloqueada.moduloLabel ? ` › ${pantallaBloqueada.label}` : ""}`} perfil={perfil?.nombre ?? null} /> : children}
+            </div>
           </ProveedorUsuario>
         </main>
       </div>
+    </div>
+  );
+}
+
+function SinAcceso({ pantalla, perfil }: { pantalla: string; perfil: string | null }) {
+  return (
+    <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-20 text-center">
+      <span className="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-500">
+        <ShieldAlert className="h-6 w-6" aria-hidden />
+      </span>
+      <h1 className="mt-4 text-lg font-semibold text-slate-900">Sin acceso</h1>
+      <p className="mt-1.5 text-sm text-slate-500">
+        Tu perfil{perfil ? <> (<span className="font-medium text-slate-700">{perfil}</span>)</> : null} no tiene habilitada la pantalla{" "}
+        <span className="font-medium text-slate-700">{pantalla}</span>. Si la necesitás, pedíselo a un administrador.
+      </p>
+      <Link href="/" className="mt-5 rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 no-underline hover:bg-slate-50">
+        Volver al inicio
+      </Link>
     </div>
   );
 }
@@ -345,13 +376,16 @@ function Header({ me, onLogout }: { me: Me | null; onLogout: () => void }) {
           </span>
           <span className="hidden text-left sm:block">
             <span className="block max-w-[180px] truncate text-sm font-medium text-slate-900">{me?.email ?? "Usuario"}</span>
-            <span className="block text-xs text-slate-500">{rolLabel(me?.rol)}</span>
+            <span className="block text-xs text-slate-500">{me?.perfil?.nombre ?? rolLabel(me?.rol)}</span>
           </span>
           <ChevronDown className={`h-4 w-4 text-slate-500 transition-transform ${open ? "rotate-180" : ""}`} />
         </button>
         {open ? (
           <div className="absolute right-0 top-full mt-1 w-48 rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
-            <div className="border-b border-slate-100 px-4 py-2 text-sm font-medium text-slate-900">{rolLabel(me?.rol)}</div>
+            <div className="border-b border-slate-100 px-4 py-2">
+              <p className="truncate text-sm font-medium text-slate-900">{me?.nombre || me?.email || "Usuario"}</p>
+              <p className="text-xs text-slate-500">Perfil: {me?.perfil?.nombre ?? rolLabel(me?.rol)}</p>
+            </div>
             <button onClick={onLogout} className="flex w-full items-center gap-2 px-4 py-2 text-sm text-slate-600 transition-colors hover:bg-slate-50 hover:text-rose-600">
               <LogOut className="h-4 w-4" /> Cerrar sesión
             </button>

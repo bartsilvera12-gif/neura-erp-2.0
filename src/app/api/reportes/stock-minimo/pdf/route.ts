@@ -94,5 +94,5 @@ export const GET = withTenant(
     pieDePagina(doc, "Stock mínimo · Lista de reposición");
     return respuestaPdf(doc, `stock-minimo-${hoy}.pdf`);
   },
-  { roles: ["ADMIN"] },
+  { permiso: ["ver_reportes_financieros", "exportar"] },
 );

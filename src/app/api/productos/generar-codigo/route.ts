@@ -20,5 +20,5 @@ export const POST = withTenant(
     if (error || !data) return fail("No se pudo generar el código. Intentá de nuevo.", 500);
     return ok({ codigo: data });
   },
-  { roles: ["ADMIN"], body: cuerpo },
+  { permiso: "editar_productos", body: cuerpo },
 );

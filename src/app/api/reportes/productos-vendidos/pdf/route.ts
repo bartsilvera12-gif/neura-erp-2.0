@@ -94,5 +94,5 @@ export const GET = withTenant(
     pieDePagina(doc, "Productos vendidos · Documento no fiscal");
     return respuestaPdf(doc, `productos-vendidos-${f.desde}_${f.hasta}.pdf`);
   },
-  { roles: ["ADMIN"] },
+  { permiso: ["ver_reportes_financieros", "exportar"] },
 );

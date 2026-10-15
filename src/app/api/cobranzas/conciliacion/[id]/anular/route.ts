@@ -19,5 +19,5 @@ export const POST = withTenant(
     if (error) return falloRpc(error);
     return ok(data);
   },
-  { roles: ["ADMIN"], body: z.object({ motivo: z.string().trim().min(1, "Escribí el motivo de la anulación").max(500) }) },
+  { permiso: "aprobar_transferencias", body: z.object({ motivo: z.string().trim().min(1, "Escribí el motivo de la anulación").max(500) }) },
 );
