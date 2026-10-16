@@ -2,15 +2,18 @@
 
 /**
  * Vista 2 — Perfiles: pantallas y permisos.
- *   · lista de perfiles (los de sistema primero) con cuántos usuarios usan cada uno
+ *   · lista de perfiles (Administrador primero) con cuántos usuarios usan cada uno
  *   · editor: nivel base, alcance de sucursal, tope de descuento, árbol de pantallas por
  *     familia (con "seleccionar todo") y permisos agrupados con su explicación
  *   · vista previa "este perfil ve…" al costado
- * Administrador no se edita (tiene todo); los de sistema conservan nombre y nivel base.
+ * Solo el Administrador está protegido (tiene todo, no se edita ni se elimina). El resto
+ * (también Supervisor, Cajero y Vendedor sembrados) se edita, duplica y elimina si nadie lo usa.
  */
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Building2, Copy, History, Info, Layers, Loader2, Lock, Plus, ShieldCheck, Sparkles, Trash2, Users } from "lucide-react";
+import { Pencil, AlertTriangle, Building2, Copy, History, Info, Layers, Loader2, Plus, ShieldCheck, Sparkles, Trash2, Users } from "lucide-react";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
+import { MQ_ESCRITORIO, useMediaQuery } from "@/lib/ui/responsive";
 import { ORDEN_FAMILIAS, pantallasCatalogo, type Pantalla } from "@/modules/registry";
 import { iconoModulo } from "@/modules/icons";
 import { GRUPOS_PERMISOS, NIVELES, nivelLabel, permisoAplica, permisoDef, TODOS_LOS_PERMISOS, type DefPermiso } from "@/modules/usuarios/permisos";
@@ -80,6 +83,7 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
   onCambio: () => void;
 }) {
   const catalogo = useMemo(() => pantallasCatalogo(), []);
+  const escritorio = useMediaQuery(MQ_ESCRITORIO);
   const [sel, setSel] = useState<string | null>(null);
   const [b, setB] = useState<Borrador | null>(null);
   const [original, setOriginal] = useState<string>("");
@@ -239,14 +243,16 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[250px_1fr]">
       {/* Lista de perfiles */}
-      <aside className="space-y-2 lg:sticky lg:top-10 lg:self-start">
+      <aside className="min-w-0 space-y-2 lg:sticky lg:top-10 lg:self-start">
         <button type="button" onClick={() => conCuidado(() => abrir({ ...NUEVO }))}
-          className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
+          className="flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
           <Plus className="h-4 w-4" /> Nuevo perfil
         </button>
-        <ul className="space-y-1.5">
+        {/* Escritorio: lista vertical. Celular/tablet: los perfiles en una fila que scrollea
+            adentro (el elegido queda a la vista) y el editor justo abajo. */}
+        <ListaPerfiles vertical={escritorio} dependencias={[sel, b?.id === null]}>
           {b && b.id === null ? (
-            <li className="rounded-xl border-2 bg-white px-3 py-2.5" style={{ borderColor: TEAL }}>
+            <li className="w-[180px] shrink-0 rounded-xl border-2 bg-white px-3 py-2.5 lg:w-auto" style={{ borderColor: TEAL }} data-activo="true">
               <p className="truncate text-sm font-semibold text-slate-900">{b.nombre.trim() || "Perfil nuevo"}</p>
               <p className="text-[11px] text-slate-500">Sin guardar</p>
             </li>
@@ -254,25 +260,25 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
           {(perfiles ?? []).map((p) => {
             const activo = sel === p.id;
             return (
-              <li key={p.id}>
-                <button type="button" onClick={() => !activo && conCuidado(() => abrir(dePerfil(p)))}
-                  className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors duration-150 ${activo ? "border-transparent bg-white shadow-sm ring-2" : "border-slate-200 bg-white hover:border-slate-300"}`}
+              <li key={p.id} className="w-[180px] shrink-0 py-0.5 lg:w-auto lg:py-0">
+                <button type="button" onClick={() => !activo && conCuidado(() => abrir(dePerfil(p)))} aria-pressed={activo} data-activo={activo ? "true" : undefined}
+                  className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors duration-150 ${activo ? "border-transparent bg-white shadow-sm ring-2 ring-inset lg:ring-offset-0" : "border-slate-200 bg-white hover:border-slate-300"}`}
                   style={activo ? ({ ["--tw-ring-color" as string]: TEAL } as React.CSSProperties) : undefined}>
                   <span className="flex items-center gap-1.5">
                     <span className="truncate text-sm font-semibold text-slate-900">{p.nombre}</span>
-                    {p.codigo === "ADMIN" ? <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#023047]" /> : p.sistema ? <Lock className="h-3 w-3 shrink-0 text-slate-400" /> : null}
+                    {p.codigo === "ADMIN" ? <ShieldCheck className="h-3.5 w-3.5 shrink-0 text-[#023047]" /> : null}
                   </span>
                   <span className="mt-0.5 flex items-center gap-2 text-[11px] text-slate-500">
-                    <span>{p.sistema ? "Sistema" : `Nivel ${nivelLabel(p.nivel_base)}`}</span>
+                    <span>{p.codigo === "ADMIN" ? "Acceso total" : `Nivel ${nivelLabel(p.nivel_base)}`}</span>
                     <span className="inline-flex items-center gap-0.5 tabular-nums"><Users className="h-3 w-3" /> {p.usuarios}</span>
                   </span>
                 </button>
               </li>
             );
           })}
-        </ul>
-        <p className="px-1 pt-1 text-[11px] leading-relaxed text-slate-400">
-          Los perfiles de sistema replican los roles de antes. Podés ajustarlos o crear los tuyos (ej. Depósito, Contador).
+        </ListaPerfiles>
+        <p className="px-1 pt-1 text-[11px] leading-relaxed text-slate-400 max-lg:hidden">
+          El Administrador tiene acceso total y no se puede modificar. El resto de los perfiles los podés editar o eliminar.
         </p>
       </aside>
 
@@ -281,23 +287,30 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
         <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-500">Elegí un perfil de la lista.</div>
       ) : (
         <div className="min-w-0 space-y-4">
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                {b.sistema ? (
-                  <h2 className="flex items-center gap-2 text-xl font-semibold text-slate-900">
+                {b.todo ? (
+                  <h2 className="flex flex-wrap items-center gap-2 text-xl font-semibold text-slate-900 [overflow-wrap:anywhere]">
                     {b.nombre}
-                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500"><Lock className="h-3 w-3" /> Sistema</span>
+                    <ShieldCheck className="h-5 w-5 shrink-0 text-[#023047]" aria-label="Protegido" />
                   </h2>
                 ) : (
-                  <input value={b.nombre} onChange={(e) => set("nombre", e.target.value)} maxLength={60} placeholder="Nombre del perfil (ej. Depósito)"
-                    className="w-full max-w-md rounded-lg border border-transparent bg-transparent px-1 -ml-1 text-xl font-semibold text-slate-900 outline-none transition hover:border-slate-200 focus:border-[var(--brand)]" />
+                  <label className="block max-w-md">
+                    <span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500">Nombre del perfil</span>
+                    <span className="relative block">
+                      <input value={b.nombre} onChange={(e) => set("nombre", e.target.value)} maxLength={60} placeholder="Ej. Depósito, Contador…"
+                        autoFocus={!b.id}
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-9 text-lg font-semibold text-slate-900 shadow-sm outline-none transition max-sm:min-h-11 hover:border-slate-300 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]" />
+                      <Pencil className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+                    </span>
+                  </label>
                 )}
                 <input value={b.descripcion} onChange={(e) => set("descripcion", e.target.value)} disabled={soloLectura} maxLength={300}
                   placeholder="Para qué es este perfil (opcional)"
-                  className="mt-1 w-full rounded-lg border border-transparent bg-transparent px-1 -ml-1 text-sm text-slate-500 outline-none transition hover:border-slate-200 focus:border-[var(--brand)] disabled:hover:border-transparent" />
+                  className={`mt-2 w-full rounded-lg text-sm text-slate-500 outline-none transition max-sm:min-h-11 ${b.todo ? "border border-transparent bg-transparent px-1 -ml-1 hover:border-slate-200 focus:border-[var(--brand)] disabled:hover:border-transparent" : "max-w-md border border-slate-200 bg-white px-3 py-2 hover:border-slate-300 focus:border-[var(--brand)]"}`} />
               </div>
-              <div className="flex shrink-0 flex-wrap items-center gap-2">
+              <div className="flex shrink-0 flex-wrap items-center gap-2 max-sm:w-full max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1">
                 {b.id ? (
                   <button type="button" onClick={() => setVerHistorial(true)} className={BOTON_SECUNDARIO} title="Quién cambió qué">
                     <History className="h-4 w-4" /> Historial
@@ -308,11 +321,12 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
                     <Copy className="h-4 w-4" /> Duplicar
                   </button>
                 ) : null}
-                {b.id && !b.sistema ? (
+                {b.id && !b.todo ? (
                   <button type="button" onClick={() => setConfirmarEliminar(true)} disabled={!!actual && actual.usuarios + actual.usuarios_inactivos > 0}
                     title={actual && actual.usuarios + actual.usuarios_inactivos > 0 ? "Lo usan usuarios: cambiales el perfil primero" : "Eliminar perfil"}
-                    className={`${BOTON_SECUNDARIO} hover:!border-rose-300 hover:!text-rose-600`}>
-                    <Trash2 className="h-4 w-4" />
+                    aria-label="Eliminar perfil"
+                    className={`${BOTON_SECUNDARIO} text-rose-600 hover:!border-rose-300 hover:!text-rose-700 disabled:text-slate-400`}>
+                    <Trash2 className="h-4 w-4" /> Eliminar
                   </button>
                 ) : null}
               </div>
@@ -333,15 +347,15 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
           <div className="grid items-start gap-4 xl:grid-cols-[1fr_300px]">
             <div className="min-w-0 space-y-4">
               {/* Nivel y alcance */}
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
                 <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900"><Layers className="h-4 w-4 text-[var(--brand)]" /> Nivel base y alcance</h3>
                 <p className="mt-0.5 text-xs text-slate-500">El nivel base es el rol de siempre: define lo que el sistema le deja hacer por dentro. Las pantallas y permisos de abajo afinan qué ve y qué puede hacer.</p>
                 <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">
                   {NIVELES.map((n) => {
                     const on = b.nivel_base === n.id;
                     return (
-                      <button key={n.id} type="button" disabled={b.sistema || soloLectura} onClick={() => set("nivel_base", n.id)}
-                        className={`rounded-xl border px-3 py-2.5 text-left transition-colors duration-150 disabled:cursor-not-allowed ${on ? "border-transparent bg-[var(--brand-50)] ring-2" : "border-slate-200 bg-white hover:border-slate-300 disabled:opacity-50"}`}
+                      <button key={n.id} type="button" disabled={soloLectura} onClick={() => set("nivel_base", n.id)}
+                        className={`min-w-0 rounded-xl border px-3 py-2.5 text-left transition-colors duration-150 disabled:cursor-not-allowed ${on ? "border-transparent bg-[var(--brand-50)] ring-2" : "border-slate-200 bg-white hover:border-slate-300 disabled:opacity-50"}`}
                         style={on ? ({ ["--tw-ring-color" as string]: TEAL } as React.CSSProperties) : undefined}>
                         <span className="block text-sm font-semibold text-slate-900">{n.label}</span>
                         <span className="block text-[11px] leading-snug text-slate-500">{n.detalle}</span>
@@ -349,7 +363,6 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
                     );
                   })}
                 </div>
-                {b.sistema && !b.todo ? <p className="mt-2 text-[11px] text-slate-400">En los perfiles de sistema el nivel base no cambia. Para otro nivel, duplicalo.</p> : null}
 
                 <div className="mt-4">
                   <span className={ET}>Sucursales</span>
@@ -374,15 +387,15 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
 
               {/* Pantallas */}
               <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-4">
+                <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3.5 sm:px-5 sm:py-4">
                   <div>
                     <h3 className="text-sm font-semibold text-slate-900">Pantallas</h3>
                     <p className="text-xs text-slate-500">Lo que aparece en su menú. Entrar por URL a otra pantalla muestra &ldquo;Sin acceso&rdquo;.</p>
                   </div>
                   {!soloLectura ? (
-                    <div className="flex gap-1 text-xs font-semibold">
-                      <button type="button" onClick={() => alternarPantallas(catalogo, true)} className="rounded-lg px-2 py-1 text-[var(--brand)] hover:bg-[var(--brand-50)]">Marcar todo</button>
-                      <button type="button" onClick={() => alternarPantallas(catalogo, false)} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100">Ninguna</button>
+                    <div className="flex gap-1 text-xs font-semibold max-sm:-ml-2 max-sm:text-[13px]">
+                      <button type="button" onClick={() => alternarPantallas(catalogo, true)} className="rounded-lg px-2 py-1 text-[var(--brand)] hover:bg-[var(--brand-50)] max-sm:min-h-11 max-sm:px-3">Marcar todo</button>
+                      <button type="button" onClick={() => alternarPantallas(catalogo, false)} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 max-sm:min-h-11 max-sm:px-3">Ninguna</button>
                     </div>
                   ) : null}
                 </div>
@@ -391,13 +404,13 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
                     const todas = modulos.flat();
                     const eg = estadoGrupo(todas);
                     return (
-                      <div key={familia} className="px-5 py-3.5">
-                        <div className="flex items-center gap-2.5">
+                      <div key={familia} className="px-4 py-3 sm:px-5 sm:py-3.5">
+                        <div className="flex items-center gap-2.5 max-sm:min-h-11">
                           <Casilla estado={b.todo || eg} disabled={soloLectura || todas.every((p) => !pantallaAplica(p, b.nivel_base))}
                             onClick={() => alternarPantallas(todas, eg !== true)} etiqueta={`Todas las pantallas de ${familia}`} />
                           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{familia}</span>
                         </div>
-                        <div className="mt-2 grid gap-x-6 gap-y-1.5 pl-[28px] sm:grid-cols-2">
+                        <div className="mt-1 grid gap-x-6 gap-y-0.5 pl-[28px] max-sm:pl-2 sm:mt-2 sm:grid-cols-2 sm:gap-y-1.5">
                           {modulos.map((ps) => {
                             const m = ps[0];
                             const Icono = iconoModulo(m.icon);
@@ -410,13 +423,13 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
                             const deshab = soloLectura || ps.every((p) => !pantallaAplica(p, b.nivel_base));
                             return (
                               <div key={m.moduloId} className="sm:col-span-2">
-                                <div className="flex items-center gap-2.5 py-0.5">
+                                <div className="flex items-center gap-2.5 py-0.5 max-sm:min-h-11">
                                   <Casilla estado={b.todo || em} disabled={deshab} onClick={() => alternarPantallas(ps, em !== true)} etiqueta={`Todo ${m.moduloLabel}`} />
-                                  <Icono className="h-4 w-4 text-slate-400" />
-                                  <span className={`text-sm font-medium ${deshab && !b.todo ? "text-slate-400" : "text-slate-800"}`}>{m.moduloLabel}</span>
+                                  <Icono className="h-4 w-4 shrink-0 text-slate-400" />
+                                  <span className={`min-w-0 text-sm font-medium ${deshab && !b.todo ? "text-slate-400" : "text-slate-800"}`}>{m.moduloLabel}</span>
                                   {m.niveles?.length && !pantallaAplica(m, b.nivel_base) ? <span className="text-[10px] text-slate-400">{soloNiveles(m.niveles)}</span> : null}
                                 </div>
-                                <div className="mt-1 grid gap-x-6 gap-y-1 pl-[28px] sm:grid-cols-2">
+                                <div className="mt-1 grid gap-x-6 gap-y-0.5 pl-[28px] max-sm:pl-5 sm:grid-cols-2 sm:gap-y-1">
                                   {ps.map((p) => (
                                     <FilaPantalla key={p.href} p={p} nivel={b.nivel_base} marcada={marcada(p.href)} soloLectura={soloLectura} sub
                                       onClick={() => alternarPantallas([p], !marcada(p.href))} />
@@ -434,7 +447,7 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
 
               {/* Permisos */}
               <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="border-b border-slate-100 px-5 py-4">
+                <div className="border-b border-slate-100 px-4 py-3.5 sm:px-5 sm:py-4">
                   <h3 className="text-sm font-semibold text-slate-900">Permisos</h3>
                   <p className="text-xs text-slate-500">Acciones delicadas. Se controlan también en el servidor y en la base: aunque alguien llame directo, sin el permiso no puede.</p>
                 </div>
@@ -442,19 +455,19 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
                   {GRUPOS_PERMISOS.map((g) => {
                     const eg = estadoPermisos(g.permisos);
                     return (
-                      <div key={g.id} className="px-5 py-3.5">
-                        <div className="flex items-center gap-2.5">
+                      <div key={g.id} className="px-4 py-3 sm:px-5 sm:py-3.5">
+                        <div className="flex items-center gap-2.5 max-sm:min-h-11">
                           <Casilla estado={b.todo || eg} disabled={soloLectura || g.permisos.every((p) => !permisoAplica(p, b.nivel_base))}
                             onClick={() => alternarPermisos(g.permisos, eg !== true)} etiqueta={`Todos los permisos de ${g.label}`} />
                           <span className="text-xs font-semibold uppercase tracking-wider text-slate-500">{g.label}</span>
                         </div>
-                        <ul className="mt-2 space-y-1 pl-[28px]">
+                        <ul className="mt-1 space-y-0.5 pl-[28px] max-sm:pl-2 sm:mt-2 sm:space-y-1">
                           {g.permisos.map((p) => {
                             const aplica = permisoAplica(p, b.nivel_base);
                             const on = tiene(p.id) && (aplica || b.todo);
                             return (
                               <li key={p.id}>
-                                <div className={`-mx-2 flex items-start gap-2.5 rounded-lg px-2 py-1.5 transition-colors ${!soloLectura && aplica ? "cursor-pointer hover:bg-slate-50" : ""}`}
+                                <div className={`-mx-2 flex items-start gap-2.5 rounded-lg px-2 py-1.5 transition-colors max-sm:min-h-11 max-sm:py-2.5 ${!soloLectura && aplica ? "cursor-pointer hover:bg-slate-50 max-sm:active:bg-slate-50" : ""}`}
                                   onClick={() => !soloLectura && aplica && alternarPermisos([p], !on)}>
                                   <span className="mt-0.5" onClick={(e) => e.stopPropagation()}>
                                     <Casilla estado={on} disabled={soloLectura || !aplica} onClick={() => alternarPermisos([p], !on)} etiqueta={p.label} />
@@ -469,11 +482,11 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
                                   </span>
                                 </div>
                                 {p.id === "descuentos_precio" && on && !b.todo ? (
-                                  <div className="mb-1 ml-[26px] mt-1 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-3 py-2">
+                                  <div className="mb-1 ml-[26px] mt-1 flex flex-wrap items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 max-sm:ml-0">
                                     <span className="text-xs text-slate-600">Descuento máximo</span>
                                     <div className="relative w-24">
                                       <input inputMode="decimal" value={b.tope_descuento_pct} onChange={(e) => set("tope_descuento_pct", e.target.value.replace(/[^\d.,]/g, "").slice(0, 6))}
-                                        placeholder="Sin tope" className={`${INPUT} !py-1.5 pr-7 text-right tabular-nums`} />
+                                        placeholder="Sin tope" className={`${INPUT} !py-1.5 pr-7 text-right tabular-nums max-sm:!py-2.5`} />
                                       <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">%</span>
                                     </div>
                                     <span className="text-[11px] text-slate-400">Vacío = sin tope. Cuenta el descuento que da la persona (además del que ya trae el producto).</span>
@@ -492,15 +505,15 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
 
             {/* Vista previa */}
             {/* En pantalla ancha la columna entera tiene su propio scroll (y queda fija al bajar). */}
-            <aside className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 xl:sticky xl:top-10 xl:self-start xl:max-h-[calc(100dvh-15rem)] xl:overflow-y-auto xl:overscroll-contain">
+            <aside className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 xl:sticky xl:top-10 xl:self-start xl:max-h-[calc(100dvh-15rem)] xl:overflow-y-auto xl:overscroll-contain">
               {previa ? <VistaPrevia b={previa} sinTope /> : null}
             </aside>
           </div>
 
           {/* Barra de guardar */}
           {!soloLectura ? (
-            <div className={`sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-3 rounded-2xl border bg-white/95 px-4 py-3 shadow-[0_-8px_24px_-12px_rgba(2,48,71,0.18)] backdrop-blur transition-colors ${sucio || !b.id ? "border-[var(--brand-100)]" : "border-slate-200"}`}>
-              <div className="min-w-0 flex-1 text-xs">
+            <div className={`sticky bottom-0 z-10 -mx-1 flex flex-wrap items-center gap-2 rounded-2xl border bg-white/95 px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1 shadow-[0_-8px_24px_-12px_rgba(2,48,71,0.18)] backdrop-blur transition-colors ${sucio || !b.id ? "border-[var(--brand-100)]" : "border-slate-200"}`}>
+              <div className="min-w-0 flex-1 text-xs max-sm:basis-full">
                 {errorEd ? <span className="flex items-center gap-1.5 text-rose-700"><AlertTriangle className="h-4 w-4 shrink-0" /> {errorEd}</span>
                   : okEd && !sucio ? <span className="flex items-center gap-1.5 text-emerald-700"><Sparkles className="h-4 w-4 shrink-0" /> {okEd}</span>
                   : sucio || !b.id ? <span className="flex items-center gap-1.5 text-slate-600"><Info className="h-4 w-4 shrink-0 text-[var(--brand)]" /> {b.id ? "Tenés cambios sin guardar." : "Perfil nuevo: elegí sus pantallas y permisos y guardalo."}</span>
@@ -510,7 +523,7 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
                 <button type="button" onClick={() => actual && abrir(dePerfil(actual))} disabled={!!busy} className={BOTON_SECUNDARIO}>Descartar</button>
               ) : null}
               {!b.id ? (
-                <button type="button" onClick={() => { setB(null); setSel(null); if (perfiles?.length) abrir(dePerfil(perfiles[0])); }} disabled={!!busy} className={BOTON_SECUNDARIO}>Cancelar</button>
+                <button type="button" onClick={() => { setB(null); setSel(null); if (perfiles?.length) abrir(dePerfil(perfiles[0])); }} disabled={!!busy} className={BOTON_SECUNDARIO}>Descartar perfil</button>
               ) : null}
               <button type="button" onClick={guardar} disabled={!!busy || !b.nombre.trim() || (!sucio && !!b.id)} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
                 {busy === "guardar" ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {b.id ? "Guardar cambios" : "Crear perfil"}
@@ -525,7 +538,7 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
           <div role="alertdialog" aria-modal="true" className={`w-full max-w-sm ${ALTO_MAX_MODAL} overflow-hidden rounded-2xl bg-white p-5 shadow-2xl`} style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
             <p className="text-base font-semibold text-slate-900">¿Descartar los cambios?</p>
             <p className="mt-1 text-sm text-slate-500">Hay cambios sin guardar en &ldquo;{b?.nombre || "el perfil"}&rdquo;.</p>
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-4 flex justify-end gap-2 max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1">
               <button type="button" onClick={() => setPendiente(null)} className={BOTON_SECUNDARIO}>Seguir editando</button>
               <button type="button" onClick={() => { const f = pendiente; setPendiente(null); f(); }} className={BOTON_PRIMARIO} style={{ backgroundColor: "#e11d48" }}>Descartar</button>
             </div>
@@ -538,7 +551,7 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
           <div role="alertdialog" aria-modal="true" className={`w-full max-w-sm ${ALTO_MAX_MODAL} overflow-hidden rounded-2xl bg-white p-5 shadow-2xl`} style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
             <p className="text-base font-semibold text-slate-900">Eliminar &ldquo;{b.nombre}&rdquo;</p>
             <p className="mt-1 text-sm text-slate-500">Nadie lo usa. Queda registrado en el historial.</p>
-            <div className="mt-4 flex justify-end gap-2">
+            <div className="mt-4 flex justify-end gap-2 max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1">
               <button type="button" onClick={() => setConfirmarEliminar(false)} disabled={!!busy} className={BOTON_SECUNDARIO}>Cancelar</button>
               <button type="button" onClick={eliminar} disabled={!!busy} className={BOTON_PRIMARIO} style={{ backgroundColor: "#e11d48" }}>
                 {busy === "eliminar" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Eliminar
@@ -563,16 +576,26 @@ function FilaPantalla({ p, nivel, marcada, soloLectura, onClick, icono, sub = fa
   const aplica = pantallaAplica(p, nivel);
   const hab = !soloLectura && aplica;
   return (
-    <div className={`-mx-2 flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors ${hab ? "cursor-pointer hover:bg-slate-50" : ""}`} onClick={() => hab && onClick()}>
+    <div className={`-mx-2 flex items-center gap-2.5 rounded-lg px-2 py-1 transition-colors max-sm:min-h-11 max-sm:py-1.5 ${hab ? "cursor-pointer hover:bg-slate-50 max-sm:active:bg-slate-50" : ""}`} onClick={() => hab && onClick()}>
       <span onClick={(e) => e.stopPropagation()}>
         <Casilla estado={marcada && (aplica || soloLectura)} disabled={!hab} onClick={onClick} etiqueta={p.label} />
       </span>
       {icono}
-      <span className="min-w-0">
-        <span className={`block truncate ${sub ? "text-[13px]" : "text-sm font-medium"} ${aplica || soloLectura ? "text-slate-700" : "text-slate-400"}`}>{p.label}</span>
+      <span className="min-w-0 flex-1">
+        <span className={`block sm:truncate ${sub ? "text-[13px] max-sm:text-sm" : "text-sm font-medium"} ${aplica || soloLectura ? "text-slate-700" : "text-slate-400"}`}>{p.label}</span>
         {!aplica && !soloLectura ? <span className="block text-[10px] text-slate-400">{soloNiveles(p.niveles)}</span>
           : p.permiso ? <span className="block text-[10px] text-slate-400">Necesita el permiso &ldquo;{permisoDef(p.permiso)?.label}&rdquo;</span> : null}
       </span>
     </div>
+  );
+}
+
+/** Lista de perfiles: vertical (escritorio) o fila con scroll horizontal interno (celular/tablet). */
+function ListaPerfiles({ vertical, dependencias, children }: { vertical: boolean; dependencias: unknown[]; children: React.ReactNode }) {
+  if (vertical) return <ul className="space-y-1.5">{children}</ul>;
+  return (
+    <ScrollHorizontal claseFila="gap-2 items-stretch" className="-mx-1 px-1" dependencias={dependencias}>
+      {children}
+    </ScrollHorizontal>
   );
 }

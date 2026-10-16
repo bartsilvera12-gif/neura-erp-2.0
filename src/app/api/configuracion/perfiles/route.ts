@@ -3,7 +3,7 @@
  *   GET  /api/configuracion/perfiles → perfiles[] con pantallas, permisos y cuántos usuarios
  *   POST /api/configuracion/perfiles { id?, nombre, descripcion?, nivel_base, alcance_sucursal,
  *        tope_descuento_pct?, pantallas[], permisos[] } → { id, cambios }
- * Administrador no se edita; los de sistema conservan nombre y nivel base.
+ * Administrador no se edita (receta 56); el resto se edita completo.
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok } from "@/lib/api/responses";

@@ -159,13 +159,13 @@ export function Avatar({ nombre, tenue = false, size = 36 }: { nombre: string; t
   );
 }
 
-/** Insignia del perfil (los de sistema llevan el color de su nivel). */
+/** Insignia del perfil (Administrador azul; los sembrados que conservan su código, color de marca; el resto, violeta). */
 export function InsigniaPerfil({ nombre, codigo }: { nombre: string | null; codigo: string | null }) {
   const color =
     codigo === "ADMIN" ? "bg-[#023047]/[0.08] text-[#023047] ring-[#023047]/15"
     : codigo ? "bg-[var(--brand-50)] text-[var(--brand-700)] ring-[var(--brand-100)]"
     : "bg-violet-50 text-violet-700 ring-violet-200";
-  return <span className={`inline-flex max-w-[180px] items-center truncate rounded-md px-2 py-0.5 text-[11px] font-semibold ring-1 ${color}`}>{nombre ?? "Sin perfil"}</span>;
+  return <span className={`inline-flex max-w-[180px] items-center truncate rounded-md max-md:max-w-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${color}`}>{nombre ?? "Sin perfil"}</span>;
 }
 
 /** Casilla con estado intermedio (para "seleccionar todo" de una familia). */
@@ -180,12 +180,13 @@ export function Casilla({ estado, disabled, onClick, etiqueta }: { estado: boole
       aria-label={etiqueta}
       disabled={disabled}
       onClick={onClick}
-      className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 ${
+      // En celular la casilla mide 22 px y su zona de toque se agranda a 44 × 44 (pseudo-elemento).
+      className={`relative flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-[5px] border transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-40 max-sm:h-[22px] max-sm:w-[22px] max-sm:before:absolute max-sm:before:-inset-[11px] max-sm:before:content-[''] ${
         marcado || parcial ? "border-transparent text-white" : "border-slate-300 bg-white hover:border-[var(--brand)]"
       }`}
       style={marcado || parcial ? { backgroundColor: TEAL } : undefined}
     >
-      {marcado ? <Check className="h-3 w-3" strokeWidth={3} /> : parcial ? <Minus className="h-3 w-3" strokeWidth={3} /> : null}
+      {marcado ? <Check className="h-3 w-3 max-sm:h-3.5 max-sm:w-3.5" strokeWidth={3} /> : parcial ? <Minus className="h-3 w-3 max-sm:h-3.5 max-sm:w-3.5" strokeWidth={3} /> : null}
     </button>
   );
 }
@@ -194,7 +195,7 @@ export function Casilla({ estado, disabled, onClick, etiqueta }: { estado: boole
 export function Interruptor({ checked, disabled, onChange, label, detalle }: { checked: boolean; disabled?: boolean; onChange: (v: boolean) => void; label: string; detalle?: React.ReactNode }) {
   return (
     <button type="button" role="switch" aria-checked={checked} disabled={disabled} onClick={() => onChange(!checked)}
-      className="flex w-full items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5 text-left transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
+      className="flex min-h-12 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 px-3 py-2.5 text-left transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60">
       <span className="min-w-0">
         <span className="block text-sm font-medium text-slate-800">{label}</span>
         {detalle ? <span className="block text-[11px] text-slate-500">{detalle}</span> : null}

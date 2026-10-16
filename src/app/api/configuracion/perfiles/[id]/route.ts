@@ -1,6 +1,6 @@
 /**
  * Eliminar un perfil propio que nadie usa: DELETE /api/configuracion/perfiles/[id]
- * (los de sistema no se eliminan; con usuarios —aunque estén inactivos— tampoco).
+ * (el Administrador no se elimina; con usuarios —aunque estén inactivos— tampoco).
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR, ok } from "@/lib/api/responses";

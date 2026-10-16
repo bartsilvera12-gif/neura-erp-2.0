@@ -151,7 +151,7 @@ export function ModalUsuario({
   if (resultado && resultado.tipo !== "existe") {
     return (
       <ModalDocumento titulo={nuevo ? "Usuario creado" : "Listo"} ancho="max-w-md" onClose={onClose}
-        footer={<button type="button" onClick={onClose} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>Listo</button>}>
+        footer={<button type="button" onClick={onClose} className={`${BOTON_PRIMARIO} max-sm:flex-1`} style={{ backgroundColor: TEAL }}>Listo</button>}>
         {resultado.tipo === "link" ? (
           <div className="space-y-4">
             <Aviso icono={<Link2 className="h-5 w-5" />} titulo={resultado.restablecer ? "Link para poner una contraseña nueva" : "Link de invitación"}>
@@ -160,13 +160,13 @@ export function ModalUsuario({
             <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 p-2">
               <code className="min-w-0 flex-1 truncate px-1 text-xs text-slate-600">{resultado.link}</code>
               <button type="button" onClick={async () => { if (await copiar(resultado.link)) { setCopiado(true); setTimeout(() => setCopiado(false), 1800); } }}
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:text-[var(--brand)] active:scale-[0.97]">
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:text-[var(--brand)] active:scale-[0.97] max-sm:min-h-11 max-sm:px-3.5 max-sm:text-sm">
                 {copiado ? <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" /> : <Copy className="h-3.5 w-3.5" />} {copiado ? "Copiado" : "Copiar"}
               </button>
             </div>
             <a href={linkWhatsApp(resultado.nombre, resultado.link, resultado.restablecer ? "restablecer" : "invitacion", clienteConfig.nombre, resultado.telefono)}
               target="_blank" rel="noopener noreferrer"
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 active:scale-[0.98]">
+              className="flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 active:scale-[0.98]">
               <MessageCircle className="h-4 w-4" /> Mandar por WhatsApp
             </a>
           </div>
@@ -200,25 +200,25 @@ export function ModalUsuario({
       footer={
         resultado?.tipo === "existe" ? (
           <>
-            <button type="button" onClick={() => setResultado(null)} disabled={!!busy} className={BOTON_SECUNDARIO}>Volver</button>
-            <button type="button" onClick={() => crear("email", true)} disabled={!!busy} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
+            <button type="button" onClick={() => setResultado(null)} disabled={!!busy} className={`${BOTON_SECUNDARIO} max-sm:order-2 max-sm:basis-full`}>Volver</button>
+            <button type="button" onClick={() => crear("email", true)} disabled={!!busy} className={`${BOTON_PRIMARIO} max-sm:order-1 max-sm:basis-full`} style={{ backgroundColor: TEAL }}>
               {busy === "vincular" ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />} Vincular a esta empresa
             </button>
           </>
         ) : nuevo ? (
           <>
-            <button type="button" onClick={onClose} disabled={!!busy} className={`${BOTON_SECUNDARIO} mr-auto`}>Cancelar</button>
-            <button type="button" onClick={() => crear("link")} disabled={!listo || !!busy} className={BOTON_SECUNDARIO} title="No manda email: genera el link para que lo mandes por WhatsApp">
+            <button type="button" onClick={onClose} disabled={!!busy} className={`${BOTON_SECUNDARIO} mr-auto max-sm:order-3 max-sm:mr-0 max-sm:basis-full`}>Cancelar</button>
+            <button type="button" onClick={() => crear("link")} disabled={!listo || !!busy} className={`${BOTON_SECUNDARIO} max-sm:order-2 max-sm:basis-full`} title="No manda email: genera el link para que lo mandes por WhatsApp">
               {busy === "link" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Link2 className="h-4 w-4" />} Crear y copiar link
             </button>
-            <button type="submit" form="form-usuario" disabled={!listo || !!busy} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
+            <button type="submit" form="form-usuario" disabled={!listo || !!busy} className={`${BOTON_PRIMARIO} max-sm:order-1 max-sm:basis-full`} style={{ backgroundColor: TEAL }}>
               {busy === "email" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} Crear y enviar invitación
             </button>
           </>
         ) : (
           <>
-            <button type="button" onClick={onClose} disabled={!!busy} className={BOTON_SECUNDARIO}>Cancelar</button>
-            <button type="submit" form="form-usuario" disabled={!listo || !!busy} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
+            <button type="button" onClick={onClose} disabled={!!busy} className={`${BOTON_SECUNDARIO} max-sm:flex-1`}>Cancelar</button>
+            <button type="submit" form="form-usuario" disabled={!listo || !!busy} className={`${BOTON_PRIMARIO} max-sm:flex-1`} style={{ backgroundColor: TEAL }}>
               {busy === "guardar" ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar cambios
             </button>
           </>
@@ -238,8 +238,8 @@ export function ModalUsuario({
           {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
         </div>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
-          <form id="form-usuario" onSubmit={guardar} className="space-y-5">
+        <div className="grid min-w-0 gap-6 lg:grid-cols-[1fr_280px]">
+          <form id="form-usuario" onSubmit={guardar} className="min-w-0 space-y-5">
             <section className="space-y-3">
               <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Datos</h3>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -257,17 +257,17 @@ export function ModalUsuario({
                 </label>
                 <label className="block">
                   <span className={ET}>Teléfono <span className="font-normal text-slate-400">(opcional)</span></span>
-                  <input inputMode="tel" value={f.telefono} onChange={(e) => set("telefono", e.target.value)} maxLength={40} placeholder="0981 123 456" className={INPUT} />
+                  <input type="tel" inputMode="tel" value={f.telefono} onChange={(e) => set("telefono", e.target.value)} maxLength={40} placeholder="0981 123 456" className={INPUT} />
                 </label>
                 <label className="block sm:col-span-2">
                   <span className={ET}>Email *</span>
                   {nuevo ? (
                     <input type="email" value={f.email} onChange={(e) => set("email", e.target.value)} maxLength={160} placeholder="maria@empresa.com" className={INPUT} autoComplete="off" />
                   ) : (
-                    <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
                       <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                      <span className="truncate">{f.email || "—"}</span>
-                      <span className="ml-auto shrink-0 text-[11px] text-slate-400">Es su cuenta de acceso: no se cambia</span>
+                      <span className="min-w-0 flex-1 truncate">{f.email || "—"}</span>
+                      <span className="shrink-0 text-[11px] text-slate-400 max-sm:basis-full max-sm:pl-[22px]">Es su cuenta de acceso: no se cambia</span>
                     </div>
                   )}
                 </label>
@@ -279,14 +279,14 @@ export function ModalUsuario({
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <span className={ET}>Perfil *</span>
-                  <Select value={f.perfil_id} onChange={(v) => set("perfil_id", v)} block disabled={!!usuario?.es_yo || esUltimoAdmin}
-                    options={datos.perfiles.map((p): [string, string] => [p.id, p.sistema ? p.nombre : `${p.nombre} · ${nivelLabel(p.nivel_base)}`])} />
+                  <Select value={f.perfil_id} onChange={(v) => set("perfil_id", v)} block etiqueta="Perfil" disabled={!!usuario?.es_yo || esUltimoAdmin}
+                    options={datos.perfiles.map((p): [string, string] => [p.id, p.codigo === "ADMIN" || p.nombre.toLowerCase() === nivelLabel(p.nivel_base).toLowerCase() ? p.nombre : `${p.nombre} · ${nivelLabel(p.nivel_base)}`])} />
                   {usuario?.es_yo ? <span className="mt-1 block text-[11px] text-slate-400">Tu propio perfil lo cambia otro administrador.</span>
                     : esUltimoAdmin ? <span className="mt-1 block text-[11px] text-amber-700">Es el único administrador: no se le puede cambiar el perfil.</span> : null}
                 </div>
                 <div>
                   <span className={ET}>Sucursal</span>
-                  <Select value={f.sucursal_id} onChange={(v) => set("sucursal_id", v)} block
+                  <Select value={f.sucursal_id} onChange={(v) => set("sucursal_id", v)} block etiqueta="Sucursal"
                     options={[["", "Sin sucursal fija (usa la principal)"], ...sucursales.map((s): [string, string] => [s.id, s.nombre + (s.es_principal ? " (principal)" : "")])]} />
                   <span className="mt-1 block text-[11px] text-slate-400">Sus ventas, compras y pérdidas usan el depósito de esa sucursal.</span>
                 </div>
@@ -323,7 +323,7 @@ export function ModalUsuario({
                       : <>Último ingreso: <span className="font-medium text-slate-800">{haceCuanto(usuario.ultimo_ingreso)}</span> <span className="text-slate-400">({fechaHora(usuario.ultimo_ingreso)})</span></>}
                     {usuario.origen === "vinculado" ? <span className="mt-1 block text-[11px] text-slate-400">Cuenta compartida con otro sistema: la contraseña solo la cambia su dueño (por email).</span> : null}
                   </p>
-                  <div className="mt-2.5 flex flex-wrap gap-2">
+                  <div className="mt-2.5 flex flex-wrap gap-2 max-sm:flex-col">
                     {usuario.pendiente && propia ? (
                       <>
                         <BotonAcceso onClick={() => acceso("enviar_invitacion")} busy={busy === "enviar_invitacion"} disabled={!usuario.activo || !!busy} icono={<Send className="h-3.5 w-3.5" />}>Reenviar invitación</BotonAcceso>
@@ -347,7 +347,7 @@ export function ModalUsuario({
 
             {usuario ? (
               <section>
-                <button type="button" onClick={() => setVerHistorial((v) => !v)} className="flex items-center gap-1.5 text-xs font-semibold text-slate-500 transition hover:text-slate-800">
+                <button type="button" onClick={() => setVerHistorial((v) => !v)} aria-expanded={verHistorial} className="flex items-center gap-1.5 text-xs font-semibold max-sm:min-h-11 max-sm:text-[13px] text-slate-500 transition hover:text-slate-800">
                   <History className="h-3.5 w-3.5" /> Historial de cambios
                   <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${verHistorial ? "rotate-180" : ""}`} />
                 </button>
@@ -356,7 +356,7 @@ export function ModalUsuario({
             ) : null}
           </form>
 
-          <aside className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 lg:sticky lg:top-0 lg:self-start">
+          <aside className="min-w-0 rounded-2xl border border-slate-200 bg-slate-50/60 p-4 lg:sticky lg:top-0 lg:self-start">
             {perfilElegido ? (
               <>
                 <p className="mb-3 text-sm font-semibold text-slate-900">{perfilElegido.nombre}</p>
@@ -375,7 +375,7 @@ export function ModalUsuario({
 function BotonAcceso({ children, icono, onClick, busy, disabled }: { children: React.ReactNode; icono: React.ReactNode; onClick: () => void; busy: boolean; disabled: boolean }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled}
-      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-[var(--brand)] hover:text-[var(--brand)] active:scale-[0.97] disabled:opacity-40">
+      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left text-xs font-semibold text-slate-700 transition hover:border-[var(--brand)] hover:text-[var(--brand)] active:scale-[0.97] disabled:opacity-40 max-sm:min-h-11 max-sm:px-3 max-sm:text-[13px]">
       {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : icono} {children}
     </button>
   );
