@@ -11,7 +11,8 @@
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { apiFetchSWR } from "@/lib/api/cache-cliente";
-import { Cabecera, Pestanas } from "@/modules/inventario/ui";
+import { Pestanas } from "@/modules/inventario/ui";
+import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { VistaUsuarios } from "@/modules/usuarios/ui/VistaUsuarios";
 import { VistaPerfiles } from "@/modules/usuarios/ui/VistaPerfiles";
 import { URL_PERFILES, URL_USUARIOS, type DatosUsuarios, type PerfilCompleto } from "@/modules/usuarios/ui/comun";
@@ -66,7 +67,7 @@ function Usuarios() {
 
   return (
     <div className="space-y-5 pb-10">
-      <Cabecera kicker="Configuración" titulo="Usuarios" subtitulo="Quién entra al sistema y qué puede ver y hacer cada uno" />
+      <EncabezadoPagina kicker="Configuración" titulo="Usuarios" subtitulo="Quién entra al sistema y qué puede ver y hacer cada uno" />
       {/* Las pestañas quedan fijas arriba al bajar (el top negativo compensa el padding del
           <main>, que es el contenedor que scrollea). */}
       <div className="sticky -top-4 z-20 -mx-3 bg-[#f6f8fa]/95 px-3 py-2 backdrop-blur sm:-top-5 sm:-mx-4 sm:px-4 lg:-top-6 lg:-mx-6 lg:px-6">

@@ -30,7 +30,7 @@ export function MotivoPerdidaModal({ etapaNombre, prospecto, onCancel, onConfirm
         <div className="flex flex-wrap gap-1.5">
           {SUGERENCIAS.map((s) => (
             <button key={s} type="button" onClick={() => setMotivo(s)}
-              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${motivo === s ? "border-rose-300 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
+              className={`rounded-full border px-2.5 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:min-h-10 [@media(pointer:coarse)]:px-3.5 ${motivo === s ? "border-rose-300 bg-rose-50 text-rose-700" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
               {s}
             </button>
           ))}
@@ -113,7 +113,7 @@ export function ConvertirClienteModal({ prospecto, onClose, onConvertido }: {
         <div className="flex gap-2">
           {(["persona", "empresa"] as const).map((t) => (
             <button key={t} type="button" onClick={() => set("tipo_cliente", t)}
-              className={`flex-1 rounded-xl border-2 py-2 text-xs font-semibold capitalize transition-colors ${f.tipo_cliente === t ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand)]" : "border-slate-200 text-slate-500"}`}>
+              className={`flex-1 rounded-xl border-2 py-2 text-xs font-semibold capitalize transition-colors max-sm:min-h-11 max-sm:text-sm ${f.tipo_cliente === t ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand)]" : "border-slate-200 text-slate-500"}`}>
               {t}
             </button>
           ))}
@@ -122,19 +122,19 @@ export function ConvertirClienteModal({ prospecto, onClose, onConvertido }: {
           <span className={LABEL}>{empresa ? "Nombre de la empresa *" : "Nombre y apellido *"}</span>
           <input autoFocus value={f.nombre} onChange={(e) => set("nombre", e.target.value)} className={INPUT} />
         </label>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {empresa ? (
             <label className="block">
               <span className={LABEL}>Razón social</span>
               <input value={f.razon_social} onChange={(e) => set("razon_social", e.target.value)} placeholder="Opcional" className={INPUT} />
             </label>
           ) : null}
-          <label className={`block ${empresa ? "" : "col-span-2"}`}>
+          <label className={`block ${empresa ? "" : "sm:col-span-2"}`}>
             <span className={LABEL}>{empresa ? "RUC" : "CI / RUC"}</span>
             <input value={f.doc} onChange={(e) => set("doc", e.target.value)} placeholder="Opcional" className={INPUT} />
           </label>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
             <span className={LABEL}>Teléfono</span>
             <input value={f.telefono} onChange={(e) => set("telefono", e.target.value)} className={INPUT} />
@@ -144,7 +144,7 @@ export function ConvertirClienteModal({ prospecto, onClose, onConvertido }: {
             <input type="email" value={f.email} onChange={(e) => set("email", e.target.value)} className={INPUT} />
           </label>
         </div>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
             <span className={LABEL}>Ciudad</span>
             <input value={f.ciudad} onChange={(e) => set("ciudad", e.target.value)} placeholder="Opcional" className={INPUT} />
@@ -217,18 +217,18 @@ export function EtapasModal({ onClose, onGuardado }: { onClose: () => void; onGu
             return (
               <li key={e.id} className={`flex flex-wrap items-center gap-2 rounded-xl border border-l-4 border-slate-200 bg-white px-3 py-2 ${tono.borderLeft} ${e.activo ? "" : "opacity-60"}`}>
                 <div className="flex flex-col">
-                  <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} aria-label="Subir" className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30"><ArrowUp className="h-3.5 w-3.5" /></button>
-                  <button type="button" onClick={() => mover(i, 1)} disabled={i === etapas.length - 1} aria-label="Bajar" className="rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30"><ArrowDown className="h-3.5 w-3.5" /></button>
+                  <button type="button" onClick={() => mover(i, -1)} disabled={i === 0} aria-label="Subir" className="rounded p-0.5 text-slate-400 [@media(pointer:coarse)]:p-2 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30"><ArrowUp className="h-3.5 w-3.5" /></button>
+                  <button type="button" onClick={() => mover(i, 1)} disabled={i === etapas.length - 1} aria-label="Bajar" className="rounded p-0.5 text-slate-400 [@media(pointer:coarse)]:p-2 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-30"><ArrowDown className="h-3.5 w-3.5" /></button>
                 </div>
-                <span className="w-28 shrink-0 font-mono text-[11px] text-slate-400">{e.codigo}</span>
+                <span className="w-28 shrink-0 font-mono text-[11px] text-slate-400 max-sm:hidden">{e.codigo}</span>
                 <input value={e.nombre} onChange={(ev) => set(i, { nombre: ev.target.value })} maxLength={60} className="min-w-32 flex-1 rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20" />
                 <div className="flex items-center gap-1" role="radiogroup" aria-label="Color">
                   {COLORES_ETAPA.map((c) => (
                     <button key={c} type="button" title={COLOR_LABEL[c]} aria-label={COLOR_LABEL[c]} aria-checked={e.color === c} role="radio" onClick={() => set(i, { color: c })}
-                      className={`h-5 w-5 rounded-full ${tonoEtapa(c).dot} ${e.color === c ? "ring-2 ring-slate-700 ring-offset-1" : "opacity-70 hover:opacity-100"}`} />
+                      className={`h-5 w-5 rounded-full [@media(pointer:coarse)]:h-7 [@media(pointer:coarse)]:w-7 ${tonoEtapa(c).dot} ${e.color === c ? "ring-2 ring-slate-700 ring-offset-1" : "opacity-70 hover:opacity-100"}`} />
                   ))}
                 </div>
-                <span className="w-20 shrink-0 text-right text-[11px] tabular-nums text-slate-500">{e.cantidad} prosp.</span>
+                <span className="w-20 shrink-0 text-right text-[11px] tabular-nums text-slate-500 max-sm:w-auto">{e.cantidad} prosp.</span>
                 <label className="flex shrink-0 items-center gap-1.5 text-xs text-slate-600">
                   <input type="checkbox" checked={e.activo} onChange={(ev) => set(i, { activo: ev.target.checked })} className="accent-[var(--brand)]" />
                   Activa

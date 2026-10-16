@@ -125,7 +125,7 @@ export function EncabezadoReporte({ kicker, titulo, subtitulo, volver = { href: 
     <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
       <div className="min-w-0">
         {volver ? (
-          <Link href={volver.href} className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800">
+          <Link href={volver.href} className="-ml-1.5 mb-1 inline-flex min-h-9 items-center gap-1 rounded-lg px-1.5 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800 max-sm:min-h-11 max-sm:text-[13px]">
             <ArrowLeft className="h-3.5 w-3.5" /> {volver.label}
           </Link>
         ) : null}
@@ -133,10 +133,10 @@ export function EncabezadoReporte({ kicker, titulo, subtitulo, volver = { href: 
           <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: "var(--brand)", boxShadow: "0 0 0 3px var(--brand-100)" }} />
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand)]">{kicker}</p>
         </div>
-        <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{titulo}</h1>
+        <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{titulo}</h1>
         {subtitulo ? <p className="mt-1 max-w-3xl text-[13px] text-slate-500 sm:text-sm">{subtitulo}</p> : null}
       </div>
-      {children ? <div className="flex flex-wrap items-center gap-2 max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1">{children}</div> : null}
+      {children ? <div className="flex flex-wrap items-center gap-2 max-sm:w-full max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1 max-sm:[&>button]:justify-center">{children}</div> : null}
     </div>
   );
 }
@@ -160,10 +160,10 @@ export function FiltrosReporte({ filtros, atajos = ATAJOS_BASE, sucursales, carg
     <section className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:p-3 max-sm:[&>*]:w-full">
       {!sinFechas ? (
         <>
-          <ScrollHorizontal className="rounded-xl bg-slate-100 p-1 sm:w-fit" claseFila="gap-0" dependencias={[f.atajo]}>
+          <ScrollHorizontal className="max-w-full rounded-xl bg-slate-100 p-1 sm:w-fit" claseFila="gap-0" dependencias={[f.atajo]}>
             {atajos.map((k) => (
               <button key={k} type="button" onClick={() => setAtajo(k)} aria-pressed={f.atajo === k} data-activo={f.atajo === k ? "true" : undefined}
-                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-10 max-sm:text-[13px] ${f.atajo === k ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-11 max-sm:px-3.5 max-sm:text-[13px] ${f.atajo === k ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
                 {ATAJO_LABEL[k]}
               </button>
             ))}
@@ -188,6 +188,42 @@ export function FiltrosReporte({ filtros, atajos = ATAJOS_BASE, sucursales, carg
       {children}
       {cargando ? <span className="inline-flex items-center gap-1 text-xs text-slate-400"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Actualizando…</span> : null}
     </section>
+  );
+}
+
+/**
+ * Atajos + Desde/Hasta con estado propio de la página (Ventas del período, Productos vendidos):
+ * mismo aspecto responsive que FiltrosReporte (atajos con scroll horizontal, fechas en 2
+ * columnas a todo el ancho en celular).
+ */
+export function RangoFechasLocal({ atajos, atajo, onAtajo, desde, hasta, onDesde, onHasta }: {
+  atajos: [string, string][];
+  atajo: string | null;
+  onAtajo: (k: string) => void;
+  desde: string;
+  hasta: string;
+  onDesde: (v: string) => void;
+  onHasta: (v: string) => void;
+}) {
+  return (
+    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+      <ScrollHorizontal className="max-w-full rounded-xl bg-slate-100 p-1 sm:w-fit" claseFila="gap-0" dependencias={[atajo]}>
+        {atajos.map(([k, l]) => (
+          <button key={k} type="button" onClick={() => onAtajo(k)} aria-pressed={atajo === k} data-activo={atajo === k ? "true" : undefined}
+            className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-11 max-sm:flex-1 max-sm:px-3.5 max-sm:text-[13px] ${atajo === k ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+            {l}
+          </button>
+        ))}
+      </ScrollHorizontal>
+      <div className="grid grid-cols-2 gap-2 sm:contents">
+        <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Desde
+          <input type="date" value={desde} max={hasta || undefined} onChange={(e) => onDesde(e.target.value)} className={`${INPUT_FECHA} max-sm:h-11 max-sm:w-full max-sm:min-w-0`} />
+        </label>
+        <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Hasta
+          <input type="date" value={hasta} min={desde || undefined} onChange={(e) => onHasta(e.target.value)} className={`${INPUT_FECHA} max-sm:h-11 max-sm:w-full max-sm:min-w-0`} />
+        </label>
+      </div>
+    </div>
   );
 }
 
@@ -241,11 +277,13 @@ export function Kpi({ label, valor, hint, delta, acento, tono, href, onClick }: 
   const cuerpo = (
     <>
       <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</p>
-      <p className={`mt-1 truncate text-base font-semibold tabular-nums sm:text-lg xl:text-xl ${color}`} title={typeof valor === "string" ? valor : undefined}>{valor}</p>
+      {/* Celular: el monto nunca se corta (si no entra, "Gs." y la cifra van en dos renglones) y
+          las notas usan hasta 2 renglones; desde sm, un renglón con "…". */}
+      <p className={`mt-1 text-[15px] font-semibold leading-snug tabular-nums [overflow-wrap:anywhere] sm:truncate sm:text-lg xl:text-xl ${color}`} title={typeof valor === "string" ? valor : undefined}>{valor}</p>
       {delta ? (
-        <p className="mt-0.5 truncate text-xs"><DeltaTexto actual={delta.actual} anterior={delta.anterior} invertir={delta.invertir} />{delta.texto ? <span className="text-slate-400"> {delta.texto}</span> : null}</p>
+        <p className="mt-0.5 text-xs max-sm:line-clamp-2 sm:truncate"><DeltaTexto actual={delta.actual} anterior={delta.anterior} invertir={delta.invertir} />{delta.texto ? <span className="text-slate-400"> {delta.texto}</span> : null}</p>
       ) : null}
-      {hint ? <p className="mt-0.5 truncate text-xs text-slate-400">{hint}</p> : null}
+      {hint ? <p className="mt-0.5 text-xs text-slate-400 max-sm:line-clamp-2 max-sm:text-[11.5px] max-sm:leading-snug sm:truncate">{hint}</p> : null}
     </>
   );
   const clase = `block min-w-0 rounded-2xl border bg-white p-3 text-left shadow-sm transition sm:p-4 ${acento ? "border-[var(--brand-100)] bg-[var(--brand-50)]" : "border-slate-200"} ${href || onClick ? "hover:-translate-y-0.5 hover:shadow-md" : ""}`;
@@ -254,10 +292,24 @@ export function Kpi({ label, valor, hint, delta, acento, tono, href, onClick }: 
   return <div className={clase}>{cuerpo}</div>;
 }
 
+/**
+ * Grilla de números clave de los reportes: 2 por fila en celular (si sobra uno impar, ocupa el
+ * renglón entero), 3 en tablet cuando son 5 y todos en fila desde lg. (No usa GrillaKpis porque
+ * con 4 por fila en tablet los montos "Gs. 1.234.567.890" no entran.)
+ */
+export function FilaKpis({ n, children }: { n: 3 | 4 | 5; children: ReactNode }) {
+  const cls = {
+    3: "sm:grid-cols-3 max-sm:[&>*:last-child:nth-child(odd)]:col-span-2",
+    4: "lg:grid-cols-4",
+    5: "md:grid-cols-3 lg:grid-cols-5 max-md:[&>*:last-child:nth-child(odd)]:col-span-2",
+  }[n];
+  return <div className={`grid grid-cols-2 gap-2.5 sm:gap-3 ${cls}`}>{children}</div>;
+}
+
 export function Tarjeta({ titulo, sub, extra, children, className = "" }: { titulo: ReactNode; sub?: ReactNode; extra?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={`min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm sm:p-5 ${className}`}>
-      <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-x-3 gap-y-2.5 sm:mb-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
             <span className="block h-5 w-1 shrink-0 rounded-full bg-[var(--brand)]" />
@@ -265,12 +317,19 @@ export function Tarjeta({ titulo, sub, extra, children, className = "" }: { titu
           </div>
           {sub ? <p className="mt-1 pl-3.5 text-xs text-slate-400">{sub}</p> : null}
         </div>
-        {extra}
+        {/* Celular: leyendas, segmentos y filtros del encabezado bajan a un renglón propio. */}
+        {extra ? <div className="min-w-0 max-sm:w-full">{extra}</div> : null}
       </div>
       {children}
     </section>
   );
 }
+
+/** Clases de celda de `Tabla`, para que una `TablaTarjetas` (listas que se abren) se vea igual en escritorio. */
+export const TH_REPORTE = "whitespace-nowrap px-3 py-2.5 text-left text-xs font-semibold text-slate-500";
+export const TD_REPORTE = "whitespace-nowrap px-3 py-2.5";
+/** Envoltorio de una `TablaTarjetas` dentro de `Tarjeta`: en < 768 px las tarjetas van de borde a borde. */
+export const SANGRIA_TARJETAS = "max-sm:-mx-3.5 max-md:border-t max-md:border-slate-100 sm:max-md:-mx-5";
 
 export function Tabla({ cols, filas, der = [], pie, onFila, vacio = "Sin datos.", minW }: {
   cols: ReactNode[];
@@ -296,10 +355,14 @@ export function Tabla({ cols, filas, der = [], pie, onFila, vacio = "Sin datos."
         </thead>
         <tbody>
           {filas.map((f) => (
+            // Filas que se tocan: ≥ 44 px en celular y el hover pinta también la 1.ª columna fija.
             <tr key={f.key} onClick={onFila ? () => onFila(f.key) : undefined} title={f.titulo}
-              className={`border-b border-slate-100 last:border-0 ${onFila ? "cursor-pointer transition-colors hover:bg-slate-50" : ""} ${f.tenue ? "opacity-60" : ""}`}>
+              className={`border-b border-slate-100 last:border-0 ${onFila ? "cursor-pointer transition-colors hover:bg-slate-50 hover:[--tabla-fondo:var(--color-slate-50)] max-sm:[&>td]:py-3" : ""} ${f.tenue ? "opacity-60" : ""}`}>
               {f.celdas.map((c, i) => (
-                <td key={i} className={`whitespace-nowrap px-3 py-2.5 ${der.includes(i) ? "text-right tabular-nums" : ""} ${i === 0 ? "text-slate-800" : "text-slate-600"}`}>{c}</td>
+                <td key={i} className={`whitespace-nowrap px-3 py-2.5 ${der.includes(i) ? "text-right tabular-nums" : ""} ${i === 0 ? "text-slate-800" : "text-slate-600"}`}>
+                  {/* Celular: la 1.ª columna (fija) no pasa del 42 % del ancho; nombres largos en 2 renglones. */}
+                  {i === 0 ? <div className="max-sm:w-max max-sm:max-w-[42vw] max-sm:whitespace-normal max-sm:break-words max-sm:leading-snug">{c}</div> : c}
+                </td>
               ))}
             </tr>
           ))}
@@ -335,10 +398,10 @@ export function Nota({ children }: { children: ReactNode }) {
 export function Segmentos<T extends string>({ valor, opciones, onChange }: { valor: T; opciones: [T, string][]; onChange: (v: T) => void }) {
   return (
     // Responsive: si no entran, scroll horizontal interno (nunca se cortan ni saltan de línea).
-    <ScrollHorizontal className="w-fit rounded-xl bg-slate-100 p-1" claseFila="gap-0" dependencias={[valor]}>
+    <ScrollHorizontal className="w-fit max-w-full rounded-xl bg-slate-100 p-1" claseFila="gap-0" dependencias={[valor]}>
       {opciones.map(([v, l]) => (
         <button key={v} type="button" onClick={() => onChange(v)} aria-pressed={valor === v} data-activo={valor === v ? "true" : undefined}
-          className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold transition max-sm:min-h-9 max-sm:text-[13px] ${valor === v ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{l}</button>
+          className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold transition max-sm:min-h-11 max-sm:px-3.5 max-sm:text-[13px] ${valor === v ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{l}</button>
       ))}
     </ScrollHorizontal>
   );

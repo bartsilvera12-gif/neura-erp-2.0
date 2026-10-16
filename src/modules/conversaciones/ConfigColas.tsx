@@ -7,6 +7,7 @@
  * respuesta y reasignaciones, ventana de "mismo asesor" y asesores de la cola
  * (recibe nuevos, máximo de conversaciones, supervisor). Se guarda todo junto.
  */
+import { TablaScroll } from "@/components/TablaResponsive";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -21,7 +22,7 @@ const tituloSeccion = "text-xs font-bold uppercase tracking-wide text-slate-500"
 const etiqueta = "mb-1 block text-xs font-semibold uppercase text-slate-500";
 const campo =
   "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm transition-colors hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20";
-const check = "h-4 w-4 rounded border-slate-300 text-[#4FAEB2] accent-[#4FAEB2] focus:ring-[#4FAEB2]/30";
+const check = "h-4 w-4 [@media(pointer:coarse)]:h-6 [@media(pointer:coarse)]:w-6 rounded border-slate-300 text-[#4FAEB2] accent-[#4FAEB2] focus:ring-[#4FAEB2]/30";
 const ayuda = "mt-1 text-[11px] leading-relaxed text-slate-500";
 
 const ESTRATEGIAS: { id: Estrategia; label: string; detalle: string }[] = [
@@ -71,7 +72,7 @@ export function ConfigColas() {
   return (
     <div className="flex flex-col gap-6 pb-10">
       <nav className="text-xs text-slate-500">
-        <Link href="/conversaciones/monitoreo" className="hover:text-[#3F8E91] hover:underline">Monitoreo</Link> / <span className="font-semibold text-slate-700">Colas y enrutamiento</span>
+        <Link href="/conversaciones/monitoreo" className="hover:text-[#3F8E91] hover:underline max-sm:inline-flex max-sm:min-h-10 max-sm:items-center">Monitoreo</Link> / <span className="font-semibold text-slate-700">Colas y enrutamiento</span>
       </nav>
       <Encabezado
         eyebrow="Omnicanal · Routing"
@@ -107,7 +108,7 @@ export function ConfigColas() {
                 const nAg = c.agentes.length;
                 const sup = c.agentes.filter((a) => a.es_supervisor).map((a) => usuarios.get(a.usuario_id)?.nombre).filter(Boolean);
                 return (
-                  <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
+                  <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 sm:px-5 sm:py-4">
                     <div className="min-w-0">
                       <p className="font-semibold text-slate-900">{c.nombre}</p>
                       <p className="mt-0.5 text-xs text-slate-500">
@@ -117,12 +118,12 @@ export function ConfigColas() {
                       </p>
                       {sup.length ? <p className="mt-0.5 text-[11px] text-slate-400">Supervisa: {sup.join(", ")}</p> : null}
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 max-sm:w-full max-sm:justify-between">
                       <span className={`text-xs font-bold uppercase ${c.activo ? "text-emerald-700" : "text-slate-400"}`}>{c.activo ? "Activa" : "Inactiva"}</span>
                       <button
                         type="button"
                         onClick={() => setEditando({ id: c.id, cola: aCuerpo(c) })}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]"
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-[#4FAEB2]/60 hover:text-[#3F8E91] max-sm:min-h-11 max-sm:px-5"
                       >
                         Editar
                       </button>
@@ -235,7 +236,7 @@ function EditorCola({
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
       >
         <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-6 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-start gap-3">
             <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-[#4FAEB2]/15 text-[#2F6E71]">
               <Inbox className="h-5 w-5" aria-hidden />
@@ -243,7 +244,7 @@ function EditorCola({
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4FAEB2]">{id ? "Editar" : "Nueva"}</p>
               <h2 className="text-lg font-semibold text-slate-900">{id ? "Editar cola" : "Nueva cola"}</h2>
-              <p className="text-[13px] text-slate-500">
+              <p className="text-[13px] text-slate-500 max-sm:hidden">
                 {id ? "Modificá nombre, canales, estrategia, SLA y asesores de esta cola." : "Definí nombre, canales asociados, estrategia de distribución, SLA y asesores."}
               </p>
             </div>
@@ -253,7 +254,7 @@ function EditorCola({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-slate-50/50 px-6 py-5">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-slate-50/50 px-3 py-4 sm:px-6 sm:py-5">
           {/* Datos generales */}
           <section className={seccion}>
             <h3 className={tituloSeccion}>Datos generales</h3>
@@ -380,7 +381,7 @@ function EditorCola({
               </p>
             </div>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="block min-w-[14rem] flex-1">
+              <label className="block min-w-[min(14rem,100%)] flex-1">
                 <span className={etiqueta}>Agregar usuario</span>
                 <select value={agregar} onChange={(e) => setAgregar(e.target.value)} className={campo}>
                   <option value="">Elegir…</option>
@@ -396,12 +397,12 @@ function EditorCola({
                   sumar([agregar]);
                   setAgregar("");
                 }}
-                className="rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/25 hover:bg-[#3F8E91] disabled:opacity-50"
+                className="rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/25 hover:bg-[#3F8E91] disabled:opacity-50 max-sm:min-h-11"
               >
                 Añadir
               </button>
               {disponibles.length > 1 ? (
-                <button type="button" onClick={() => sumar(disponibles.map((u) => u.id))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">
+                <button type="button" onClick={() => sumar(disponibles.map((u) => u.id))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold max-sm:min-h-11 text-slate-600 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">
                   Añadir todos
                 </button>
               ) : null}
@@ -409,7 +410,8 @@ function EditorCola({
             {!c.agentes.length ? (
               <p className="text-sm text-slate-500">Sin asesores en esta cola.</p>
             ) : (
-              <div className="overflow-x-auto rounded-xl border border-slate-200">
+              <div className="overflow-hidden rounded-xl border border-slate-200">
+                <TablaScroll primeraFija>
                 <table className="w-full min-w-[520px] text-sm">
                   <thead className="bg-slate-50/80 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
                     <tr>
@@ -439,7 +441,7 @@ function EditorCola({
                               max={500}
                               value={a.max_conversaciones}
                               onChange={(e) => setAgente(a.usuario_id, { max_conversaciones: Math.min(500, Math.max(1, numero(e.target.value, 20))) })}
-                              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-xs tabular-nums focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20"
+                              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-xs tabular-nums max-sm:h-11 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20"
                               aria-label="Máximo de conversaciones"
                             />
                           </td>
@@ -450,7 +452,7 @@ function EditorCola({
                             <button
                               type="button"
                               onClick={() => setC((x) => ({ ...x, agentes: x.agentes.filter((y) => y.usuario_id !== a.usuario_id) }))}
-                              className="text-xs font-semibold text-red-600 hover:underline"
+                              className="text-xs font-semibold text-red-600 hover:underline [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-2"
                             >
                               Quitar
                             </button>
@@ -460,13 +462,14 @@ function EditorCola({
                     })}
                   </tbody>
                 </table>
+                </TablaScroll>
               </div>
             )}
           </section>
           {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div> : null}
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-6 py-4">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-200 bg-white px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex flex-wrap gap-2">
             <button
               type="button"

@@ -165,9 +165,9 @@ export function ProyectoDetalle({
   return (
     <div className={esModal ? "flex min-h-0 flex-1 flex-col bg-white" : "mx-auto flex max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"}>
       {/* Cabecera */}
-      <div className="relative flex shrink-0 flex-col gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[var(--brand)]/5 px-4 pb-5 pr-14 pt-6 md:px-6 md:pr-16">
+      <div className="relative flex shrink-0 flex-col gap-3 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[var(--brand)]/5 px-4 pb-4 pr-14 pt-4 sm:gap-4 sm:pb-5 sm:pt-6 md:px-6 md:pr-16">
         <button type="button" aria-label="Cerrar" title="Cerrar" onClick={onClose}
-          className="absolute right-3 top-3 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)]">
+          className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)] max-sm:h-11 max-sm:w-11 max-sm:border-transparent max-sm:shadow-none sm:right-3 sm:top-3">
           <X className="h-4 w-4" />
         </button>
         <div className="min-w-0">
@@ -180,9 +180,9 @@ export function ProyectoDetalle({
             {cab ? <span className="font-mono text-[11px] text-slate-400">{cab.numero}</span> : null}
             {p?.archivado ? <span className="rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Archivado</span> : null}
           </div>
-          <h1 className="mt-1 truncate text-2xl font-semibold tracking-tight text-slate-900">{cab?.titulo ?? "Cargando…"}</h1>
+          <h1 className="mt-1 text-lg font-semibold leading-snug tracking-tight text-slate-900 [overflow-wrap:anywhere] max-sm:line-clamp-2 sm:truncate sm:text-2xl">{cab?.titulo ?? "Cargando…"}</h1>
           {cab ? (
-            <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">
+            <p className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-slate-500 sm:text-sm">
               <span>{cab.cliente_nombre ?? "Sin cliente asignado"}</span>
               {estadoActual ? <SlaBadge desde={cab.estado_desde} estado={estadoActual} horario={horario} /> : null}
               {cab.bloqueado ? <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-semibold text-rose-700"><Lock className="h-2.5 w-2.5" /> Bloqueado</span> : null}
@@ -192,8 +192,8 @@ export function ProyectoDetalle({
         {d ? (
           <div className="flex flex-wrap items-center gap-2">
             {d.permisos.mover ? (
-              <div className="flex items-center gap-2">
-                <Select value={d.proyecto.estado_id} onChange={moverA} options={opcionesEstado} minWidth={200} disabled={moviendo} />
+              <div className="flex items-center gap-2 max-sm:w-full max-sm:[&>*:first-child]:flex-1">
+                <Select value={d.proyecto.estado_id} onChange={moverA} options={opcionesEstado} minWidth={200} disabled={moviendo} etiqueta="Mover a" />
                 {moviendo ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : null}
               </div>
             ) : estadoActual ? (
@@ -201,14 +201,14 @@ export function ProyectoDetalle({
             ) : null}
             {d.permisos.editar ? (
               <button type="button" onClick={() => setConfirmar("archivar")}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)]">
+                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)] max-sm:min-h-11 max-sm:flex-1 max-sm:justify-center">
                 {d.proyecto.archivado ? <ArchiveRestore className="h-4 w-4" /> : <Archive className="h-4 w-4" />}
                 {d.proyecto.archivado ? "Desarchivar" : "Archivar"}
               </button>
             ) : null}
             {d.permisos.eliminar ? (
               <button type="button" onClick={() => setConfirmar("eliminar")} title="Eliminar definitivamente el proyecto (irreversible)"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3.5 py-2.5 text-sm font-medium text-red-600 shadow-sm transition-colors hover:border-red-400 hover:bg-red-50">
+                className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-white px-3.5 py-2.5 text-sm font-medium text-red-600 shadow-sm transition-colors hover:border-red-400 hover:bg-red-50 max-sm:min-h-11 max-sm:flex-1 max-sm:justify-center">
                 <Trash2 className="h-4 w-4" /> Eliminar
               </button>
             ) : null}
@@ -227,13 +227,13 @@ export function ProyectoDetalle({
       ) : null}
 
       {/* Pestañas */}
-      <div className="flex shrink-0 gap-1.5 overflow-x-auto border-b border-slate-100 bg-white px-4 pb-3 pt-4 [scrollbar-width:none] md:flex-wrap md:overflow-visible md:px-6 [&::-webkit-scrollbar]:hidden">
+      <div className="flex shrink-0 gap-1.5 overflow-x-auto overscroll-x-contain border-b border-slate-100 bg-white px-4 pb-2.5 pt-3 [scrollbar-width:none] sm:pb-3 sm:pt-4 md:flex-wrap md:overflow-visible md:px-6 [&::-webkit-scrollbar]:hidden">
         {TABS.map(([t, label]) => {
           const activa = tab === t;
           const badge = t === "tareas" && cab && cab.tareas_total > 0 ? `${cab.tareas_hechas}/${cab.tareas_total}` : null;
           return (
             <button key={t} type="button" onClick={() => irA(t)}
-              className={`relative shrink-0 rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${activa ? "border border-[var(--brand)]/30 bg-[var(--brand)]/10 text-[var(--brand-600)] shadow-sm" : "border border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-700"}`}>
+              className={`relative shrink-0 whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors max-md:min-h-10 ${activa ? "border border-[var(--brand)]/30 bg-[var(--brand)]/10 text-[var(--brand-600)] shadow-sm" : "border border-transparent text-slate-500 hover:bg-slate-100 hover:text-slate-700"}`}>
               {label}
               {badge ? <span className="ml-1.5 rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-slate-600">{badge}</span> : null}
             </button>
@@ -241,7 +241,7 @@ export function ProyectoDetalle({
         })}
       </div>
 
-      <div className={esModal ? "min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-slate-50/50 px-4 py-5 md:px-6" : "min-h-[420px] bg-slate-50/50 px-4 py-5 md:px-6"}>
+      <div className={esModal ? "min-h-0 flex-1 overflow-y-auto overscroll-y-contain bg-slate-50/50 px-3 py-4 sm:px-4 sm:py-5 md:px-6" : "min-h-[420px] bg-slate-50/50 px-4 py-5 md:px-6"}>
         {estadoCarga === "cargando" && !d ? (
           <div className="flex items-center justify-center gap-2 py-16 text-sm text-slate-500"><Loader2 className="h-4 w-4 animate-spin" /> Cargando…</div>
         ) : estadoCarga === "no" && !d ? (

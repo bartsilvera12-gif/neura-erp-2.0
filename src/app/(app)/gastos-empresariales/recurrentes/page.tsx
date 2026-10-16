@@ -8,10 +8,12 @@
  */
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { AlertTriangle, CalendarClock, CalendarPlus, CheckCircle2, ChevronLeft, ChevronRight, Loader2, Pencil, Plus, Trash2, X } from "lucide-react";
+import { AlertTriangle, CalendarClock, CalendarPlus, CheckCircle2, ChevronLeft, ChevronRight, Loader2, MoreHorizontal, Pencil, Plus, Trash2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
+import { AccionesPagina, EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { MenuAcciones } from "@/components/MenuAcciones";
 import { FormRecurrente } from "@/modules/gastos/FormRecurrente";
 import { ESTADO_GASTO, fechaCorta, gs, monto, nombreMedioGasto, nombreMes, type ListaRecurrentes, type Plantilla, type Vencimientos } from "@/modules/gastos/tipos";
 
@@ -56,31 +58,26 @@ function Recurrentes() {
 
   return (
     <div className="space-y-5 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Gastos recurrentes</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">Lo que se paga todos los meses. Cada mes generás los borradores, los revisás y los confirmás cuando llega la factura o se paga.</p>
-        </div>
-        <button onClick={() => setForm({ p: null })} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
-          <Plus className="h-4 w-4" /> Nueva plantilla
-        </button>
-      </header>
+      <EncabezadoPagina
+        titulo="Gastos recurrentes"
+        subtitulo="Lo que se paga todos los meses. Cada mes generás los borradores, los revisás y los confirmás cuando llega la factura o se paga."
+        acciones={<AccionesPagina acciones={[{ etiqueta: "Nueva plantilla", icono: <Plus />, onClick: () => setForm({ p: null }) }]} />} />
 
-      {/* Mes + acción principal */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#4FAEB2]/30 bg-[#4FAEB2]/5 px-4 py-3">
-        <div className="flex items-center gap-1">
-          <button onClick={() => setPeriodo((p) => sumarMes(p, -1))} aria-label="Mes anterior" className="rounded-lg p-1.5 text-slate-500 hover:bg-white"><ChevronLeft className="h-4 w-4" /></button>
+      {/* Mes + acción principal (en celular: mes arriba a todo el ancho, cifras y el botón abajo) */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#4FAEB2]/30 bg-[#4FAEB2]/5 px-3 py-3 sm:px-4">
+        <div className="flex items-center gap-1 max-sm:w-full max-sm:justify-between">
+          <button onClick={() => setPeriodo((p) => sumarMes(p, -1))} aria-label="Mes anterior" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 hover:bg-white max-sm:h-11 max-sm:w-11"><ChevronLeft className="h-4 w-4 max-sm:h-5 max-sm:w-5" /></button>
           <span className="min-w-[10rem] text-center text-base font-semibold capitalize text-slate-800">{nombreMes(periodo)}</span>
           <button onClick={() => setPeriodo((p) => (sumarMes(p, 1) <= maxPeriodo ? sumarMes(p, 1) : p))} disabled={sumarMes(periodo, 1) > maxPeriodo}
-            aria-label="Mes siguiente" className="rounded-lg p-1.5 text-slate-500 hover:bg-white disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
+            aria-label="Mes siguiente" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 hover:bg-white disabled:opacity-30 max-sm:h-11 max-sm:w-11"><ChevronRight className="h-4 w-4 max-sm:h-5 max-sm:w-5" /></button>
         </div>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-slate-600">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-slate-600 max-sm:w-full max-sm:justify-center">
           <span>Previsto <b className="tabular-nums text-slate-900">{gs(r?.previsto_mes)}</b></span>
           <span>Generados <b className="tabular-nums text-slate-900">{r ? `${r.generadas} de ${r.aplican}` : "—"}</b></span>
           {r && r.a_completar > 0 ? <span className="text-xs text-slate-500">{r.a_completar} con monto variable</span> : null}
         </div>
         <button onClick={() => setGenerar(true)} disabled={!pendientes.length}
-          className="inline-flex items-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#3F8E91] disabled:opacity-50">
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#3F8E91] disabled:opacity-50 max-sm:min-h-11 max-sm:w-full">
           <CalendarPlus className="h-4 w-4" />
           {pendientes.length ? `Generar gastos de ${nombreMes(periodo).split(" ")[0]} (${pendientes.length})` : "Todo generado este mes"}
         </button>
@@ -90,7 +87,7 @@ function Recurrentes() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         {/* Plantillas */}
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
+        <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:col-span-2">
           <div className="border-b border-slate-100 px-4 py-3"><h2 className="text-sm font-semibold text-slate-800">Plantillas</h2></div>
           {!datos ? <p className="px-4 py-10 text-center text-sm text-slate-400">Cargando…</p>
             : datos.plantillas.length === 0 ? (
@@ -106,14 +103,14 @@ function Recurrentes() {
         </section>
 
         {/* Vencimientos */}
-        <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 px-4 py-3">
             <h2 className="text-sm font-semibold text-slate-800">Próximos vencimientos</h2>
             <p className="text-[11px] text-slate-400">Próximos 30 días y lo vencido · {venc ? gs(venc.total_gs) : "—"}</p>
           </div>
           {!venc ? <p className="px-4 py-8 text-center text-sm text-slate-400">Cargando…</p>
             : venc.rows.length === 0 ? <p className="px-4 py-8 text-center text-sm text-slate-400">Nada por vencer.</p> : (
-              <ul className="max-h-[34rem] divide-y divide-slate-100 overflow-y-auto">
+              <ul className="divide-y divide-slate-100 lg:max-h-[34rem] lg:overflow-y-auto">
                 {venc.rows.map((v, i) => {
                   const href = v.tipo === "a_pagar" ? "/compras/pagos" : v.gasto_id ? `/gastos-empresariales/operativos?ver=${v.gasto_id}` : null;
                   const badge = v.tipo === "a_pagar" ? ["A pagar", "bg-sky-50 text-sky-700"] : v.tipo === "borrador" ? ["Borrador", "bg-slate-100 text-slate-600"] : ["Sin generar", "bg-amber-50 text-amber-700"];
@@ -153,28 +150,41 @@ function Recurrentes() {
 function FilaPlantilla({ p, onEditar, onBorrar }: { p: Plantilla; onEditar: () => void; onBorrar: () => void }) {
   const est = p.generado ? ESTADO_GASTO[p.generado.estado] : null;
   return (
-    <li className={`flex flex-wrap items-center gap-3 px-4 py-3 ${p.activo ? "" : "opacity-50"}`}>
+    <li className={`flex items-center gap-3 px-3.5 py-3 sm:px-4 ${p.activo ? "" : "opacity-50"}`}>
       <div className="flex w-12 shrink-0 flex-col items-center rounded-xl bg-slate-50 py-1.5 text-slate-600">
         <span className="text-[9px] uppercase tracking-wide text-slate-400">día</span>
         <span className="text-base font-bold leading-none">{p.dia_vencimiento}</span>
       </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-semibold text-slate-800">{p.nombre}{!p.activo ? <span className="ml-2 text-[11px] font-normal text-slate-400">inactiva</span> : null}</p>
-        <p className="truncate text-[11px] text-slate-500">
-          {[p.proveedor_nombre ?? (p.con_comprobante ? null : "Sin comprobante"), p.categorias, p.sucursal_nombre,
-            p.tipo_pago === "credito" ? "Crédito" : nombreMedioGasto(p.medio_pago)].filter(Boolean).join(" · ")}
-        </p>
+      {/* En celular el monto y el estado van debajo del nombre (no se aprietan contra las acciones). */}
+      <div className="min-w-0 flex-1 sm:flex sm:items-center sm:gap-3">
+        <div className="min-w-0 sm:flex-1">
+          <p className="truncate text-sm font-semibold text-slate-800">{p.nombre}{!p.activo ? <span className="ml-2 text-[11px] font-normal text-slate-400">inactiva</span> : null}</p>
+          <p className="truncate text-[11px] text-slate-500">
+            {[p.proveedor_nombre ?? (p.con_comprobante ? null : "Sin comprobante"), p.categorias, p.sucursal_nombre,
+              p.tipo_pago === "credito" ? "Crédito" : nombreMedioGasto(p.medio_pago)].filter(Boolean).join(" · ")}
+          </p>
+        </div>
+        <div className="mt-1 flex flex-wrap items-center justify-between gap-x-2 sm:mt-0 sm:block sm:shrink-0 sm:text-right">
+          <p className="text-sm font-semibold tabular-nums text-slate-800">{Number(p.total) > 0 ? monto(p.total, p.moneda) : <span className="text-slate-400">variable</span>}</p>
+          {!p.aplica ? <p className="text-[11px] text-slate-400">{p.activo ? "fuera de vigencia" : "—"}</p>
+            : p.generado ? (
+              <Link href={`/gastos-empresariales/operativos?ver=${p.generado.id}`} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#3F8E91] hover:underline max-sm:-my-2 max-sm:min-h-11">
+                <CheckCircle2 className="h-3 w-3" /> {p.generado.numero ?? "Borrador"} {est && p.generado.estado !== "confirmado" ? `· ${est.t.toLowerCase()}` : ""}
+              </Link>
+            ) : <p className="inline-flex items-center gap-1 text-[11px] text-amber-700"><CalendarClock className="h-3 w-3" /> pendiente · {fechaCorta(p.fecha_periodo)}</p>}
+        </div>
       </div>
-      <div className="text-right">
-        <p className="text-sm font-semibold tabular-nums text-slate-800">{Number(p.total) > 0 ? monto(p.total, p.moneda) : <span className="text-slate-400">variable</span>}</p>
-        {!p.aplica ? <p className="text-[11px] text-slate-400">{p.activo ? "fuera de vigencia" : "—"}</p>
-          : p.generado ? (
-            <Link href={`/gastos-empresariales/operativos?ver=${p.generado.id}`} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#3F8E91] hover:underline">
-              <CheckCircle2 className="h-3 w-3" /> {p.generado.numero ?? "Borrador"} {est && p.generado.estado !== "confirmado" ? `· ${est.t.toLowerCase()}` : ""}
-            </Link>
-          ) : <p className="inline-flex items-center gap-1 text-[11px] text-amber-700"><CalendarClock className="h-3 w-3" /> pendiente · {fechaCorta(p.fecha_periodo)}</p>}
+      {/* Celular: un solo botón "⋯" de 44 px (hoja con Editar / Eliminar); desde sm, los dos íconos. */}
+      <div className="-mr-1.5 shrink-0 sm:hidden">
+        <MenuAcciones etiqueta={`Acciones de ${p.nombre}`} className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 active:bg-slate-100"
+          items={[
+            { etiqueta: "Editar plantilla", icono: <Pencil className="h-4 w-4" />, onClick: onEditar },
+            { etiqueta: p.ultimo_periodo ? "Desactivar" : "Eliminar", icono: <Trash2 className="h-4 w-4" />, onClick: onBorrar, tono: "peligro" },
+          ]}>
+          <MoreHorizontal className="h-5 w-5" />
+        </MenuAcciones>
       </div>
-      <div className="flex gap-1">
+      <div className="flex shrink-0 gap-1 max-sm:hidden">
         <button onClick={onEditar} aria-label={`Editar ${p.nombre}`} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-50 hover:text-slate-700"><Pencil className="h-4 w-4" /></button>
         <button onClick={onBorrar} aria-label={`Eliminar ${p.nombre}`} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
       </div>
@@ -209,20 +219,20 @@ function GenerarMes({ periodo, pendientes, onClose, onHecho }: { periodo: string
   return (
     <CapaModal onClose={busy ? undefined : onClose}>
       <div className={`flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${ALTO_MAX_MODAL}`} style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-4">
-          <h2 className="text-lg font-semibold capitalize text-slate-800">{hecho ? "Borradores creados" : `Generar gastos de ${nombreMes(periodo)}`}</h2>
-          <button onClick={onClose} disabled={busy} aria-label="Cerrar" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
+          <h2 className="min-w-0 text-lg font-semibold capitalize text-slate-800">{hecho ? "Borradores creados" : `Generar gastos de ${nombreMes(periodo)}`}</h2>
+          <button onClick={onClose} disabled={busy} aria-label="Cerrar" className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
         </div>
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-6 py-4 text-sm">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 text-sm sm:px-6">
           {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700">{error}</div> : null}
           {hecho ? (
             <>
               <p className="text-slate-600">Se crearon {hecho.creados.length} {hecho.creados.length === 1 ? "borrador" : "borradores"}. Revisalos y confirmalos cuando llegue la factura o se pague.</p>
               <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
                 {hecho.creados.map((c) => (
-                  <li key={c.id} className="flex items-center justify-between gap-2 px-3 py-2">
-                    <span className="truncate">{c.plantilla} <span className="text-xs text-slate-400">· {fechaCorta(c.fecha)}</span></span>
-                    <Link href={`/gastos-empresariales/operativos?ver=${c.id}`} className="shrink-0 text-xs font-semibold text-[#3F8E91] hover:underline">Abrir</Link>
+                  <li key={c.id} className="flex items-center justify-between gap-2 px-3 py-2 max-sm:py-0.5">
+                    <span className="min-w-0 truncate">{c.plantilla} <span className="text-xs text-slate-400">· {fechaCorta(c.fecha)}</span></span>
+                    <Link href={`/gastos-empresariales/operativos?ver=${c.id}`} className="inline-flex shrink-0 items-center text-xs font-semibold text-[#3F8E91] hover:underline max-sm:min-h-11 max-sm:px-2">Abrir</Link>
                   </li>
                 ))}
               </ul>
@@ -233,10 +243,10 @@ function GenerarMes({ periodo, pendientes, onClose, onHecho }: { periodo: string
               <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
                 {pendientes.map((p) => (
                   <li key={p.id}>
-                    <label className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-slate-50">
-                      <input type="checkbox" className="accent-[#4FAEB2]" checked={sel.has(p.id)}
+                    <label className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-slate-50 max-sm:min-h-12">
+                      <input type="checkbox" className="shrink-0 accent-[#4FAEB2] max-sm:h-5 max-sm:w-5" checked={sel.has(p.id)}
                         onChange={(e) => setSel((s) => { const n = new Set(s); if (e.target.checked) n.add(p.id); else n.delete(p.id); return n; })} />
-                      <span className="min-w-0 flex-1 truncate">{p.nombre} <span className="text-xs text-slate-400">· vence {fechaCorta(p.fecha_periodo)}</span></span>
+                      <span className="min-w-0 flex-1 max-sm:[overflow-wrap:anywhere] sm:truncate">{p.nombre} <span className="text-xs text-slate-400 max-sm:block">· vence {fechaCorta(p.fecha_periodo)}</span></span>
                       <span className="shrink-0 tabular-nums text-slate-700">{Number(p.total) > 0 ? monto(p.total, p.moneda) : "variable"}</span>
                     </label>
                   </li>
@@ -246,14 +256,14 @@ function GenerarMes({ periodo, pendientes, onClose, onHecho }: { periodo: string
             </>
           )}
         </div>
-        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 px-6 py-4">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
           {hecho ? (
-            <Link href="/gastos-empresariales/operativos?estado=borrador&desde=&hasta=" className="rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91]">Ver borradores</Link>
+            <Link href="/gastos-empresariales/operativos?estado=borrador&desde=&hasta=" className="inline-flex items-center justify-center rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] max-sm:flex-1">Ver borradores</Link>
           ) : (
             <>
-              <button onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+              <button onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 max-sm:flex-1">Cancelar</button>
               <button onClick={() => void ok()} disabled={busy || sel.size === 0}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50">
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 max-sm:flex-[2]">
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />} Crear {sel.size} {sel.size === 1 ? "borrador" : "borradores"}
               </button>
             </>
@@ -281,14 +291,14 @@ function BorrarPlantilla({ p, onClose, onHecho }: { p: Plantilla; onClose: () =>
   return (
     <CapaModal onClose={busy ? undefined : onClose}>
       <div className={`flex w-full max-w-md flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${ALTO_MAX_MODAL}`} style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-        <div className="border-b border-slate-100 px-6 py-4"><h2 className="text-base font-semibold text-slate-800">Eliminar «{p.nombre}»</h2></div>
-        <div className="space-y-2 px-6 py-4 text-sm text-slate-600">
+        <div className="shrink-0 border-b border-slate-100 px-4 py-3 sm:px-6 sm:py-4"><h2 className="text-base font-semibold text-slate-800 [overflow-wrap:anywhere]">Eliminar «{p.nombre}»</h2></div>
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-4 text-sm text-slate-600 sm:px-6">
           <p>{p.ultimo_periodo ? "Ya generó gastos: la plantilla se desactiva (los gastos quedan como están)." : "La plantilla se elimina."}</p>
           {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-rose-700">{error}</div> : null}
         </div>
-        <div className="flex justify-end gap-2 border-t border-slate-100 px-6 py-4">
-          <button onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
-          <button onClick={() => void ok()} disabled={busy} className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
+          <button onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 max-sm:flex-1">Cancelar</button>
+          <button onClick={() => void ok()} disabled={busy} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50 max-sm:flex-1">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {p.ultimo_periodo ? "Desactivar" : "Eliminar"}
           </button>
         </div>

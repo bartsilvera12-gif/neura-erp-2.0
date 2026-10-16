@@ -12,7 +12,7 @@ import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import MontoInput from "@/components/ui/MontoInput";
-import { TEAL } from "@/modules/clientes/ui";
+import { PIE_MODAL, TEAL } from "@/modules/clientes/ui";
 import type { ModoCambioPlan, Plan, SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos";
 import { mesActual, monto, nombreMes, sumarMes } from "@/modules/clientes/suscripciones/ui";
 
@@ -119,7 +119,7 @@ export function ModalCambioPlan({ suscripcion: s, onClose, onHecho }: {
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <span className="mb-1 block text-xs font-medium text-slate-600">Plan nuevo</span>
-              <Select block value={planId} onChange={elegirPlan}
+              <Select block value={planId} onChange={elegirPlan} etiqueta="Plan nuevo"
                 options={[["", "— Elegí un plan —"], ...planes.map((p) => [p.id, `${p.nombre} — ${monto(p.precio, p.moneda)}`] as [string, string])]} />
             </div>
             <label>
@@ -139,7 +139,7 @@ export function ModalCambioPlan({ suscripcion: s, onClose, onHecho }: {
                 <label key={m.id}
                   className={`flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm transition-colors ${m.bloqueo ? "cursor-not-allowed border-slate-100 bg-slate-50 text-slate-400" : sel ? "cursor-pointer bg-[var(--brand-50)]" : "cursor-pointer border-slate-200 hover:bg-slate-50"}`}
                   style={sel && !m.bloqueo ? { borderColor: TEAL } : undefined}>
-                  <input type="radio" name="modo-cambio" className="mt-0.5 accent-[var(--brand)]" checked={sel} disabled={!!m.bloqueo} onChange={() => setModo(m.id)} />
+                  <input type="radio" name="modo-cambio" className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand)]" checked={sel} disabled={!!m.bloqueo} onChange={() => setModo(m.id)} />
                   <span>
                     <span className={`block font-semibold ${m.bloqueo ? "" : "text-slate-800"}`}>
                       {m.titulo}{m.id === "proximo_mes" ? <span className="ml-1.5 text-[10px] font-semibold uppercase text-slate-400">recomendado</span> : null}
@@ -153,7 +153,7 @@ export function ModalCambioPlan({ suscripcion: s, onClose, onHecho }: {
         </div>
 
         {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className={PIE_MODAL}>
           <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
           <button type="submit" disabled={busy || !plan} className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

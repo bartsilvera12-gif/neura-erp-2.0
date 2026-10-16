@@ -13,6 +13,8 @@ import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { Drawer } from "@/components/Drawer";
+import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 import type { Compra } from "@/modules/compras/tipos";
 import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos";
@@ -27,7 +29,8 @@ const POR_PAGINA = 25;
 const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
 const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric" });
 const fechaDia = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("es-PY", { day: "2-digit", month: "short", year: "numeric" });
-const INPUT_F = "h-[38px] rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
+const TH = "whitespace-nowrap px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[var(--brand)]";
+const INPUT_F = "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] md:h-[38px] md:w-auto";
 
 export default function ComprasPage() {
   const [rows, setRows] = useState<Compra[]>([]);
@@ -78,104 +81,152 @@ export default function ComprasPage() {
   const hayFiltros = !!(q || desde || hasta || proveedor || tipoPago || estado);
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
+  const filtrosActivos = [desde, hasta, proveedor, tipoPago, estado].filter(Boolean).length;
+  const limpiar = () => { setBorrador(""); setQ(""); setDesde(""); setHasta(""); setProveedor(""); setTipoPago(""); setEstado(""); setPagina(1); };
+
+  // Tabla en ≥ 768 px; en celular cada compra es una tarjeta (proveedor, número · fecha, total y condición).
+  const columnas: ColumnaTabla<Compra>[] = [
+    {
+      key: "numero", titulo: "Número", movil: "subtitulo", claseTh: "pl-5", claseTd: "whitespace-nowrap pl-5",
+      celda: (c) => {
+        const anulada = c.estado === "anulada";
+        return (
+          <>
+            <p className={`font-mono text-xs font-semibold ${anulada ? "text-slate-400 line-through" : "text-slate-800"}`}>{c.numero_control}</p>
+            {anulada ? <span className="rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600">Anulada</span> : null}
+            {c.oc?.numero_oc ? <p className="mt-0.5 font-mono text-[10px] text-sky-700" title="Recepción de una orden de compra">{c.oc.numero_oc}</p> : null}
+          </>
+        );
+      },
+      celdaMovil: (c) => (
+        <span className={c.estado === "anulada" ? "line-through" : ""}>
+          <span className="font-mono text-xs">{c.numero_control}</span> · {fecha(c.fecha)}
+        </span>
+      ),
+    },
+    { key: "fecha", titulo: "Fecha", movil: "oculto", claseTd: "whitespace-nowrap text-xs text-slate-600", celda: (c) => fecha(c.fecha) },
+    { key: "proveedor", titulo: "Proveedor", movil: "titulo", claseTd: "font-semibold text-slate-800", celda: (c) => c.proveedor_nombre },
+    { key: "factura", titulo: "Factura", movil: "dato", claseTd: "whitespace-nowrap font-mono text-xs text-slate-600", celda: (c) => c.numero_factura, celdaMovil: (c) => <span className="font-mono">{c.numero_factura}</span> },
+    { key: "productos", titulo: "Productos", movil: "dato", claseTh: "text-center", claseTd: "text-center text-slate-600", celda: (c) => c.cantidad_items },
+    {
+      key: "condicion", titulo: "Condición", movil: "chip",
+      celda: (c) => {
+        const anulada = c.estado === "anulada";
+        return (
+          <>
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.tipo_pago === "credito" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+              {c.tipo_pago === "credito" ? "Crédito" : "Contado"}
+            </span>
+            {c.tipo_pago === "credito" && !anulada && c.deuda ? (
+              c.deuda.estado === "pagada"
+                ? <p className="mt-0.5 text-[11px] font-semibold text-emerald-600">Pagada</p>
+                : <p className="mt-0.5 text-[11px] text-slate-500">debés {dinero(c.deuda.saldo, c.deuda.moneda)}{c.vencimiento ? ` · vence ${fechaDia(c.vencimiento)}` : ""}</p>
+            ) : c.tipo_pago === "credito" && c.vencimiento ? <p className="mt-0.5 text-[11px] text-slate-400">vence {fechaDia(c.vencimiento)}</p> : null}
+            {c.tipo_pago === "contado" && c.medio_pago ? <p className="mt-0.5 text-[11px] text-slate-400">{nombreMetodoPago(c.medio_pago)}</p> : null}
+          </>
+        );
+      },
+      // Tarjeta: solo los chips (el detalle de la deuda va en "Pago").
+      celdaMovil: (c) => (
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.tipo_pago === "credito" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+            {c.tipo_pago === "credito" ? "Crédito" : "Contado"}
+          </span>
+          {c.estado === "anulada" ? <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-600">Anulada</span> : null}
+          {c.oc?.numero_oc ? <span className="rounded-full bg-sky-50 px-2 py-0.5 font-mono text-[11px] font-semibold text-sky-700">{c.oc.numero_oc}</span> : null}
+        </span>
+      ),
+    },
+    {
+      // Solo en la tarjeta: cómo está el pago (en la tabla ya va dentro de "Condición").
+      key: "pago", titulo: "Pago", movil: "dato", claseTh: "hidden", claseTd: "hidden",
+      celda: (c) => c.estado === "anulada" ? "—"
+        : c.tipo_pago === "credito"
+          ? c.deuda ? (c.deuda.estado === "pagada" ? <span className="font-semibold text-emerald-600">Pagada</span> : <>Debés {dinero(c.deuda.saldo, c.deuda.moneda)}{c.vencimiento ? ` · vence ${fechaDia(c.vencimiento)}` : ""}</>)
+            : c.vencimiento ? `Vence ${fechaDia(c.vencimiento)}` : "A crédito"
+          : c.medio_pago ? nombreMetodoPago(c.medio_pago) : "Contado",
+    },
+    {
+      key: "total", titulo: "Total", movil: "valor", claseTh: "pr-5 text-right",
+      claseTd: "whitespace-nowrap pr-5 text-right font-bold tabular-nums",
+      celda: (c) => <span className={c.estado === "anulada" ? "text-slate-400 line-through" : "text-slate-900"}>{gs(c.total)}</span>,
+    },
+  ];
+
   return (
-    <div className="space-y-6 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Compras</h1>
-          <p className="mt-1 text-sm text-slate-500">Las facturas de tus proveedores: cada una suma stock y actualiza los costos.</p>
-        </div>
-        <Link href="/compras/nueva" className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
-          <Plus className="h-4 w-4" /> Nueva compra
-        </Link>
-      </header>
+    <div className="space-y-5 pb-10 sm:space-y-6">
+      <EncabezadoPagina
+        titulo="Compras"
+        subtitulo="Las facturas de tus proveedores: cada una suma stock y actualiza los costos."
+        acciones={<AccionesPagina acciones={[{ etiqueta: "Nueva compra", icono: <Plus />, href: "/compras/nueva", primaria: true }]} />}
+      />
 
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-3">
-          <div className="relative min-w-[240px] flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por número, proveedor, factura o producto…"
-              className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-3 py-3 sm:px-5">
+          <BarraFiltros
+            plano
+            activos={filtrosActivos}
+            onLimpiar={limpiar}
+            busqueda={
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input type="search" value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por número, proveedor, factura o producto…"
+                  aria-label="Buscar compras" enterKeyHint="search"
+                  className="h-11 w-full rounded-xl border border-slate-200 pl-9 pr-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] md:h-auto md:py-2.5" />
+              </div>
+            }
+          >
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-slate-600 md:hidden">Desde</span>
+              <input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} aria-label="Desde" className={INPUT_F} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-slate-600 md:hidden">Hasta</span>
+              <input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} aria-label="Hasta" className={INPUT_F} />
+            </label>
+            <Select value={proveedor} onChange={(v) => { setProveedor(v); setPagina(1); }} minWidth={180} etiqueta="Proveedor"
+              options={[["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])]} />
+            <Select value={tipoPago} onChange={(v) => { setTipoPago(v); setPagina(1); }} minWidth={140} etiqueta="Condición" options={[["", "Contado y crédito"], ["contado", "Contado"], ["credito", "Crédito"]]} />
+            <Select value={estado} onChange={(v) => { setEstado(v); setPagina(1); }} minWidth={140} etiqueta="Estado" options={[["", "Todas"], ["registrada", "Registradas"], ["anulada", "Anuladas"]]} />
+            {hayFiltros && !filtrosActivos ? (
+              <button onClick={limpiar} className="text-xs text-slate-400 underline-offset-2 hover:text-slate-700 hover:underline max-md:hidden">Limpiar</button>
+            ) : null}
+          </BarraFiltros>
+        </div>
+
+        {cargando && rows.length === 0 ? (
+          <p className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</p>
+        ) : rows.length === 0 ? (
+          <div className="px-5 py-16 text-center">
+            <ShoppingCart className="mx-auto h-8 w-8 text-slate-300" />
+            <p className="mt-3 text-sm font-medium text-slate-700">{hayFiltros ? "Ninguna compra coincide con los filtros" : "Todavía no cargaste compras"}</p>
+            {!hayFiltros ? (
+              <Link href="/compras/nueva" className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white sm:min-h-0" style={{ backgroundColor: TEAL }}>
+                <Plus className="h-4 w-4" /> Cargar la primera
+              </Link>
+            ) : null}
           </div>
-          <input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} aria-label="Desde" className={INPUT_F} />
-          <input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} aria-label="Hasta" className={INPUT_F} />
-          <Select value={proveedor} onChange={(v) => { setProveedor(v); setPagina(1); }} minWidth={180}
-            options={[["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])]} />
-          <Select value={tipoPago} onChange={(v) => { setTipoPago(v); setPagina(1); }} minWidth={140} options={[["", "Contado y crédito"], ["contado", "Contado"], ["credito", "Crédito"]]} />
-          <Select value={estado} onChange={(v) => { setEstado(v); setPagina(1); }} minWidth={140} options={[["", "Todas"], ["registrada", "Registradas"], ["anulada", "Anuladas"]]} />
-          {hayFiltros ? (
-            <button onClick={() => { setBorrador(""); setQ(""); setDesde(""); setHasta(""); setProveedor(""); setTipoPago(""); setEstado(""); setPagina(1); }} className="text-xs text-slate-400 underline-offset-2 hover:text-slate-700 hover:underline">Limpiar</button>
-          ) : null}
-        </div>
-
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
-            <thead>
-              <tr className="border-b-2 text-[11px] font-bold uppercase tracking-wider" style={{ borderColor: `${TEAL}26`, backgroundColor: `${TEAL}0d`, color: TEAL }}>
-                <th className="px-5 py-3">Número</th>
-                <th className="px-3 py-3">Fecha</th>
-                <th className="px-3 py-3">Proveedor</th>
-                <th className="px-3 py-3">Factura</th>
-                <th className="px-3 py-3 text-center">Productos</th>
-                <th className="px-3 py-3">Condición</th>
-                <th className="px-5 py-3 text-right">Total</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {cargando && rows.length === 0 ? (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</td></tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-5 py-16 text-center">
-                    <ShoppingCart className="mx-auto h-8 w-8 text-slate-300" />
-                    <p className="mt-3 text-sm font-medium text-slate-700">{hayFiltros ? "Ninguna compra coincide con los filtros" : "Todavía no cargaste compras"}</p>
-                    {!hayFiltros ? (
-                      <Link href="/compras/nueva" className="mt-4 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>
-                        <Plus className="h-4 w-4" /> Cargar la primera
-                      </Link>
-                    ) : null}
-                  </td>
-                </tr>
-              ) : (
-                rows.map((c) => {
-                  const anulada = c.estado === "anulada";
-                  return (
-                    <tr key={c.id} onClick={() => setViendo(c.id)} className={`cursor-pointer transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
-                      <td className="px-5 py-3">
-                        <p className={`font-mono text-xs font-semibold ${anulada ? "text-slate-400 line-through" : "text-slate-800"}`}>{c.numero_control}</p>
-                        {anulada ? <span className="rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600">Anulada</span> : null}
-                        {c.oc?.numero_oc ? <p className="mt-0.5 font-mono text-[10px] text-sky-700" title="Recepción de una orden de compra">{c.oc.numero_oc}</p> : null}
-                      </td>
-                      <td className="px-3 py-3 text-xs text-slate-600">{fecha(c.fecha)}</td>
-                      <td className="px-3 py-3 font-semibold text-slate-800">{c.proveedor_nombre}</td>
-                      <td className="px-3 py-3 font-mono text-xs text-slate-600">{c.numero_factura}</td>
-                      <td className="px-3 py-3 text-center text-slate-600">{c.cantidad_items}</td>
-                      <td className="px-3 py-3">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${c.tipo_pago === "credito" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
-                          {c.tipo_pago === "credito" ? "Crédito" : "Contado"}
-                        </span>
-                        {c.tipo_pago === "credito" && !anulada && c.deuda ? (
-                          c.deuda.estado === "pagada"
-                            ? <p className="mt-0.5 text-[11px] font-semibold text-emerald-600">Pagada</p>
-                            : <p className="mt-0.5 text-[11px] text-slate-500">debés {dinero(c.deuda.saldo, c.deuda.moneda)}{c.vencimiento ? ` · vence ${fechaDia(c.vencimiento)}` : ""}</p>
-                        ) : c.tipo_pago === "credito" && c.vencimiento ? <p className="mt-0.5 text-[11px] text-slate-400">vence {fechaDia(c.vencimiento)}</p> : null}
-                        {c.tipo_pago === "contado" && c.medio_pago ? <p className="mt-0.5 text-[11px] text-slate-400">{nombreMetodoPago(c.medio_pago)}</p> : null}
-                      </td>
-                      <td className={`whitespace-nowrap px-5 py-3 text-right font-bold tabular-nums ${anulada ? "text-slate-400 line-through" : "text-slate-900"}`}>{gs(c.total)}</td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        ) : (
+          <TablaTarjetas
+            filas={rows}
+            columnas={columnas}
+            claveFila={(c) => c.id}
+            onFila={(c) => setViendo(c.id)}
+            cargando={cargando}
+            minAncho={860}
+            claseTabla="w-full text-left text-sm"
+            claseThead="border-b-2 border-[var(--brand)]/15 bg-[var(--brand)]/5"
+            thBase={TH}
+            tdBase="px-3 py-3"
+          />
+        )}
 
         {total > POR_PAGINA ? (
-          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
-            <span>Página {pagina} de {totalPaginas} · {total} compras</span>
+          <div className="flex flex-col gap-2 border-t border-slate-100 px-3 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <span className="text-center sm:text-left">Página {pagina} de {totalPaginas} · {total} compras</span>
             <div className="flex gap-2">
-              <button disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">Anterior</button>
-              <button disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">Siguiente</button>
+              <button disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40 max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">Anterior</button>
+              <button disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40 max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">Siguiente</button>
             </div>
           </div>
         ) : null}
@@ -227,13 +278,13 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
       footer={c && !anulada ? (
         anulando ? (
           <>
-            <button onClick={() => setAnulando(false)} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Volver</button>
-            <button onClick={anular} disabled={busy || !motivo.trim()} className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-40">
-              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />} Confirmar anulación
+            <button onClick={() => setAnulando(false)} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 max-sm:flex-1">Volver</button>
+            <button onClick={anular} disabled={busy || !motivo.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-40 max-sm:flex-[2] max-sm:px-3">
+              {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <Ban className="h-4 w-4 shrink-0" />} Confirmar anulación
             </button>
           </>
         ) : (
-          <button onClick={() => setAnulando(true)} className="inline-flex items-center gap-2 rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50">
+          <button onClick={() => setAnulando(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 px-4 py-2.5 text-sm font-semibold text-rose-600 hover:bg-rose-50 max-sm:flex-1">
             <Ban className="h-4 w-4" /> Anular compra
           </button>
         )
@@ -261,7 +312,7 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
             {c.orden_compra_id ? (
               <div>
                 <dt className="text-[11px] text-slate-500">Orden de compra</dt>
-                <dd><Link href={`/compras/ordenes?ver=${c.orden_compra_id}`} className="font-mono text-sm font-semibold text-sky-700 hover:underline">{c.oc?.numero_oc ?? "Ver la orden"}</Link></dd>
+                <dd><Link href={`/compras/ordenes?ver=${c.orden_compra_id}`} className="inline-flex items-center font-mono text-sm font-semibold text-sky-700 hover:underline max-sm:min-h-11">{c.oc?.numero_oc ?? "Ver la orden"}</Link></dd>
               </div>
             ) : null}
           </dl>
@@ -272,7 +323,7 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
               {(c.items ?? []).map((i) => (
                 <li key={i.id} className="flex items-center gap-3 px-3 py-2.5">
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-slate-800">{i.producto_nombre}</p>
+                    <p className="text-sm font-medium text-slate-800 max-sm:line-clamp-2 max-sm:[overflow-wrap:anywhere] sm:truncate">{i.producto_nombre}</p>
                     <p className="text-[11px] text-slate-500">
                       {Number(i.cantidad).toLocaleString("es-PY")} × {c.moneda === "USD" ? `US$ ${Number(i.costo_unitario_original).toLocaleString("es-PY")}` : gs(i.costo_unitario)}
                       {i.precio_venta_nuevo ? ` · precio de venta → ${gs(i.precio_venta_nuevo)}` : ""}
@@ -309,13 +360,13 @@ function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose: () => 
               {cxp && Number(cxp.pagado) > 0 ? (
                 <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">Esta compra ya tiene pagos al proveedor ({dinero(cxp.pagado, cxp.moneda)}): para anularla primero anulá esas órdenes de pago.</p>
               ) : null}
-              <textarea autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={2} maxLength={500} placeholder="Ej: se cargó con el proveedor equivocado"
+              <textarea autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={2} maxLength={500} enterKeyHint="done" placeholder="Ej: se cargó con el proveedor equivocado"
                 className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
             </div>
           ) : null}
           {error ? (
             <div className="flex items-start justify-between gap-2 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">
-              <span>{error}</span><button onClick={() => setError(null)} aria-label="Cerrar"><X className="h-3.5 w-3.5" /></button>
+              <span className="min-w-0 [overflow-wrap:anywhere]">{error}</span><button onClick={() => setError(null)} aria-label="Cerrar" className="inline-flex shrink-0 items-center justify-center max-sm:-m-2 max-sm:h-9 max-sm:w-9"><X className="h-3.5 w-3.5" /></button>
             </div>
           ) : null}
         </div>
@@ -344,27 +395,27 @@ function CuentaPagarBloque({ c, puedePagar, onPagar }: { c: Compra; puedePagar: 
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Cuenta a pagar</p>
         <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${est.c}`}>{est.t}</span>
       </div>
-      <dl className="grid grid-cols-3 gap-3 px-4 py-3 text-sm">
-        <div><dt className="text-[11px] text-slate-500">Saldo</dt><dd className="font-bold tabular-nums text-slate-900">{din(x.saldo)}</dd></div>
-        <div><dt className="text-[11px] text-slate-500">Pagado</dt><dd className="font-semibold tabular-nums text-emerald-700">{din(x.pagado)}</dd></div>
-        <div><dt className="text-[11px] text-slate-500">Vence</dt><dd className={`font-medium ${atraso > 0 ? "text-rose-600" : "text-slate-800"}`}>{fechaDia(x.vencimiento)}</dd></div>
+      <dl className="grid grid-cols-2 gap-3 px-4 py-3 text-sm sm:grid-cols-3">
+        <div className="min-w-0"><dt className="text-[11px] text-slate-500">Saldo</dt><dd className="font-bold tabular-nums text-slate-900 [overflow-wrap:anywhere]">{din(x.saldo)}</dd></div>
+        <div className="min-w-0"><dt className="text-[11px] text-slate-500">Pagado</dt><dd className="font-semibold tabular-nums text-emerald-700 [overflow-wrap:anywhere]">{din(x.pagado)}</dd></div>
+        <div className="col-span-2 sm:col-span-1"><dt className="text-[11px] text-slate-500">Vence</dt><dd className={`font-medium ${atraso > 0 ? "text-rose-600" : "text-slate-800"}`}>{fechaDia(x.vencimiento)}</dd></div>
       </dl>
       {x.pagos.length ? (
         <ul className="divide-y divide-slate-100 border-t border-slate-100">
           {x.pagos.map((p) => (
-            <li key={p.id} className={`flex items-center gap-3 px-4 py-2 text-xs ${p.anulado_at ? "opacity-60" : ""}`}>
+            <li key={p.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-2 text-xs ${p.anulado_at ? "opacity-60" : ""}`}>
               <span className={`font-mono font-semibold text-slate-800 ${p.anulado_at ? "line-through" : ""}`}>{p.numero}</span>
-              <span className="text-slate-500">{fecha(p.fecha)}</span>
+              <span className="text-slate-500 max-sm:order-last max-sm:-mt-1.5 max-sm:basis-full">{fecha(p.fecha)}</span>
               {p.anulado_at ? <span className="rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600">Anulada</span> : null}
               <span className={`ml-auto font-semibold tabular-nums ${p.anulado_at ? "text-slate-400 line-through" : "text-emerald-700"}`}>{din(p.monto)}</span>
-              <button onClick={() => imprimirOrdenPago(p.id, p.numero).catch(() => {})} title="Orden de pago en PDF" aria-label={`Orden de pago ${p.numero} en PDF`} className="rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Printer className="h-3.5 w-3.5" /></button>
+              <button onClick={() => imprimirOrdenPago(p.id, p.numero).catch(() => {})} title="Orden de pago en PDF" aria-label={`Orden de pago ${p.numero} en PDF`} className="inline-flex items-center justify-center rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 max-sm:-my-2 max-sm:-mr-2 max-sm:h-11 max-sm:w-11"><Printer className="h-4 w-4 sm:h-3.5 sm:w-3.5" /></button>
             </li>
           ))}
         </ul>
       ) : null}
       {puedePagar && abierta && Number(x.saldo) > 0 ? (
         <div className="border-t border-slate-100 px-4 py-3">
-          <button onClick={onPagar} className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white hover:brightness-95" style={{ backgroundColor: TEAL }}>
+          <button onClick={onPagar} className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white hover:brightness-95 max-sm:min-h-11 max-sm:w-full" style={{ backgroundColor: TEAL }}>
             <Banknote className="h-4 w-4" /> Pagar {din(x.saldo)}
           </button>
         </div>
@@ -375,9 +426,9 @@ function CuentaPagarBloque({ c, puedePagar, onPagar }: { c: Compra; puedePagar: 
 
 function Dato({ l, v, mono }: { l: string; v: string; mono?: boolean }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-[11px] text-slate-500">{l}</dt>
-      <dd className={`text-sm font-medium text-slate-800 ${mono ? "font-mono" : ""}`}>{v}</dd>
+      <dd className={`text-sm font-medium text-slate-800 [overflow-wrap:anywhere] ${mono ? "font-mono" : ""}`}>{v}</dd>
     </div>
   );
 }

@@ -9,6 +9,15 @@ import { TZ_PY } from "@/lib/fecha/paraguay";
 
 export const TEAL = clienteConfig.color;
 
+/**
+ * Pie de acciones de un `<Modal>` (su cuerpo scrollea con p-5): queda pegado abajo mientras se
+ * scrollea (también con el teclado abierto en el celular) y, en celular, los botones se
+ * reparten el ancho con 44 px de alto. Va como ÚLTIMO hijo del contenido del modal.
+ * (`-bottom-5` / `-mx-5 -mb-5` compensan el p-5 del cuerpo: el sticky respeta ese padding.)
+ */
+export const PIE_MODAL =
+  "sticky -bottom-5 z-[2] -mx-5 -mb-5 flex items-center justify-end gap-2 border-t border-slate-100 bg-white px-5 py-3 max-sm:[&>*]:min-h-11 max-sm:[&>*]:flex-auto max-sm:[&>*]:justify-center max-sm:[&>*]:whitespace-nowrap";
+
 export const gs = (v: number | string | null | undefined) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
 export const usd = (v: number | string | null | undefined) =>
   `US$ ${(Number(v) || 0).toLocaleString("es-PY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;

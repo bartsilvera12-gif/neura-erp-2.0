@@ -201,8 +201,8 @@ export function ProductoForm({
       onClose={onClose}
       footer={
         <>
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
-          <button type="submit" form="producto-form" disabled={busy || subiendo || !puede} className="rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: BRAND }}>
+          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 max-sm:min-h-11 max-sm:flex-1">Cancelar</button>
+          <button type="submit" form="producto-form" disabled={busy || subiendo || !puede} className="rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40 max-sm:min-h-11 max-sm:flex-[2] max-sm:px-4" style={{ backgroundColor: BRAND }}>
             {busy ? "Guardando…" : editando ? "Guardar cambios" : "Crear producto"}
           </button>
         </>
@@ -222,14 +222,17 @@ export function ProductoForm({
               <History className="h-3.5 w-3.5" /> Ver movimientos
             </Link>
           ) : null}>
-            <div className="flex gap-4">
-              <div className="shrink-0 text-center">
+            {/* Celular: foto chica + nombre en una fila y el SKU debajo a todo el ancho; desde sm,
+                foto a la izquierda con nombre y SKU apilados (como siempre). */}
+            <div className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-3 sm:gap-x-4">
+              <div className="shrink-0 text-center sm:row-span-2">
                 <input ref={fileRef} type="file" accept="image/*" onChange={onFile} className="hidden" />
                 <button
                   type="button"
                   onClick={() => fileRef.current?.click()}
                   title="Foto del producto (opcional · JPG/PNG hasta 5 MB)"
-                  className="relative flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white text-slate-400 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                  aria-label={imagenUrl ? "Cambiar la foto del producto" : "Agregar foto del producto"}
+                  className="relative flex h-[104px] w-[104px] items-center justify-center overflow-hidden rounded-xl border-2 border-dashed border-slate-200 bg-white text-slate-400 transition hover:border-[var(--brand)] hover:text-[var(--brand)] max-sm:h-[84px] max-sm:w-[84px]"
                 >
                   {subiendo ? (
                     <Loader2 className="h-5 w-5 animate-spin" />
@@ -243,29 +246,27 @@ export function ProductoForm({
                   )}
                 </button>
                 {imagenUrl ? (
-                  <button type="button" onClick={() => setImagenUrl(null)} className="mt-1 inline-flex items-center gap-1 text-[11px] text-rose-500 hover:underline">
+                  <button type="button" onClick={() => setImagenUrl(null)} className="mt-1 inline-flex items-center gap-1 text-[11px] text-rose-500 hover:underline max-sm:min-h-9 max-sm:px-2">
                     <X className="h-3 w-3" /> Quitar
                   </button>
                 ) : null}
               </div>
-              <div className="grid min-w-0 flex-1 grid-cols-3 gap-3">
-                <label className="col-span-3 block">
-                  <span className={ET}>Nombre *</span>
-                  <input autoFocus value={f.nombre} onChange={(e) => set("nombre", e.target.value)} className={INPUT} placeholder="Ej. Coca-Cola 2L" />
-                </label>
-                <div className="col-span-3">
-                  <span className={ET}>SKU *</span>
-                  <div className="flex gap-2">
-                    <input value={f.sku} onChange={(e) => set("sku", e.target.value)} className={`${INPUT} font-mono`} placeholder="Escribilo o tocá Generar" aria-label="SKU" />
-                    <BotonGenerar onClick={() => generar("sku")} cargando={generando === "sku"} />
-                  </div>
+              <label className="block min-w-0 max-sm:self-center">
+                <span className={ET}>Nombre *</span>
+                <input autoFocus enterKeyHint="next" value={f.nombre} onChange={(e) => set("nombre", e.target.value)} className={INPUT} placeholder="Ej. Coca-Cola 2L" />
+              </label>
+              <div className="col-span-2 min-w-0 sm:col-span-1">
+                <span className={ET}>SKU *</span>
+                <div className="flex gap-2">
+                  <input enterKeyHint="next" autoCapitalize="characters" autoComplete="off" value={f.sku} onChange={(e) => set("sku", e.target.value)} className={`${INPUT} min-w-0 font-mono`} placeholder="Escribilo o tocá Generar" aria-label="SKU" />
+                  <BotonGenerar onClick={() => generar("sku")} cargando={generando === "sku"} />
                 </div>
               </div>
             </div>
             <div className="mt-3">
               <span className={ET}>Código de barras <span className="font-normal text-slate-400">(opcional)</span></span>
               <div className="flex gap-2">
-                <input value={f.codigo_barras} onChange={(e) => set("codigo_barras", e.target.value)} className={`${INPUT} font-mono`} placeholder="Escaneá el código o tocá Generar" aria-label="Código de barras" />
+                <input enterKeyHint="next" autoComplete="off" value={f.codigo_barras} onChange={(e) => set("codigo_barras", e.target.value)} className={`${INPUT} min-w-0 font-mono`} placeholder="Escaneá el código o tocá Generar" aria-label="Código de barras" />
                 <BotonGenerar onClick={() => generar("barras")} cargando={generando === "barras"} />
               </div>
               <p className="mt-1 text-[11px] text-slate-400">
@@ -274,13 +275,14 @@ export function ProductoForm({
                   : "Si el producto no trae código, generá uno para imprimir etiquetas."}
               </p>
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className={ET}>Categoría</span>
                 <Select
                   value={cat.madre?.id ?? ""}
                   onChange={(v) => set("categoria_principal_id", v)}
                   block
+                  etiqueta="Categoría"
                   options={[["", "— Sin categoría —"], ...madres.map((c): [string, string] => [c.id, c.nombre])]}
                 />
               </label>
@@ -291,6 +293,7 @@ export function ProductoForm({
                   onChange={(v) => set("categoria_principal_id", v || cat.madre?.id || "")}
                   block
                   disabled={!cat.madre || subs.length === 0}
+                  etiqueta="Subcategoría"
                   options={[[
                     "",
                     !cat.madre ? "Elegí primero la categoría" : subs.length === 0 ? "No tiene subcategorías" : "— Sin subcategoría —",
@@ -307,7 +310,7 @@ export function ProductoForm({
 
           {/* ── Precios ──────────────────────────────────────────────────── */}
           <Bloque titulo="Precios" extra={<span className="text-[11px] text-slate-400">IVA incluido</span>}>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className={ET}>Costo promedio</span>
                 <MontoInput decimals={false} value={f.costo_promedio} onChange={(v) => set("costo_promedio", v)} className={NUM} placeholder="0" />
@@ -329,7 +332,7 @@ export function ProductoForm({
               <div className="grid grid-cols-3 gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
                 {IVAS.map(([v, l]) => (
                   <button key={v} type="button" onClick={() => set("tipo_iva", v)}
-                    className="rounded-lg py-2 text-sm font-semibold transition"
+                    className="rounded-lg py-2 text-sm font-semibold transition max-sm:min-h-10"
                     style={f.tipo_iva === v ? { backgroundColor: "#fff", color: BRAND, boxShadow: "0 1px 2px rgba(15,23,42,.08)" } : { color: "#64748b" }}>
                     {l}
                   </button>
@@ -337,7 +340,7 @@ export function ProductoForm({
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className={ET}>Precio mayorista <span className="font-normal text-slate-400">(opcional)</span></span>
                 <MontoInput decimals={false} value={f.precio_mayorista} onChange={(v) => set("precio_mayorista", v)} className={NUM} placeholder="—" />
@@ -352,7 +355,7 @@ export function ProductoForm({
               <label className="block">
                 <span className={ET}>Descuento</span>
                 <div className="relative">
-                  <input inputMode="numeric" value={f.descuento_pct} onChange={(e) => set("descuento_pct", e.target.value.replace(/\D/g, "").slice(0, 3))} className={`${NUM} pr-8`} placeholder="0" />
+                  <input inputMode="numeric" value={f.descuento_pct} onChange={(e) => set("descuento_pct", e.target.value.replace(/\D/g, "").slice(0, 3))} enterKeyHint="next" className={`${NUM} pr-8`} placeholder="0" />
                   <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">%</span>
                 </div>
               </label>
@@ -386,14 +389,14 @@ export function ProductoForm({
               ) : null}
               <Interruptor checked={f.es_vendible} onChange={(v) => set("es_vendible", v)} label="Se vende en caja" detalle="Aparece en el buscador de la caja." />
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className={ET}>Stock mínimo</span>
-                <input inputMode="numeric" disabled={!f.controla_stock} value={f.stock_minimo} onChange={(e) => set("stock_minimo", e.target.value.replace(/\D/g, ""))} className={NUM} placeholder="0" />
+                <input inputMode="numeric" enterKeyHint="next" disabled={!f.controla_stock} value={f.stock_minimo} onChange={(e) => set("stock_minimo", e.target.value.replace(/\D/g, ""))} className={NUM} placeholder="0" />
               </label>
               <label className="block">
                 <span className={ET}>Unidad</span>
-                <input list="unidades-medida" value={f.unidad_medida} onChange={(e) => set("unidad_medida", e.target.value)} className={INPUT} placeholder="Unidad" />
+                <input list="unidades-medida" enterKeyHint="next" value={f.unidad_medida} onChange={(e) => set("unidad_medida", e.target.value)} className={INPUT} placeholder="Unidad" />
                 <datalist id="unidades-medida">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
               </label>
             </div>
@@ -405,19 +408,19 @@ export function ProductoForm({
                 <div className="mt-2 grid grid-cols-[110px_1fr] gap-3">
                   <label className="block">
                     <span className={ET}>Cantidad</span>
-                    <input inputMode="decimal" value={stockIni.cantidad} onChange={(e) => setStockIni((p) => ({ ...p, cantidad: e.target.value.replace(/[^\d.]/g, "") }))} className={`${NUM} bg-white`} placeholder="0" />
+                    <input inputMode="decimal" enterKeyHint="next" value={stockIni.cantidad} onChange={(e) => setStockIni((p) => ({ ...p, cantidad: e.target.value.replace(/[^\d.]/g, "") }))} className={`${NUM} bg-white`} placeholder="0" />
                   </label>
                   <div>
                     <span className={ET}>Depósito</span>
-                    <Select value={depositoInicial} onChange={(v) => setStockIni((p) => ({ ...p, deposito: v }))} block
+                    <Select value={depositoInicial} onChange={(v) => setStockIni((p) => ({ ...p, deposito: v }))} block etiqueta="Depósito del stock inicial"
                       options={deps.datos ? opcionesDepositos(deps.datos) : [["", "Cargando depósitos…"]]} />
                   </div>
                 </div>
                 {conLotes && cantInicial > 0 ? (
-                  <div className="mt-3 grid grid-cols-2 gap-3">
+                  <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <label className="block">
                       <span className={ET}>N° de lote <span className="font-normal text-slate-400">(editable)</span></span>
-                      <input value={stockIni.lote} onChange={(e) => setStockIni((p) => ({ ...p, lote: e.target.value.slice(0, 40) }))} className={`${INPUT} font-mono uppercase`} />
+                      <input enterKeyHint="next" autoCapitalize="characters" autoComplete="off" value={stockIni.lote} onChange={(e) => setStockIni((p) => ({ ...p, lote: e.target.value.slice(0, 40) }))} className={`${INPUT} font-mono uppercase`} />
                     </label>
                     <label className="block">
                       <span className={ET}>Vencimiento *</span>
@@ -456,7 +459,7 @@ export function ProductoForm({
 function BotonGenerar({ onClick, cargando }: { onClick: () => void; cargando: boolean }) {
   return (
     <button type="button" onClick={onClick} disabled={cargando}
-      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[var(--brand)] px-3.5 text-sm font-semibold text-[var(--brand)] transition hover:bg-[var(--brand-50)] disabled:opacity-60">
+      className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[var(--brand)] px-3.5 text-sm font-semibold max-sm:min-h-11 max-sm:px-3 text-[var(--brand)] transition hover:bg-[var(--brand-50)] disabled:opacity-60">
       {cargando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Wand2 className="h-4 w-4" />}
       Generar
     </button>
@@ -503,17 +506,17 @@ function Contenedor({ modal, titulo, subtitulo, onClose, footer, children }: {
       <div role="dialog" aria-modal="true" aria-label={titulo}
         className={`flex w-full max-w-2xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[#4FAEB2]/15`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 py-3 pl-4 pr-2 sm:px-6 sm:py-4">
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-slate-900">{titulo}</h2>
+            <h2 className="text-base font-semibold text-slate-900 sm:text-lg">{titulo}</h2>
             {subtitulo ? <p className="mt-0.5 text-xs text-slate-500">{subtitulo}</p> : null}
           </div>
-          <button type="button" onClick={onClose} aria-label="Cerrar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="inline-flex shrink-0 items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600 max-sm:h-11 max-sm:w-11">
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
-        {footer ? <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-6 py-3.5">{footer}</div> : null}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">{children}</div>
+        {footer ? <div className="pb-safe flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-4 py-3 sm:px-6 sm:py-3.5">{footer}</div> : null}
       </div>
     </CapaModal>
   );

@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { Modal } from "@/components/Modal";
-import { gs } from "@/modules/clientes/ui";
+import { PIE_MODAL, gs } from "@/modules/clientes/ui";
 
 export function PanelBaja({ clienteId, onCancel, onHecho }: { clienteId: string; onCancel: () => void; onHecho: () => void }) {
   const [motivo, setMotivo] = useState("");
@@ -41,7 +41,7 @@ export function PanelBaja({ clienteId, onCancel, onHecho }: { clienteId: string;
           className="min-h-[60px] w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-400" />
         {error ? <p className="mt-1 text-xs text-rose-600">{error}</p> : null}
       </div>
-      <div className="flex gap-2">
+      <div className="flex gap-2 max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1">
         <button type="button" onClick={confirmar} disabled={busy} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50">
           {busy ? "Procesando…" : "Confirmar baja"}
         </button>
@@ -121,7 +121,7 @@ export function ModalEliminar({ clienteId, onClose, onEliminado, onDarDeBaja }: 
               Tiene {bloqueos.join(" y ")}. Para que deje de ser cliente sin perder su historial, dalo de baja.
             </p>
             {onDarDeBaja ? (
-              <button type="button" onClick={onDarDeBaja} className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100">
+              <button type="button" onClick={onDarDeBaja} className="mt-2 min-h-11 rounded-lg sm:min-h-0 border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-700 hover:bg-amber-100">
                 Dar de baja
               </button>
             ) : null}
@@ -138,13 +138,13 @@ export function ModalEliminar({ clienteId, onClose, onEliminado, onDarDeBaja }: 
         ) : null}
         {error ? <p className="text-xs text-rose-600">{error}</p> : null}
 
-        <div className="flex gap-2 pt-1">
+        <div className={PIE_MODAL}>
+          <button type="button" onClick={onClose} disabled={busy} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+            Cancelar
+          </button>
           <button type="button" onClick={confirmar} disabled={busy || cargando || !preview?.puede_eliminar}
             className="inline-flex items-center gap-2 rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700 disabled:opacity-50">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {busy ? "Eliminando…" : "Confirmar eliminación"}
-          </button>
-          <button type="button" onClick={onClose} disabled={busy} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-            Cancelar
           </button>
         </div>
       </div>

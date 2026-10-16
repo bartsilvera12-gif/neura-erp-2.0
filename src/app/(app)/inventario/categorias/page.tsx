@@ -8,7 +8,6 @@
  * llena de botones repetidos. Dos niveles: Bebidas › Gaseosas.
  * No hay borrado (como Ferretería): una categoría con productos se desactiva.
  */
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { flushSync } from "react-dom";
 import { Ban, CheckCircle2, ChevronRight, Loader2, MoreHorizontal, Palette, Pencil, Plus, Search, Tags, X } from "lucide-react";
@@ -18,6 +17,7 @@ import { invalidar } from "@/lib/api/cache-cliente";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
+import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { ColorPicker } from "@/components/ColorPicker";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { MenuAcciones, type ItemMenu } from "@/components/MenuAcciones";
@@ -187,28 +187,21 @@ export default function CategoriasPage() {
   const hexDe = (id: string) => colores.get(id)?.dot ?? "#94a3b8";
 
   return (
-    <div className="space-y-6 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Operaciones · Stock</p>
-          </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Categorías de productos</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Ordená tus productos en categorías y, si querés, en subcategorías. Ej: <strong className="font-semibold text-slate-700">Bebidas › Gaseosas</strong>.
-          </p>
-        </div>
-        <Link href="/inventario" className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">Inventario</Link>
-      </header>
+    <div className="space-y-5 pb-10 sm:space-y-6">
+      <EncabezadoPagina
+        volver={{ href: "/inventario", label: "Inventario" }}
+        kicker="Operaciones · Stock"
+        titulo="Categorías de productos"
+        subtitulo={<>Ordená tus productos en categorías y, si querés, en subcategorías. Ej: <strong className="font-semibold text-slate-700">Bebidas › Gaseosas</strong>.</>}
+      />
 
       {esAdmin ? (
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <div className="mb-4 flex items-center gap-2.5">
             <span className="block h-5 w-1 rounded-full" style={{ backgroundColor: TEAL }} />
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Nueva categoría</h2>
           </div>
-          <form onSubmit={crear} className="grid gap-3 sm:grid-cols-[2fr_1.5fr_1fr_auto] sm:items-end">
+          <form onSubmit={crear} className="grid gap-3 md:grid-cols-[2fr_1.5fr_1fr_auto] md:items-end">
             <label className="block">
               <span className={ET}>Nombre</span>
               <input value={nombre} onChange={(e) => setNombre(e.target.value)} required placeholder={padreElegido ? "Ej: Gaseosas" : "Ej: Bebidas"} className={INPUT} />
@@ -225,7 +218,7 @@ export default function CategoriasPage() {
             <div>
               <span className={ET}>Color</span>
               {padreElegido ? (
-                <p className="flex h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs text-slate-500" title="Las subcategorías usan el color de su categoría">
+                <p className="flex min-h-11 items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 text-xs text-slate-500 md:h-[42px] md:min-h-0" title="Las subcategorías usan el color de su categoría">
                   <span className="h-4 w-4 shrink-0 rounded-md" style={{ backgroundColor: hexDe(padreElegido.id) }} />
                   El de {padreElegido.nombre}
                 </p>
@@ -233,7 +226,7 @@ export default function CategoriasPage() {
                 <ColorPicker value={colorElegido} onChange={setColorNuevo} block />
               )}
             </div>
-            <button type="submit" disabled={creando || !nombre.trim()} className="inline-flex h-[42px] items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
+            <button type="submit" disabled={creando || !nombre.trim()} className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl px-4 text-sm font-semibold text-white md:h-[42px] transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
               {creando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               {creando ? "Creando..." : padreElegido ? "Crear subcategoría" : "Crear categoría"}
             </button>
@@ -252,10 +245,10 @@ export default function CategoriasPage() {
       ) : null}
 
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-3">
-          <div className="relative min-w-[220px] flex-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-slate-100 px-3 py-3 sm:px-5">
+          <div className="relative min-w-0 flex-1 basis-full sm:basis-[220px]">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar categoría o subcategoría..." className={`${INPUT} pl-9`} />
+            <input type="search" enterKeyHint="search" aria-label="Buscar categorías" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar categoría o subcategoría..." className={`${INPUT} pl-9`} />
           </div>
           <p className="text-xs text-slate-500">
             {arbol.length} {arbol.length === 1 ? "categoría" : "categorías"} · {totalSubs} {totalSubs === 1 ? "subcategoría" : "subcategorías"}
@@ -288,28 +281,40 @@ export default function CategoriasPage() {
               ];
               return (
                 <li key={cat.id}>
-                  <div className={`flex flex-wrap items-center gap-x-4 gap-y-2 px-5 py-3.5 transition-colors hover:bg-slate-50/70 ${abierta ? "bg-slate-50/70" : ""}`}>
-                  {/* Nombre y cantidad: al tocarlo se despliega el árbol de la categoría */}
+                  <div className={`flex flex-wrap items-center gap-x-4 gap-y-2 py-2 pl-2 pr-2 transition-colors hover:bg-slate-50/70 sm:px-5 sm:py-3.5 ${abierta ? "bg-slate-50/70" : ""}`}>
+                  {/* Nombre y cantidad: al tocarlo se despliega el árbol de la categoría. En celular
+                      el menú ⋯ va en la misma línea (44 px), a la derecha. */}
+                  <div className="flex w-full min-w-0 items-center gap-1 sm:w-56">
                   <button
                     type="button"
                     onClick={(e) => alternar(cat.id, e.currentTarget)}
                     aria-expanded={abierta}
                     title={abierta ? "Ocultar subcategorías" : "Ver subcategorías"}
-                    className={`group flex w-full min-w-0 items-center gap-3 text-left sm:w-56 ${cat.activo ? "" : "opacity-50"}`}
+                    className={`group flex min-h-11 w-full min-w-0 flex-1 items-center gap-3 rounded-lg px-1.5 text-left sm:min-h-0 sm:px-0 ${cat.activo ? "" : "opacity-50"}`}
                   >
                     <ChevronRight className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 group-hover:text-slate-700 ${abierta ? "rotate-90" : ""}`} />
                     <span className="h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: hex, boxShadow: `0 0 0 4px ${tono.fondo}` }} />
                     <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-slate-900">
+                      <p className="text-sm font-semibold text-slate-900 [overflow-wrap:anywhere] sm:truncate">
                         <Resaltado texto={cat.nombre} q={q} />
                         {!cat.activo ? <EtiquetaInactiva /> : null}
                       </p>
                       <p className="text-xs text-slate-500">{nProductos(total)}</p>
                     </div>
                   </button>
+                  {esAdmin ? (
+                    <MenuAcciones
+                      items={menu}
+                      etiqueta={`Acciones de ${cat.nombre}`}
+                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 transition active:bg-slate-100 sm:hidden"
+                    >
+                      <MoreHorizontal className="h-5 w-5" />
+                    </MenuAcciones>
+                  ) : null}
+                  </div>
 
                   {/* Cerrada: las subcategorías como etiquetas. Abierta: se ven en el árbol de abajo. */}
-                  <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5">
+                  <div className={`min-w-0 flex-1 flex-wrap items-center gap-1.5 max-sm:pl-[42px] ${abierta ? "hidden sm:flex" : "flex"}`}>
                     {abierta ? null : hijas.length ? (
                       hijas.map((h) => (
                         <EtiquetaSub
@@ -329,11 +334,11 @@ export default function CategoriasPage() {
                   </div>
 
                   {esAdmin ? (
-                    <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                    <div className={`ml-auto flex shrink-0 items-center gap-1.5 ${cat.activo && !cat.parent_id ? "" : "max-sm:hidden"}`}>
                       {cat.activo && !cat.parent_id ? (
                         <button
                           onClick={() => agregarSub(cat.id)}
-                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]"
+                          className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 px-2.5 py-1 text-xs font-medium text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)] max-sm:min-h-11 max-sm:px-3.5 max-sm:text-[13px]"
                         >
                           <Plus className="h-3 w-3" /> Subcategoría
                         </button>
@@ -341,7 +346,7 @@ export default function CategoriasPage() {
                       <MenuAcciones
                         items={menu}
                         etiqueta={`Acciones de ${cat.nombre}`}
-                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 max-sm:hidden"
                       >
                         <MoreHorizontal className="h-5 w-5" />
                       </MenuAcciones>
@@ -422,7 +427,8 @@ function EtiquetaSub({ sub, tono, cantidad, q, esAdmin, onEditar, onToggle }: {
     borderColor: resaltar ? tono.dot : tono.borde,
     color: tono.texto,
   };
-  const clase = `inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-semibold transition ${sub.activo ? "" : "border-dashed opacity-60"}`;
+    // En celular cada etiqueta es un objetivo de 44 px; los nombres largos parten en varias líneas.
+  const clase = `inline-flex max-w-full items-center gap-1 rounded-full border px-2.5 py-1 text-left text-xs font-semibold [overflow-wrap:anywhere] transition max-sm:min-h-11 max-sm:px-3.5 max-sm:text-[13px] ${sub.activo ? "" : "border-dashed opacity-60"}`;
   if (!esAdmin) return <span className={clase} style={estilo}>{contenido}</span>;
   return (
     <MenuAcciones
@@ -481,19 +487,20 @@ function NuevaSub({ madre, onCrear, onCancelar }: { madre: string; onCrear: (nom
   }
 
   return (
-    <form onSubmit={enviar} className="flex flex-wrap items-center gap-1.5">
+    <form onSubmit={enviar} className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto">
       <input
         ref={ref}
         value={nombre}
         onChange={(e) => setNombre(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Escape") onCancelar(); }}
         placeholder={`Nueva en ${madre}`}
-        className="w-48 rounded-full border border-[var(--brand)] px-3 py-1 text-xs outline-none focus:ring-4 focus:ring-[var(--brand-100)]"
+        aria-label={`Nueva subcategoría en ${madre}`}
+        className="w-48 rounded-full border border-[var(--brand)] px-3 py-1 text-xs outline-none focus:ring-4 focus:ring-[var(--brand-100)] max-sm:h-11 max-sm:min-w-0 max-sm:w-full max-sm:basis-full"
       />
-      <button type="submit" disabled={busy || !nombre.trim()} className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
+      <button type="submit" disabled={busy || !nombre.trim()} className="inline-flex items-center justify-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-white transition hover:brightness-95 disabled:opacity-50 max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm" style={{ backgroundColor: TEAL }}>
         {busy ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />} Agregar
       </button>
-      <button type="button" onClick={onCancelar} className="rounded-full px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100">Cancelar</button>
+      <button type="button" onClick={onCancelar} className="rounded-full px-2 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100 max-sm:min-h-11 max-sm:flex-1 max-sm:border max-sm:border-slate-200 max-sm:text-sm">Cancelar</button>
       {error ? <span className="w-full text-xs text-rose-600">{error}</span> : null}
     </form>
   );
@@ -534,8 +541,8 @@ function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuarda
   return (
     <CapaModal onClose={busy ? undefined : onClose} z="z-[120]" fondo="bg-slate-900/40 backdrop-blur-sm">
         <form onSubmit={guardar} onClick={(e) => e.stopPropagation()} className={`flex w-full max-w-md ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-slate-900/5`} style={{ animation: "rb-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-          <h3 className="shrink-0 px-6 pt-6 text-lg font-semibold text-slate-900">{categoria.parent_id ? "Editar subcategoría" : "Editar categoría"}</h3>
-          <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-6 py-1">
+          <h3 className="shrink-0 px-4 pt-5 text-lg font-semibold text-slate-900 sm:px-6 sm:pt-6">{categoria.parent_id ? "Editar subcategoría" : "Editar categoría"}</h3>
+          <div className="mt-3 min-h-0 flex-1 overflow-y-auto px-4 py-1 sm:px-6">
           <div className="space-y-3">
             <label className="block">
               <span className={ET}>Nombre</span>
@@ -569,7 +576,7 @@ function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuarda
           </div>
           {error ? <p className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
           </div>
-          <div className="flex shrink-0 justify-end gap-2 px-6 pt-4 pb-6">
+          <div className="flex shrink-0 justify-end gap-2 px-4 pt-4 pb-5 sm:px-6 sm:pb-6 max-sm:[&>button]:flex-1">
             <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
             <button type="submit" disabled={busy || !nombre.trim()} className="rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
               {busy ? "Guardando..." : "Guardar cambios"}

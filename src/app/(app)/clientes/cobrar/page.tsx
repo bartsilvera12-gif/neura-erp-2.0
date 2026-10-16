@@ -7,10 +7,14 @@
  * y "Cobrar" que abre el cobro de ese cliente.
  */
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { HandCoins, Search, Wallet } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
+import { EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
+import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
 import type { CuentaCobrar } from "@/modules/clientes/cobros";
 
@@ -34,6 +38,8 @@ export default function CuentasCobrarPage() {
   const [pagina, setPagina] = useState(1);
   const [cobrando, setCobrando] = useState<{ id: string; nombre: string } | null>(null);
   const [recarga, setRecarga] = useState(0);
+  const router = useRouter();
+  const vistaTarjetas = useVistaTarjetas();
 
   useEffect(() => {
     const t = setTimeout(() => { setQ(borrador.trim()); setPagina(1); }, 300);
@@ -64,38 +70,77 @@ export default function CuentasCobrarPage() {
     { l: "Más de 90 días", v: ant.d90, tono: "text-rose-700" },
   ] : [];
 
+  // Lista: tabla en ≥ 768 px; en celular, tarjetas (tocar abre la ficha; "Cobrar" en el pie).
+  const columnas: ColumnaTabla<Fila>[] = [
+    {
+      key: "cliente", titulo: "Cliente", movil: "titulo",
+      celda: (r) => (
+        <>
+          <Link href={`/clientes/${r.cliente_id}`} className="font-bold text-slate-900 hover:text-[var(--brand)]">{r.cliente_nombre}</Link>
+          <p className="text-[11px] text-slate-500">{r.cliente_telefono ? <a href={`tel:${r.cliente_telefono}`} className="hover:underline">{r.cliente_telefono}</a> : "sin teléfono"}</p>
+        </>
+      ),
+      celdaMovil: (r) => r.cliente_nombre,
+    },
+    {
+      key: "tel", titulo: "Teléfono", movil: "subtitulo", claseTh: "hidden", claseTd: "hidden",
+      celda: (r) => (r.cliente_telefono ? (
+        <a href={`tel:${r.cliente_telefono}`} onClick={(e) => e.stopPropagation()} className="-my-1.5 inline-flex min-h-11 items-center font-medium text-[var(--brand)] hover:underline">{r.cliente_telefono}</a>
+      ) : "sin teléfono"),
+    },
+    {
+      key: "venta", titulo: "Venta", movil: "dato",
+      celda: (r) => <><span className="font-mono text-xs font-semibold text-slate-800">{r.numero}</span><span className="block text-[11px] text-slate-500">{dia(r.fecha_emision)}</span></>,
+    },
+    {
+      key: "vence", titulo: "Vence", movil: "dato",
+      celda: (r) => (
+        <span className={`text-xs ${r.dias_atraso > 0 ? "font-semibold text-rose-600" : "text-slate-600"}`}>
+          {dia(r.vencimiento)}{r.dias_atraso > 0 ? <span className="block">vencida hace {r.dias_atraso} días</span> : null}
+        </span>
+      ),
+    },
+    { key: "importe", titulo: "Importe", movil: "dato", claseTh: "text-right", claseTd: "text-right tabular-nums text-slate-600 whitespace-nowrap", celda: (r) => gs(r.monto) },
+    { key: "debe", titulo: "Debe", movil: "valor", claseTh: "text-right", claseTd: "text-right font-bold tabular-nums text-slate-900 whitespace-nowrap", celda: (r) => gs(r.saldo) },
+    {
+      key: "acc", titulo: "", movil: "acciones", claseTh: "w-px", claseTd: "!px-5",
+      celda: (r) => (
+        <button type="button" onClick={() => setCobrando({ id: r.cliente_id, nombre: r.cliente_nombre })}
+          className="inline-flex items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 max-md:px-4 max-md:text-sm">
+          <HandCoins className="h-3.5 w-3.5" /> Cobrar
+        </button>
+      ),
+    },
+  ];
+
   return (
-    <div className="space-y-6 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Comercial · Clientes</p>
-          </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Cuentas a cobrar</h1>
-          <p className="mt-1 text-sm text-slate-500">Todo lo que te deben tus clientes, empezando por lo más urgente.</p>
-        </div>
-      </header>
+    <div className="space-y-4 pb-10 sm:space-y-6">
+      <EncabezadoPagina
+        kicker="Comercial · Clientes"
+        titulo="Cuentas a cobrar"
+        subtitulo="Todo lo que te deben tus clientes, empezando por lo más urgente."
+      />
 
       <div className="grid gap-3 lg:grid-cols-[1.2fr_2fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+        <div className="min-w-0 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5">
           <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500"><Wallet className="h-4 w-4" /> Total a cobrar</p>
-          <p className="mt-1 text-3xl font-bold tabular-nums text-slate-900">{gs(ant?.total ?? 0)}</p>
+          <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 [overflow-wrap:anywhere] sm:text-3xl">{gs(ant?.total ?? 0)}</p>
           <p className="mt-1 text-xs text-slate-500">
             {ant?.clientes ?? 0} {ant?.clientes === 1 ? "cliente" : "clientes"}
             {vencido > 0 ? <span className="font-semibold text-rose-600"> · vencido {gs(vencido)}</span> : null}
             <span className="text-emerald-700"> · cobrado este mes {gs(ant?.cobrado_mes ?? 0)}</span>
           </p>
         </div>
-        <div className="grid grid-cols-5 gap-2">
+        {/* Tramos: 2 por fila en celular ("Por vencer" a todo el ancho), 3 en tablet, 5 en pantallas anchas. */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 2xl:grid-cols-5">
           {tramos.map((t, i) => {
             const clave = i === 0 ? "por_vencer" : "vencidas";
             const activo = (i === 0 && filtro === "por_vencer") || (i > 0 && filtro === "vencidas");
             return (
-              <button key={t.l} onClick={() => { setFiltro(activo ? "" : clave); setPagina(1); }}
-                className={`rounded-2xl border bg-white px-3 py-3 text-left shadow-sm transition hover:border-slate-300 ${activo ? "border-[var(--brand)] ring-2 ring-[var(--brand-100)]" : "border-slate-200"}`}>
+              <button key={t.l} type="button" onClick={() => { setFiltro(activo ? "" : clave); setPagina(1); }} aria-pressed={activo}
+                className={`min-w-0 rounded-2xl border bg-white px-3 py-3 text-left shadow-sm transition hover:border-slate-300 ${i === 0 ? "max-sm:col-span-2" : ""} ${activo ? "border-[var(--brand)] ring-2 ring-[var(--brand-100)]" : "border-slate-200"}`}>
                 <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">{t.l}</p>
-                <p className={`mt-1 text-sm font-bold tabular-nums ${t.v > 0 ? t.tono : "text-slate-300"}`}>{gs(t.v)}</p>
+                <p className={`mt-1 text-sm font-bold tabular-nums [overflow-wrap:anywhere] ${t.v > 0 ? t.tono : "text-slate-300"}`}>{gs(t.v)}</p>
               </button>
             );
           })}
@@ -103,75 +148,46 @@ export default function CuentasCobrarPage() {
       </div>
 
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-3">
-          <div className="relative min-w-[240px] flex-1">
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-3 py-3 sm:px-5">
+          <div className="relative min-w-0 basis-full sm:min-w-[240px] sm:flex-1 sm:basis-auto">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por cliente, RUC o número de venta…"
-              className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
+            <input type="search" value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por cliente, RUC o número de venta…"
+              aria-label="Buscar cuentas a cobrar" enterKeyHint="search"
+              className="h-11 w-full rounded-xl border border-slate-200 pl-9 pr-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] sm:h-auto sm:py-2.5" />
           </div>
-          <div className="flex rounded-xl bg-slate-100 p-1">
+          {/* Si no entran, los filtros scrollean de costado (nunca se cortan). */}
+          <ScrollHorizontal className="min-w-0 rounded-xl bg-slate-100 p-1 max-sm:w-full" claseFila="gap-0" dependencias={[filtro]}>
             {([["", "Todas"], ["vencidas", "Vencidas"], ["semana", "Vencen esta semana"], ["por_vencer", "Por vencer"]] as const).map(([v, l]) => (
-              <button key={v} onClick={() => { setFiltro(v); setPagina(1); }}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${filtro === v ? "bg-white shadow-sm" : "text-slate-500"}`}
+              <button key={v} type="button" onClick={() => { setFiltro(v); setPagina(1); }} aria-pressed={filtro === v} data-activo={filtro === v}
+                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-10 max-sm:flex-1 ${filtro === v ? "bg-white shadow-sm" : "text-slate-500"}`}
                 style={filtro === v ? { color: TEAL } : undefined}>{l}</button>
             ))}
-          </div>
+          </ScrollHorizontal>
           <p className="text-xs text-slate-500">{total} {total === 1 ? "cuenta" : "cuentas"} · {gs(totalSaldo)}</p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
-            <thead>
-              <tr className="border-b-2 text-[11px] font-bold uppercase tracking-wider" style={{ borderColor: `${TEAL}26`, backgroundColor: `${TEAL}0d`, color: TEAL }}>
-                <th className="px-5 py-3">Cliente</th>
-                <th className="px-3 py-3">Venta</th>
-                <th className="px-3 py-3">Vence</th>
-                <th className="px-3 py-3 text-right">Importe</th>
-                <th className="px-3 py-3 text-right">Debe</th>
-                <th className="w-px px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {cargando && rows.length === 0 ? (
-                <tr><td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</td></tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center">
-                    <HandCoins className="mx-auto h-8 w-8 text-slate-300" />
-                    <p className="mt-3 text-sm font-medium text-slate-700">{q || filtro ? "Ninguna cuenta coincide" : "Nadie te debe nada"}</p>
-                  </td>
-                </tr>
-              ) : (
-                rows.map((r) => (
-                  <tr key={r.id} className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
-                    <td className="px-5 py-3">
-                      <Link href={`/clientes/${r.cliente_id}`} className="font-bold text-slate-900 hover:text-[var(--brand)]">{r.cliente_nombre}</Link>
-                      <p className="text-[11px] text-slate-500">{r.cliente_telefono ? <a href={`tel:${r.cliente_telefono}`} className="hover:underline">{r.cliente_telefono}</a> : "sin teléfono"}</p>
-                    </td>
-                    <td className="px-3 py-3"><span className="font-mono text-xs font-semibold text-slate-800">{r.numero}</span><span className="block text-[11px] text-slate-500">{dia(r.fecha_emision)}</span></td>
-                    <td className={`px-3 py-3 text-xs ${r.dias_atraso > 0 ? "font-semibold text-rose-600" : "text-slate-600"}`}>
-                      {dia(r.vencimiento)}{r.dias_atraso > 0 ? <span className="block">vencida hace {r.dias_atraso} días</span> : null}
-                    </td>
-                    <td className="px-3 py-3 text-right tabular-nums text-slate-600">{gs(r.monto)}</td>
-                    <td className="px-3 py-3 text-right font-bold tabular-nums text-slate-900">{gs(r.saldo)}</td>
-                    <td className="px-5 py-3">
-                      <button onClick={() => setCobrando({ id: r.cliente_id, nombre: r.cliente_nombre })}
-                        className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">
-                        <HandCoins className="h-3.5 w-3.5" /> Cobrar
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {cargando && rows.length === 0 ? (
+          <p className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</p>
+        ) : rows.length === 0 ? (
+          <div className="px-5 py-16 text-center">
+            <HandCoins className="mx-auto h-8 w-8 text-slate-300" />
+            <p className="mt-3 text-sm font-medium text-slate-700">{q || filtro ? "Ninguna cuenta coincide" : "Nadie te debe nada"}</p>
+          </div>
+        ) : (
+          <TablaTarjetas filas={rows} columnas={columnas} claveFila={(r) => r.id} minAncho={820} cargando={cargando}
+            onFila={vistaTarjetas ? (r) => router.push(`/clientes/${r.cliente_id}`) : undefined}
+            claseTabla="w-full text-left text-sm"
+            claseThead="border-b-2 border-[var(--brand-100)] bg-[var(--brand-50)]"
+            claseFila={() => "transition-colors hover:bg-[var(--brand-50)]"}
+            thBase="whitespace-nowrap px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-[var(--brand)] first:px-5"
+            tdBase="px-3 py-3 first:px-5" />
+        )}
         {total > POR_PAGINA ? (
-          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
+          <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-3 py-3 text-xs text-slate-500 sm:px-5">
             <span>Página {pagina} de {totalPaginas}</span>
             <div className="flex gap-2">
-              <button disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">Anterior</button>
-              <button disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">Siguiente</button>
+              <button type="button" disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40 max-sm:min-h-11">Anterior</button>
+              <button type="button" disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40 max-sm:min-h-11">Siguiente</button>
             </div>
           </div>
         ) : null}

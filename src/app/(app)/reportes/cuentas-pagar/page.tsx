@@ -10,7 +10,7 @@ import Link from "next/link";
 import { Suspense, useMemo, useState } from "react";
 import { BarraTramos, BarrasH, Columnas, C_TRAMOS, SERIES } from "@/components/graficos/Graficos";
 import { fechaCorta, gs, num } from "@/components/graficos/formato";
-import { Descargas, EncabezadoReporte, EstadoCarga, FiltrosReporte, Kpi, Nota, Segmentos, Tabla, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
+import { Descargas, EncabezadoReporte, EstadoCarga, FilaKpis, FiltrosReporte, Kpi, Nota, Segmentos, Tabla, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
 import { TRAMOS, type CuentasPagar, type Tramos } from "@/modules/reportes/tipos";
 
 const ATAJOS: Atajo[] = ["todo", "mes", "3m", "anio"];
@@ -41,7 +41,7 @@ function CuentasPorPagar() {
 
       <FiltrosReporte filtros={filtros} atajos={ATAJOS} etiquetaFechas="Emitidas:" sucursales={d?.sucursales} cargando={cargando && !!d}>
         {prov ? (
-          <button type="button" onClick={() => filtros.cambiar({ proveedor: null })} className="rounded-xl bg-[var(--brand-50)] px-3 py-1.5 text-xs font-semibold text-[var(--brand)]">
+          <button type="button" onClick={() => filtros.cambiar({ proveedor: null })} className="rounded-xl bg-[var(--brand-50)] px-3 py-1.5 text-xs font-semibold text-[var(--brand)] max-sm:min-h-11 max-sm:text-[13px]">
             {prov} ✕
           </button>
         ) : null}
@@ -49,7 +49,7 @@ function CuentasPorPagar() {
 
       {!d || !t ? <EstadoCarga error={error} /> : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <FilaKpis n={5}>
             <Kpi acento label="Total a pagar" valor={gs(t.total)} hint={`${num(t.proveedores)} proveedores · ${num(d.rows.length)} documentos`} />
             <Kpi label="Vencido" valor={gs(t.vencido)} tono={Number(t.vencido) ? "malo" : "bueno"} hint={Number(t.total) ? `${Math.round((Number(t.vencido) / Number(t.total)) * 100)} % del total` : "nada vencido"}
               onClick={() => { setVista("documento"); setTramo(null); }} />
@@ -57,7 +57,7 @@ function CuentasPorPagar() {
             <Kpi label="Compras / gastos" valor={gs(t.compras)} hint={`Gastos a crédito ${gs(t.gastos)}`} />
             <Kpi label="En dólares" valor={d.por_moneda.USD ? usd(d.por_moneda.USD.saldo) : "—"}
               hint={d.por_moneda.USD ? `≈ ${gs(d.por_moneda.USD.saldo_gs)} · vencido ${usd(d.por_moneda.USD.vencido)}` : "sin deudas en USD"} />
-          </div>
+          </FilaKpis>
 
           <Tarjeta titulo="Antigüedad de la deuda" sub="en Gs. (USD al tipo de cambio de cada documento) · tocá un tramo para filtrar los documentos">
             <BarraTramos activo={tramo} onClick={(k) => { setTramo((x) => (x === k ? null : (k as keyof Tramos))); setVista("documento"); }}
@@ -87,7 +87,7 @@ function CuentasPorPagar() {
             extra={<div className="flex flex-wrap items-center gap-2">
               {vista === "documento" ? (
                 <>
-                  {tramo ? <button type="button" onClick={() => setTramo(null)} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{TRAMOS.find((x) => x.key === tramo)?.label} ✕</button> : null}
+                  {tramo ? <button type="button" onClick={() => setTramo(null)} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 max-sm:min-h-11 max-sm:px-3 max-sm:text-[13px]">{TRAMOS.find((x) => x.key === tramo)?.label} ✕</button> : null}
                   {d.por_moneda.USD ? <Segmentos valor={moneda} onChange={setMoneda} opciones={[["", "Todas"], ["GS", "Gs."], ["USD", "USD"]]} /> : null}
                 </>
               ) : null}
@@ -114,7 +114,7 @@ function CuentasPorPagar() {
                   key: r.id,
                   celdas: [
                     <span key="p" className="block max-w-[220px] truncate">{r.proveedor_nombre}</span>,
-                    <Link key="d" href={r.origen === "compra" ? `/compras?ver=${r.doc_id}` : `/gastos-empresariales/operativos?ver=${r.doc_id}`} className="font-mono text-xs text-[var(--brand)] hover:underline">
+                    <Link key="d" href={r.origen === "compra" ? `/compras?ver=${r.doc_id}` : `/gastos-empresariales/operativos?ver=${r.doc_id}`} className="font-mono text-xs text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">
                       {r.documento}{r.factura ? <span className="ml-1 font-sans text-slate-400">· {r.factura}</span> : null}
                     </Link>,
                     r.origen === "compra" ? "Compra" : <span key="o" title={r.descripcion}>Gasto</span>,

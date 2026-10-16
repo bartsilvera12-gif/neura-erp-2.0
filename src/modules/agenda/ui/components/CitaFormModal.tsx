@@ -295,7 +295,7 @@ export default function CitaFormModal({
         <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
 
         {/* header con gradiente sutil */}
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-5 pb-4 pt-5">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-4 pb-3 pt-4 sm:px-5 sm:pb-4 sm:pt-5">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold tracking-tight text-slate-900">{tituloModal}</h2>
             <p className="mt-0.5 text-sm text-slate-500">{subtitulo}</p>
@@ -310,7 +310,7 @@ export default function CitaFormModal({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
           {/* BÁSICO */}
           {!reprog && (
             <section className="space-y-3">
@@ -481,7 +481,7 @@ export default function CitaFormModal({
           {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs text-rose-700">{error}</div>}
         </div>
 
-        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-4">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-4 py-3 max-sm:[&>*]:flex-1 sm:px-5 sm:py-4">
           <button
             type="button"
             onClick={onClose}

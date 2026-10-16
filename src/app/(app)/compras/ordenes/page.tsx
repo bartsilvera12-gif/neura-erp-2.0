@@ -14,6 +14,8 @@ import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { Drawer } from "@/components/Drawer";
+import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 import { ESTADO_OC, type OrdenCompra } from "@/modules/compras/ordenes";
 import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos";
@@ -25,6 +27,7 @@ const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-P
 const num = (v: number) => Number(v || 0).toLocaleString("es-PY", { maximumFractionDigits: 3 });
 const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric" });
 const fechaDia = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("es-PY", { day: "2-digit", month: "short", year: "numeric" });
+const TH = "whitespace-nowrap px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[var(--brand)]";
 const hoy = () => new Date().toLocaleDateString("sv-SE", { timeZone: TZ_PY });
 
 export default function OrdenesPage() {
@@ -68,93 +71,109 @@ export default function OrdenesPage() {
   const refrescar = useCallback(() => setRecarga((k) => k + 1), []);
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
-  return (
-    <div className="space-y-6 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Órdenes de compra</h1>
-          <p className="mt-1 text-sm text-slate-500">Lo que le pediste a cada proveedor y cuánto ya llegó.</p>
-        </div>
-        <Link href="/compras/ordenes/nueva" className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
-          <Plus className="h-4 w-4" /> Nueva orden
-        </Link>
-      </header>
+  const filtrosActivos = (estado !== "abiertas" ? 1 : 0) + (proveedor ? 1 : 0);
+  const limpiar = () => { setBorrador(""); setQ(""); setEstado("abiertas"); setProveedor(""); setPagina(1); };
 
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-3">
-          <div className="relative min-w-[240px] flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por número, proveedor o producto…"
-              className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
+  // Tabla en ≥ 768 px; en celular cada orden es una tarjeta (proveedor, número · fecha, total, estado y cuánto llegó).
+  const columnas: ColumnaTabla<OrdenCompra>[] = [
+    {
+      key: "numero", titulo: "Número", movil: "subtitulo", claseTh: "pl-5", claseTd: "whitespace-nowrap pl-5 font-mono text-xs font-semibold text-slate-800",
+      celda: (o) => o.numero_oc,
+      celdaMovil: (o) => <><span className="font-mono text-xs">{o.numero_oc}</span> · {fecha(o.fecha)}</>,
+    },
+    { key: "fecha", titulo: "Fecha", movil: "oculto", claseTd: "whitespace-nowrap text-xs text-slate-600", celda: (o) => fecha(o.fecha) },
+    { key: "proveedor", titulo: "Proveedor", movil: "titulo", claseTd: "font-semibold text-slate-800", celda: (o) => o.proveedor_nombre },
+    {
+      key: "llego", titulo: "Llegó", movil: "dato",
+      celda: (o) => {
+        const pct = o.unidades ? Math.min(100, Math.round(((o.recibidas ?? 0) / o.unidades) * 100)) : 0;
+        return (
+          <div className="flex items-center gap-2">
+            <div className="h-1.5 w-20 shrink-0 overflow-hidden rounded-full bg-slate-100 max-md:w-12">
+              <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: pct >= 100 ? "#10b981" : TEAL }} />
+            </div>
+            <span className="text-[11px] tabular-nums text-slate-500">{num(o.recibidas ?? 0)} de {num(o.unidades ?? 0)}</span>
           </div>
-          <Select value={estado} onChange={(v) => { setEstado(v); setPagina(1); }} minWidth={190} options={[
-            ["abiertas", "Abiertas (por recibir)"], ["", "Todas"], ["pendiente", "Pendientes"], ["recibida_parcial", "Recibidas en parte"], ["recibida_total", "Recibidas"], ["cancelada", "Canceladas"],
-          ]} />
-          <Select value={proveedor} onChange={(v) => { setProveedor(v); setPagina(1); }} minWidth={180}
-            options={[["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])]} />
+        );
+      },
+    },
+    {
+      key: "entrega", titulo: "Entrega", movil: "dato",
+      claseTd: "whitespace-nowrap text-xs",
+      celda: (o) => {
+        const atrasada = o.fecha_entrega && o.fecha_entrega < hoy() && (o.estado === "pendiente" || o.estado === "recibida_parcial");
+        return <span className={atrasada ? "font-semibold text-rose-600" : "text-slate-600"}>{o.fecha_entrega ? fechaDia(o.fecha_entrega) : "—"}{atrasada ? " · atrasada" : ""}</span>;
+      },
+    },
+    { key: "estado", titulo: "Estado", movil: "chip", celda: (o) => <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${ESTADO_OC[o.estado].clase}`}>{ESTADO_OC[o.estado].texto}</span> },
+    {
+      key: "total", titulo: "Total estimado", movil: "valor", claseTh: "pr-5 text-right",
+      claseTd: "whitespace-nowrap pr-5 text-right font-bold tabular-nums text-slate-900",
+      celda: (o) => (Number(o.total) ? gs(o.total) : "—"),
+    },
+  ];
+
+  return (
+    <div className="space-y-5 pb-10 sm:space-y-6">
+      <EncabezadoPagina
+        titulo="Órdenes de compra"
+        subtitulo="Lo que le pediste a cada proveedor y cuánto ya llegó."
+        acciones={<AccionesPagina acciones={[{ etiqueta: "Nueva orden", icono: <Plus />, href: "/compras/ordenes/nueva", primaria: true }]} />}
+      />
+
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-3 py-3 sm:px-5">
+          <BarraFiltros
+            plano
+            activos={filtrosActivos}
+            onLimpiar={limpiar}
+            busqueda={
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input type="search" value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por número, proveedor o producto…"
+                  aria-label="Buscar órdenes de compra" enterKeyHint="search"
+                  className="h-11 w-full rounded-xl border border-slate-200 pl-9 pr-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] md:h-auto md:py-2.5" />
+              </div>
+            }
+          >
+            <Select value={estado} onChange={(v) => { setEstado(v); setPagina(1); }} minWidth={190} etiqueta="Estado" options={[
+              ["abiertas", "Abiertas (por recibir)"], ["", "Todas"], ["pendiente", "Pendientes"], ["recibida_parcial", "Recibidas en parte"], ["recibida_total", "Recibidas"], ["cancelada", "Canceladas"],
+            ]} />
+            <Select value={proveedor} onChange={(v) => { setProveedor(v); setPagina(1); }} minWidth={180} etiqueta="Proveedor"
+              options={[["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])]} />
+          </BarraFiltros>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[860px] text-left text-sm">
-            <thead>
-              <tr className="border-b-2 text-[11px] font-bold uppercase tracking-wider" style={{ borderColor: `${TEAL}26`, backgroundColor: `${TEAL}0d`, color: TEAL }}>
-                <th className="px-5 py-3">Número</th>
-                <th className="px-3 py-3">Fecha</th>
-                <th className="px-3 py-3">Proveedor</th>
-                <th className="px-3 py-3">Llegó</th>
-                <th className="px-3 py-3">Entrega</th>
-                <th className="px-3 py-3">Estado</th>
-                <th className="px-5 py-3 text-right">Total estimado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {cargando && rows.length === 0 ? (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</td></tr>
-              ) : rows.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-5 py-16 text-center">
-                    <ClipboardList className="mx-auto h-8 w-8 text-slate-300" />
-                    <p className="mt-3 text-sm font-medium text-slate-700">{estado === "abiertas" && !q && !proveedor ? "No hay órdenes esperando mercadería" : "Ninguna orden coincide"}</p>
-                    <Link href="/compras/ordenes/nueva" className="mt-4 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>
-                      <Plus className="h-4 w-4" /> Nueva orden
-                    </Link>
-                  </td>
-                </tr>
-              ) : (
-                rows.map((o) => {
-                  const pct = o.unidades ? Math.min(100, Math.round(((o.recibidas ?? 0) / o.unidades) * 100)) : 0;
-                  const atrasada = o.fecha_entrega && o.fecha_entrega < hoy() && (o.estado === "pendiente" || o.estado === "recibida_parcial");
-                  return (
-                    <tr key={o.id} onClick={() => setViendo(o.id)} className={`cursor-pointer transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
-                      <td className="px-5 py-3 font-mono text-xs font-semibold text-slate-800">{o.numero_oc}</td>
-                      <td className="px-3 py-3 text-xs text-slate-600">{fecha(o.fecha)}</td>
-                      <td className="px-3 py-3 font-semibold text-slate-800">{o.proveedor_nombre}</td>
-                      <td className="px-3 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
-                            <div className="h-full rounded-full" style={{ width: `${pct}%`, backgroundColor: pct >= 100 ? "#10b981" : TEAL }} />
-                          </div>
-                          <span className="text-[11px] tabular-nums text-slate-500">{num(o.recibidas ?? 0)} de {num(o.unidades ?? 0)}</span>
-                        </div>
-                      </td>
-                      <td className={`px-3 py-3 text-xs ${atrasada ? "font-semibold text-rose-600" : "text-slate-600"}`}>
-                        {o.fecha_entrega ? fechaDia(o.fecha_entrega) : "—"}{atrasada ? " · atrasada" : ""}
-                      </td>
-                      <td className="px-3 py-3"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${ESTADO_OC[o.estado].clase}`}>{ESTADO_OC[o.estado].texto}</span></td>
-                      <td className="whitespace-nowrap px-5 py-3 text-right font-bold tabular-nums text-slate-900">{Number(o.total) ? gs(o.total) : "—"}</td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        {cargando && rows.length === 0 ? (
+          <p className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</p>
+        ) : rows.length === 0 ? (
+          <div className="px-5 py-16 text-center">
+            <ClipboardList className="mx-auto h-8 w-8 text-slate-300" />
+            <p className="mt-3 text-sm font-medium text-slate-700">{estado === "abiertas" && !q && !proveedor ? "No hay órdenes esperando mercadería" : "Ninguna orden coincide"}</p>
+            <Link href="/compras/ordenes/nueva" className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white sm:min-h-0" style={{ backgroundColor: TEAL }}>
+              <Plus className="h-4 w-4" /> Nueva orden
+            </Link>
+          </div>
+        ) : (
+          <TablaTarjetas
+            filas={rows}
+            columnas={columnas}
+            claveFila={(o) => o.id}
+            onFila={(o) => setViendo(o.id)}
+            cargando={cargando}
+            minAncho={860}
+            claseTabla="w-full text-left text-sm"
+            claseThead="border-b-2 border-[var(--brand)]/15 bg-[var(--brand)]/5"
+            thBase={TH}
+            tdBase="px-3 py-3"
+          />
+        )}
         {total > POR_PAGINA ? (
-          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
-            <span>Página {pagina} de {totalPaginas} · {total} órdenes</span>
+          <div className="flex flex-col gap-2 border-t border-slate-100 px-3 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+            <span className="text-center sm:text-left">Página {pagina} de {totalPaginas} · {total} órdenes</span>
             <div className="flex gap-2">
-              <button disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">Anterior</button>
-              <button disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">Siguiente</button>
+              <button disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40 max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">Anterior</button>
+              <button disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40 max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">Siguiente</button>
             </div>
           </div>
         ) : null}
@@ -217,19 +236,19 @@ function DetalleOrden({ id, onClose, onCambio }: { id: string; onClose: () => vo
       footer={o ? (
         cancelando ? (
           <>
-            <button onClick={() => setCancelando(false)} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Volver</button>
-            <button onClick={cancelar} disabled={busy || !motivo.trim()} className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-40">
+            <button onClick={() => setCancelando(false)} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 max-sm:flex-1">Volver</button>
+            <button onClick={cancelar} disabled={busy || !motivo.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-40 max-sm:flex-[2] max-sm:px-3">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Ban className="h-4 w-4" />} {o.estado === "recibida_parcial" ? "Confirmar cierre" : "Confirmar cancelación"}
             </button>
           </>
         ) : (
           <>
             <button onClick={() => descargarArchivo(`/api/ordenes-compra/${o.id}/pdf`, `orden-compra-${o.numero_oc}.pdf`).catch(() => {})}
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 max-sm:flex-1">
               <Download className="h-4 w-4" /> PDF
             </button>
             {abierta ? (
-              <Link href={`/compras/nueva?oc=${o.id}`} className="inline-flex items-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-semibold text-white hover:brightness-95" style={{ backgroundColor: TEAL }}>
+              <Link href={`/compras/nueva?oc=${o.id}`} className="inline-flex items-center justify-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-semibold text-white hover:brightness-95 max-sm:flex-[2] max-sm:px-3" style={{ backgroundColor: TEAL }}>
                 <PackageCheck className="h-4 w-4" /> Recibir mercadería
               </Link>
             ) : null}
@@ -256,7 +275,7 @@ function DetalleOrden({ id, onClose, onCambio }: { id: string; onClose: () => vo
                   Llegaron <b className="font-semibold text-slate-900 tabular-nums">{num(avance.recibido)}</b> de <b className="font-semibold text-slate-900 tabular-nums">{num(avance.pedido)}</b> unidades
                 </p>
               </div>
-              <div className="text-right">
+              <div className="sm:text-right">
                 <p className="text-[11px] font-medium uppercase tracking-wide text-slate-400">Total estimado</p>
                 <p className="text-xl font-bold tabular-nums tracking-tight text-slate-900">{Number(o.total) ? gs(o.total) : "—"}</p>
               </div>
@@ -287,7 +306,7 @@ function DetalleOrden({ id, onClose, onCambio }: { id: string; onClose: () => vo
                   <li key={i.id} className="px-4 py-3">
                     <div className="flex items-start gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-slate-800">{i.producto_nombre}</p>
+                        <p className="text-sm font-semibold text-slate-800 max-sm:line-clamp-2 max-sm:[overflow-wrap:anywhere] sm:truncate">{i.producto_nombre}</p>
                         <p className="mt-0.5 text-[11px] text-slate-500 tabular-nums">
                           {Number(i.costo_unitario) ? `${gs(i.costo_unitario)} c/u · subtotal ${gs(pedido * Number(i.costo_unitario))}` : "Sin costo cargado"}
                         </p>
@@ -347,12 +366,12 @@ function DetalleOrden({ id, onClose, onCambio }: { id: string; onClose: () => vo
           {!cancelando && (editable || abierta) ? (
             <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-4">
               {editable ? (
-                <Link href={`/compras/ordenes/nueva?editar=${o.id}`} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+                <Link href={`/compras/ordenes/nueva?editar=${o.id}`} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 max-sm:min-h-11 max-sm:w-full max-sm:text-sm">
                   <Pencil className="h-3.5 w-3.5" /> Editar orden
                 </Link>
               ) : null}
               {abierta ? (
-                <button onClick={() => setCancelando(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50">
+                <button onClick={() => setCancelando(true)} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 px-3.5 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 max-sm:min-h-11 max-sm:w-full max-sm:text-sm">
                   <Ban className="h-3.5 w-3.5" /> {o.estado === "recibida_parcial" ? "Cerrar orden (no esperar lo que falta)" : "Cancelar orden"}
                 </button>
               ) : null}
@@ -367,13 +386,13 @@ function DetalleOrden({ id, onClose, onCambio }: { id: string; onClose: () => vo
                   ? "Lo que ya llegó queda como está (sus compras siguen vigentes); lo que falta deja de esperarse y la orden ya no se puede recibir."
                   : "La orden queda cancelada y no se puede recibir."}
               </p>
-              <textarea autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={2} maxLength={500} placeholder="Ej: el proveedor no tiene stock"
+              <textarea autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={2} maxLength={500} enterKeyHint="done" placeholder="Ej: el proveedor no tiene stock"
                 className="mt-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm outline-none focus:border-rose-400 focus:ring-4 focus:ring-rose-100" />
             </div>
           ) : null}
           {error ? (
             <div className="flex items-start justify-between gap-2 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">
-              <span>{error}</span><button onClick={() => setError(null)} aria-label="Cerrar"><X className="h-3.5 w-3.5" /></button>
+              <span className="min-w-0 [overflow-wrap:anywhere]">{error}</span><button onClick={() => setError(null)} aria-label="Cerrar" className="inline-flex shrink-0 items-center justify-center max-sm:-m-2 max-sm:h-9 max-sm:w-9"><X className="h-3.5 w-3.5" /></button>
             </div>
           ) : null}
         </div>
@@ -390,7 +409,7 @@ function Dato({ l, v, icono: Icono, extra }: {
       <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"><Icono className="h-3.5 w-3.5" /></span>
       <div className="min-w-0">
         <dt className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">{l}</dt>
-        <dd className="truncate text-sm font-medium text-slate-800" title={v}>{v}</dd>
+        <dd className="text-sm font-medium text-slate-800 max-sm:[overflow-wrap:anywhere] sm:truncate" title={v}>{v}</dd>
         {extra ? <dd className={`text-[11px] font-semibold ${extra.tono}`}>{extra.texto}</dd> : null}
       </div>
     </div>

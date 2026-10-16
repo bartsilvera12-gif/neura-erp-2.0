@@ -142,7 +142,7 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
           <p className="mt-4 text-lg font-semibold text-slate-900">Recibo {hecho.numero}</p>
           <p className="mt-1 text-sm text-slate-500">Por {gs(hecho.total)}. Ya se descontó de la deuda.</p>
           {hecho.aFavor > 0 ? <p className="mt-2 inline-block rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{gs(hecho.aFavor)} quedaron a favor del cliente</p> : null}
-          <div className="mt-6 flex justify-center gap-2">
+          <div className="mt-6 flex justify-center gap-2 max-sm:flex-col max-sm:[&>button]:min-h-11 max-sm:[&>button]:justify-center">
             <button onClick={() => descargarArchivo(`/api/cobros/${hecho.id}/pdf`, `recibo-${hecho.numero}.pdf`).catch(() => {})}
               className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: BRAND }}>
               <Download className="h-4 w-4" /> Descargar recibo
@@ -161,9 +161,9 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
       onClose={onClose}
       footer={
         <>
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
-          <button onClick={registrar} disabled={!!faltan.length || busy || !ec} className="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: BRAND }}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 max-sm:flex-1">Cancelar</button>
+          <button onClick={registrar} disabled={!!faltan.length || busy || !ec} className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40 max-sm:flex-[2] max-sm:px-3" style={{ backgroundColor: BRAND }}>
+            {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <CheckCircle2 className="h-4 w-4 shrink-0" />}
             {busy ? "Registrando…" : deuda <= 0 ? `Registrar anticipo ${gs(total)}` : `Cobrar ${gs(total)}`}
           </button>
         </>
@@ -182,19 +182,19 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
             <div className="flex flex-wrap items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
               <PiggyBank className="h-5 w-5 text-emerald-600" />
               <p className="min-w-0 flex-1 text-sm text-emerald-800">Tiene <strong className="font-semibold">{gs(saldoFavor)} a favor</strong>. Podés usarlo para pagar {saldoFavor >= deuda ? "toda la deuda" : "parte de la deuda"}.</p>
-              <button onClick={usarSaldo} disabled={busy} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50">
+              <button onClick={usarSaldo} disabled={busy} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 max-sm:min-h-11 max-sm:w-full">
                 Pagar {gs(Math.min(saldoFavor, deuda))} con el saldo
               </button>
             </div>
           ) : null}
           <div className="grid grid-cols-2 gap-3">
-            <div className="rounded-xl bg-slate-50 px-4 py-3">
+            <div className="min-w-0 rounded-xl bg-slate-50 px-3 py-3 sm:px-4">
               <p className="text-[11px] text-slate-500">Debe en total</p>
-              <p className="text-lg font-bold tabular-nums text-slate-900">{gs(deuda)}</p>
+              <p className="text-base font-bold tabular-nums text-slate-900 [overflow-wrap:anywhere] sm:text-lg">{gs(deuda)}</p>
             </div>
-            <div className={`rounded-xl px-4 py-3 ${vencido > 0 ? "bg-rose-50" : "bg-slate-50"}`}>
+            <div className={`min-w-0 rounded-xl px-3 py-3 sm:px-4 ${vencido > 0 ? "bg-rose-50" : "bg-slate-50"}`}>
               <p className={`text-[11px] ${vencido > 0 ? "text-rose-600" : "text-slate-500"}`}>Vencido</p>
-              <p className={`text-lg font-bold tabular-nums ${vencido > 0 ? "text-rose-600" : "text-slate-900"}`}>{gs(vencido)}</p>
+              <p className={`text-base font-bold tabular-nums [overflow-wrap:anywhere] sm:text-lg ${vencido > 0 ? "text-rose-600" : "text-slate-900"}`}>{gs(vencido)}</p>
             </div>
           </div>
 
@@ -213,23 +213,23 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
             <span className={ET}>Cómo te paga</span>
             <ul className="space-y-2">
               {pagos.map((p) => (
-                <li key={p.key} className="flex items-center gap-2">
-                  <div className="w-36 shrink-0">
-                    <Select value={p.metodo} onChange={(v) => setPagos((ps) => ps.map((x) => (x.key === p.key ? { ...x, metodo: v as MetodoCobro } : x)))} block options={METODOS_COBRO.map((m): [string, string] => [m.v, m.l])} />
+                <li key={p.key} className="flex flex-wrap items-center gap-2 max-sm:rounded-xl max-sm:border max-sm:border-slate-200 max-sm:p-2 sm:flex-nowrap">
+                  <div className={`min-w-0 flex-1 sm:w-36 sm:flex-none ${pagos.length > 1 ? "max-sm:basis-[calc(100%-3.25rem)]" : "max-sm:basis-full"}`}>
+                    <Select etiqueta="Medio de pago" value={p.metodo} onChange={(v) => setPagos((ps) => ps.map((x) => (x.key === p.key ? { ...x, metodo: v as MetodoCobro } : x)))} block options={METODOS_COBRO.map((m): [string, string] => [m.v, m.l])} />
                   </div>
-                  <MontoInput value={p.monto || ""} onChange={(v) => setPagos((ps) => ps.map((x) => (x.key === p.key ? { ...x, monto: v } : x)))} decimals={false} placeholder="0" className={`${INPUT} text-right tabular-nums`} />
+                  <MontoInput value={p.monto || ""} onChange={(v) => setPagos((ps) => ps.map((x) => (x.key === p.key ? { ...x, monto: v } : x)))} decimals={false} placeholder="0" className={`${INPUT} min-w-0 flex-1 text-right tabular-nums max-sm:order-3 max-sm:basis-[calc(50%-0.25rem)]`} />
                   {p.metodo !== "efectivo" ? (
-                    <input value={p.referencia} onChange={(e) => setPagos((ps) => ps.map((x) => (x.key === p.key ? { ...x, referencia: e.target.value } : x)))} maxLength={120} placeholder="Nº / banco" className={`${INPUT} w-32`} />
+                    <input value={p.referencia} onChange={(e) => setPagos((ps) => ps.map((x) => (x.key === p.key ? { ...x, referencia: e.target.value } : x)))} maxLength={120} placeholder="Nº / banco" className={`${INPUT} min-w-0 max-sm:order-4 max-sm:flex-1 max-sm:basis-[calc(50%-0.25rem)] sm:w-32`} />
                   ) : null}
                   {pagos.length > 1 ? (
-                    <button onClick={() => setPagos((ps) => ps.filter((x) => x.key !== p.key))} aria-label="Quitar medio" className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+                    <button onClick={() => setPagos((ps) => ps.filter((x) => x.key !== p.key))} aria-label="Quitar medio" className="inline-flex shrink-0 items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 max-sm:order-2 max-sm:h-11 max-sm:w-11"><Trash2 className="h-4 w-4" /></button>
                   ) : null}
                 </li>
               ))}
             </ul>
-            <div className="mt-2 flex items-center justify-between">
+            <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
               <button onClick={() => setPagos((ps) => [...ps, { key: Date.now(), metodo: "transferencia", monto: Math.max(diferencia, 0), referencia: "" }])}
-                className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)] hover:underline">
+                className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)] hover:underline max-sm:min-h-11">
                 <Plus className="h-3.5 w-3.5" /> Agregar otro medio (pago combinado)
               </button>
               {diferencia !== 0 && pagos.length > 1 ? (
@@ -247,7 +247,7 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
             <div className="flex rounded-xl bg-slate-100 p-1">
               {([["auto", "Lo más viejo primero"], ["elegir", "Elegir ventas"]] as const).map(([v, l]) => (
                 <button key={v} type="button" onClick={() => setModo(v)}
-                  className={`flex-1 rounded-lg py-1.5 text-sm font-semibold transition ${modo === v ? "bg-white shadow-sm" : "text-slate-500"}`}
+                  className={`min-h-10 flex-1 rounded-lg px-2 py-1.5 text-sm font-semibold leading-tight transition sm:min-h-0 ${modo === v ? "bg-white shadow-sm" : "text-slate-500"}`}
                   style={modo === v ? { color: BRAND } : undefined}>{l}</button>
               ))}
             </div>
@@ -256,14 +256,14 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
                 const aplicado = aplicacion.m.get(c.id) ?? 0;
                 const queda = Number(c.saldo) - aplicado;
                 return (
-                  <li key={c.id} className="flex items-center gap-3 px-3 py-2.5">
+                  <li key={c.id} className="flex items-center gap-3 px-3 py-2.5 max-sm:min-h-12">
                     {modo === "elegir" ? (
-                      <input type="checkbox" checked={elegidas.has(c.id)} onChange={() => setElegidas((s) => { const n = new Set(s); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); return n; })} className="h-4 w-4 accent-[var(--brand)]" />
+                      <input type="checkbox" checked={elegidas.has(c.id)} onChange={() => setElegidas((s) => { const n = new Set(s); if (n.has(c.id)) n.delete(c.id); else n.add(c.id); return n; })} className="h-5 w-5 shrink-0 accent-[var(--brand)] sm:h-4 sm:w-4" />
                     ) : null}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-slate-800">
                         <span className="font-mono text-xs">{c.numero}</span>
-                        <span className="ml-2 text-xs text-slate-500">del {dia(c.fecha_emision)} · vence {dia(c.vencimiento)}</span>
+                        <span className="ml-2 inline-block text-xs text-slate-500">del {dia(c.fecha_emision)} · vence {dia(c.vencimiento)}</span>
                       </p>
                       <p className="text-[11px] text-slate-500">
                         Debe {gs(c.saldo)}
@@ -271,7 +271,7 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
                       </p>
                     </div>
                     {aplicado > 0 ? (
-                      <span className="text-right text-xs">
+                      <span className="shrink-0 text-right text-xs">
                         <span className="block font-semibold text-emerald-700">− {gs(aplicado)}</span>
                         <span className={queda > 0 ? "text-slate-500" : "font-semibold text-emerald-700"}>{queda > 0 ? `queda ${gs(queda)}` : "queda pagada"}</span>
                       </span>
@@ -298,7 +298,7 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
 
 function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
-    <button type="button" onClick={onClick} className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${on ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand)]" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
+    <button type="button" onClick={onClick} className={`rounded-full border px-3 py-1 text-xs font-semibold transition max-sm:min-h-9 ${on ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand)]" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
       {children}
     </button>
   );

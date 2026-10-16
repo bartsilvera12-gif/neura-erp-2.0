@@ -10,6 +10,7 @@ import { invalidar } from "@/lib/api/cache-cliente";
 import { useMemo, useState } from "react";
 import { apiForm } from "@/lib/api/client-fetch";
 import { Select } from "@/components/Select";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import { invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
 import { invalidarLista } from "@/modules/inventario/lista-cache";
 
@@ -146,7 +147,7 @@ export function ImportInicialWizard() {
   if (resultado) {
     const r = resultado as Record<string, number & string>;
     return (
-      <div className="rounded-2xl border-2 border-[var(--brand-100)] bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border-2 border-[var(--brand-100)] bg-white p-4 shadow-sm sm:p-6">
         <h2 className="text-lg font-bold text-slate-900">Importación completada</h2>
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
@@ -158,7 +159,7 @@ export function ImportInicialWizard() {
           ].map(([k, v]) => (
             <div key={String(k)} className="rounded-xl border border-[var(--brand-100)] bg-[var(--brand-50)] p-3">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{String(k)}</p>
-              <p className="mt-1 text-xl font-bold text-[var(--brand)]">{num(Number(v ?? 0))}</p>
+              <p className="mt-1 text-xl font-bold tabular-nums text-[var(--brand)] [overflow-wrap:anywhere]">{num(Number(v ?? 0))}</p>
             </div>
           ))}
         </div>
@@ -176,13 +177,13 @@ export function ImportInicialWizard() {
             </ul>
           </div>
         )}
-        <div className="mt-5 flex gap-2">
-          <Link href="/inventario" className="rounded-lg bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white hover:brightness-95">
+        <div className="mt-5 flex flex-col gap-2 sm:flex-row">
+          <Link href="/inventario" className="inline-flex min-h-11 items-center justify-center rounded-lg bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white hover:brightness-95 sm:min-h-0">
             Ir al inventario
           </Link>
           <button
             onClick={() => { setResultado(null); setFiles({}); }}
-            className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+            className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 sm:min-h-0"
           >
             Importar de nuevo
           </button>
@@ -198,7 +199,7 @@ export function ImportInicialWizard() {
       )}
 
       {/* Paso 1 — archivos */}
-      <section className="rounded-2xl border-2 border-[var(--brand-100)] bg-white p-5 shadow-sm">
+      <section className="rounded-2xl border-2 border-[var(--brand-100)] bg-white p-4 shadow-sm sm:p-5">
         <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--brand)]">Paso 1 · Cargar los reportes</h2>
         <p className="mt-1 text-xs text-slate-500">
           Podés cargar los tres o solo los que tengas. Los datos que falten en un reporte
@@ -208,14 +209,14 @@ export function ImportInicialWizard() {
           {FUENTES.map(({ campo, titulo, aporta }) => (
             <label
               key={campo}
-              className={`cursor-pointer rounded-xl border-2 p-4 transition ${
+              className={`min-w-0 cursor-pointer rounded-xl border-2 p-3.5 transition sm:p-4 ${
                 files[campo] ? "border-[var(--brand)] bg-[var(--brand-50)]" : "border-dashed border-slate-300 hover:border-[var(--brand)]"
               }`}
             >
               <p className="text-sm font-bold text-slate-900">{titulo}</p>
               <p className="mt-1 text-[11px] leading-relaxed text-slate-500">{aporta}</p>
               <input
-                type="file" accept=".xlsx,.xls,.csv" className="mt-3 block w-full text-xs"
+                type="file" accept=".xlsx,.xls,.csv" className="mt-3 block w-full min-w-0 text-xs file:mr-3 file:min-h-10 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:text-xs file:font-semibold file:text-slate-700"
                 onChange={(e) => {
                   setFiles((p) => ({ ...p, [campo]: e.target.files?.[0] ?? null }));
                   setPreview(null);
@@ -230,7 +231,7 @@ export function ImportInicialWizard() {
         <button
           onClick={analizar}
           disabled={!algunArchivo || cargando}
-          className="mt-4 rounded-lg bg-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-40"
+          className="mt-4 min-h-11 w-full rounded-lg bg-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-40 sm:w-auto"
         >
           {cargando ? "Analizando…" : "Analizar y consolidar"}
         </button>
@@ -239,7 +240,7 @@ export function ImportInicialWizard() {
       {/* Paso 2 — revisión */}
       {preview && (
         <>
-          <section className="rounded-2xl border-2 border-[var(--brand-100)] bg-white p-5 shadow-sm">
+          <section className="rounded-2xl border-2 border-[var(--brand-100)] bg-white p-4 shadow-sm sm:p-5">
             <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--brand)]">Paso 2 · Revisar el consolidado</h2>
 
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
@@ -253,7 +254,7 @@ export function ImportInicialWizard() {
               ].map(([k, v, c]) => (
                 <div key={String(k)} className="rounded-xl border border-slate-200 bg-slate-50/60 p-3">
                   <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">{String(k)}</p>
-                  <p className={`mt-1 text-xl font-bold ${c}`}>{num(Number(v))}</p>
+                  <p className={`mt-1 text-xl font-bold tabular-nums ${c}`}>{num(Number(v))}</p>
                 </div>
               ))}
             </div>
@@ -261,14 +262,14 @@ export function ImportInicialWizard() {
             {/* Diagnóstico por archivo: qué columnas se reconocieron */}
             <div className="mt-4 grid gap-3 lg:grid-cols-3">
               {preview.archivos.map((a) => (
-                <div key={a.fuente} className="rounded-xl border border-slate-200 p-3">
+                <div key={a.fuente} className="min-w-0 rounded-xl border border-slate-200 p-3">
                   <p className="text-xs font-bold text-slate-900">{FUENTE_LABEL[a.fuente]}</p>
                   <p className="truncate text-[11px] text-slate-500">{a.filename}</p>
                   <p className="mt-2 text-[11px] text-slate-600">
                     <span className="font-semibold text-[var(--brand)]">{num(a.filas_datos)}</span> filas de datos
                     {a.filas_ignoradas > 0 && <span className="text-slate-400"> · {num(a.filas_ignoradas)} ignoradas</span>}
                   </p>
-                  <p className="mt-1 text-[11px] text-slate-600">
+                  <p className="mt-1 text-[11px] text-slate-600 [overflow-wrap:anywhere]">
                     Columnas: {Object.entries(a.columnas).filter(([, v]) => v >= 0).map(([c]) => CAMPO_LABEL[c] ?? c).join(", ") || "ninguna"}
                   </p>
                   {a.columnas_faltantes.length > 0 && (
@@ -282,7 +283,7 @@ export function ImportInicialWizard() {
 
             {/* Cómo se cruzaron */}
             <div className="mt-4 flex flex-wrap gap-2 text-[11px]">
-              <span className="text-slate-500">Productos cruzados por:</span>
+              <span className="w-full text-slate-500 sm:w-auto">Productos cruzados por:</span>
               {Object.entries(preview.resumen.por_criterio).map(([k, v]) => (
                 <span key={k} className="rounded-full bg-[var(--brand-50)] px-2 py-0.5 font-semibold text-[var(--brand)]">
                   {CAMPO_LABEL[k] ?? k}: {num(Number(v))}
@@ -293,28 +294,34 @@ export function ImportInicialWizard() {
 
           {/* Tabla */}
           <section className="rounded-2xl border-2 border-[var(--brand-100)] bg-white shadow-sm">
-            <div className="flex flex-wrap gap-2 border-b border-slate-200 p-4">
+            {/* Filtros: en una fila; si no entran, scrollean adentro (nunca saltan de línea ni se cortan). */}
+            <div className="flex flex-col gap-2 border-b border-slate-200 p-3 sm:flex-row sm:items-center sm:p-4">
+              <ScrollHorizontal className="min-w-0" claseFila="gap-2" dependencias={[filtro]}>
               {([
                 ["todos", "Todos"], ["conflictos", "Con diferencias"], ["faltantes", "Datos faltantes"],
                 ["errores", "Errores"], ["nuevos", "Nuevos"], ["existentes", "Ya existen"],
               ] as [Filtro, string][]).map(([k, label]) => (
                 <button
-                  key={k} onClick={() => setFiltro(k)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  key={k} onClick={() => setFiltro(k)} aria-pressed={filtro === k} data-activo={filtro === k ? "true" : undefined}
+                  className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-10 max-sm:text-[13px] ${
                     filtro === k ? "bg-[var(--brand)] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                   }`}
                 >{label}</button>
               ))}
-              <span className="ml-auto self-center text-xs text-slate-500">
+              </ScrollHorizontal>
+              <span className="shrink-0 text-xs text-slate-500 sm:ml-auto">
                 Mostrando {num(Math.min(items.length, 300))} de {num(items.length)}
               </span>
             </div>
 
-            <div className="max-h-[560px] overflow-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="sticky top-0 bg-[var(--brand-50)] text-[11px] uppercase tracking-wide text-[var(--brand)]">
+            {/* Vista previa: scroll interno en los dos sentidos (cabecera fija arriba y la
+                descripción fija a la izquierda); la página nunca se corre de costado. */}
+            <div className="tabla-primera-fija max-h-[65dvh] overflow-auto overscroll-contain sm:max-h-[560px]"
+              style={{ ["--tabla-fondo-cabecera" as string]: "var(--brand-50)" } as React.CSSProperties}>
+              <table className="w-full min-w-[980px] text-left text-xs">
+                <thead className="sticky top-0 z-[2] bg-[var(--brand-50)] text-[11px] uppercase tracking-wide text-[var(--brand)]">
                   <tr>
-                    <th className="p-2">Descripción</th>
+                    <th className="p-2 pl-3">Descripción</th>
                     <th className="p-2">Cód. interno</th>
                     <th className="p-2">Cód. fábrica</th>
                     <th className="p-2">Cód. barras</th>
@@ -345,8 +352,9 @@ export function ImportInicialWizard() {
                         className={`cursor-pointer border-b border-slate-100 hover:bg-slate-50 ${
                           it.errores.length ? "bg-rose-50/60" : ""
                         }`}
+                        style={{ ["--tabla-fondo" as string]: it.errores.length ? "#fff6f7" : "#fff" } as React.CSSProperties}
                       >
-                        <td className="p-2 max-w-[260px]">
+                        <td className="w-[170px] min-w-[170px] max-w-[170px] p-2 pl-3 sm:w-auto sm:min-w-[200px] sm:max-w-[260px]">
                           <p className="truncate font-semibold text-slate-800">{it.descripcion || "—"}</p>
                           <p className="text-[10px] text-slate-400">
                             {it.fuentes.map((f) => FUENTE_LABEL[f]).join(" · ")}
@@ -401,22 +409,22 @@ export function ImportInicialWizard() {
           </section>
 
           {/* Paso 3 — confirmar */}
-          <section className="rounded-2xl border-2 border-[var(--brand-100)] bg-white p-5 shadow-sm">
+          <section className="rounded-2xl border-2 border-[var(--brand-100)] bg-white p-4 shadow-sm sm:p-5">
             <h2 className="text-sm font-bold uppercase tracking-wide text-[var(--brand)]">Paso 3 · Confirmar</h2>
             <div className="mt-3 space-y-2">
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={crearCategorias} onChange={(e) => setCrearCategorias(e.target.checked)} />
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-slate-700 sm:min-h-0 sm:gap-2">
+                <input type="checkbox" className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" checked={crearCategorias} onChange={(e) => setCrearCategorias(e.target.checked)} />
                 Crear las categorías que no existan
               </label>
-              <label className="flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={actualizarExistentes} onChange={(e) => setActualizarExistentes(e.target.checked)} />
+              <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm text-slate-700 sm:min-h-0 sm:gap-2">
+                <input type="checkbox" className="h-5 w-5 shrink-0 sm:h-4 sm:w-4" checked={actualizarExistentes} onChange={(e) => setActualizarExistentes(e.target.checked)} />
                 Actualizar los productos que ya existen ({num(preview.resumen.existentes)})
               </label>
             </div>
             {opcDepositos.length > 1 ? (
               <div className="mt-3 max-w-sm">
                 <span className="mb-1 block text-xs font-medium text-slate-600">El stock de los reportes está en</span>
-                <Select value={depositoEf} onChange={setDeposito} block options={opcDepositos} />
+                <Select value={depositoEf} onChange={setDeposito} block options={opcDepositos} etiqueta="Depósito del stock inicial" />
               </div>
             ) : null}
             <p className="mt-3 text-xs text-slate-500">
@@ -426,7 +434,7 @@ export function ImportInicialWizard() {
             <button
               onClick={importar}
               disabled={importando}
-              className="mt-4 rounded-lg bg-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-40"
+              className="mt-4 min-h-11 w-full rounded-lg bg-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-white hover:brightness-95 disabled:opacity-40 sm:w-auto"
             >
               {importando ? "Importando…" : `Importar ${num(preview.resumen.total)} productos`}
             </button>

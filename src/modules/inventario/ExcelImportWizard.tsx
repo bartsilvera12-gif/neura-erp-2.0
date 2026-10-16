@@ -112,9 +112,9 @@ export function ExcelImportWizard({
   return (
     <CapaModal onClose={busy ? undefined : onClose} z="z-[120]" fondo="bg-slate-900/50 backdrop-blur-[2px]">
         <div className={`flex ${ALTO_MAX_MODAL} w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl`} onClick={(e) => e.stopPropagation()}>
-          <div className="flex shrink-0 items-center justify-between border-b border-slate-100 p-5">
-            <div>
-              <h2 className="text-lg font-semibold text-slate-800">Importar {entidad} desde Excel</h2>
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 py-3 pl-4 pr-2 sm:p-5">
+            <div className="min-w-0">
+              <h2 className="text-base font-semibold text-slate-800 [overflow-wrap:anywhere] sm:text-lg">Importar {entidad} desde Excel</h2>
               <p className="text-xs text-slate-400">Paso {paso === "upload" ? "1 de 3" : paso === "preview" ? "2 de 3" : "3 de 3"}</p>
             </div>
             <button onClick={onClose} disabled={busy} aria-label="Cerrar" className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40">
@@ -122,7 +122,7 @@ export function ExcelImportWizard({
             </button>
           </div>
 
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain p-4 sm:p-5">
             {error ? <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</div> : null}
 
             {paso === "upload" ? (
@@ -133,7 +133,7 @@ export function ExcelImportWizard({
                   <button
                     type="button"
                     onClick={() => void descargarArchivo(templateUrl, "plantilla.xlsx").catch((e) => setError((e as Error).message))}
-                    className="ml-2 inline-flex items-center gap-1 font-medium underline underline-offset-2"
+                    className="inline-flex items-center gap-1 font-medium underline underline-offset-2 max-sm:mt-1 max-sm:flex max-sm:min-h-11 sm:ml-2"
                     style={{ color: TEAL }}
                   >
                     <Download className="h-3.5 w-3.5" /> Descargar plantilla
@@ -146,7 +146,7 @@ export function ExcelImportWizard({
                   className={`flex cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed px-4 py-8 text-sm text-slate-500 transition hover:border-[var(--brand)] hover:bg-[var(--brand-50)] ${arrastrando ? "border-[var(--brand)] bg-[var(--brand-50)]" : "border-slate-200 bg-slate-50/50"}`}
                 >
                   <Upload className="h-6 w-6 text-slate-400" />
-                  {file ? <span className="font-medium text-slate-800">{file.name}</span> : <span>Elegí el archivo o arrastralo acá</span>}
+                  {file ? <span className="max-w-full text-center font-medium text-slate-800 [overflow-wrap:anywhere]">{file.name}</span> : <span>Elegí el archivo o arrastralo acá</span>}
                   <input
                     type="file"
                     accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -189,8 +189,8 @@ export function ExcelImportWizard({
                   </div>
                 ) : null}
                 {permiteCrearFaltantes ? (
-                  <label className="flex select-none items-center gap-2 text-sm text-slate-700">
-                    <input type="checkbox" checked={crearFaltantes} onChange={(e) => setCrearFaltantes(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+                  <label className="flex min-h-11 cursor-pointer select-none items-center gap-3 text-sm text-slate-700 sm:min-h-0 sm:gap-2">
+                    <input type="checkbox" checked={crearFaltantes} onChange={(e) => setCrearFaltantes(e.target.checked)} className="h-5 w-5 shrink-0 rounded border-slate-300 sm:h-4 sm:w-4" />
                     Crear las categorías faltantes durante la importación
                   </label>
                 ) : null}
@@ -226,9 +226,9 @@ export function ExcelImportWizard({
             ) : null}
           </div>
           {/* Acciones del paso: fijas abajo, siempre visibles aunque la tabla sea larga. */}
-          <div className="shrink-0 border-t border-slate-100 px-5 py-4">
+          <div className="shrink-0 border-t border-slate-100 px-4 py-3 sm:px-5 sm:py-4">
             {paso === "upload" ? (
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 max-sm:[&>button]:flex-1">
                 <button onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
                 <button onClick={analizar} disabled={!file || busy} className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -237,11 +237,11 @@ export function ExcelImportWizard({
               </div>
             ) : paso === "preview" && preview ? (
               <div className="flex justify-between gap-2">
-                <button onClick={() => setPaso("upload")} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">← Volver</button>
+                <button onClick={() => setPaso("upload")} disabled={busy} className="shrink-0 rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">← Volver</button>
                 <button
                   onClick={confirmar}
                   disabled={busy || preview.summary.errores === preview.summary.total || preview.summary.insertar + preview.summary.actualizar === 0}
-                  className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
+                  className="inline-flex min-w-0 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2 text-center text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50 max-sm:flex-1"
                 >
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
                   {busy ? "Importando..." : textoConfirmar ? textoConfirmar(preview.summary) : "Confirmar e importar"}
@@ -249,7 +249,7 @@ export function ExcelImportWizard({
               </div>
             ) : paso === "done" && commit ? (
               <div className="flex justify-end gap-2">
-                <button onClick={onClose} className="rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Cerrar</button>
+                <button onClick={onClose} className="rounded-xl px-4 py-2 text-sm font-semibold text-white max-sm:flex-1" style={{ backgroundColor: TEAL }}>Cerrar</button>
               </div>
             ) : null}
           </div>
@@ -267,7 +267,7 @@ function Stat({ label, value, color }: { label: string; value: number; color: "s
     red: "bg-red-50 border-red-200 text-red-700",
   };
   return (
-    <div className={`rounded-lg border px-3 py-2 ${colores[color]}`}>
+    <div className={`min-w-0 rounded-lg border px-3 py-2 ${colores[color]}`}>
       <p className="text-[11px] uppercase tracking-wide opacity-75">{label}</p>
       <p className="text-xl font-bold tabular-nums">{value.toLocaleString("es-PY")}</p>
     </div>
@@ -277,9 +277,11 @@ function Stat({ label, value, color }: { label: string; value: number; color: "s
 function TablaPreview({ rows, etiquetas }: { rows: FilaPreview[]; etiquetas?: Partial<Record<Accion, string>> }) {
   const visibles = rows.slice(0, 200);
   return (
-    <div className="max-h-[40vh] overflow-auto rounded-lg border border-slate-200">
-      <table className="w-full min-w-[640px] text-xs sm:min-w-0">
-        <thead className="sticky top-0 bg-slate-50 text-slate-600">
+        // Vista previa con scroll interno en los dos sentidos (cabecera fija): en celular la tabla
+    // conserva su ancho y se desplaza adentro; la hoja nunca se corre de costado.
+    <div className="max-h-[45dvh] overflow-auto overscroll-contain rounded-lg border border-slate-200 sm:max-h-[40vh]">
+      <table className="w-full min-w-[640px] text-xs md:min-w-0">
+        <thead className="sticky top-0 z-[1] bg-slate-50 text-slate-600">
           <tr>
             <th className="px-2 py-1.5 text-left">Fila</th>
             <th className="px-2 py-1.5 text-left">Acción</th>

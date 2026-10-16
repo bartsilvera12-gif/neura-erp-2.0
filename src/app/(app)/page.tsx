@@ -18,6 +18,8 @@ import { AlertTriangle, ArrowRight, Boxes, CalendarClock, PackageMinus, PackageX
 import { clienteConfig } from "@/cliente.config";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Select } from "@/components/Select";
+import { EncabezadoPagina, GrillaKpis } from "@/components/EncabezadoPagina";
+import { useEsMovil } from "@/lib/ui/responsive";
 import { BarrasH, Columnas, Dona, Leyenda, SERIES, C_ANTERIOR, colorMetodo } from "@/components/graficos/Graficos";
 import { corto, diaLargo, mayuscula, diaSemana, gs, num, pct, variacion } from "@/components/graficos/formato";
 import { Kpi, Tarjeta, useReporte } from "@/modules/reportes/ui";
@@ -26,6 +28,8 @@ import type { Dashboard } from "@/modules/reportes/tipos";
 export default function Inicio() {
   const router = useRouter();
   const me = useUsuario();
+  // Celular: textos de comparación más cortos (la tarjeta KPI mide ~165 px).
+  const movil = useEsMovil();
   const [sucursal, setSucursal] = useState("");
   const { data: d, error, cargando } = useReporte<Dashboard>(`/api/dashboard${sucursal ? `?sucursal=${sucursal}` : ""}`);
 
@@ -57,53 +61,57 @@ export default function Inicio() {
 
   return (
     <div className="space-y-6 pb-10">
-      <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">{saludo}</h1>
-          <p className="mt-1 text-sm text-slate-500">
-            Cómo viene <span className="font-medium text-slate-600">{clienteConfig.nombre}</span>
-            {d ? <> · {mayuscula(diaLargo(d.hoy))}</> : null}
-            {d && !esAdmin && d.sucursales[0] ? <> · {d.sucursales[0].nombre}</> : null}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {cargando && d ? <span className="text-xs text-slate-400">Actualizando…</span> : null}
-          {esAdmin && (d?.sucursales.length ?? 0) > 1 ? (
-            <Select value={sucursal} onChange={setSucursal} minWidth={200}
-              options={[["", "Todas las sucursales"], ...d!.sucursales.map((s): [string, string] => [s.id, s.nombre])]} />
-          ) : null}
-        </div>
-      </header>
+      {/* Responsive: en celular el título baja a 20 px y el selector de sucursal va debajo, a todo el ancho. */}
+      <EncabezadoPagina
+        titulo={saludo}
+        subtitulo={<>
+          Cómo viene <span className="font-medium text-slate-600">{clienteConfig.nombre}</span>
+          {d ? <> · {mayuscula(diaLargo(d.hoy))}</> : null}
+          {d && !esAdmin && d.sucursales[0] ? <> · {d.sucursales[0].nombre}</> : null}
+        </>}
+        acciones={(cargando && d) || (esAdmin && (d?.sucursales.length ?? 0) > 1) ? (
+          <div className="flex items-center gap-2 max-sm:[&>div:last-child]:min-w-0 max-sm:[&>div:last-child]:flex-1">
+            {cargando && d ? <span className="shrink-0 text-xs text-slate-400">Actualizando…</span> : null}
+            {esAdmin && (d?.sucursales.length ?? 0) > 1 ? (
+              <Select value={sucursal} onChange={setSucursal} minWidth={200} etiqueta="Sucursal" className="max-sm:w-full"
+                options={[["", "Todas las sucursales"], ...d!.sucursales.map((s): [string, string] => [s.id, s.nombre])]} />
+            ) : null}
+          </div>
+        ) : null}
+      />
 
       {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">No se pudo cargar el resumen: {error}</div> : null}
 
       {!d ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">{[0, 1, 2, 3].map((i) => <div key={i} className="h-[104px] animate-pulse rounded-2xl border border-slate-200 bg-white" />)}</div>
+          <GrillaKpis>{[0, 1, 2, 3].map((i) => <div key={i} className="h-[104px] animate-pulse rounded-2xl border border-slate-200 bg-white" />)}</GrillaKpis>
           <div className="h-80 animate-pulse rounded-2xl border border-slate-200 bg-white" />
         </div>
       ) : (
         <>
           {/* Números del momento */}
-          <div className={`grid grid-cols-2 gap-3 ${esAdmin ? "lg:grid-cols-5" : "lg:grid-cols-4"}`}>
+          {/* 2 por fila en celular; con 5 cifras (admin) la ganancia ocupa la fila entera. */}
+          <GrillaKpis columnas={esAdmin && d.margen_mes ? 5 : 4}>
             <Kpi acento label="Ventas de hoy" valor={gs(k!.hoy.total)} href={linkVentas(d.hoy, d.hoy)}
-              delta={{ actual: k!.hoy.total, anterior: k!.hoy.anterior, texto: "vs. mismo día sem. pasada" }}
+              delta={{ actual: k!.hoy.total, anterior: k!.hoy.anterior, texto: movil ? "vs. sem. ant." : "vs. mismo día sem. pasada" }}
               hint={`${num(k!.hoy.cantidad)} venta${k!.hoy.cantidad === 1 ? "" : "s"}`} />
             <Kpi label="Esta semana" valor={gs(k!.semana.total)}
-              delta={{ actual: k!.semana.total, anterior: k!.semana.anterior, texto: "vs. semana pasada" }}
+              delta={{ actual: k!.semana.total, anterior: k!.semana.anterior, texto: movil ? "vs. sem. ant." : "vs. semana pasada" }}
               hint={`${num(k!.semana.cantidad)} ventas`} />
             <Kpi label="Este mes" valor={gs(k!.mes.total)} href={linkVentas(mesIni, d.hoy)}
-              delta={{ actual: k!.mes.total, anterior: k!.mes.anterior, texto: "vs. mes pasado" }}
+              delta={{ actual: k!.mes.total, anterior: k!.mes.anterior, texto: movil ? "vs. mes ant." : "vs. mes pasado" }}
               hint={`${num(k!.mes.cantidad)} ventas`} />
             <Kpi label="Ticket promedio" valor={gs(ticket)}
-              delta={ticketAnt ? { actual: ticket, anterior: ticketAnt, texto: "vs. mes pasado" } : null}
+              delta={ticketAnt ? { actual: ticket, anterior: ticketAnt, texto: movil ? "vs. mes ant." : "vs. mes pasado" } : null}
               hint="por venta, este mes" />
             {esAdmin && d.margen_mes ? (
+              <div className="col-span-2 min-w-0 sm:col-span-1 [&>*]:h-full">
               <Kpi label="Ganancia bruta del mes" valor={gs(d.margen_mes.ganancia)} href="/reportes/estado-cuenta"
                 tono={d.margen_mes.ganancia < 0 ? "malo" : undefined}
                 hint={`Margen ${pct(d.margen_mes.ganancia, d.margen_mes.ventas)} sobre ventas`} />
+              </div>
             ) : null}
-          </div>
+          </GrillaKpis>
 
           {/* Ventas por día */}
           <Tarjeta titulo="Ventas por día · últimos 30 días"
@@ -120,7 +128,7 @@ export default function Inicio() {
 
           <div className={`grid gap-6 ${porSucursal ? "xl:grid-cols-3" : "lg:grid-cols-2"}`}>
             <Tarjeta titulo="Lo más vendido del mes" sub="por monto vendido"
-              extra={veReportes ? <Link href={`/reportes/productos-vendidos?desde=${mesIni}&hasta=${d.hoy}`} className="text-xs font-semibold text-[var(--brand)] hover:underline">Ver todo</Link> : null}>
+              extra={veReportes ? <Link href={`/reportes/productos-vendidos?desde=${mesIni}&hasta=${d.hoy}`} className="-my-2 inline-flex min-h-11 items-center text-xs font-semibold text-[var(--brand)] hover:underline sm:min-h-0">Ver todo</Link> : null}>
               <BarrasH vacio="Todavía no hubo ventas este mes" max={8}
                 filas={d.top_productos.map((p) => ({
                   key: p.producto_id ?? p.nombre,
@@ -152,11 +160,12 @@ export default function Inicio() {
             <section className="space-y-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">Inventario</h2>
-                <Link href="/inventario" className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)] hover:underline">Ir a Inventario <ArrowRight className="h-3.5 w-3.5" /></Link>
+                <Link href="/inventario" className="-my-2 inline-flex min-h-11 items-center gap-1 text-xs font-semibold sm:min-h-0 text-[var(--brand)] hover:underline">Ir a Inventario <ArrowRight className="h-3.5 w-3.5" /></Link>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {/* Celular y tablet: 2 por fila (el stock valorizado, con su detalle por sucursal, a lo ancho). */}
+              <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-5">
                 {esAdmin && inv.valor_stock != null ? (
-                  <Mosaico Icon={Boxes} titulo="Stock valorizado al costo" valor={gs(inv.valor_stock)} href="/inventario"
+                  <Mosaico Icon={Boxes} titulo="Stock valorizado al costo" valor={gs(inv.valor_stock)} href="/inventario" className="col-span-2 xl:col-span-1"
                     detalle={(inv.por_sucursal ?? []).length > 1 ? (
                       <ul className="mt-2 space-y-1">
                         {inv.por_sucursal!.map((s) => (
@@ -188,12 +197,12 @@ export default function Inicio() {
             </section>
           ) : null}
 
-          <Link href="/caja/turnos" className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm shadow-sm transition hover:shadow-md">
-            <span className="flex items-center gap-3 text-slate-600">
-              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--brand-50)] text-[var(--brand)]"><Wallet className="h-4 w-4" /></span>
+          <Link href="/caja/turnos" className="flex min-h-14 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm shadow-sm transition hover:shadow-md sm:px-5">
+            <span className="flex min-w-0 items-center gap-3 text-slate-600">
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-50)] text-[var(--brand)]"><Wallet className="h-4 w-4" /></span>
               {d.cajas_abiertas ? <><b className="text-slate-800">{d.cajas_abiertas}</b> caja{d.cajas_abiertas === 1 ? "" : "s"} abierta{d.cajas_abiertas === 1 ? "" : "s"} ahora</> : "No hay cajas abiertas"}
             </span>
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)]">Apertura y cierre <ArrowRight className="h-3.5 w-3.5" /></span>
+            <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold text-[var(--brand)]"><span className="max-[400px]:sr-only">Apertura y cierre</span> <ArrowRight className="h-3.5 w-3.5" /></span>
           </Link>
         </>
       )}
@@ -201,13 +210,14 @@ export default function Inicio() {
   );
 }
 
-function Mosaico({ Icon, titulo, valor, detalle, href, tono = "brand" }: {
+function Mosaico({ Icon, titulo, valor, detalle, href, tono = "brand", className = "" }: {
   Icon: React.ComponentType<{ className?: string }>;
   titulo: string;
   valor: React.ReactNode;
   detalle?: React.ReactNode;
   href: string;
   tono?: "brand" | "ok" | "alerta" | "malo";
+  className?: string;
 }) {
   const c = {
     brand: { bg: "var(--brand-50)", fg: "var(--brand)" },
@@ -216,14 +226,14 @@ function Mosaico({ Icon, titulo, valor, detalle, href, tono = "brand" }: {
     malo: { bg: "#fff1f2", fg: "#e11d48" },
   }[tono];
   return (
-    <Link href={href} className="group block rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+    <Link href={href} className={`group block min-w-0 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:p-4 ${className}`}>
       <div className="flex items-start justify-between gap-2">
-        <span className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-400">{titulo}</span>
+        <span className="min-w-0 text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-400">{titulo}</span>
         <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: c.bg, color: c.fg }}>
           {tono === "malo" ? <AlertTriangle className="h-3.5 w-3.5" /> : <Icon className="h-3.5 w-3.5" />}
         </span>
       </div>
-      <div className="mt-2 text-xl font-semibold tabular-nums text-slate-900">{valor}</div>
+      <div className="mt-1.5 text-lg font-semibold tabular-nums text-slate-900 sm:mt-2 sm:text-xl">{valor}</div>
       {detalle}
     </Link>
   );

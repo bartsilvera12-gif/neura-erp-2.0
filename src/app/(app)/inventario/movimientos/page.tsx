@@ -12,13 +12,15 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import {
-  ArrowDownToLine, ArrowLeft, ArrowLeftRight, ArrowUpFromLine, Calendar, ChevronLeft, ChevronRight,
-  ClipboardCheck, Download, History, Loader2, Package, Search, X,
+  ArrowDownToLine, ArrowLeftRight, ArrowUpFromLine, Calendar, ClipboardCheck, Download, History, Loader2, Package, Search, X,
 } from "lucide-react";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
+import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { TablaScroll, TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
+import { Paginador, Pestanas } from "@/modules/inventario/ui";
 import { precargarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { GRUPOS_ORIGEN, ORIGEN_LABEL, hrefDocumento, type Movimiento, type TipoMovimiento } from "@/modules/inventario/kardex";
 import { hayVariosDepositos, opcionesAlcance, partesAlcance, useDepositos } from "@/modules/inventario/depositos";
@@ -121,63 +123,131 @@ function Movimientos() {
     const t = setTimeout(() => precargarLista(urlSiguiente), 300);
     return () => clearTimeout(t);
   }, [urlSiguiente]);
-  const de = total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
-  const a = Math.min(pagina * POR_PAGINA, total);
   const varios = hayVariosDepositos(deps.datos);
   const opcAlcance = opcionesAlcance(deps.datos);
   const nombreAlcance = opcAlcance.find(([v]) => v === alcance)?.[1];
 
-  const filas = useMemo(() => (
-    items.map((m) => {
-      const Icono = TIPO_ICONO[m.tipo as TipoMovimiento] ?? ArrowDownToLine;
-      const entrada = m.tipo === "ENTRADA";
-      const href = hrefDocumento(m);
-      const badge = m.origen.startsWith("anulacion") ? BADGE_ANULACION : ORIGEN_BADGE[m.origen] ?? ORIGEN_BADGE.ajuste;
-      const traslado = m.origen.startsWith("traslado") || m.origen === "anulacion_traslado";
-      return (
-        <tr key={m.id} className={`align-top transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
-          <td className="whitespace-nowrap px-5 py-3 text-xs tabular-nums text-slate-500">{fecha(m.fecha)}</td>
-          <td className="max-w-[240px] px-3 py-3">
+  // Columnas: en celular cada movimiento es una tarjeta (producto, fecha, cantidad, documento);
+  // en tablet/escritorio, la tabla. El kardex de UN producto (con saldo) es siempre tabla, con
+  // scroll interno y la fecha fija a la izquierda (ahí se comparan saldos entre filas).
+  const columnas = useMemo<ColumnaTabla<Movimiento>[]>(() => {
+    const cols: ColumnaTabla<Movimiento>[] = [
+      {
+        key: "fecha", titulo: "Fecha", movil: "subtitulo",
+        claseTh: "!pl-4 sm:!pl-5", claseTd: "whitespace-nowrap !pl-4 text-xs tabular-nums text-slate-500 sm:!pl-5",
+        // En celular (tabla del kardex con la fecha fija) la hora baja a otra línea: la columna fija queda angosta.
+        celda: (m) => {
+          const [d, h] = fecha(m.fecha).split(" · ");
+          return <>{d}<span className="max-md:hidden"> · </span><span className="max-md:block">{h}</span></>;
+        },
+        celdaMovil: (m) => fecha(m.fecha),
+      },
+      {
+        key: "producto", titulo: "Producto", movil: "titulo", claseTd: "max-w-[240px]",
+        celda: (m) => (
+          <>
             <Link href={`/inventario/movimientos?producto=${m.producto_id}`} className="block truncate font-semibold text-slate-800 hover:text-[var(--brand)] hover:underline" title="Ver el historial de este producto">
               {m.producto_nombre ?? "—"}
             </Link>
-            <span className="font-mono text-[11px] text-slate-400">{m.producto_sku}</span>
-          </td>
-          <td className="px-3 py-3">
-            <span className={`inline-flex whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-semibold ${badge}`}>{ORIGEN_LABEL[m.origen] ?? m.origen}</span>
-            <span className="mt-1 block text-[11px]">
-              {m.documento_numero ? (
-                href ? <Link href={href} className="font-mono font-semibold text-[var(--brand)] hover:underline">{m.documento_numero}</Link>
-                : <span className="font-mono font-semibold text-slate-600">{m.documento_numero}</span>
-              ) : <span className="text-slate-300">sin documento</span>}
+            <span className="font-mono text-[11px] font-normal text-slate-400">{m.producto_sku}</span>
+          </>
+        ),
+        celdaMovil: (m) => (
+          <>
+            <Link href={`/inventario/movimientos?producto=${m.producto_id}`} className="block text-slate-900 active:text-[var(--brand)]" title="Ver el historial de este producto">
+              {m.producto_nombre ?? "—"}
+            </Link>
+            {m.producto_sku ? <span className="block font-mono text-[12px] font-normal text-slate-400">{m.producto_sku}</span> : null}
+          </>
+        ),
+      },
+      {
+        key: "documento", titulo: "Documento", movil: "chip",
+        celda: (m) => {
+          const href = hrefDocumento(m);
+          const badge = m.origen.startsWith("anulacion") ? BADGE_ANULACION : ORIGEN_BADGE[m.origen] ?? ORIGEN_BADGE.ajuste;
+          const numero = m.documento_numero ? (
+            href ? <Link href={href} className="font-mono font-semibold text-[var(--brand)] hover:underline [li_&]:inline-flex [li_&]:min-h-8 [li_&]:items-center">{m.documento_numero}</Link>
+            : <span className="font-mono font-semibold text-slate-600">{m.documento_numero}</span>
+          ) : <span className="text-slate-300">sin documento</span>;
+          // Tabla: etiqueta y número uno debajo del otro. Tarjeta (celular): en una línea.
+          return (
+            <span className="block [li_&]:flex [li_&]:flex-wrap [li_&]:items-center [li_&]:gap-x-2 [li_&]:gap-y-1">
+              <span className={`inline-flex whitespace-nowrap rounded-md px-2 py-0.5 text-[11px] font-semibold ${badge}`}>{ORIGEN_LABEL[m.origen] ?? m.origen}</span>
+              <span className="mt-1 block text-[11px] [li_&]:mt-0">{numero}</span>
             </span>
-          </td>
-          <td className="max-w-[200px] px-3 py-3 text-xs">
-            <span className="block truncate font-medium text-slate-700">{m.deposito_nombre ?? "—"}</span>
-            {traslado && m.contraparte_nombre ? (
-              <span className="flex items-center gap-1 truncate text-[11px] text-indigo-600">
-                <ArrowLeftRight className="h-3 w-3 shrink-0" /> {entrada ? "desde" : "hacia"} {m.contraparte_nombre}
-              </span>
-            ) : varios && m.sucursal_nombre ? <span className="block truncate text-[11px] text-slate-400">{m.sucursal_nombre}</span> : null}
-          </td>
-          <td className={`whitespace-nowrap px-3 py-3 text-right font-bold tabular-nums ${entrada ? "text-emerald-700" : "text-red-600"}`}>
-            <span className="inline-flex items-center gap-1"><Icono className="h-3 w-3" strokeWidth={2.5} />{entrada ? "+" : "−"}{cantidad(Math.abs(m.cantidad))}</span>
-          </td>
-          {conSaldo ? (
-            <td className="whitespace-nowrap px-3 py-3 text-right text-sm font-semibold tabular-nums text-slate-900">{m.saldo == null ? <span className="text-slate-300">—</span> : cantidad(m.saldo)}</td>
-          ) : null}
-          <td className="whitespace-nowrap px-3 py-3 text-right text-xs tabular-nums text-slate-600">{gs(m.costo_unitario)}</td>
-          <td className="max-w-[220px] px-3 py-3 text-xs text-slate-500" title={[m.referencia, m.proveedor, m.numero_factura && `Fact. ${m.numero_factura}`].filter(Boolean).join(" · ")}>
-            <span className="block truncate">{m.referencia ?? "—"}</span>
-            {m.proveedor || m.numero_factura ? (
-              <span className="block truncate text-[11px] text-slate-400">{[m.proveedor, m.numero_factura && `Fact. ${m.numero_factura}`].filter(Boolean).join(" · ")}</span>
-            ) : null}
-            <span className="block truncate text-[11px] text-slate-400">{m.usuario_nombre ?? ""}</span>
-          </td>
-        </tr>
-      );
-    })
-  ), [items, cargando, conSaldo, varios]);
+          );
+        },
+      },
+      {
+        key: "deposito", titulo: "Depósito", movil: "dato", claseTd: "max-w-[200px] text-xs",
+        celda: (m) => {
+          const entrada = m.tipo === "ENTRADA";
+          const traslado = m.origen.startsWith("traslado") || m.origen === "anulacion_traslado";
+          return (
+            <>
+              <span className="block truncate font-medium text-slate-700 [li_&]:whitespace-normal">{m.deposito_nombre ?? "—"}</span>
+              {traslado && m.contraparte_nombre ? (
+                <span className="flex items-center gap-1 truncate text-[11px] text-indigo-600 [li_&]:whitespace-normal">
+                  <ArrowLeftRight className="h-3 w-3 shrink-0" /> {entrada ? "desde" : "hacia"} {m.contraparte_nombre}
+                </span>
+              ) : varios && m.sucursal_nombre ? <span className="block truncate text-[11px] text-slate-400 [li_&]:whitespace-normal">{m.sucursal_nombre}</span> : null}
+            </>
+          );
+        },
+      },
+      {
+        key: "cantidad", titulo: "Cantidad", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right",
+        celda: (m) => {
+          const Icono = TIPO_ICONO[m.tipo as TipoMovimiento] ?? ArrowDownToLine;
+          const entrada = m.tipo === "ENTRADA";
+          return (
+            <span className={`inline-flex items-center gap-1 font-bold tabular-nums ${entrada ? "text-emerald-700" : "text-red-600"}`}>
+              <Icono className="h-3 w-3" strokeWidth={2.5} />{entrada ? "+" : "−"}{cantidad(Math.abs(m.cantidad))}
+            </span>
+          );
+        },
+      },
+    ];
+    if (conSaldo) {
+      cols.push({
+        key: "saldo", titulo: <span title="Stock después del movimiento">Saldo</span>, etiquetaMovil: "Saldo", movil: "dato",
+        claseTh: "text-right", claseTd: "whitespace-nowrap text-right text-sm font-semibold tabular-nums text-slate-900",
+        celda: (m) => (m.saldo == null ? <span className="text-slate-300">—</span> : cantidad(m.saldo)),
+      });
+    }
+    cols.push(
+      {
+        key: "costo", titulo: "Costo unit.", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right text-xs tabular-nums text-slate-600",
+        celda: (m) => gs(m.costo_unitario),
+        celdaMovil: (m) => <span className="tabular-nums">{gs(m.costo_unitario)}</span>,
+      },
+      {
+        key: "detalle", titulo: "Detalle · usuario", movil: "detalle", claseTd: "max-w-[220px] text-xs text-slate-500",
+        celda: (m) => {
+          const extra = [m.proveedor, m.numero_factura && `Fact. ${m.numero_factura}`].filter(Boolean).join(" · ");
+          return (
+            <span className="block min-w-0" title={[m.referencia, extra].filter(Boolean).join(" · ")}>
+              <span className="block truncate">{m.referencia ?? "—"}</span>
+              {extra ? <span className="block truncate text-[11px] text-slate-400">{extra}</span> : null}
+              <span className="block truncate text-[11px] text-slate-400">{m.usuario_nombre ?? ""}</span>
+            </span>
+          );
+        },
+        celdaMovil: (m) => {
+          const extra = [m.proveedor, m.numero_factura && `Fact. ${m.numero_factura}`].filter(Boolean).join(" · ");
+          return (
+            <span className="block">
+              <span className="block">{m.referencia ?? "—"}</span>
+              {extra ? <span className="block text-[12px] text-slate-500">{extra}</span> : null}
+              {m.usuario_nombre ? <span className="block text-[12px] text-slate-500">{m.usuario_nombre}</span> : null}
+            </span>
+          );
+        },
+      },
+    );
+    return cols;
+  }, [conSaldo, varios]);
   const hayFiltros = !!(busqueda || tipo || grupo || alcance || desde || hasta || productoId);
 
   function limpiar() {
@@ -201,61 +271,62 @@ function Movimientos() {
     }
   }
 
-  const input = "h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
-  const nCols = conSaldo ? 8 : 7;
+  const input = "h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] md:h-10";
+  const nActivos = (tipo ? 1 : 0) + (alcance ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0);
+
+  const vacio = (
+    <div className="px-5 py-14 text-center sm:py-16">
+      {cargando ? <Loader2 className="mx-auto h-5 w-5 animate-spin text-slate-400" /> : (
+        <>
+          <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-2xl border" style={{ backgroundColor: `${TEAL}14`, borderColor: `${TEAL}33` }}>
+            <Package className="h-6 w-6" style={{ color: TEAL }} />
+          </div>
+          <p className="text-sm font-semibold text-slate-700">{hayFiltros ? "Ningún movimiento coincide con los filtros" : "Todavía no hay movimientos"}</p>
+          <p className="mt-1 text-xs text-slate-500">Se generan solos con compras, ventas, traslados, ajustes y pérdidas.</p>
+          {hayFiltros ? <button onClick={limpiar} className="mt-2 inline-flex min-h-11 items-center px-2 text-xs font-semibold hover:underline sm:min-h-0" style={{ color: TEAL }}>Limpiar filtros</button> : null}
+        </>
+      )}
+    </div>
+  );
 
   return (
-    <div className="space-y-6 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Inventario · Kardex</p>
-          </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Movimientos de inventario</h1>
-          <p className="mt-1 text-sm text-slate-500">Cada entrada y salida, con su documento, depósito y usuario</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {esAdmin ? (
-            <>
-              <Link href="/inventario/traslados/nuevo" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
-                <ArrowLeftRight className="h-4 w-4" /> Nuevo traslado
-              </Link>
-              <Link href="/inventario/ajustes/nuevo?tipo=ajuste" className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
-                <ClipboardCheck className="h-4 w-4" /> Nuevo ajuste
-              </Link>
-            </>
-          ) : null}
-          <button onClick={exportar} disabled={exportando || total === 0} className="inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-semibold transition hover:bg-[var(--brand-50)] disabled:opacity-50" style={{ borderColor: `${TEAL}55`, color: TEAL }}>
-            {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            {exportando ? "Generando..." : "Exportar Excel"}
-          </button>
-          <Link href="/inventario" className="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
-            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" /> Inventario
-          </Link>
-        </div>
-      </header>
+    <div className="space-y-5 pb-10 sm:space-y-6">
+      <EncabezadoPagina
+        volver={{ href: "/inventario", label: "Inventario" }}
+        kicker="Inventario · Kardex"
+        titulo="Movimientos de inventario"
+        subtitulo="Cada entrada y salida, con su documento, depósito y usuario"
+        acciones={
+          <AccionesPagina acciones={[
+            ...(esAdmin ? [
+              { etiqueta: "Nuevo ajuste", icono: <ClipboardCheck />, href: "/inventario/ajustes/nuevo?tipo=ajuste", primaria: true },
+              { etiqueta: "Nuevo traslado", icono: <ArrowLeftRight />, href: "/inventario/traslados/nuevo" },
+            ] : []),
+            { etiqueta: exportando ? "Generando..." : "Exportar Excel", icono: <Download />, onClick: exportar, cargando: exportando, deshabilitada: total === 0 },
+          ]} />
+        }
+      />
 
       {producto ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-white px-5 py-4 shadow-sm" style={{ borderColor: `${TEAL}33` }}>
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>
+        <div className="flex flex-col gap-3 rounded-2xl border bg-white px-4 py-3.5 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:px-5 sm:py-4" style={{ borderColor: `${TEAL}33` }}>
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>
               <History className="h-5 w-5" />
             </span>
-            <div>
+            <div className="min-w-0">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Kardex del producto{alcance ? ` · ${nombreAlcance}` : ""}</p>
-              <p className="font-semibold text-slate-900">{producto.nombre} <span className="font-mono text-xs font-normal text-slate-400">{producto.sku}</span></p>
+              <p className="font-semibold text-slate-900 [overflow-wrap:anywhere]">{producto.nombre} <span className="font-mono text-xs font-normal text-slate-400">{producto.sku}</span></p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="text-right">
+          <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-3 sm:border-0 sm:pt-0">
+            <div className="sm:text-right">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{alcance.startsWith("d:") ? "Stock en el depósito" : "Stock total"}</p>
               <p className="text-lg font-semibold tabular-nums text-slate-900">
                 {cantidad(producto.stock_deposito ?? producto.stock_actual)}{" "}
                 <span className="text-xs font-normal text-slate-400">{producto.unidad_medida}</span>
               </p>
             </div>
-            <button onClick={() => router.replace("/inventario/movimientos")} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800">
+            <button onClick={() => router.replace("/inventario/movimientos")} className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:min-h-0 sm:px-2.5 sm:py-1.5">
               <X className="h-3.5 w-3.5" /> Ver todos
             </button>
           </div>
@@ -263,115 +334,81 @@ function Movimientos() {
       ) : null}
 
       <section className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: `${TEAL}33` }}>
-        {/* Pestañas por tipo de documento */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3" style={{ borderColor: `${TEAL}22`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
-          <div className="flex flex-wrap gap-1 rounded-xl bg-slate-100/80 p-1" role="tablist">
-            {GRUPOS_ORIGEN.map((g) => {
-              const sel = grupo === g.id;
-              return (
-                <button key={g.id} role="tab" aria-selected={sel} onClick={() => setGrupo(g.id)}
-                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${sel ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
-                  {g.label}
-                </button>
-              );
-            })}
+        {/* Pestañas por tipo de documento: si no entran, scrollean adentro (nunca saltan de línea). */}
+        <div className="flex flex-col gap-2 border-b px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:gap-3 sm:px-5" style={{ borderColor: `${TEAL}22`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
+          <div className="min-w-0 max-w-full">
+            <Pestanas opciones={GRUPOS_ORIGEN.map((g) => ({ id: g.id, label: g.label }))} valor={grupo} onChange={setGrupo} />
           </div>
-          <span className="inline-flex h-[22px] items-center justify-center rounded-full px-2 text-[11px] font-bold tabular-nums text-white" style={{ backgroundColor: TEAL }}>
+          <span className="inline-flex h-[22px] shrink-0 items-center justify-center self-start rounded-full px-2 text-[11px] font-bold tabular-nums text-white sm:self-auto" style={{ backgroundColor: TEAL }}>
             {total.toLocaleString("es-PY")} {total === 1 ? "movimiento" : "movimientos"}
           </span>
         </div>
 
-        {/* Filtros */}
-        <div className="border-b border-slate-100 bg-slate-50/40 px-5 py-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-            <div className="relative md:col-span-5">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input placeholder="Buscar por producto, SKU, documento, referencia o proveedor..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className={`${input} w-full pl-9 pr-9`} />
-              {busqueda ? (
-                <button onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              ) : null}
-            </div>
-            <div className={varios ? "md:col-span-4" : "hidden"}>
-              <Select value={alcance} onChange={setAlcance} block options={opcAlcance} />
-            </div>
-            <div className={varios ? "md:col-span-3" : "md:col-span-3"}>
-              <Select value={tipo} onChange={setTipo} block options={[["", "Entradas y salidas"], ["ENTRADA", "Solo entradas"], ["SALIDA", "Solo salidas"]]} />
-            </div>
-          </div>
-          <div className="mt-3 grid grid-cols-1 items-center gap-3 md:grid-cols-12">
-            <div className="flex items-center gap-2 md:col-span-4">
-              <Calendar className="h-4 w-4 shrink-0 text-slate-400" />
-              <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} max={hasta || undefined} className={`${input} w-full`} aria-label="Desde" />
-            </div>
-            <span className="hidden justify-center text-xs font-medium text-slate-400 md:col-span-1 md:flex">hasta</span>
-            <div className="flex items-center gap-2 md:col-span-4">
-              <Calendar className="h-4 w-4 shrink-0 text-slate-400 md:hidden" />
-              <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} min={desde || undefined} className={`${input} w-full`} aria-label="Hasta" />
-            </div>
-            <div className="flex justify-end md:col-span-3">
-              {hayFiltros ? (
-                <button onClick={limpiar} className="inline-flex items-center gap-1 rounded-lg px-3 py-2 text-xs font-semibold text-slate-500 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)]">
-                  <X className="h-3.5 w-3.5" /> Limpiar filtros
-                </button>
-              ) : null}
-            </div>
-          </div>
+        {/* Filtros: búsqueda siempre a la vista; depósito, tipo y fechas en "Filtros" en celular. */}
+        <div className="border-b border-slate-100 bg-slate-50/40 px-3 py-3 sm:px-5 sm:py-4">
+          <BarraFiltros
+            plano
+            activos={nActivos}
+            onLimpiar={hayFiltros ? limpiar : undefined}
+            busqueda={
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input type="search" enterKeyHint="search" aria-label="Buscar movimientos" placeholder="Buscar por producto, SKU, documento, referencia o proveedor..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className={`${input} w-full pl-9 pr-10`} />
+                {busqueda ? (
+                  <button onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
+              </div>
+            }
+          >
+            {varios ? <Select value={alcance} onChange={setAlcance} options={opcAlcance} minWidth={220} etiqueta="Depósito o sucursal" /> : null}
+            <Select value={tipo} onChange={setTipo} options={[["", "Entradas y salidas"], ["ENTRADA", "Solo entradas"], ["SALIDA", "Solo salidas"]]} minWidth={170} etiqueta="Tipo de movimiento" />
+            <label className="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-stretch max-md:gap-1">
+              <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500"><Calendar className="h-4 w-4 text-slate-400" /> Desde</span>
+              <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} max={hasta || undefined} className={`${input} min-w-0 md:w-[150px]`} aria-label="Desde" />
+            </label>
+            <label className="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-stretch max-md:gap-1">
+              <span className="text-xs font-medium text-slate-500">Hasta</span>
+              <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} min={desde || undefined} className={`${input} min-w-0 md:w-[150px]`} aria-label="Hasta" />
+            </label>
+          </BarraFiltros>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[980px] text-left text-sm">
-            <thead className="bg-slate-50/70 text-[11px] uppercase tracking-wider text-slate-500">
-              <tr>
-                <th className="px-5 py-3 font-semibold">Fecha</th>
-                <th className="px-3 py-3 font-semibold">Producto</th>
-                <th className="px-3 py-3 font-semibold">Documento</th>
-                <th className="px-3 py-3 font-semibold">Depósito</th>
-                <th className="px-3 py-3 text-right font-semibold">Cantidad</th>
-                {conSaldo ? <th className="px-3 py-3 text-right font-semibold" title="Stock después del movimiento">Saldo</th> : null}
-                <th className="px-3 py-3 text-right font-semibold">Costo unit.</th>
-                <th className="px-3 py-3 font-semibold">Detalle · usuario</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {cargando && items.length === 0 ? (
-                <tr><td colSpan={nCols} className="py-12 text-center text-sm text-slate-400"><Loader2 className="mx-auto h-5 w-5 animate-spin" /></td></tr>
-              ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={nCols} className="py-16 text-center">
-                    <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-2xl border" style={{ backgroundColor: `${TEAL}14`, borderColor: `${TEAL}33` }}>
-                      <Package className="h-6 w-6" style={{ color: TEAL }} />
-                    </div>
-                    <p className="text-sm font-semibold text-slate-700">{hayFiltros ? "Ningún movimiento coincide con los filtros" : "Todavía no hay movimientos"}</p>
-                    <p className="mt-1 text-xs text-slate-500">Se generan solos con compras, ventas, traslados, ajustes y pérdidas.</p>
-                    {hayFiltros ? <button onClick={limpiar} className="mt-2 text-xs font-semibold hover:underline" style={{ color: TEAL }}>Limpiar filtros</button> : null}
-                  </td>
-                </tr>
-              ) : (
-                filas
-              )}
-            </tbody>
-          </table>
-        </div>
+        {conSaldo ? (
+          !items.length ? vacio : (
+            <TablaScroll primeraFija minAncho={900}>
+              <table className="w-full text-left text-sm">
+                <thead className="bg-slate-50/70 text-[11px] uppercase tracking-wider text-slate-500">
+                  <tr>{columnas.map((c) => <th key={c.key} scope="col" className={`whitespace-nowrap px-3 py-3 font-semibold ${c.claseTh ?? ""}`}>{c.titulo}</th>)}</tr>
+                </thead>
+                <tbody className={`divide-y divide-slate-100 ${cargando ? "opacity-60" : ""}`}>
+                  {items.map((m) => (
+                    <tr key={m.id} className="align-top">
+                      {columnas.map((c) => <td key={c.key} className={`px-3 py-3 ${c.claseTd ?? ""}`}>{c.celda(m)}</td>)}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </TablaScroll>
+          )
+        ) : (
+          <TablaTarjetas
+            filas={items}
+            columnas={columnas}
+            claveFila={(m) => m.id}
+            cargando={cargando}
+            minAncho={900}
+            vacio={vacio}
+            claseTabla="w-full text-left text-sm"
+            claseThead="bg-slate-50/70"
+            thBase="whitespace-nowrap px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500"
+            tdBase="px-3 py-3 align-top"
+            claseFila={() => "hover:bg-[var(--brand-50)]"}
+          />
+        )}
 
-        {total > 0 ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/40 px-5 py-3.5">
-            <p className="text-xs text-slate-500">
-              Mostrando <span className="font-semibold text-slate-700">{de.toLocaleString("es-PY")}</span>–<span className="font-semibold text-slate-700">{a.toLocaleString("es-PY")}</span> de{" "}
-              <span className="font-semibold text-slate-700">{total.toLocaleString("es-PY")}</span>
-            </p>
-            <div className="flex items-center gap-1.5">
-              <button disabled={pagina <= 1 || cargando} onClick={() => setPagina((p) => Math.max(1, p - 1))} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-40">
-                <ChevronLeft className="h-3.5 w-3.5" /> Anterior
-              </button>
-              <span className="px-3 py-1.5 text-xs font-semibold tabular-nums text-slate-700">{pagina} / {totalPaginas}</span>
-              <button disabled={pagina >= totalPaginas || cargando} onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-40">
-                Siguiente <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          </div>
-        ) : null}
+        <Paginador pagina={pagina} porPagina={POR_PAGINA} total={total} cargando={cargando} onCambiar={(n) => setPagina(() => Math.max(1, Math.min(totalPaginas, n)))} />
       </section>
     </div>
   );

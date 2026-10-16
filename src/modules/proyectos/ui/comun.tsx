@@ -17,7 +17,7 @@ import { useAhora } from "./reloj";
 
 export { BTN_PRIMARIO, BTN_SECUNDARIO, INPUT, LABEL, SectionTitle, useAvisos, useUsuarios } from "@/modules/crm/ui/comun";
 
-export const PANEL = "rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+export const PANEL = "min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-5";
 
 export function TituloPanel({ children, extra }: { children: React.ReactNode; extra?: React.ReactNode }) {
   return (
@@ -75,15 +75,15 @@ export function ModalChico({ titulo, subtitulo, icono, tono = "brand", onClose, 
         onClick={(e) => e.stopPropagation()}
       >
         <span aria-hidden className={`pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r ${barra}`} />
-        <div className="flex shrink-0 items-start gap-3 border-b border-slate-100 px-5 pb-4 pt-5">
+        <div className="flex shrink-0 items-start gap-3 border-b border-slate-100 px-4 pb-3 pt-4 sm:px-5 sm:pb-4 sm:pt-5">
           {icono ? <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ring-1 ${chip}`}>{icono}</div> : null}
           <div className="min-w-0 flex-1">
             <h2 className="text-base font-semibold text-slate-900">{titulo}</h2>
             {subtitulo ? <div className="mt-1 text-xs text-slate-500">{subtitulo}</div> : null}
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">{children}</div>
-        {pie ? <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 px-5 py-3">{pie}</div> : null}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">{children}</div>
+        {pie ? <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 px-4 py-3 max-sm:[&>*]:flex-1 sm:px-5">{pie}</div> : null}
       </div>
     </CapaModal>
   );

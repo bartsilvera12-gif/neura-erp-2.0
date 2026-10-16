@@ -15,9 +15,9 @@ export const INPUT =
   "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20";
 export const LABEL = "mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500";
 export const BTN_PRIMARIO =
-  "rounded-xl bg-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-600)] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none";
+  "rounded-xl bg-[var(--brand)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-600)] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none max-sm:min-h-11";
 export const BTN_SECUNDARIO =
-  "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)]";
+  "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)] max-sm:min-h-11";
 
 export function SectionTitle({ children }: { children: React.ReactNode }) {
   return (
@@ -75,18 +75,22 @@ export function ModalGrande({
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
       >
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--brand)] via-[var(--brand)]/80 to-[var(--brand)]/40" />
-        <div className="flex shrink-0 flex-wrap items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[var(--brand)]/5 px-6 pb-5 pt-6">
+        <div className="flex shrink-0 flex-wrap items-start justify-between gap-x-2 gap-y-3 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[var(--brand)]/5 py-3 pl-4 pr-1.5 sm:gap-4 sm:px-6 sm:pb-5 sm:pt-6">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--brand)] shadow-[0_0_0_3px_var(--brand-100)]" />
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand)]">{eyebrow}</p>
             </div>
-            <h2 className="mt-1 truncate text-2xl font-semibold tracking-tight text-slate-900">{titulo}</h2>
-            {subtitulo ? <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-500">{subtitulo}</div> : null}
+            <h2 className="mt-1 truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-2xl">{titulo}</h2>
+            {subtitulo ? <div className="mt-1 flex flex-wrap items-center gap-2 text-[13px] text-slate-500 sm:text-sm">{subtitulo}</div> : null}
           </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {extra}
-            <button type="button" className={BTN_SECUNDARIO} onClick={onClose}>Cerrar</button>
+          {/* En celular: la ✕ al lado del título y las acciones extra en una fila abajo, a lo ancho. */}
+          <div className="flex shrink-0 items-center gap-2 max-sm:contents">
+            {extra ? <div className="max-sm:order-last max-sm:w-full max-sm:pr-2.5 max-sm:[&>*]:w-full">{extra}</div> : null}
+            <button type="button" className={`${BTN_SECUNDARIO} max-sm:hidden`} onClick={onClose}>Cerrar</button>
+            <button type="button" onClick={onClose} aria-label="Cerrar" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 sm:hidden">
+              <X className="h-5 w-5" />
+            </button>
           </div>
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">{children}</div>
@@ -111,7 +115,7 @@ export function useAvisos() {
     <div
       key={aviso.k}
       role="status"
-      className={`fixed bottom-5 right-5 z-[80] flex max-w-sm items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg ${
+      className={`fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] left-3 right-3 z-[80] flex items-start gap-3 rounded-xl border px-4 py-3 text-sm shadow-lg sm:bottom-5 sm:left-auto sm:right-5 sm:max-w-sm ${
         aviso.tipo === "error" ? "border-rose-200 bg-rose-50 text-rose-800" : "border-emerald-200 bg-white text-slate-800"
       }`}
       style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
@@ -122,7 +126,7 @@ export function useAvisos() {
           <Link href={aviso.link.href} className="ml-1.5 font-semibold text-[var(--brand)] hover:underline">{aviso.link.texto}</Link>
         ) : null}
       </span>
-      <button type="button" onClick={() => setAviso(null)} aria-label="Cerrar aviso" className="shrink-0 text-slate-400 hover:text-slate-600">
+      <button type="button" onClick={() => setAviso(null)} aria-label="Cerrar aviso" className="-m-2 inline-flex shrink-0 items-center justify-center p-2 text-slate-400 hover:text-slate-600 max-sm:-my-3 max-sm:h-11 max-sm:w-11">
         <X className="h-4 w-4" />
       </button>
     </div>
@@ -167,7 +171,7 @@ export function PlanSelector({ planes, seleccion, onToggle }: { planes: Plan[]; 
               <button
                 type="button"
                 onClick={() => onToggle(p.id)}
-                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${sel ? "bg-[var(--brand-50)] text-[var(--brand-700)]" : "text-slate-700 hover:bg-slate-50"}`}
+                className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors max-sm:min-h-11 ${sel ? "bg-[var(--brand-50)] text-[var(--brand-700)]" : "text-slate-700 hover:bg-slate-50"}`}
               >
                 <span className="flex min-w-0 items-center gap-2">
                   <span className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${sel ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-slate-300 bg-white"}`}>

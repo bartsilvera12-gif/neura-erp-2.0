@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Loader2, Lock } from "lucide-react";
 import { Select } from "@/components/Select";
+import { TablaTarjetas } from "@/components/TablaResponsive";
 import { apiFetch } from "@/lib/api/client-fetch";
 import {
   PRIORIDAD_LABEL, estiloPrioridad, fechaHoraPY, filtrosQuery,
@@ -86,90 +87,109 @@ export function ProyectosLista({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div> : null}
-      <div className={`min-h-0 flex-1 overflow-auto rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-opacity ${cargando && filas.length ? "opacity-60" : ""}`}>
-        <table className="w-full min-w-[980px] border-collapse text-sm">
-          <colgroup>
-            <col className="w-[30%]" />
-            <col className="w-[9%]" />
-            <col className="w-[17%]" />
-            <col className="w-[15%]" />
-            <col className="w-[15%]" />
-            <col className="w-[14%]" />
-          </colgroup>
-          <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur">
-            <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-              <th className="px-4 py-3 font-semibold">Proyecto</th>
-              <th className="px-3 py-3 font-semibold">Prioridad</th>
-              <th className="px-3 py-3 font-semibold">Estado</th>
-              <th className="px-3 py-3 font-semibold">Comercial</th>
-              <th className="px-3 py-3 font-semibold">Técnico</th>
-              <th className="px-3 py-3 font-semibold">Actividad / SLA</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibles.length === 0 ? (
-              <tr>
-                <td colSpan={6} className="px-4 py-12 text-center text-slate-400">{cargando ? "Cargando…" : "Sin proyectos"}</td>
-              </tr>
-            ) : (
-              visibles.map((p) => {
+      <div className={`min-h-0 flex-1 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-opacity ${cargando && filas.length ? "opacity-60" : ""}`}>
+        <TablaTarjetas
+          filas={visibles}
+          claveFila={(p) => p.id}
+          onFila={(p) => onAbrir(p.id)}
+          minAncho={980}
+          claseTabla="w-full border-collapse text-sm"
+          claseThead="bg-slate-50/95"
+          thBase="px-3 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500"
+          tdBase="px-3 py-3.5"
+          claseFila={() => "border-t border-slate-100 align-top hover:!bg-slate-50/70"}
+          vacio={<div className="px-4 py-12 text-center text-sm text-slate-400">{cargando ? "Cargando…" : "Sin proyectos"}</div>}
+          columnas={[
+            {
+              key: "proyecto",
+              titulo: "Proyecto",
+              movil: "titulo",
+              claseTh: "w-[30%] !px-4",
+              claseTd: "!px-4",
+              celda: (p) => {
                 const prio = estiloPrioridad(p.prioridad);
+                return (
+                  <div className="flex items-start gap-2">
+                    <span aria-hidden className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${prio.punto}`} />
+                    <div className="min-w-0">
+                      <div className="break-words text-[13.5px] font-semibold leading-snug text-slate-900 group-hover:text-[var(--brand-600)] max-md:text-[15px]" title={p.titulo}>{p.titulo}</div>
+                      {p.cliente_id ? (
+                        <div className="mt-0.5 break-words text-[11.5px] leading-tight text-slate-500 max-md:text-[13px] max-md:font-normal">{p.cliente_nombre || "—"}</div>
+                      ) : (
+                        <span className="mt-0.5 inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Sin cliente asignado</span>
+                      )}
+                      <div className="mt-1 flex flex-wrap items-center gap-1">
+                        <span className="font-mono text-[10px] font-normal text-slate-400">{p.numero}</span>
+                        {p.bloqueado ? (
+                          <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700"><Lock className="h-2.5 w-2.5" /> Bloqueado</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                );
+              },
+            },
+            {
+              key: "prioridad",
+              titulo: "Prioridad",
+              movil: "chip",
+              claseTh: "w-[9%]",
+              celda: (p) => <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${estiloPrioridad(p.prioridad).badge}`}>{PRIORIDAD_LABEL[p.prioridad] ?? p.prioridad}</span>,
+            },
+            {
+              key: "sla",
+              titulo: "SLA",
+              movil: "chip",
+              claseTh: "hidden",
+              claseTd: "hidden",
+              celda: (p) => <SlaBadge desde={p.estado_desde} estado={estados.get(p.estado_id)} horario={horario} />,
+            },
+            {
+              key: "estado",
+              titulo: "Estado",
+              movil: "acciones",
+              claseTh: "w-[17%]",
+              celda: (p) => {
                 const estado = estados.get(p.estado_id);
                 const color = estado?.color ?? "#94a3b8";
-                const mover = puedeMoverTarjeta(p, yo, esAdmin);
                 return (
-                  <tr key={p.id} onClick={() => onAbrir(p.id)} className="group cursor-pointer border-t border-slate-100 align-top transition-colors hover:bg-slate-50/70">
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-start gap-2">
-                        <span aria-hidden className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${prio.punto}`} />
-                        <div className="min-w-0">
-                          <div className="break-words text-[13.5px] font-semibold leading-snug text-slate-900 group-hover:text-[var(--brand-600)]" title={p.titulo}>{p.titulo}</div>
-                          {p.cliente_id ? (
-                            <div className="mt-0.5 break-words text-[11.5px] leading-tight text-slate-500">{p.cliente_nombre || "—"}</div>
-                          ) : (
-                            <span className="mt-0.5 inline-flex items-center rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Sin cliente asignado</span>
-                          )}
-                          <div className="mt-1 flex flex-wrap items-center gap-1">
-                            <span className="font-mono text-[10px] text-slate-400">{p.numero}</span>
-                            {p.bloqueado ? (
-                              <span className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700"><Lock className="h-2.5 w-2.5" /> Bloqueado</span>
-                            ) : null}
-                          </div>
-                        </div>
+                  <div onClick={(e) => e.stopPropagation()} className="max-md:min-w-[11rem]">
+                    {puedeMoverTarjeta(p, yo, esAdmin) ? (
+                      <div className="rounded-xl" style={{ boxShadow: `0 0 0 3px ${color}1f` }}>
+                        <Select value={p.estado_id} onChange={(v) => onMover(p, v)} options={opcionesEstado} block etiqueta="Mover a" className="[&>button]:py-1.5 [&>button]:text-xs" />
                       </div>
-                    </td>
-                    <td className="px-3 py-3.5">
-                      <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold ${prio.badge}`}>{PRIORIDAD_LABEL[p.prioridad] ?? p.prioridad}</span>
-                    </td>
-                    <td className="px-3 py-3.5" onClick={(e) => e.stopPropagation()}>
-                      {mover ? (
-                        <div className="rounded-xl" style={{ boxShadow: `0 0 0 3px ${color}1f` }}>
-                          <Select value={p.estado_id} onChange={(v) => onMover(p, v)} options={opcionesEstado} block className="[&>button]:py-1.5 [&>button]:text-xs" />
-                        </div>
-                      ) : (
-                        <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold" style={{ borderColor: `${color}55`, background: `${color}14`, color }}>
-                          <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
-                          {estado?.nombre ?? "—"}
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-3 py-3.5"><Responsable nombre={p.comercial_nombre} /></td>
-                    <td className="px-3 py-3.5"><Responsable nombre={p.tecnico_nombre} /></td>
-                    <td className="px-3 py-3.5">
-                      <div className="text-[11px] tabular-nums text-slate-500">{fechaHoraPY(p.ultimo_movimiento_at)}</div>
-                      <div className="mt-1"><SlaBadge desde={p.estado_desde} estado={estado} horario={horario} /></div>
-                    </td>
-                  </tr>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold" style={{ borderColor: `${color}55`, background: `${color}14`, color }}>
+                        <span aria-hidden className="h-1.5 w-1.5 rounded-full" style={{ background: color }} />
+                        {estado?.nombre ?? "—"}
+                      </span>
+                    )}
+                  </div>
                 );
-              })
-            )}
-          </tbody>
-        </table>
+              },
+            },
+            { key: "comercial", titulo: "Comercial", movil: "dato", claseTh: "w-[15%]", celda: (p) => <Responsable nombre={p.comercial_nombre} /> },
+            { key: "tecnico", titulo: "Técnico", movil: "dato", claseTh: "w-[15%]", celda: (p) => <Responsable nombre={p.tecnico_nombre} /> },
+            {
+              key: "actividad",
+              titulo: "Actividad / SLA",
+              movil: "detalle",
+              etiquetaMovil: "Actividad",
+              claseTh: "w-[14%]",
+              celda: (p) => (
+                <>
+                  <div className="text-[11px] tabular-nums text-slate-500">{fechaHoraPY(p.ultimo_movimiento_at)}</div>
+                  <div className="mt-1 max-md:hidden"><SlaBadge desde={p.estado_desde} estado={estados.get(p.estado_id)} horario={horario} /></div>
+                </>
+              ),
+            },
+          ]}
+        />
       </div>
       {hayMas ? (
         <div className="flex justify-center">
           <button type="button" disabled={cargando} onClick={() => void pedir(filas[filas.length - 1])}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)] disabled:opacity-60">
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)] disabled:opacity-60 max-md:min-h-11">
             {cargando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Cargar más
           </button>
         </div>

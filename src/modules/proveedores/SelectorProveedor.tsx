@@ -86,7 +86,7 @@ export function SelectorProveedor({
           <p className="truncate text-sm font-semibold text-slate-800">{nombreProveedor(elegido)}</p>
           {elegido.ruc ? <p className="font-mono text-[11px] text-slate-400">RUC {elegido.ruc}</p> : null}
         </div>
-        <button type="button" onClick={() => onChange(null, null)} aria-label="Quitar proveedor" className="rounded-lg p-1 text-slate-400 hover:bg-white hover:text-slate-700">
+        <button type="button" onClick={() => onChange(null, null)} aria-label="Quitar proveedor" className="flex shrink-0 items-center justify-center rounded-lg p-1 text-slate-400 hover:bg-white hover:text-slate-700 max-sm:-my-2 max-sm:-mr-2 max-sm:h-11 max-sm:w-11">
           <X className="h-4 w-4" />
         </button>
       </div>
@@ -117,7 +117,7 @@ export function SelectorProveedor({
           {resultados.map((p, i) => (
             <li key={p.id}>
               <button type="button" onMouseEnter={() => setHi(i)} onClick={() => elegir(p)}
-                className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm ${hi === i ? "bg-[var(--brand-50)]" : ""}`}>
+                className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm max-sm:min-h-11 ${hi === i ? "bg-[var(--brand-50)]" : ""}`}>
                 <span className="min-w-0 truncate font-medium text-slate-800">{nombreProveedor(p)}</span>
                 {p.ruc ? <span className="shrink-0 font-mono text-[11px] text-slate-400">{p.ruc}</span> : null}
               </button>
@@ -126,7 +126,7 @@ export function SelectorProveedor({
           {puedeCrear ? (
             <li>
               <button type="button" onMouseEnter={() => setHi(resultados.length)} onClick={() => void crear()} disabled={creando}
-                className={`flex w-full items-center gap-2 border-t border-slate-100 px-3 py-2 text-left text-sm font-semibold text-[var(--brand)] ${hi === resultados.length ? "bg-[var(--brand-50)]" : ""}`}>
+                className={`flex w-full items-center gap-2 border-t border-slate-100 px-3 py-2 text-left text-sm font-semibold text-[var(--brand)] max-sm:min-h-11 [overflow-wrap:anywhere] ${hi === resultados.length ? "bg-[var(--brand-50)]" : ""}`}>
                 {creando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 Crear proveedor «{texto.trim()}»
               </button>

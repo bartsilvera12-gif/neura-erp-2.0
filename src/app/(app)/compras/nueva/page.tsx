@@ -245,6 +245,8 @@ function NuevaCompra() {
     lineas.some((l) => conLotes(l.prod) && !l.vencimiento) && "el vencimiento de algún producto con lotes",
   ].filter(Boolean) as string[];
 
+  const etiquetaRegistrar = subiendoAdjuntos ? "Subiendo comprobantes…" : busy ? "Registrando…" : "Registrar compra";
+
   async function registrar() {
     if (faltan.length || busy) return;
     setBusy(true);
@@ -326,12 +328,12 @@ function NuevaCompra() {
             <p className="mt-1">Podés adjuntarlo después desde el detalle de la compra (Compras → tocá la compra → Adjuntar comprobante).</p>
           </div>
         ) : null}
-        <div className="mt-6 flex justify-center gap-2">
-          <Link href={`/compras?ver=${hecha.id}`} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Ver la compra</Link>
+        <div className="mt-6 flex flex-col-reverse justify-center gap-2 sm:flex-row">
+          <Link href={`/compras?ver=${hecha.id}`} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 sm:min-h-0">Ver la compra</Link>
           {orden ? (
-            <Link href={`/compras/ordenes?ver=${orden.id}`} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Ver la orden {orden.numero_oc}</Link>
+            <Link href={`/compras/ordenes?ver=${orden.id}`} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white sm:min-h-0" style={{ backgroundColor: TEAL }}>Ver la orden {orden.numero_oc}</Link>
           ) : (
-            <button onClick={otra} className="rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Cargar otra compra</button>
+            <button onClick={otra} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white sm:min-h-0" style={{ backgroundColor: TEAL }}>Cargar otra compra</button>
           )}
         </div>
       </div>
@@ -339,15 +341,15 @@ function NuevaCompra() {
   }
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-5 pb-10 max-lg:pb-28 sm:space-y-6">
       <header className="flex items-start gap-3">
-        <Link href="/compras" aria-label="Volver a compras" className="mt-1 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50">
+        <Link href="/compras" aria-label="Volver a compras" className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 sm:h-9 sm:w-9">
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div>
+        <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Gastos empresariales · Compras</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{orden ? `Recibir ${orden.numero_oc}` : "Nueva compra"}</h1>
-          <p className="mt-1 text-sm text-slate-500">
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{orden ? `Recibir ${orden.numero_oc}` : "Nueva compra"}</h1>
+          <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">
             {orden
               ? "Cargá la factura y ajustá las cantidades a lo que llegó de verdad. Lo que no llegó queda pendiente en la orden."
               : "Cargá la factura del proveedor: suma el stock y actualiza los costos solo."}
@@ -355,16 +357,16 @@ function NuevaCompra() {
         </div>
       </header>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="space-y-6">
+      <div className="grid grid-cols-1 gap-5 sm:gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-5 sm:space-y-6">
           {/* ── 1. Factura ───────────────────────────────────────────────── */}
           <Tarjeta numero={1} titulo="Factura del proveedor">
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <span className={ET}>Proveedor *</span>
                 {orden ? (
-                  <p className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm font-semibold text-slate-800">
-                    <ClipboardList className="h-4 w-4 text-slate-400" /> {orden.proveedor_nombre}
+                  <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 text-sm font-semibold text-slate-800">
+                    <ClipboardList className="h-4 w-4 shrink-0 text-slate-400" /> <span className="min-w-0 [overflow-wrap:anywhere]">{orden.proveedor_nombre}</span>
                     <span className="ml-auto text-xs font-normal text-slate-500">de la {orden.numero_oc}</span>
                   </p>
                 ) : (
@@ -373,12 +375,12 @@ function NuevaCompra() {
               </div>
               <label className="block">
                 <span className={ET}>Nº de factura *</span>
-                <input value={factura} onChange={(e) => setFactura(e.target.value)} maxLength={40} placeholder="Ej: 001-001-0000123" className={`${INPUT} font-mono`} />
+                <input value={factura} onChange={(e) => setFactura(e.target.value)} maxLength={40} placeholder="Ej: 001-001-0000123" enterKeyHint="next" autoComplete="off" className={`${INPUT} font-mono`} />
               </label>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <span className={ET}>Timbrado <span className="font-normal text-slate-400">(opcional)</span></span>
-                  <input value={timbrado} onChange={(e) => setTimbrado(e.target.value.replace(/\D/g, "").slice(0, 12))} inputMode="numeric" placeholder="Ej: 12345678" className={`${INPUT} font-mono`} />
+                  <input value={timbrado} onChange={(e) => setTimbrado(e.target.value.replace(/\D/g, "").slice(0, 12))} inputMode="numeric" enterKeyHint="next" placeholder="Ej: 12345678" className={`${INPUT} font-mono`} />
                 </label>
                 <label className="block">
                   <span className={ET}>Fecha de la factura</span>
@@ -389,8 +391,8 @@ function NuevaCompra() {
                 <span className={ET}>Condición</span>
                 <Segmentado valor={tipoPago} onChange={(v) => setTipoPago(v as "contado" | "credito")} opciones={[["contado", "Contado"], ["credito", "Crédito"]]} />
                 {tipoPago === "credito" ? (
-                  <div className="mt-2 flex items-center gap-2">
-                    <input inputMode="numeric" value={plazo} onChange={(e) => setPlazo(e.target.value.replace(/\D/g, "").slice(0, 4))} className={`${INPUT} w-20 py-2 text-right tabular-nums`} />
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <input inputMode="numeric" enterKeyHint="done" aria-label="Plazo en días" value={plazo} onChange={(e) => setPlazo(e.target.value.replace(/\D/g, "").slice(0, 4))} className={`${INPUT} w-20 py-2 text-right tabular-nums`} />
                     <span className="text-sm text-slate-500">días</span>
                     {fechaFactura && Number(plazo) > 0 ? (
                       <span className="ml-auto rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700">Vence el {sumarDias(fechaFactura, Number(plazo))}</span>
@@ -398,10 +400,10 @@ function NuevaCompra() {
                   </div>
                 ) : (
                   <div className="mt-2 space-y-2">
-                    <Select value={medioPago} onChange={(v) => setMedioPago(v as MetodoPagoProv)} block
+                    <Select value={medioPago} onChange={(v) => setMedioPago(v as MetodoPagoProv)} block etiqueta="Medio de pago"
                       options={[["", "¿Cómo le pagaste?"], ...METODOS_PAGO_PROV.map((m): [string, string] => [m.v, m.l])]} />
                     {medioPago && medioPago !== "efectivo" ? (
-                      <input value={referenciaPago} onChange={(e) => setReferenciaPago(e.target.value.slice(0, 120))} placeholder="N° de operación o de cheque (opcional)" className={`${INPUT} py-2`} />
+                      <input value={referenciaPago} onChange={(e) => setReferenciaPago(e.target.value.slice(0, 120))} enterKeyHint="done" placeholder="N° de operación o de cheque (opcional)" className={`${INPUT} py-2`} />
                     ) : null}
                     {medioPago === "efectivo" ? (
                       <p className={`text-[11px] ${moneda === "USD" || cajaAbierta === false ? "font-semibold text-rose-600" : "text-slate-500"}`}>
@@ -417,9 +419,9 @@ function NuevaCompra() {
                 <span className={ET}>Moneda de la factura</span>
                 <Segmentado valor={moneda} onChange={(v) => setMoneda(v as "GS" | "USD")} opciones={[["GS", "Guaraníes"], ["USD", "Dólares"]]} />
                 {moneda === "USD" ? (
-                  <div className="mt-2 flex items-center gap-2">
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
                     <span className="text-sm text-slate-500">1 US$ =</span>
-                    <MontoInput value={cambio} onChange={setCambio} decimals={false} placeholder="7.300" className={`${INPUT} w-28 py-2 text-right tabular-nums`} />
+                    <MontoInput value={cambio} onChange={setCambio} decimals={false} placeholder="7.300" aria-label="Cotización del dólar" className={`${INPUT} w-28 py-2 text-right tabular-nums`} />
                     <span className="text-sm text-slate-500">Gs.</span>
                   </div>
                 ) : null}
@@ -479,7 +481,7 @@ function NuevaCompra() {
             {opcDepositos.length > 1 ? (
               <div className="mt-4">
                 <span className={ET}>Entra al depósito</span>
-                <Select value={depositoEf} onChange={setDeposito} block options={opcDepositos} />
+                <Select value={depositoEf} onChange={setDeposito} block etiqueta="Entra al depósito" options={opcDepositos} />
               </div>
             ) : null}
 
@@ -493,8 +495,8 @@ function NuevaCompra() {
             </div>
 
             {hayExcedente ? (
-              <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                <input type="checkbox" checked={excedenteOk} onChange={(e) => setExcedenteOk(e.target.checked)} className="mt-0.5" />
+              <label className="mt-3 flex cursor-pointer items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800 max-sm:py-3 max-sm:text-[13px]">
+                <input type="checkbox" checked={excedenteOk} onChange={(e) => setExcedenteOk(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand)] max-sm:h-5 max-sm:w-5" />
                 <span>Estás recibiendo <strong>más de lo que falta</strong> de {excedidas.size === 1 ? "un producto" : `${excedidas.size} productos`} de la orden. Confirmo que llegó de más y lo quiero ingresar.</span>
               </label>
             ) : null}
@@ -502,16 +504,34 @@ function NuevaCompra() {
               <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">Falta: {faltan.join(", ")}.</p>
             ) : null}
             {error ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p> : null}
+            {/* En celular / tablet el botón va en el pie fijo (abajo). */}
             <button onClick={registrar} disabled={!!faltan.length || busy}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: TEAL }}>
+              className="mt-4 hidden w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40 lg:inline-flex" style={{ backgroundColor: TEAL }}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              {subiendoAdjuntos ? "Subiendo comprobantes…" : busy ? "Registrando…" : "Registrar compra"}
+              {etiquetaRegistrar}
             </button>
             <p className="mt-2 text-center text-[11px] text-slate-400">
               Suma el stock{opcDepositos.length > 1 ? ` en ${opcDepositos.find(([id]) => id === depositoEf)?.[1] ?? "el depósito elegido"}` : ""}, recalcula el costo promedio y queda en el kardex como recarga de stock.
             </p>
           </div>
         </aside>
+      </div>
+
+      {/* Celular / tablet: total y "Registrar compra" en un pie fijo (safe-area) */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 shadow-[0_-10px_30px_-12px_rgba(15,23,42,0.28)] backdrop-blur pb-safe lg:hidden">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2.5 sm:px-4">
+          <div className="min-w-0 flex-1">
+            <p className={`truncate text-[11px] ${error ? "font-semibold text-rose-600" : "text-slate-500"}`}>
+              {error ? error : faltan.length ? `Falta: ${faltan[0]}${faltan.length > 1 ? ` y ${faltan.length - 1} más` : ""}` : `Total · ${lineas.length} producto${lineas.length === 1 ? "" : "s"}`}
+            </p>
+            <p className="truncate text-xl font-bold leading-tight tabular-nums text-slate-900">{gs(calc.total)}</p>
+          </div>
+          <button type="button" onClick={() => void registrar()} disabled={!!faltan.length || busy}
+            className="inline-flex h-12 max-w-[60%] shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-40" style={{ backgroundColor: TEAL }}>
+            {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <CheckCircle2 className="h-4 w-4 shrink-0" />}
+            <span className="truncate">{etiquetaRegistrar}</span>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -542,7 +562,7 @@ function LineaCompra({ l, moneda, factor, excede, onCambiar, onQuitar }: {
           ) : l.prod.nombre.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-semibold text-slate-900">{l.prod.nombre}</p>
+          <p className="text-sm font-semibold text-slate-900 max-sm:line-clamp-2 max-sm:[overflow-wrap:anywhere] sm:truncate">{l.prod.nombre}</p>
           <p className="text-[11px] text-slate-500"><span className="font-mono">{l.prod.sku}</span> · stock {Number(l.prod.stock_actual).toLocaleString("es-PY")} {unidad} · IVA {l.prod.tipo_iva}</p>
           {l.pedido != null ? (
             <p className="mt-0.5 text-[11px] font-medium text-sky-700">
@@ -552,36 +572,36 @@ function LineaCompra({ l, moneda, factor, excede, onCambiar, onQuitar }: {
             </p>
           ) : null}
         </div>
-        <p className="text-right text-sm font-bold tabular-nums text-slate-900">{gs(totalLinea)}</p>
-        <button onClick={onQuitar} aria-label={`Quitar ${l.prod.nombre}`} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+        <p className="text-right text-sm font-bold tabular-nums text-slate-900 max-sm:hidden">{gs(totalLinea)}</p>
+        <button type="button" onClick={onQuitar} aria-label={`Quitar ${l.prod.nombre}`} className="-mr-1.5 -mt-1.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 sm:mr-0 sm:mt-0 sm:h-auto sm:w-auto sm:p-1.5"><Trash2 className="h-4 w-4" /></button>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-2">
-        <label className="block">
+      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <label className="flex flex-col justify-end">
           <span className={ET}>Cantidad</span>
-          <input inputMode="decimal" value={l.cantidad} onChange={(e) => onCambiar({ cantidad: e.target.value.replace(/[^\d.,]/g, "") })} className={`${INPUT} py-2 text-right tabular-nums`} />
+          <input inputMode="decimal" enterKeyHint="next" aria-label={`Cantidad de ${l.prod.nombre}`} value={l.cantidad} onChange={(e) => onCambiar({ cantidad: e.target.value.replace(/[^\d.,]/g, "") })} className={`${INPUT} py-2 text-right tabular-nums`} />
         </label>
-        <label className="block">
+        <label className="flex flex-col justify-end">
           <span className={ET}>Costo c/u {moneda === "USD" ? "(US$)" : ""} <span className="font-normal text-slate-400">IVA incl.</span></span>
           <MontoInput value={l.costo} onChange={(v) => onCambiar({ costo: v })} decimals={moneda === "USD"} placeholder="0" className={`${INPUT} py-2 text-right tabular-nums`} />
         </label>
-        <label className="block">
+        <label className="col-span-2 flex flex-col justify-end sm:col-span-1">
           <span className={ET}>Nuevo precio de venta <span className="font-normal text-slate-400">(opcional)</span></span>
           <MontoInput value={l.precioNuevo || ""} onChange={(v) => onCambiar({ precioNuevo: v })} decimals={false} placeholder={Number(l.prod.precio_venta).toLocaleString("es-PY")} className={`${INPUT} py-2 text-right tabular-nums`} />
         </label>
       </div>
 
       {l.prod.controla_stock && l.prod.controla_lotes ? (
-        <div className="mt-2 grid grid-cols-3 gap-2 rounded-lg bg-slate-50/70 p-2">
-          <label className="block">
+        <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg bg-slate-50/70 p-2 min-[420px]:grid-cols-2 sm:grid-cols-3">
+          <label className="flex flex-col justify-end">
             <span className={ET}>Lote <span className="font-normal text-slate-400">(editable)</span></span>
-            <input value={l.lote} onChange={(e) => onCambiar({ lote: e.target.value.slice(0, 40) })} placeholder={loteAutomatico(hoyPY())} className={`${INPUT} bg-white py-2 font-mono uppercase`} />
+            <input value={l.lote} enterKeyHint="next" autoComplete="off" autoCapitalize="characters" onChange={(e) => onCambiar({ lote: e.target.value.slice(0, 40) })} placeholder={loteAutomatico(hoyPY())} className={`${INPUT} bg-white py-2 font-mono uppercase`} />
           </label>
-          <label className="block">
+          <label className="flex min-w-0 flex-col justify-end">
             <span className={ET}>Vencimiento *</span>
             <input type="date" value={l.vencimiento} onChange={(e) => onCambiar({ vencimiento: e.target.value })} className={`${INPUT} bg-white py-2 ${l.vencimiento ? "" : "border-amber-300"}`} />
           </label>
-          <p className="self-end pb-2 text-[11px] text-slate-500">
+          <p className="self-end text-[11px] text-slate-500 min-[420px]:col-span-2 sm:col-span-1 sm:pb-2">
             {!l.vencimiento ? "Cargá el vencimiento de este lote."
               : l.vencimiento < hoyPY() ? <span className="font-semibold text-rose-600">Esa fecha ya pasó: el lote entra vencido.</span>
               : "Para otro lote del mismo producto, agregalo de nuevo."}
@@ -590,7 +610,7 @@ function LineaCompra({ l, moneda, factor, excede, onCambiar, onQuitar }: {
       ) : null}
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
-        <span className="flex items-center gap-2">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
           {l.ultima ? (
             <>Última compra: <strong className="font-semibold text-slate-700">{gs(l.ultima.costo)}</strong>{l.ultima.proveedor ? ` · ${l.ultima.proveedor}` : ""}{variacion != null ? <Variacion pct={variacion} /> : null}</>
           ) : <>Primera compra de este producto.</>}
@@ -600,6 +620,12 @@ function LineaCompra({ l, moneda, factor, excede, onCambiar, onQuitar }: {
             {l.precioNuevo > 0 ? "Margen con el precio nuevo" : `Margen a ${gs(precio)}`}: {margen.toLocaleString("es-PY")} %{margen < 0 ? " · vendés a pérdida" : ""}
           </span>
         ) : null}
+      </div>
+
+      {/* Celular: el total de la línea abajo (arriba no entra junto al nombre). */}
+      <div className="mt-2 flex items-baseline justify-between gap-3 border-t border-slate-100 pt-2 sm:hidden">
+        <span className="text-xs text-slate-500">Total de la línea</span>
+        <span className="text-base font-bold tabular-nums text-slate-900">{gs(totalLinea)}</span>
       </div>
     </li>
   );

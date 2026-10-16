@@ -13,8 +13,9 @@ import { invalidar } from "@/lib/api/cache-cliente";
 import { Modal } from "@/components/Modal";
 import { MenuAcciones, type ItemMenu } from "@/components/MenuAcciones";
 import { Select } from "@/components/Select";
+import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import MontoInput from "@/components/ui/MontoInput";
-import { TEAL } from "@/modules/clientes/ui";
+import { PIE_MODAL, TEAL } from "@/modules/clientes/ui";
 import type { Moneda, Plan, TipoIva } from "@/modules/clientes/suscripciones/tipos";
 import { IVA_LABEL, monto } from "@/modules/clientes/suscripciones/ui";
 
@@ -27,6 +28,7 @@ export function PanelPlanes({ esAdmin, onCambio }: { esAdmin: boolean; onCambio?
   const [editando, setEditando] = useState<Plan | "nuevo" | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [aBorrar, setABorrar] = useState<Plan | null>(null);
+  const vistaTarjetas = useVistaTarjetas();
 
   const cargar = useCallback(async () => {
     try {
@@ -79,6 +81,41 @@ export function PanelPlanes({ esAdmin, onCambio }: { esAdmin: boolean; onCambio?
 
   const activos = planes?.filter((p) => p.activo).length ?? 0;
 
+  // Tabla en ≥ 768 px; en celular, tarjetas (el administrador toca una para editarla).
+  const columnas: ColumnaTabla<Plan>[] = [
+    {
+      key: "plan", titulo: "Plan", movil: "titulo",
+      celda: (p) => (
+        <>
+          <p className="font-semibold text-slate-800">{p.nombre}</p>
+          {p.descripcion ? <p className="mt-0.5 max-w-xs truncate text-[11px] font-normal text-slate-400 max-md:max-w-full max-md:whitespace-normal">{p.descripcion}</p> : null}
+        </>
+      ),
+    },
+    { key: "precio", titulo: "Precio", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-semibold tabular-nums", celda: (p) => <span style={{ color: TEAL }}>{monto(p.precio, p.moneda)}</span> },
+    { key: "moneda", titulo: "Moneda", movil: "dato", claseTd: "text-slate-600", celda: (p) => p.moneda },
+    { key: "iva", titulo: "IVA", movil: "dato", claseTd: "whitespace-nowrap text-xs text-slate-600", celda: (p) => IVA_LABEL[p.tipo_iva] ?? p.tipo_iva },
+    { key: "susc", titulo: "Suscripciones", movil: "dato", claseTd: "tabular-nums text-slate-600", celda: (p) => p.suscripciones ?? 0 },
+    {
+      key: "estado", titulo: "Estado", movil: "chip",
+      celda: (p) => (
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${p.activo ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
+          <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${p.activo ? "bg-emerald-500" : "bg-slate-400"}`} />
+          {p.activo ? "Activo" : "Inactivo"}
+        </span>
+      ),
+    },
+    ...(esAdmin ? [{
+      key: "acc", titulo: "Acción", movil: "acciones" as const, claseTh: "text-right", claseTd: "text-right",
+      celda: (p: Plan) => (
+        <MenuAcciones items={items(p)} etiqueta={`Acciones de ${p.nombre}`}
+          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
+          Acciones
+        </MenuAcciones>
+      ),
+    }] : []),
+  ];
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -91,7 +128,7 @@ export function PanelPlanes({ esAdmin, onCambio }: { esAdmin: boolean; onCambio?
         </div>
         {esAdmin ? (
           <button type="button" onClick={() => setEditando("nuevo")}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 max-sm:min-h-11 max-sm:w-full max-sm:justify-center max-sm:text-sm"
             style={{ backgroundColor: TEAL }}>
             <Plus className="h-3.5 w-3.5" strokeWidth={2.5} /> Nuevo plan
           </button>
@@ -113,56 +150,17 @@ export function PanelPlanes({ esAdmin, onCambio }: { esAdmin: boolean; onCambio?
             <p className="mx-auto mt-1 max-w-md text-xs text-slate-500">Creá el primero (ej. "Abono mensual", "Cuota social", "Mantenimiento") para poder suscribir clientes.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50/80">
-                <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                  <th className="px-4 py-2.5">Plan</th>
-                  <th className="px-4 py-2.5 text-right">Precio</th>
-                  <th className="px-4 py-2.5">Moneda</th>
-                  <th className="px-4 py-2.5">IVA</th>
-                  <th className="px-4 py-2.5">Suscripciones</th>
-                  <th className="px-4 py-2.5">Estado</th>
-                  {esAdmin ? <th className="px-4 py-2.5 text-right">Acción</th> : null}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {planes.map((p) => (
-                  <tr key={p.id} className={`hover:bg-slate-50/70 ${p.activo ? "" : "opacity-60"}`}>
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-slate-800">{p.nombre}</p>
-                      {p.descripcion ? <p className="mt-0.5 max-w-xs truncate text-[11px] text-slate-400">{p.descripcion}</p> : null}
-                    </td>
-                    <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums" style={{ color: TEAL }}>{monto(p.precio, p.moneda)}</td>
-                    <td className="px-4 py-3 text-slate-600">{p.moneda}</td>
-                    <td className="whitespace-nowrap px-4 py-3 text-xs text-slate-600">{IVA_LABEL[p.tipo_iva] ?? p.tipo_iva}</td>
-                    <td className="px-4 py-3 tabular-nums text-slate-600">{p.suscripciones ?? 0}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${p.activo ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-500"}`}>
-                        <span aria-hidden className={`h-1.5 w-1.5 rounded-full ${p.activo ? "bg-emerald-500" : "bg-slate-400"}`} />
-                        {p.activo ? "Activo" : "Inactivo"}
-                      </span>
-                    </td>
-                    {esAdmin ? (
-                      <td className="px-4 py-3 text-right">
-                        <MenuAcciones items={items(p)} etiqueta={`Acciones de ${p.nombre}`}
-                          className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
-                          Acciones
-                        </MenuAcciones>
-                      </td>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <TablaTarjetas filas={planes} columnas={columnas} claveFila={(p) => p.id} minAncho={720}
+            onFila={esAdmin && vistaTarjetas ? (p) => setEditando(p) : undefined}
+            claseFila={(p) => `hover:bg-slate-50/70 ${p.activo ? "" : "opacity-60"}`}
+            thBase="whitespace-nowrap px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500" tdBase="px-4 py-3" />
         )}
       </div>
 
       {aBorrar ? (
         <Modal titulo="Borrar plan" onClose={() => setABorrar(null)}>
           <p className="text-sm text-slate-600">¿Borrar el plan <strong>{aBorrar.nombre}</strong>? Ninguna suscripción lo usa. Si preferís conservarlo, desactivalo.</p>
-          <div className="mt-4 flex justify-end gap-2">
+          <div className={`mt-4 ${PIE_MODAL}`}>
             <button type="button" onClick={() => setABorrar(null)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Volver</button>
             <button type="button" onClick={() => void borrar(aBorrar)} className="rounded-lg bg-rose-600 px-3 py-2 text-sm font-medium text-white hover:bg-rose-700">Borrar plan</button>
           </div>
@@ -221,14 +219,14 @@ function ModalPlan({ plan, onClose, onGuardado }: { plan: Plan | null; onClose: 
           </label>
           <div>
             <span className={LABEL}>Moneda</span>
-            <Select block value={moneda} onChange={(v) => setMoneda(v as Moneda)} options={[["GS", "Guaraníes (Gs.)"], ["USD", "Dólares (US$)"]]} />
+            <Select block value={moneda} onChange={(v) => setMoneda(v as Moneda)} etiqueta="Moneda" options={[["GS", "Guaraníes (Gs.)"], ["USD", "Dólares (US$)"]]} />
           </div>
           <div>
             <span className={LABEL}>IVA</span>
-            <Select block value={iva} onChange={(v) => setIva(v as TipoIva)} options={[["10%", "IVA 10%"], ["5%", "IVA 5%"], ["exenta", "Exenta"]]} />
+            <Select block value={iva} onChange={(v) => setIva(v as TipoIva)} etiqueta="IVA" options={[["10%", "IVA 10%"], ["5%", "IVA 5%"], ["exenta", "Exenta"]]} />
           </div>
         </div>
-        <label className="flex cursor-pointer items-center gap-2">
+        <label className="flex min-h-11 cursor-pointer items-center gap-2 sm:min-h-0">
           <input type="checkbox" className="h-4 w-4 accent-[var(--brand)]" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
           <span className="text-sm text-slate-700">Activo <span className="text-xs text-slate-500">(se puede elegir en suscripciones nuevas)</span></span>
         </label>
@@ -238,7 +236,7 @@ function ModalPlan({ plan, onClose, onGuardado }: { plan: Plan | null; onClose: 
           </p>
         ) : null}
         {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
-        <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+        <div className={PIE_MODAL}>
           <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
           <button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {busy ? "Guardando…" : "Guardar"}

@@ -94,46 +94,50 @@ export function PresupuestoModal({ periodoInicial, onClose, onGuardado }: { peri
     }
   }
 
-  const INPUT = "w-36 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-right text-sm tabular-nums text-slate-800 outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
+  const INPUT = "w-36 max-sm:w-32 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 max-sm:py-2.5 text-right text-sm tabular-nums text-slate-800 outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
 
   return (
     <CapaModal onClose={guardando ? undefined : onClose}>
       <div className={`flex w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${ALTO_MAX_MODAL}`} style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-6 py-4">
-          <div>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
+          <div className="min-w-0">
             <h2 className="text-lg font-semibold text-slate-800">Presupuesto mensual</h2>
             <p className="text-xs text-slate-500">Cuánto prevés gastar por categoría. Podés cargarlo por rubro o abrir el rubro y cargarlo por subcategoría.</p>
           </div>
-          <button onClick={onClose} disabled={guardando} aria-label="Cerrar" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
+          <button onClick={onClose} disabled={guardando} aria-label="Cerrar" className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-5 w-5" /></button>
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/60 px-6 py-2.5">
-          <div className="flex items-center gap-1">
-            <button onClick={() => setPeriodo((p) => sumarMes(p, -1))} aria-label="Mes anterior" className="rounded-lg p-1.5 text-slate-500 hover:bg-white"><ChevronLeft className="h-4 w-4" /></button>
-            <span className="min-w-[9rem] text-center text-sm font-semibold capitalize text-slate-800">{nombreMes(periodo)}</span>
-            <button onClick={() => setPeriodo((p) => sumarMes(p, 1))} aria-label="Mes siguiente" className="rounded-lg p-1.5 text-slate-500 hover:bg-white"><ChevronRight className="h-4 w-4" /></button>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-slate-100 bg-slate-50/60 px-4 py-2 sm:px-6 sm:py-2.5">
+          <div className="flex items-center gap-1 max-sm:-ml-2">
+            <button onClick={() => setPeriodo((p) => sumarMes(p, -1))} aria-label="Mes anterior" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 hover:bg-white max-sm:h-11 max-sm:w-11"><ChevronLeft className="h-4 w-4 max-sm:h-5 max-sm:w-5" /></button>
+            <span className="min-w-[9rem] text-center text-sm font-semibold capitalize text-slate-800 max-sm:min-w-[7.5rem]">{nombreMes(periodo)}</span>
+            <button onClick={() => setPeriodo((p) => sumarMes(p, 1))} aria-label="Mes siguiente" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 hover:bg-white max-sm:h-11 max-sm:w-11"><ChevronRight className="h-4 w-4 max-sm:h-5 max-sm:w-5" /></button>
           </div>
           {hayAnterior ? (
-            <button onClick={copiarAnterior} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#3F8E91] hover:bg-slate-50">
-              <Copy className="h-3.5 w-3.5" /> Copiar del mes anterior
+            <button onClick={copiarAnterior} aria-label="Copiar del mes anterior" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#3F8E91] hover:bg-slate-50 max-sm:min-h-11">
+              <Copy className="h-3.5 w-3.5" /> Copiar<span className="max-[400px]:hidden"> del mes anterior</span>
             </button>
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-6 sm:py-4">
           {error ? <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div> : null}
           {!datos ? (
             <p className="py-10 text-center text-sm text-slate-400">Cargando…</p>
           ) : (
             <table className="w-full text-sm">
               <thead className="text-[11px] uppercase tracking-wide text-slate-400">
-                <tr><th className="pb-2 text-left font-semibold">Categoría</th><th className="pb-2 text-right font-semibold">Gastado</th><th className="pb-2 pl-3 text-right font-semibold">Previsto</th></tr>
+                {/* Celular: sin la columna "Gastado" (va debajo del nombre): nombre + monto previsto. */}
+                <tr><th className="pb-2 text-left font-semibold">Categoría</th><th className="pb-2 text-right font-semibold max-sm:hidden">Gastado</th><th className="pb-2 pl-3 text-right font-semibold">Previsto</th></tr>
               </thead>
               <tbody>
                 <tr className="border-t border-slate-100">
-                  <td className="py-2 font-medium text-slate-800">Compras de mercadería</td>
-                  <td className="py-2 text-right tabular-nums text-slate-500">{gs(datos.mercaderia.gastado)}</td>
-                  <td className="py-2 pl-3 text-right"><MontoInput value={montos[MERC] ?? ""} onChange={(n) => set(MERC, n)} decimals={false} placeholder="—" className={INPUT} /></td>
+                  <td className="py-2 font-medium text-slate-800">
+                    Compras de mercadería
+                    <span className="block text-[11px] font-normal tabular-nums text-slate-400 sm:hidden">Gastado {gs(datos.mercaderia.gastado)}</span>
+                  </td>
+                  <td className="py-2 text-right tabular-nums text-slate-500 max-sm:hidden">{gs(datos.mercaderia.gastado)}</td>
+                  <td className="py-2 pl-3 text-right"><MontoInput value={montos[MERC] ?? ""} onChange={(n) => set(MERC, n)} decimals={false} placeholder="—" aria-label="Previsto para compras de mercadería" className={INPUT} /></td>
                 </tr>
                 {datos.rubros.map((r) => {
                   const ab = !!abiertos[r.id];
@@ -148,12 +152,12 @@ export function PresupuestoModal({ periodoInicial, onClose, onGuardado }: { peri
           )}
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-6 py-4">
-          <p className="text-sm text-slate-500">Previsto <b className="tabular-nums text-slate-900">{gs(totalPrevisto)}</b> · gastado <b className="tabular-nums text-slate-700">{gs(totalGastado)}</b></p>
-          <div className="flex gap-2">
-            <button onClick={onClose} disabled={guardando} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50">Cancelar</button>
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 sm:gap-3 sm:px-6 sm:py-4">
+          <p className="text-sm text-slate-500 max-sm:w-full max-sm:text-center">Previsto <b className="tabular-nums text-slate-900">{gs(totalPrevisto)}</b> · gastado <b className="tabular-nums text-slate-700">{gs(totalGastado)}</b></p>
+          <div className="flex gap-2 max-sm:w-full">
+            <button onClick={onClose} disabled={guardando} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 max-sm:flex-1">Cancelar</button>
             <button onClick={() => void guardar()} disabled={guardando || !cambios || !datos}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50">
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 max-sm:flex-[2]">
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar presupuesto
             </button>
           </div>
@@ -171,19 +175,23 @@ function RubroFilas({ r, ab, subTotal, montos, set, input, toggle }: {
     <>
       <tr className="border-t border-slate-100">
         <td className="py-2">
-          <button onClick={toggle} className="inline-flex items-center gap-1 font-medium text-slate-800 hover:text-[#3F8E91]" aria-expanded={ab}>
-            <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform ${ab ? "" : "-rotate-90"}`} /> {r.nombre}
+          <button onClick={toggle} className="inline-flex items-center gap-1 text-left font-medium text-slate-800 hover:text-[#3F8E91] max-sm:-ml-1 max-sm:min-h-11 max-sm:pl-1" aria-expanded={ab}>
+            <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${ab ? "" : "-rotate-90"}`} /> {r.nombre}
           </button>
-          {subTotal > 0 ? <span className="ml-2 text-[11px] text-slate-400">+ {gs(subTotal)} en subcategorías</span> : null}
+          <span className="block pl-5 text-[11px] tabular-nums text-slate-400 sm:hidden">Gastado {gs(r.gastado)}</span>
+          {subTotal > 0 ? <span className="ml-2 text-[11px] text-slate-400 max-sm:block max-sm:pl-3">+ {gs(subTotal)} en subcategorías</span> : null}
         </td>
-        <td className="py-2 text-right tabular-nums text-slate-500">{gs(r.gastado)}</td>
-        <td className="py-2 pl-3 text-right"><MontoInput value={montos[r.id] ?? ""} onChange={(n) => set(r.id, n)} decimals={false} placeholder="—" className={input} /></td>
+        <td className="py-2 text-right tabular-nums text-slate-500 max-sm:hidden">{gs(r.gastado)}</td>
+        <td className="py-2 pl-3 text-right"><MontoInput value={montos[r.id] ?? ""} onChange={(n) => set(r.id, n)} decimals={false} placeholder="—" aria-label={`Previsto para ${r.nombre}`} className={input} /></td>
       </tr>
       {ab ? r.subcategorias.map((s) => (
         <tr key={s.id} className="text-[13px]">
-          <td className="py-1.5 pl-7 text-slate-600">{s.nombre}{s.tipo_costo === "fijo" ? <span className="ml-1.5 rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">Fijo</span> : null}</td>
-          <td className="py-1.5 text-right tabular-nums text-slate-400">{gs(s.gastado)}</td>
-          <td className="py-1.5 pl-3 text-right"><MontoInput value={montos[s.id] ?? ""} onChange={(n) => set(s.id, n)} decimals={false} placeholder="—" className={input} /></td>
+          <td className="py-1.5 pl-7 text-slate-600 max-sm:pl-5">
+            {s.nombre}{s.tipo_costo === "fijo" ? <span className="ml-1.5 rounded bg-violet-50 px-1.5 py-0.5 text-[10px] font-semibold text-violet-700">Fijo</span> : null}
+            <span className="block text-[11px] tabular-nums text-slate-400 sm:hidden">Gastado {gs(s.gastado)}</span>
+          </td>
+          <td className="py-1.5 text-right tabular-nums text-slate-400 max-sm:hidden">{gs(s.gastado)}</td>
+          <td className="py-1.5 pl-3 text-right"><MontoInput value={montos[s.id] ?? ""} onChange={(n) => set(s.id, n)} decimals={false} placeholder="—" aria-label={`Previsto para ${s.nombre}`} className={input} /></td>
         </tr>
       )) : null}
     </>

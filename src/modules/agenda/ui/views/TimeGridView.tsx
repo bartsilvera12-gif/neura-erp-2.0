@@ -69,7 +69,7 @@ export default function TimeGridView({
       {/* Header + grilla comparten el MISMO contenedor de scroll para que el ancho de la
           barra de scroll afecte por igual a encabezado y cuerpo y las columnas queden
           alineadas. El header es sticky. */}
-      <div ref={scrollRef} className="relative max-h-[68vh] overflow-y-auto">
+      <div ref={scrollRef} className="relative max-h-[68dvh] overflow-y-auto overscroll-contain max-sm:max-h-[calc(100dvh-19rem)] max-sm:min-h-[22rem]">
         {/* Encabezado de días (sticky) */}
         <div className="sticky top-0 z-30 flex border-b border-slate-300/80 bg-slate-50">
           <div className="shrink-0 border-r border-slate-200" style={{ width: GUTTER_W }} />

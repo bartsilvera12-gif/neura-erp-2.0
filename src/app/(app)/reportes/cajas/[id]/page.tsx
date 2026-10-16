@@ -18,7 +18,7 @@ import { BarrasH, colorMetodo } from "@/components/graficos/Graficos";
 import { diaLargo, mayuscula, gs, horaPY, num, pct } from "@/components/graficos/formato";
 import { TurnoModal } from "@/modules/caja/TurnoModal";
 import type { ResumenTurno } from "@/modules/caja/turno";
-import { Descargas, EncabezadoReporte, EstadoCarga, FiltrosReporte, Kpi, Tabla, Tarjeta, useFiltrosReporte, useReporte } from "@/modules/reportes/ui";
+import { Descargas, EncabezadoReporte, EstadoCarga, FilaKpis, FiltrosReporte, Kpi, Tabla, Tarjeta, useFiltrosReporte, useReporte } from "@/modules/reportes/ui";
 import type { CierreDiaDetalle } from "@/modules/reportes/tipos";
 
 const FECHA = /^\d{4}-\d{2}-\d{2}$/;
@@ -74,9 +74,9 @@ function DiaCaja({ fecha }: { fecha: string }) {
         titulo={mayuscula(diaLargo(fecha))}
         subtitulo="Todos los turnos que se abrieron este día, en todas las cajas.">
         <div className="flex items-center gap-1">
-          <Link href={`/reportes/cajas/${masDias(fecha, -1)}${sufijo}`} aria-label="Día anterior" className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"><ChevronLeft className="h-4 w-4" /></Link>
+          <Link href={`/reportes/cajas/${masDias(fecha, -1)}${sufijo}`} aria-label="Día anterior" className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 max-sm:h-11 max-sm:w-11"><ChevronLeft className="h-4 w-4" /></Link>
           {fecha < hoy ? (
-            <Link href={`/reportes/cajas/${masDias(fecha, 1)}${sufijo}`} aria-label="Día siguiente" className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"><ChevronRight className="h-4 w-4" /></Link>
+            <Link href={`/reportes/cajas/${masDias(fecha, 1)}${sufijo}`} aria-label="Día siguiente" className="flex h-[38px] w-[38px] items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 max-sm:h-11 max-sm:w-11"><ChevronRight className="h-4 w-4" /></Link>
           ) : null}
         </div>
         <Descargas pdf={`/api/reportes/cajas/dia/pdf?${q}`} deshabilitado={!d?.detalle.length} />
@@ -93,7 +93,7 @@ function DiaCaja({ fecha }: { fecha: string }) {
         <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center text-sm text-slate-400 shadow-sm">Ese día no se abrió ninguna caja{f.sucursal ? " en esta sucursal" : ""}.</div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <FilaKpis n={5}>
             <Kpi acento label="Total vendido" valor={gs(t.total_vendido)} hint={`${num(t.cantidad_ventas)} ventas · ${t.turnos} turno${t.turnos === 1 ? "" : "s"}${t.abiertos ? ` (${t.abiertos} abierto${t.abiertos === 1 ? "" : "s"})` : ""}`} />
             <Kpi label="Contado" valor={gs(t.ventas_contado)} hint={`Crédito ${gs(t.ventas_credito)}`} />
             <Kpi label="Cobros de cuentas" valor={gs(t.cobros)} hint="entraron a las cajas" />
@@ -101,7 +101,7 @@ function DiaCaja({ fecha }: { fecha: string }) {
             <Kpi label="Diferencias" valor={Number(t.diferencia) + Number(t.diferencia_otros) === 0 ? "Cuadró" : conSigno(Number(t.diferencia) + Number(t.diferencia_otros))}
               tono={Number(t.diferencia) + Number(t.diferencia_otros) === 0 ? "bueno" : Number(t.diferencia) + Number(t.diferencia_otros) < 0 ? "malo" : "alerta"}
               hint={`Efectivo ${conSigno(t.diferencia)} · otros ${conSigno(t.diferencia_otros)}`} />
-          </div>
+          </FilaKpis>
 
           <div className="grid gap-6 lg:grid-cols-2">
             <Tarjeta titulo="Ventas por forma de pago" sub="contado por cada forma de pago + ventas a crédito"
@@ -160,9 +160,9 @@ function TurnoCard({ r, fecha, onVer }: { r: ResumenTurno; fecha: string; onVer:
 
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/60 px-5 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 bg-slate-50/60 px-3.5 py-3 sm:px-5">
         <div className="min-w-0">
-          <p className="flex flex-wrap items-center gap-2 font-semibold text-slate-900">
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-slate-900 [overflow-wrap:anywhere]">
             {c.punto_nombre} · {c.sucursal_nombre}
             <span className="text-xs font-medium text-slate-400">Turno N° {c.numero_caja}</span>
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${abierta ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{abierta ? "Abierta" : "Cerrada"}</span>
@@ -172,18 +172,18 @@ function TurnoCard({ r, fecha, onVer }: { r: ResumenTurno; fecha: string; onVer:
             Abrió {c.abierta_por_nombre ?? "—"} a las {horaPY(c.fecha_apertura)} · {c.fecha_cierre ? <>cerró {c.cerrada_por_nombre ?? "—"} a las {horaPY(c.fecha_cierre)}{cruzaDia ? " (del día siguiente)" : ""}</> : "sigue abierta"} · sale de {c.deposito_nombre}
           </p>
         </div>
-        <div className="flex gap-2">
-          <button type="button" onClick={onVer} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-[var(--brand)] hover:text-[var(--brand)]">
+        <div className="flex gap-2 max-sm:w-full">
+          <button type="button" onClick={onVer} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-[var(--brand)] hover:text-[var(--brand)] max-sm:min-h-11 max-sm:flex-1 max-sm:text-[13px]">
             <ListChecks className="h-3.5 w-3.5" /> Movimientos y ventas
           </button>
-          <button type="button" onClick={pdf} disabled={bajando} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50">
+          <button type="button" onClick={pdf} disabled={bajando} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50 max-sm:min-h-11 max-sm:flex-1 max-sm:text-[13px]">
             <Download className="h-3.5 w-3.5" /> {abierta ? "Arqueo parcial" : "PDF del turno"}
           </button>
         </div>
       </div>
 
-      <div className="grid gap-5 p-5 lg:grid-cols-[1.25fr_1fr]">
-        <div className="space-y-4">
+      <div className="grid gap-5 p-3.5 sm:p-5 lg:grid-cols-[1.25fr_1fr]">
+        <div className="min-w-0 space-y-4">
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Dato l="Total vendido" v={gs(r.ventas.total)} sub={`${num(r.ventas.cantidad)} ventas`} fuerte />
             <Dato l="Contado" v={gs(r.ventas.contado.total)} sub={`${num(r.ventas.contado.cantidad)} ventas`} />
@@ -209,7 +209,7 @@ function TurnoCard({ r, fecha, onVer }: { r: ResumenTurno; fecha: string; onVer:
           </div>
         </div>
 
-        <div className="rounded-2xl bg-slate-50 p-4">
+        <div className="min-w-0 rounded-2xl bg-slate-50 p-3.5 sm:p-4">
           <p className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Efectivo en caja</p>
           <ul className="space-y-1 text-sm">
             {efectivo.filter(([l, v]) => v !== 0 || l === "Monto inicial").map(([l, v]) => (
@@ -234,8 +234,8 @@ function Dato({ l, v, sub, fuerte, alerta }: { l: string; v: string; sub?: strin
   return (
     <div className="min-w-0 rounded-xl border border-slate-100 px-3 py-2">
       <p className="text-[10.5px] font-semibold uppercase tracking-wide text-slate-400">{l}</p>
-      <p className={`mt-0.5 truncate text-sm font-semibold tabular-nums ${alerta ? "text-rose-600" : fuerte ? "text-[var(--brand)]" : "text-slate-800"}`}>{v}</p>
-      {sub ? <p className="truncate text-[11px] text-slate-400">{sub}</p> : null}
+      <p className={`mt-0.5 text-sm font-semibold tabular-nums [overflow-wrap:anywhere] sm:truncate ${alerta ? "text-rose-600" : fuerte ? "text-[var(--brand)]" : "text-slate-800"}`}>{v}</p>
+      {sub ? <p className="text-[11px] text-slate-400 max-sm:line-clamp-2 sm:truncate">{sub}</p> : null}
     </div>
   );
 }

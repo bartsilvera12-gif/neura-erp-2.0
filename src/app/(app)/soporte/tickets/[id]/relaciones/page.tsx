@@ -8,6 +8,7 @@ import { TIPOS_RELACION, numeroTicket } from "@/modules/soporte/dominio";
 import { apiSoporte, obtenerRelaciones, relacionesEnMemoria } from "@/modules/soporte/api";
 import { useTicket } from "@/modules/soporte/detalle/TicketContexto";
 import { Aviso, Boton, Cargando, Desplegable, Insignia, Tarjeta, Vacio, claseInput } from "@/modules/soporte/ui";
+import { TablaScroll } from "@/components/TablaResponsive";
 
 type Relacion = {
   id: string;
@@ -102,7 +103,7 @@ export default function TicketRelacionesPage() {
         ) : lista.length === 0 ? (
           <Vacio icono={GitBranch} tono="indigo" titulo="Sin tickets relacionados" detalle="Vinculá tickets duplicados, bloqueados o derivados para no perder el contexto." />
         ) : (
-          <div className="overflow-x-auto">
+          <TablaScroll primeraFija>
             <table className="w-full min-w-[640px] text-left text-[13px]">
               <thead>
                 <tr className="border-b border-slate-100 text-[11.5px] text-slate-500">
@@ -148,7 +149,7 @@ export default function TicketRelacionesPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </TablaScroll>
         )}
       </Tarjeta>
     </div>

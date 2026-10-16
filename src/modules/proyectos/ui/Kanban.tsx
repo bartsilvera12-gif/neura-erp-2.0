@@ -8,6 +8,10 @@
  * estables (los arma ProyectosClient con useCallback + refs). Mover una tarjeta
  * re-renderiza solo las dos columnas involucradas. El SLA de cada tarjeta corre solo
  * (un único reloj de 60 s para toda la pantalla) sin re-renderizar la tarjeta entera.
+ *
+ * Táctil / celular: el drag nativo no anda con el dedo → la tarjeta no es arrastrable y se
+ * mueve con "Mover a" (el Select abre una hoja inferior en celular). En celular cada columna
+ * ocupa casi todo el ancho, con scroll horizontal con imán (snap) entre columnas.
  */
 import { memo } from "react";
 import Link from "next/link";
@@ -19,6 +23,7 @@ import {
 } from "@/modules/proyectos/tipos";
 import { PersonaMeta, SlaBadge } from "./comun";
 import { useAhora } from "./reloj";
+import { useEsTactil } from "@/lib/ui/responsive";
 
 export type AccionesTarjeta = {
   onAbrir: (id: string) => void;
@@ -100,9 +105,10 @@ export const ProyectoCard = memo(function ProyectoCard({
 }) {
   const prio = estiloPrioridad(t.prioridad);
   const abierta = !estado?.es_final;
+  const tactil = useEsTactil();
   return (
     <div
-      draggable={puedeMover}
+      draggable={puedeMover && !tactil}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", t.id);
         e.dataTransfer.effectAllowed = "move";
@@ -110,12 +116,12 @@ export const ProyectoCard = memo(function ProyectoCard({
       }}
       onDragEnd={acciones.onDragEnd}
       onClick={() => acciones.onAbrir(t.id)}
-      className={`group select-none rounded-2xl border border-l-4 border-slate-200 bg-white p-4 shadow-sm transition-all [contain-intrinsic-size:auto_320px] [content-visibility:auto] hover:-translate-y-0.5 hover:shadow-md ${prio.borde} ${puedeMover ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
+      className={`group select-none rounded-2xl border border-l-4 border-slate-200 bg-white p-3.5 shadow-sm transition-all [contain-intrinsic-size:auto_320px] [content-visibility:auto] sm:p-4 ${tactil ? "active:bg-slate-50" : "hover:-translate-y-0.5 hover:shadow-md"} ${prio.borde} ${puedeMover && !tactil ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"}`}
     >
       <div className="flex items-start gap-2">
         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${prio.punto}`} />
         <div className="min-w-0 flex-1">
-          <div className="text-[15px] font-semibold leading-snug text-slate-950 group-hover:underline">{t.titulo}</div>
+          <div className="text-[15px] font-semibold leading-snug text-slate-950 [overflow-wrap:anywhere] group-hover:underline">{t.titulo}</div>
           {t.cliente_id ? (
             <div className="mt-1 truncate text-xs font-medium text-slate-600">{t.cliente_nombre || "—"}</div>
           ) : (
@@ -161,7 +167,7 @@ export const ProyectoCard = memo(function ProyectoCard({
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-2 border-t border-slate-100 pt-3" onClick={parar}>
-        <Link href={`/proyectos/${t.id}`} onClick={parar} draggable={false} className="text-[11px] font-semibold text-[var(--brand)] hover:text-[var(--brand-600)] hover:underline">
+        <Link href={`/proyectos/${t.id}`} onClick={parar} draggable={false} className="text-[11px] font-semibold text-[var(--brand)] hover:text-[var(--brand-600)] hover:underline [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center [@media(pointer:coarse)]:text-xs">
           Abrir en página completa
         </Link>
       </div>
@@ -176,7 +182,7 @@ export const ProyectoCard = memo(function ProyectoCard({
         >
           <label className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Mover a</label>
           <div className="mt-1">
-            <Select value={t.estado_id} onChange={(v) => acciones.onMover(t, v)} options={opcionesEstado} block className="[&>button]:py-1.5 [&>button]:text-xs" />
+            <Select value={t.estado_id} onChange={(v) => acciones.onMover(t, v)} options={opcionesEstado} block etiqueta="Mover a" className="[&>button]:py-1.5 [&>button]:text-xs [@media(pointer:coarse)]:[&>button]:min-h-11 [@media(pointer:coarse)]:[&>button]:text-sm" />
           </div>
         </div>
       ) : null}
@@ -203,9 +209,10 @@ export const ColumnaKanban = memo(function ColumnaKanban({
 }) {
   const faltan = col.cantidad - col.tarjetas.length;
   const estado = estados.get(col.id);
+  const tactil = useEsTactil();
   return (
     <div
-      className={`flex w-[300px] shrink-0 flex-col rounded-xl border bg-slate-50/80 transition-colors ${resaltada ? "border-[var(--brand)]/50 bg-[var(--brand)]/[0.06] ring-2 ring-[var(--brand)]/20" : "border-slate-200"}`}
+      className={`flex w-[300px] shrink-0 snap-start flex-col rounded-xl border bg-slate-50/80 transition-colors max-md:w-[calc(100vw-3.5rem)] max-md:max-w-[22rem] ${resaltada ? "border-[var(--brand)]/50 bg-[var(--brand)]/[0.06] ring-2 ring-[var(--brand)]/20" : "border-slate-200"}`}
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; onDragSobre(col.id); }}
       onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) onDragSobre(null); }}
       onDrop={(e) => { e.preventDefault(); onSoltar(col.id); }}
@@ -220,10 +227,10 @@ export const ColumnaKanban = memo(function ColumnaKanban({
         <span className="shrink-0 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-600">{col.cantidad.toLocaleString("es-PY")}</span>
       </div>
 
-      <div className="flex max-h-[calc(100vh-300px)] min-h-24 flex-1 flex-col gap-2 overflow-y-auto p-2">
+      <div className="flex max-h-[calc(100dvh-19rem)] min-h-24 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain p-2 md:max-h-[calc(100dvh-300px)]">
         {col.tarjetas.length === 0 ? (
           <div className={`flex h-20 items-center justify-center rounded-xl border-2 border-dashed text-xs transition-colors ${resaltada ? "border-[var(--brand)]/60 bg-[var(--brand)]/5 text-[var(--brand-600)]" : "border-slate-200 text-slate-400"}`}>
-            Soltá tarjetas acá
+            {tactil ? "Sin proyectos" : "Soltá tarjetas acá"}
           </div>
         ) : (
           col.tarjetas.map((t) => (
@@ -240,7 +247,7 @@ export const ColumnaKanban = memo(function ColumnaKanban({
         )}
         {faltan > 0 ? (
           <button type="button" onClick={() => onCargarMas(col.id)} disabled={cargandoMas}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white/70 px-3 py-2 text-[11px] font-semibold text-slate-600 transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)] disabled:opacity-60">
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white/70 px-3 py-2 text-[11px] font-semibold text-slate-600 transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)] disabled:opacity-60 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-xs">
             {cargandoMas ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
             Cargar más ({faltan.toLocaleString("es-PY")})
           </button>

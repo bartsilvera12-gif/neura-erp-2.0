@@ -126,16 +126,16 @@ export function ModalContactos({ clienteId, clienteNombre, puedeEditar, onClose,
           ) : lista.length > 0 ? (
             <ul className="divide-y divide-slate-100 rounded-xl border border-slate-200">
               {lista.map((c) => (
-                <li key={c.id} className="flex items-start gap-3 px-3.5 py-2.5">
+                <li key={c.id} className="flex flex-wrap items-start gap-x-3 gap-y-1 px-3.5 py-2.5 sm:flex-nowrap">
                   <span className="mt-0.5 grid h-8 w-8 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500">
                     <UserRound className="h-4 w-4" aria-hidden />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-[13.5px] font-semibold text-slate-800">
+                    <p className="text-[13.5px] font-semibold text-slate-800 [overflow-wrap:anywhere]">
                       {c.nombre}
                       {c.cargo ? <span className="ml-1.5 font-medium text-slate-400">· {c.cargo}</span> : null}
                     </p>
-                    <p className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-[12.5px] text-slate-600">
+                    <p className="mt-0.5 flex min-w-0 flex-wrap gap-x-3 gap-y-0.5 text-[12.5px] text-slate-600 [overflow-wrap:anywhere]">
                       {c.telefono ? <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3 text-slate-400" aria-hidden />{c.telefono}</span> : null}
                       {c.email ? <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3 text-slate-400" aria-hidden />{c.email}</span> : null}
                       {!c.telefono && !c.email ? <span className="text-slate-400">Sin teléfono ni correo</span> : null}
@@ -143,7 +143,7 @@ export function ModalContactos({ clienteId, clienteNombre, puedeEditar, onClose,
                     {c.notas ? <p className="mt-0.5 text-[12px] text-slate-400">{c.notas}</p> : null}
                   </div>
                   {puedeEditar ? (
-                    <>
+                    <div className="flex shrink-0 items-center gap-1 max-sm:w-full max-sm:justify-end max-sm:[&>button]:min-h-11">
                       <button type="button" onClick={() => editar(c)} aria-label={`Editar ${c.nombre}`}
                         className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-slate-500 hover:bg-slate-100 hover:text-slate-700">
                         <Pencil className="h-3.5 w-3.5" /> Editar
@@ -152,7 +152,7 @@ export function ModalContactos({ clienteId, clienteNombre, puedeEditar, onClose,
                         className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs text-slate-500 hover:bg-rose-50 hover:text-rose-600">
                         <Trash2 className="h-3.5 w-3.5" /> Quitar
                       </button>
-                    </>
+                    </div>
                   ) : null}
                 </li>
               ))}
@@ -189,7 +189,7 @@ export function ModalContactos({ clienteId, clienteNombre, puedeEditar, onClose,
                 <input className={CAMPO} value={form.notas} maxLength={500} placeholder="Opcional"
                   onChange={(e) => setForm((f) => ({ ...f, notas: e.target.value }))} />
               </label>
-              <div className="flex justify-end gap-2">
+              <div className="flex justify-end gap-2 max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1 max-sm:[&>button]:justify-center">
                 <button type="button" onClick={() => { setAbierto(false); setError(null); }} disabled={guardando}
                   className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[12.5px] font-semibold text-slate-600 hover:bg-slate-50">
                   Cancelar
@@ -208,7 +208,7 @@ export function ModalContactos({ clienteId, clienteNombre, puedeEditar, onClose,
         </div>
 
         {!abierto && puedeEditar ? (
-          <div className="flex shrink-0 justify-end border-t border-slate-100 px-5 py-3">
+          <div className="flex shrink-0 justify-end border-t border-slate-100 px-5 py-3 max-sm:[&>button]:w-full max-sm:[&>button]:justify-center">
             <button type="button" onClick={nuevo}
               className="inline-flex items-center gap-1.5 rounded-lg px-3.5 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:brightness-95"
               style={{ backgroundColor: TEAL }}>

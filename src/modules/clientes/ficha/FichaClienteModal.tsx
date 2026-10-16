@@ -14,21 +14,21 @@ export function FichaClienteModal({ id, onCerrar, onCambio }: { id: string; onCe
         role="dialog"
         aria-modal="true"
         aria-label="Detalle del cliente"
-        className={`relative flex h-[92dvh] w-full max-w-7xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15`}
+        className={`relative flex h-[100dvh] w-full max-w-7xl sm:h-[92dvh] ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
       >
         <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 z-10 h-1 bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
-        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-white px-5 py-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 bg-white py-1.5 pl-4 pr-2 sm:px-5 sm:py-3">
           <div className="flex items-center gap-2">
             <span aria-hidden="true" className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
             <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4FAEB2]">Detalle del cliente</p>
           </div>
           <button type="button" onClick={onCerrar}
-            className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2]">
+            className="min-h-11 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] sm:min-h-0">
             Cerrar
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-slate-50/50 px-5 py-5">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-slate-50/50 px-3 py-3 sm:px-5 sm:py-5">
           <FichaCliente id={id} onCerrar={onCerrar} onCambio={onCambio} />
         </div>
       </div>

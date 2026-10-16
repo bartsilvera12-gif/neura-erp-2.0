@@ -91,14 +91,14 @@ export function BuscadorProductos({ onElegir, onCrear, mostrarPrecio = false }: 
           else if (e.key === "Enter") { e.preventDefault(); void enter(); }
           else if (e.key === "Escape") setQ("");
         }}
-        placeholder="Buscá o escaneá un producto (nombre, SKU o código de barras)…" className={`${INPUT} pl-9`} />
+        placeholder="Buscá o escaneá un producto (nombre, SKU o código)…" autoComplete="off" enterKeyHint="search" aria-label="Buscar producto" className={`${INPUT} pl-9`} />
       {buscando ? <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" /> : null}
       {res.length ? (
-        <ul className="absolute z-20 mt-1 max-h-80 w-full overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+        <ul className="absolute z-20 mt-1 max-h-80 w-full overflow-auto overscroll-contain rounded-xl border border-slate-200 bg-white py-1 shadow-lg max-sm:max-h-[min(20rem,50dvh)]">
           {res.map((p, i) => (
             <li key={p.id}>
               <button type="button" onMouseEnter={() => setHi(i)} onClick={() => elegir(p)}
-                className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm ${hi === i ? "bg-[var(--brand-50)]" : ""}`}>
+                className={`flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm sm:min-h-0 ${hi === i ? "bg-[var(--brand-50)]" : ""}`}>
                 <span className="min-w-0">
                   <span className="block truncate font-medium text-slate-800">{p.nombre}</span>
                   <span className="font-mono text-[11px] text-slate-400">{p.sku}{p.codigo_barras ? ` · ${p.codigo_barras}` : ""}</span>
@@ -111,7 +111,7 @@ export function BuscadorProductos({ onElegir, onCrear, mostrarPrecio = false }: 
           ))}
           {onCrear ? (
             <li className="border-t border-slate-100">
-              <button type="button" onClick={crear} className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand-50)]">
+              <button type="button" onClick={crear} className="flex min-h-11 w-full items-center gap-2 px-3 py-2.5 text-left text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand-50)]">
                 <Plus className="h-4 w-4" /> Crear producto «{q.trim()}»
               </button>
             </li>
@@ -130,9 +130,9 @@ export function BuscadorProductos({ onElegir, onCrear, mostrarPrecio = false }: 
       ) : null}
     </div>
     {onCrear ? (
-      <button type="button" onClick={crear} title="Crear un producto nuevo y agregarlo"
-        className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
-        <Plus className="h-4 w-4" /> Nuevo producto
+      <button type="button" onClick={crear} title="Crear un producto nuevo y agregarlo" aria-label="Nuevo producto"
+        className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)] max-sm:w-11 max-sm:px-0 sm:min-h-0">
+        <Plus className="h-4 w-4" /> <span className="max-sm:hidden">Nuevo producto</span>
       </button>
     ) : null}
     </div>
@@ -141,8 +141,8 @@ export function BuscadorProductos({ onElegir, onCrear, mostrarPrecio = false }: 
 
 export function Tarjeta({ numero, titulo, extra, children }: { numero: number; titulo: string; extra?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div className="mb-4 flex items-center justify-between gap-3">
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <h2 className="flex items-center gap-2.5 text-sm font-semibold text-slate-800">
           <span className="flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold text-white" style={{ backgroundColor: TEAL }}>{numero}</span>
           {titulo}
@@ -163,7 +163,7 @@ export function Segmentado({ valor, onChange, opciones }: { valor: string; onCha
     <div className="flex rounded-xl bg-slate-100 p-1">
       {opciones.map(([v, l]) => (
         <button key={v} type="button" onClick={() => onChange(v)}
-          className={`flex-1 rounded-lg py-1.5 text-sm font-semibold transition ${valor === v ? "bg-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+          className={`min-h-9 flex-1 rounded-lg px-2 py-1.5 text-sm font-semibold transition max-sm:min-h-10 ${valor === v ? "bg-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
           style={valor === v ? { color: TEAL } : undefined}>
           {l}
         </button>

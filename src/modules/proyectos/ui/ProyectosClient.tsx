@@ -22,8 +22,11 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Archive, BarChart3, ClipboardCheck, LayoutGrid, List, Plus, Search, Settings2, Users } from "lucide-react";
+import { Archive, BarChart3, ClipboardCheck, LayoutGrid, List, Plus, Search, Settings2, Users, X } from "lucide-react";
 import { Select } from "@/components/Select";
+import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
+import { useEsTactil } from "@/lib/ui/responsive";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
@@ -173,6 +176,7 @@ export default function ProyectosClient() {
   const me = useUsuario();
   const esAdmin = me?.rol === "ADMIN";
   const yo = me?.usuarioId;
+  const tactil = useEsTactil();
   const usuarios = useUsuarios();
   const { nodo: avisoNodo, avisar } = useAvisos();
 
@@ -475,51 +479,48 @@ export default function ProyectosClient() {
 
   return (
     <div className="flex h-full flex-col gap-4">
-      {/* Encabezado + pestañas */}
+      {/* Encabezado + pestañas (en celular: acción principal a la vista, el resto en ⋯; pestañas con scroll) */}
       <div className="flex flex-col gap-3">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--brand)] shadow-[0_0_0_3px_var(--brand-100)]" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand)]">{cab.ojo}</p>
-            </div>
-            <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{cab.titulo}</h1>
-            <p className="mt-1 text-sm text-slate-500">{cab.sub}</p>
-          </div>
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
-            {esAdmin ? (
-              <button type="button" onClick={() => setEstadosOpen(true)} title="Configurar los estados (columnas) del tablero y los parámetros de seguimiento"
-                className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)]">
-                <Settings2 className="h-3.5 w-3.5" /> Configurar estados
-              </button>
-            ) : null}
-            {pantalla === "tablero" ? (
-              <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100/80 p-0.5">
-                {([["kanban", "Kanban", LayoutGrid], ["lista", "Lista", List]] as const).map(([v, t, I]) => (
-                  <button key={v} type="button" onClick={() => cambiarVista(v)} aria-pressed={vista === v}
-                    className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${vista === v ? "bg-white text-[var(--brand-600)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                    <I className="h-3.5 w-3.5" /> {t}
-                  </button>
-                ))}
+        <EncabezadoPagina
+          kicker={cab.ojo}
+          titulo={cab.titulo}
+          subtitulo={cab.sub}
+          acciones={
+            <div className="flex min-w-0 items-center gap-2">
+              {pantalla === "tablero" ? (
+                <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100/80 p-0.5" role="group" aria-label="Vista">
+                  {([["kanban", "Kanban", LayoutGrid], ["lista", "Lista", List]] as const).map(([v, t, I]) => (
+                    <button key={v} type="button" onClick={() => cambiarVista(v)} aria-pressed={vista === v} aria-label={t}
+                      className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors max-sm:h-10 max-sm:w-10 max-sm:px-0 ${vista === v ? "bg-white text-[var(--brand-600)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                      <I className="h-3.5 w-3.5 max-sm:h-4 max-sm:w-4" /> <span className="max-sm:sr-only">{t}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              <div className="min-w-0 flex-1 sm:flex-none">
+                <AccionesPagina
+                  acciones={[
+                    ...(esAdmin ? [{ etiqueta: "Configurar estados", icono: <Settings2 />, onClick: () => setEstadosOpen(true) }] : []),
+                    { etiqueta: "Nuevo proyecto", icono: <Plus />, onClick: () => setNuevoOpen(true), primaria: true },
+                  ]}
+                />
               </div>
-            ) : null}
-            <button type="button" onClick={() => setNuevoOpen(true)}
-              className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-600)]">
-              <Plus className="h-4 w-4" /> Nuevo proyecto
-            </button>
-          </div>
-        </div>
-        <nav aria-label="Pantallas de Proyectos" className="-mb-1 flex items-center gap-1 overflow-x-auto border-b border-slate-200">
-          {pantallas.filter((p) => p.ver).map((p) => {
-            const activa = pantalla === p.id;
-            const I = p.icon;
-            return (
-              <button key={p.id} type="button" onClick={() => irPantalla(p.id)} aria-current={activa ? "page" : undefined}
-                className={`-mb-px inline-flex shrink-0 items-center gap-1.5 border-b-2 px-3 py-2 text-[13px] font-semibold transition-colors ${activa ? "border-[var(--brand)] text-[var(--brand-700)]" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"}`}>
-                <I className="h-3.5 w-3.5" /> {p.label}
-              </button>
-            );
-          })}
+            </div>
+          }
+        />
+        <nav aria-label="Pantallas de Proyectos" className="-mb-1 border-b border-slate-200">
+          <ScrollHorizontal claseFila="gap-1" dependencias={[pantalla]}>
+            {pantallas.filter((p) => p.ver).map((p) => {
+              const activa = pantalla === p.id;
+              const I = p.icon;
+              return (
+                <button key={p.id} type="button" onClick={() => irPantalla(p.id)} aria-current={activa ? "page" : undefined}
+                  className={`-mb-px inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-[13px] font-semibold transition-colors max-md:min-h-11 ${activa ? "border-[var(--brand)] text-[var(--brand-700)]" : "border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700"}`}>
+                  <I className="h-3.5 w-3.5" /> {p.label}
+                </button>
+              );
+            })}
+          </ScrollHorizontal>
         </nav>
       </div>
 
@@ -531,41 +532,43 @@ export default function ProyectosClient() {
         <DashboardPm esAdmin={esAdmin} config={config} version={dashVersion} onAbrir={acciones.onAbrir} />
       ) : (
       <>
-      {/* Buscador + filtros */}
-      <div className="flex flex-col gap-2 xl:flex-row xl:flex-wrap xl:items-center">
-        <div className="relative min-w-[220px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--brand)]" />
-          <input
-            type="search"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            onKeyDown={(e) => e.key === "Escape" && setBusqueda("")}
-            placeholder="Buscar por título, número, cliente o descripción…"
-            aria-label="Buscar proyectos"
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20"
-          />
-        </div>
-        <Select value={responsable ?? ""} onChange={setResponsable} minWidth={200} options={opcionesResp} />
+      {/* Buscador + filtros (en celular / tablet chica, los filtros van en la hoja "Filtros") */}
+      <BarraFiltros
+        plano
+        activos={[responsable && responsable !== (esAdmin || !yo ? "" : yo), cliente, prioridad, archivados, desde || hasta].filter(Boolean).length}
+        onLimpiar={hayFiltros ? limpiar : undefined}
+        busqueda={
+          <div className="relative min-w-0 md:min-w-[220px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--brand)]" />
+            <input
+              type="search"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              onKeyDown={(e) => e.key === "Escape" && setBusqueda("")}
+              placeholder="Buscar por título, número, cliente o descripción…"
+              aria-label="Buscar proyectos"
+              enterKeyHint="search"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20 max-md:h-11"
+            />
+          </div>
+        }
+      >
+        <Select value={responsable ?? ""} onChange={setResponsable} minWidth={200} options={opcionesResp} etiqueta="Responsable" />
         <div className="min-w-[220px]"><ClienteSelect valor={cliente} onChange={setCliente} /></div>
-        <Select value={prioridad} onChange={setPrioridad} minWidth={170}
+        <Select value={prioridad} onChange={setPrioridad} minWidth={170} etiqueta="Prioridad"
           options={[["", "Todas las prioridades"], ...PRIORIDADES.map((p) => [p, PRIORIDAD_LABEL[p]] as [string, string])]} />
         <button type="button" onClick={() => setArchivados((v) => !v)} aria-pressed={archivados}
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-colors ${archivados ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand-700)]" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}>
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-colors max-md:min-h-11 max-md:justify-center max-md:text-sm ${archivados ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand-700)]" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}>
           <Archive className="h-3.5 w-3.5" /> Archivados
         </button>
-        <div className="flex shrink-0 items-center gap-1.5" title="Acota solo las columnas de Entregado">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Entregado</span>
+        <div className="flex shrink-0 flex-wrap items-center gap-1.5" title="Acota solo las columnas de Entregado">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-md:w-full">Entregado</span>
           <input type="date" value={desde} max={hasta || undefined} onChange={(e) => setDesde(e.target.value)} aria-label="Entregados desde"
-            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20" />
+            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20 max-md:h-11 max-md:min-w-0 max-md:flex-1" />
           <input type="date" value={hasta} min={desde || undefined} onChange={(e) => setHasta(e.target.value)} aria-label="Entregados hasta"
-            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20" />
+            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20 max-md:h-11 max-md:min-w-0 max-md:flex-1" />
         </div>
-        {hayFiltros ? (
-          <button type="button" onClick={limpiar} className="shrink-0 rounded-xl border border-transparent px-3 py-2.5 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700">
-            Limpiar filtros
-          </button>
-        ) : null}
-      </div>
+      </BarraFiltros>
 
       {error ? (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
@@ -605,7 +608,9 @@ export default function ProyectosClient() {
               </KanbanScroller>
             </div>
             <p className="text-center text-xs text-slate-400">
-              Arrastrá tarjetas entre columnas o usá el selector “Mover a”. Mueven el técnico, el PM o un administrador.
+              {tactil
+                ? "Deslizá para ver las otras columnas y usá “Mover a” en cada tarjeta. Mueven el técnico, el PM o un administrador."
+                : "Arrastrá tarjetas entre columnas o usá el selector “Mover a”. Mueven el técnico, el PM o un administrador."}
             </p>
           </>
         )
@@ -630,15 +635,18 @@ export default function ProyectosClient() {
       {/* Modales */}
       {nuevoOpen ? (
         <ModalProyecto onClose={() => setNuevoOpen(false)} ancho="max-w-3xl" etiqueta="Nuevo proyecto">
-          <div className="flex shrink-0 flex-wrap items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[var(--brand)]/5 px-6 pb-5 pt-6">
+          <div className="flex shrink-0 flex-wrap items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[var(--brand)]/5 py-3 pl-4 pr-1.5 sm:px-6 sm:pb-5 sm:pt-6">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--brand)] shadow-[0_0_0_3px_var(--brand-100)]" />
                 <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand)]">Nuevo</p>
               </div>
-              <h2 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Crear proyecto</h2>
-              <p className="mt-1 text-sm text-slate-500">Entra en el estado inicial del tablero.</p>
+              <h2 className="mt-1 text-lg font-semibold tracking-tight text-slate-900 sm:text-2xl">Crear proyecto</h2>
+              <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">Entra en el estado inicial del tablero.</p>
             </div>
+            <button type="button" onClick={() => setNuevoOpen(false)} aria-label="Cerrar" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:bg-slate-100 sm:hidden">
+              <X className="h-5 w-5" />
+            </button>
           </div>
           <ProyectoForm variant="modal" onCancel={() => setNuevoOpen(false)} onCreado={alCrear} />
         </ModalProyecto>

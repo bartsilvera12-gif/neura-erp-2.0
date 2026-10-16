@@ -5,6 +5,8 @@
  * Entrantes en blanco con filete turquesa, salientes en turquesa, notas internas en
  * amarillo. Imagen (visor), audio, video, documento, respuesta citada y tildes.
  * content-visibility:auto: las burbujas fuera de vista no se pintan.
+ * Táctil (sin hover): tocar la burbuja muestra debajo "Responder" / "Descargar" (44 px);
+ * los botones flotantes del hover quedan sólo para mouse.
  */
 import { memo, useState } from "react";
 import { AlertTriangle, CornerUpLeft, Download, FileText, Lock, RotateCw, Trash2 } from "lucide-react";
@@ -34,6 +36,7 @@ function nombreArchivo(m: Mensaje): string {
 
 function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, onDescartar }: Props) {
   const [imgError, setImgError] = useState(false);
+  const [accionesTactil, setAccionesTactil] = useState(false);
 
   if (m.tipo === "sistema") {
     return (
@@ -53,21 +56,29 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
   const tenue = nota ? "text-amber-700/80" : mio ? "text-sky-100" : "text-slate-400";
   const claro = mio && !nota;
   const archivo = nombreArchivo(m);
+  const conAcciones = !m.local && !nota && (!!url || !!onResponder);
+  // Toque en la burbuja (no en un control) con dedo → muestra/oculta las acciones.
+  const alTocar = (e: React.MouseEvent) => {
+    if (!conAcciones || !window.matchMedia("(hover: none)").matches) return;
+    if ((e.target as HTMLElement).closest("button, a, audio, video, input")) return;
+    setAccionesTactil((v) => !v);
+  };
 
   return (
     <div
       id={`msg-${m.id}`}
-      className={`flex ${mio || nota ? "justify-end" : "justify-start"} py-1`}
+      className={`flex flex-col ${mio || nota ? "items-end" : "items-start"} py-1`}
       style={{ contentVisibility: "auto", containIntrinsicSize: "auto 64px" }}
     >
       <div
-        className={`group relative max-w-[92%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed sm:max-w-[80%] sm:text-sm lg:max-w-[70%] ${claseBurbuja} ${
+        onClick={alTocar}
+        className={`group relative min-w-0 max-w-[88%] rounded-2xl px-3 py-2 text-[13px] leading-relaxed sm:max-w-[80%] sm:text-sm lg:max-w-[70%] ${claseBurbuja} ${
           m.local && m.estado_entrega === "pendiente" ? "opacity-80" : ""
         }`}
       >
         {/* Acciones al pasar el mouse */}
         {!m.local && !nota ? (
-          <div className="absolute right-1 top-1 z-10 flex items-center gap-1">
+          <div className="absolute right-1 top-1 z-10 flex items-center gap-1 [@media(hover:none)]:hidden">
             {url ? (
               <button
                 type="button"
@@ -125,7 +136,7 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
         {m.tipo === "imagen" || m.tipo === "sticker" ? (
           <div className="space-y-1.5">
             {url && !imgError ? (
-              <button type="button" className="block cursor-zoom-in border-0 bg-transparent p-0" onClick={() => onVerImagen(url, archivo)}>
+              <button type="button" className="block max-w-full cursor-zoom-in border-0 bg-transparent p-0" onClick={() => onVerImagen(url, archivo)}>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={url}
@@ -133,30 +144,30 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
                   loading="lazy"
                   decoding="async"
                   onError={() => setImgError(true)}
-                  className="max-h-60 min-h-[3rem] min-w-[6rem] rounded-lg border border-white/30 bg-white object-contain"
+                  className="max-h-60 min-h-[3rem] min-w-[6rem] max-w-full rounded-lg border border-white/30 bg-white object-contain"
                 />
               </button>
             ) : (
-              <div className={`flex h-32 w-48 items-center justify-center rounded-lg text-xs ${claro ? "bg-white/15" : "bg-slate-100 text-slate-400"}`}>
+              <div className={`flex h-32 w-48 max-w-full items-center justify-center rounded-lg text-xs ${claro ? "bg-white/15" : "bg-slate-100 text-slate-400"}`}>
                 {imgError ? "No se pudo cargar la imagen" : "Cargando imagen…"}
               </div>
             )}
-            {m.contenido ? <p className="whitespace-pre-wrap break-words">{m.contenido}</p> : null}
+            {m.contenido ? <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{m.contenido}</p> : null}
           </div>
         ) : m.tipo === "audio" ? (
           <div className="space-y-1.5">
             <div className={`text-xs font-medium ${claro ? "text-white/85" : "text-slate-500"}`}>Audio</div>
-            {url ? <audio controls src={url} preload="metadata" className="h-9 w-[260px] max-w-full" /> : <div className="h-9 w-[260px] animate-pulse rounded-full bg-black/10" />}
-            {m.contenido ? <p className="whitespace-pre-wrap break-words">{m.contenido}</p> : null}
+            {url ? <audio controls src={url} preload="metadata" className="h-9 w-[260px] max-w-full" /> : <div className="h-9 w-[260px] max-w-full animate-pulse rounded-full bg-black/10" />}
+            {m.contenido ? <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{m.contenido}</p> : null}
           </div>
         ) : m.tipo === "video" ? (
           <div className="space-y-1.5">
             {url ? (
               <video controls src={url} preload="metadata" className="max-h-64 max-w-full rounded-lg bg-black" />
             ) : (
-              <div className={`flex h-32 w-56 items-center justify-center rounded-lg text-xs ${claro ? "bg-white/15" : "bg-slate-100 text-slate-400"}`}>Cargando video…</div>
+              <div className={`flex h-32 w-56 max-w-full items-center justify-center rounded-lg text-xs ${claro ? "bg-white/15" : "bg-slate-100 text-slate-400"}`}>Cargando video…</div>
             )}
-            {m.contenido ? <p className="whitespace-pre-wrap break-words">{m.contenido}</p> : null}
+            {m.contenido ? <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{m.contenido}</p> : null}
           </div>
         ) : m.tipo === "documento" ? (
           <div className="space-y-1.5">
@@ -167,7 +178,7 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
                   <span className={`block text-[10px] font-bold uppercase tracking-wide ${claro ? "text-sky-100" : "text-slate-500"}`}>
                     Documento{m.media_size ? ` · ${tamanoLegible(m.media_size)}` : ""}
                   </span>
-                  <span className="mt-0.5 block break-words text-sm font-semibold">{archivo}</span>
+                  <span className="mt-0.5 block text-sm font-semibold [overflow-wrap:anywhere]">{archivo}</span>
                 </span>
               </div>
               {url ? (
@@ -175,7 +186,7 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
                   <button
                     type="button"
                     onClick={() => void descargar(url, archivo)}
-                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors ${
+                    className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors [@media(pointer:coarse)]:min-h-10 [@media(pointer:coarse)]:px-3.5 [@media(pointer:coarse)]:text-xs ${
                       claro ? "bg-white/25 text-white hover:bg-white/35" : "bg-[#4FAEB2] text-white hover:bg-[#3F8E91]"
                     }`}
                   >
@@ -185,7 +196,7 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
                     href={url}
                     target="_blank"
                     rel="noreferrer"
-                    className={`rounded-lg px-2.5 py-1 text-[11px] font-semibold no-underline transition-colors ${
+                    className={`inline-flex items-center rounded-lg px-2.5 py-1 text-[11px] font-semibold no-underline transition-colors [@media(pointer:coarse)]:min-h-10 [@media(pointer:coarse)]:px-3.5 [@media(pointer:coarse)]:text-xs ${
                       claro ? "bg-white/15 text-white hover:bg-white/25" : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-100"
                     }`}
                   >
@@ -194,15 +205,15 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
                 </div>
               ) : null}
             </div>
-            {m.contenido ? <p className="whitespace-pre-wrap break-words">{m.contenido}</p> : null}
+            {m.contenido ? <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{m.contenido}</p> : null}
           </div>
         ) : m.tipo === "plantilla" ? (
           <div>
             <div className={`text-[10px] font-bold uppercase tracking-wide ${claro ? "text-sky-100" : "text-slate-500"}`}>Plantilla</div>
-            <p className="whitespace-pre-wrap break-words">{m.contenido}</p>
+            <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{m.contenido}</p>
           </div>
         ) : (
-          <p className="whitespace-pre-wrap break-words">{m.contenido ?? (m.tipo === "ubicacion" ? "📍 Ubicación" : m.tipo === "reaccion" ? "Reacción" : "")}</p>
+          <p className="whitespace-pre-wrap [overflow-wrap:anywhere]">{m.contenido ?? (m.tipo === "ubicacion" ? "📍 Ubicación" : m.tipo === "reaccion" ? "Reacción" : "")}</p>
         )}
 
         {/* Hora · autor · tildes */}
@@ -220,10 +231,10 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
             </span>
             {m.local ? (
               <span className="flex gap-1">
-                <button type="button" onClick={() => onReintentar(m.id)} className="inline-flex items-center gap-0.5 font-semibold underline-offset-2 hover:underline">
+                <button type="button" onClick={() => onReintentar(m.id)} className="inline-flex items-center gap-0.5 font-semibold underline-offset-2 hover:underline [@media(pointer:coarse)]:min-h-9 [@media(pointer:coarse)]:px-1">
                   <RotateCw className="h-3 w-3" /> Reintentar
                 </button>
-                <button type="button" onClick={() => onDescartar(m.id)} className="inline-flex items-center gap-0.5 font-semibold text-red-500 underline-offset-2 hover:underline">
+                <button type="button" onClick={() => onDescartar(m.id)} className="inline-flex items-center gap-0.5 font-semibold text-red-500 underline-offset-2 hover:underline [@media(pointer:coarse)]:min-h-9 [@media(pointer:coarse)]:px-1">
                   <Trash2 className="h-3 w-3" /> Descartar
                 </button>
               </span>
@@ -231,6 +242,34 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
           </div>
         ) : null}
       </div>
+      {accionesTactil && conAcciones ? (
+        <div className="mt-1 flex gap-1.5" style={{ animation: "modal-pop 0.15s cubic-bezier(0.16,1,0.3,1)" }}>
+          {onResponder ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAccionesTactil(false);
+                onResponder(m);
+              }}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 shadow-sm active:bg-slate-50"
+            >
+              <CornerUpLeft className="h-4 w-4" aria-hidden /> Responder
+            </button>
+          ) : null}
+          {url ? (
+            <button
+              type="button"
+              onClick={() => {
+                setAccionesTactil(false);
+                void descargar(url, archivo);
+              }}
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 text-[13px] font-semibold text-slate-700 shadow-sm active:bg-slate-50"
+            >
+              <Download className="h-4 w-4" aria-hidden /> Descargar
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

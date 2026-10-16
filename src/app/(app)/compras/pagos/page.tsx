@@ -14,6 +14,8 @@ import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
+import { BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { cargarProveedores } from "@/modules/proveedores/cache";
@@ -29,7 +31,8 @@ const TEAL = clienteConfig.color;
 const POR_PAGINA = 50;
 const dia = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("es-PY", { day: "2-digit", month: "short", year: "numeric" });
 const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
-const BUSCADOR = "w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
+const TH = "whitespace-nowrap px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[var(--brand)]";
+const BUSCADOR = "h-11 w-full rounded-xl border border-slate-200 pl-9 pr-3 text-sm outline-none md:h-auto md:py-2.5 transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 
 type Pagando = { id: string; nombre: string; cxp?: string | null };
 
@@ -51,34 +54,35 @@ export default function PagosProveedoresPage() {
   const provSel = proveedores.find((p) => p.id === proveedor);
 
   return (
-    <div className="space-y-6 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Pagos a proveedores</h1>
-          <p className="mt-1 text-sm text-slate-500">Lo que les debés a tus proveedores por compras y gastos a crédito, empezando por lo más urgente.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-xl bg-slate-100 p-1">
-            {(["GS", "USD"] as const).map((m) => (
-              <button key={m} onClick={() => setMoneda(m)} className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${moneda === m ? "bg-white shadow-sm" : "text-slate-500"}`}
-                style={moneda === m ? { color: TEAL } : undefined}>{m === "GS" ? "Guaraníes" : "Dólares"}</button>
-            ))}
+    <div className="space-y-5 pb-10 sm:space-y-6">
+      <EncabezadoPagina
+        titulo="Pagos a proveedores"
+        subtitulo="Lo que les debés a tus proveedores por compras y gastos a crédito, empezando por lo más urgente."
+        acciones={
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex rounded-xl bg-slate-100 p-1" role="group" aria-label="Moneda">
+              {(["GS", "USD"] as const).map((m) => (
+                <button key={m} onClick={() => setMoneda(m)} aria-pressed={moneda === m}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-10 max-sm:flex-1 max-sm:text-sm ${moneda === m ? "bg-white shadow-sm" : "text-slate-500"}`}
+                  style={moneda === m ? { color: TEAL } : undefined}>{m === "GS" ? "Guaraníes" : "Dólares"}</button>
+              ))}
+            </div>
+            {provSel && esAdmin ? (
+              <button onClick={() => setPagando({ id: provSel.id, nombre: nombreProveedor(provSel) })}
+                className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 max-sm:min-h-11" style={{ backgroundColor: TEAL }}>
+                <Banknote className="h-4 w-4 shrink-0" /> <span className="truncate">Registrar pago a {nombreProveedor(provSel)}</span>
+              </button>
+            ) : null}
           </div>
-          {provSel && esAdmin ? (
-            <button onClick={() => setPagando({ id: provSel.id, nombre: nombreProveedor(provSel) })}
-              className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
-              <Banknote className="h-4 w-4" /> Registrar pago a {nombreProveedor(provSel)}
-            </button>
-          ) : null}
-        </div>
-      </header>
+        }
+      />
 
       <Kpis ant={ant} din={din} filtro={tab === "cuentas" ? filtro : ""} onFiltro={(f) => { setFiltro(f); setTab("cuentas"); }} />
 
-      <div className="flex gap-1 border-b border-slate-200">
+      <div className="flex gap-1 border-b border-slate-200" role="tablist">
         {([["cuentas", "Cuentas a pagar"], ["pagos", "Pagos realizados"]] as const).map(([v, l]) => (
-          <button key={v} onClick={() => setTab(v)}
-            className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold transition ${tab === v ? "border-[var(--brand)] text-[var(--brand)]" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+          <button key={v} onClick={() => setTab(v)} role="tab" aria-selected={tab === v}
+            className={`-mb-px border-b-2 px-4 py-2.5 text-sm font-semibold transition max-sm:min-h-11 max-sm:flex-1 max-sm:px-2 ${tab === v ? "border-[var(--brand)] text-[var(--brand)]" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
             {l}
           </button>
         ))}
@@ -118,7 +122,7 @@ function Kpis({ ant, din, filtro, onFiltro }: { ant: AntiguedadPagar | null; din
     <div className="grid gap-3 lg:grid-cols-[1.3fr_1fr_2fr]">
       <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
         <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500"><Wallet className="h-4 w-4" /> A pagar</p>
-        <p className="mt-1 text-3xl font-bold tabular-nums text-slate-900">{din(ant?.total ?? 0)}</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums text-slate-900 [overflow-wrap:anywhere] sm:text-3xl">{din(ant?.total ?? 0)}</p>
         <p className="mt-1 text-xs text-slate-500">
           {ant?.proveedores ?? 0} {ant?.proveedores === 1 ? "proveedor" : "proveedores"}
           {vencido > 0 ? <span className="font-semibold text-rose-600"> · vencido {din(vencido)}</span> : null}
@@ -156,7 +160,7 @@ function AntiguedadSilenciosa({ moneda, recarga, onAntiguedad }: { moneda: Moned
 }
 
 function FiltroProveedor({ proveedor, setProveedor, proveedores }: { proveedor: string; setProveedor: (v: string) => void; proveedores: ProveedorMin[] }) {
-  return <Select value={proveedor} onChange={setProveedor} minWidth={200} options={[["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])]} />;
+  return <Select value={proveedor} onChange={setProveedor} minWidth={200} etiqueta="Proveedor" className="max-md:!min-w-0" options={[["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])]} />;
 }
 
 function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, proveedores, recarga, onAntiguedad, esAdmin, onPagar }: {
@@ -206,95 +210,130 @@ function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, prov
   }
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
-  return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-3">
-        <div className="relative min-w-[240px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por proveedor, RUC, factura o compra…" className={BUSCADOR} />
-        </div>
-        <FiltroProveedor proveedor={proveedor} setProveedor={setProveedor} proveedores={proveedores} />
-        <div className="flex rounded-xl bg-slate-100 p-1">
-          {([["", "Todas"], ["vencidas", "Vencidas"], ["semana", "Vencen esta semana"], ["por_vencer", "Por vencer"]] as const).map(([v, l]) => (
-            <button key={v} onClick={() => { setFiltro(v); setPagina(1); }}
-              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${filtro === v ? "bg-white shadow-sm" : "text-slate-500"}`}
-              style={filtro === v ? { color: TEAL } : undefined}>{l}</button>
-          ))}
-        </div>
-        <button onClick={exportar} disabled={exportando || total === 0} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
-          {exportando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />} Excel
+  const filtrosActivos = (proveedor ? 1 : 0) + (filtro ? 1 : 0);
+
+  // Tabla en ≥ 768 px; en celular cada factura es una tarjeta (proveedor, factura, saldo, estado y "Pagar").
+  const columnas: ColumnaTabla<CuentaPagar>[] = [
+    {
+      key: "proveedor", titulo: "Proveedor", movil: "titulo", claseTh: "pl-5", claseTd: "min-w-48 pl-5",
+      celda: (r) => (
+        <>
+          <p className="font-bold text-slate-900">{r.proveedor_nombre}</p>
+          <p className="text-[11px] text-slate-500">
+            {r.proveedor_ruc ? <span className="font-mono">RUC {r.proveedor_ruc}</span> : "sin RUC"}
+            {esAdmin ? (
+              <button onClick={() => onPagar({ id: r.proveedor_id, nombre: r.proveedor_nombre })} className="ml-2 font-semibold text-[var(--brand)] hover:underline">Registrar pago</button>
+            ) : null}
+          </p>
+        </>
+      ),
+      celdaMovil: (r) => r.proveedor_nombre,
+    },
+    { key: "ruc", titulo: "RUC", movil: "detalle", claseTh: "hidden", claseTd: "hidden", celda: (r) => (r.proveedor_ruc ? <span className="font-mono">{r.proveedor_ruc}</span> : "sin RUC") },
+    {
+      key: "factura", titulo: "Factura", movil: "subtitulo", claseTd: "whitespace-nowrap font-mono text-xs font-semibold text-slate-800",
+      celda: (r) => r.numero, celdaMovil: (r) => <>Factura <span className="font-mono text-xs">{r.numero}</span></>,
+    },
+    { key: "compra", titulo: "Compra / gasto", movil: "dato", celda: (r) => <Link href={hrefOrigenCxp(r)} className="inline-flex items-center font-mono text-xs font-semibold text-[var(--brand)] hover:underline max-md:min-h-9">{r.compra_numero}</Link> },
+    { key: "emision", titulo: "Emisión", movil: "detalle", claseTd: "whitespace-nowrap text-xs text-slate-600", celda: (r) => dia(r.fecha_emision) },
+    {
+      key: "vencimiento", titulo: "Vencimiento", movil: "dato", claseTd: "whitespace-nowrap text-xs",
+      celda: (r) => {
+        const v = textoVencimiento(r.dias_atraso, r.dias_para_vencer);
+        return (
+          <>
+            <span className="text-slate-700">{dia(r.vencimiento)}</span>
+            <span className={`block text-[11px] ${v.c}`}>{v.t}</span>
+          </>
+        );
+      },
+    },
+    { key: "monto", titulo: "Monto", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-slate-600", celda: (r) => din(r.monto) },
+    { key: "pagado", titulo: "Pagado", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-emerald-700", celda: (r) => (Number(r.pagado) ? din(r.pagado) : "—") },
+    { key: "saldo", titulo: "Saldo", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-bold tabular-nums text-slate-900", celda: (r) => din(r.saldo) },
+    {
+      key: "estado", titulo: "Estado", movil: "chip",
+      celda: (r) => {
+        const est = r.dias_atraso > 0 ? { t: "Vencida", c: "bg-rose-50 text-rose-700" } : ESTADO_CXP[r.estado] ?? ESTADO_CXP.pendiente;
+        return <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${est.c}`}>{est.t}</span>;
+      },
+    },
+    {
+      key: "acciones", titulo: "", movil: esAdmin ? "acciones" : "oculto", claseTh: "w-px pr-5", claseTd: "pr-5",
+      celda: (r) => esAdmin ? (
+        <button onClick={() => onPagar({ id: r.proveedor_id, nombre: r.proveedor_nombre, cxp: r.id })}
+          className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95" style={{ backgroundColor: TEAL }}>
+          <Banknote className="h-3.5 w-3.5" /> Pagar
         </button>
-        <p className="text-xs text-slate-500">{total} {total === 1 ? "factura" : "facturas"} · {din(totalSaldo)}</p>
+      ) : null,
+      celdaMovil: (r) => (
+        <>
+          <button onClick={() => onPagar({ id: r.proveedor_id, nombre: r.proveedor_nombre })} className="whitespace-nowrap rounded-lg px-3 text-[13px] font-semibold text-[var(--brand)]" title="Registrar un pago a este proveedor (una o varias facturas)">Pagar varias</button>
+          <button onClick={() => onPagar({ id: r.proveedor_id, nombre: r.proveedor_nombre, cxp: r.id })}
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>
+            <Banknote className="h-4 w-4" /> Pagar
+          </button>
+        </>
+      ),
+    },
+  ];
+
+  const contador = <p className="text-xs text-slate-500">{total} {total === 1 ? "factura" : "facturas"} · {din(totalSaldo)}</p>;
+  const botonExcel = (
+    <button onClick={exportar} disabled={exportando || total === 0} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 max-md:min-h-11">
+      {exportando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />} Excel
+    </button>
+  );
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-100 px-3 py-3 sm:px-5">
+        <BarraFiltros
+          plano
+          activos={filtrosActivos}
+          onLimpiar={() => { setProveedor(""); setFiltro(""); setPagina(1); }}
+          busqueda={
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input type="search" value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por proveedor, RUC, factura o compra…"
+                aria-label="Buscar cuentas a pagar" enterKeyHint="search" className={BUSCADOR} />
+            </div>
+          }
+          extra={<div className="flex items-center gap-2 max-md:hidden">{botonExcel}{contador}</div>}
+        >
+          <FiltroProveedor proveedor={proveedor} setProveedor={setProveedor} proveedores={proveedores} />
+          <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 md:flex" role="group" aria-label="Vencimiento">
+            {([["", "Todas"], ["vencidas", "Vencidas"], ["semana", "Vencen esta semana"], ["por_vencer", "Por vencer"]] as const).map(([v, l]) => (
+              <button key={v} onClick={() => { setFiltro(v); setPagina(1); }} aria-pressed={filtro === v}
+                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition max-md:min-h-11 max-md:text-sm ${filtro === v ? "bg-white shadow-sm" : "text-slate-500"}`}
+                style={filtro === v ? { color: TEAL } : undefined}>{l}</button>
+            ))}
+          </div>
+        </BarraFiltros>
+        <div className="mt-2 flex items-center justify-between gap-2 md:hidden">{contador}{botonExcel}</div>
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[1040px] text-left text-sm">
-          <thead>
-            <tr className="border-b-2 text-[11px] font-bold uppercase tracking-wider" style={{ borderColor: `${TEAL}26`, backgroundColor: `${TEAL}0d`, color: TEAL }}>
-              <th className="px-5 py-3">Proveedor</th>
-              <th className="px-3 py-3">Factura</th>
-              <th className="px-3 py-3">Compra / gasto</th>
-              <th className="px-3 py-3">Emisión</th>
-              <th className="px-3 py-3">Vencimiento</th>
-              <th className="px-3 py-3 text-right">Monto</th>
-              <th className="px-3 py-3 text-right">Pagado</th>
-              <th className="px-3 py-3 text-right">Saldo</th>
-              <th className="px-3 py-3">Estado</th>
-              <th className="w-px px-5 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {cargando && rows.length === 0 ? (
-              <tr><td colSpan={10} className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</td></tr>
-            ) : rows.length === 0 ? (
-              <tr>
-                <td colSpan={10} className="px-5 py-16 text-center">
-                  <Banknote className="mx-auto h-8 w-8 text-slate-300" />
-                  <p className="mt-3 text-sm font-medium text-slate-700">{q || filtro || proveedor ? "Ninguna factura coincide" : `No le debés nada a ningún proveedor${moneda === "USD" ? " en dólares" : ""}`}</p>
-                  <p className="mt-1 text-xs text-slate-500">Las compras y los gastos a crédito aparecen acá hasta que los pagues.</p>
-                </td>
-              </tr>
-            ) : (
-              rows.map((r) => {
-                const v = textoVencimiento(r.dias_atraso, r.dias_para_vencer);
-                const est = r.dias_atraso > 0 ? { t: "Vencida", c: "bg-rose-50 text-rose-700" } : ESTADO_CXP[r.estado] ?? ESTADO_CXP.pendiente;
-                return (
-                  <tr key={r.id} className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
-                    <td className="px-5 py-3">
-                      <p className="font-bold text-slate-900">{r.proveedor_nombre}</p>
-                      <p className="text-[11px] text-slate-500">
-                        {r.proveedor_ruc ? <span className="font-mono">RUC {r.proveedor_ruc}</span> : "sin RUC"}
-                        {esAdmin ? (
-                          <button onClick={() => onPagar({ id: r.proveedor_id, nombre: r.proveedor_nombre })} className="ml-2 font-semibold text-[var(--brand)] hover:underline">Registrar pago</button>
-                        ) : null}
-                      </p>
-                    </td>
-                    <td className="px-3 py-3 font-mono text-xs font-semibold text-slate-800">{r.numero}</td>
-                    <td className="px-3 py-3"><Link href={hrefOrigenCxp(r)} className="font-mono text-xs font-semibold text-[var(--brand)] hover:underline">{r.compra_numero}</Link></td>
-                    <td className="px-3 py-3 text-xs text-slate-600">{dia(r.fecha_emision)}</td>
-                    <td className="px-3 py-3 text-xs">
-                      <span className="text-slate-700">{dia(r.vencimiento)}</span>
-                      <span className={`block text-[11px] ${v.c}`}>{v.t}</span>
-                    </td>
-                    <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-slate-600">{din(r.monto)}</td>
-                    <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-emerald-700">{Number(r.pagado) ? din(r.pagado) : "—"}</td>
-                    <td className="whitespace-nowrap px-3 py-3 text-right font-bold tabular-nums text-slate-900">{din(r.saldo)}</td>
-                    <td className="px-3 py-3"><span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${est.c}`}>{est.t}</span></td>
-                    <td className="px-5 py-3">
-                      {esAdmin ? (
-                        <button onClick={() => onPagar({ id: r.proveedor_id, nombre: r.proveedor_nombre, cxp: r.id })}
-                          className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95" style={{ backgroundColor: TEAL }}>
-                          <Banknote className="h-3.5 w-3.5" /> Pagar
-                        </button>
-                      ) : null}
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      {cargando && rows.length === 0 ? (
+        <p className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</p>
+      ) : rows.length === 0 ? (
+        <div className="px-5 py-16 text-center">
+          <Banknote className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-3 text-sm font-medium text-slate-700">{q || filtro || proveedor ? "Ninguna factura coincide" : `No le debés nada a ningún proveedor${moneda === "USD" ? " en dólares" : ""}`}</p>
+          <p className="mt-1 text-xs text-slate-500">Las compras y los gastos a crédito aparecen acá hasta que los pagues.</p>
+        </div>
+      ) : (
+        <TablaTarjetas
+          filas={rows}
+          columnas={columnas}
+          claveFila={(r) => r.id}
+          cargando={cargando}
+          minAncho={1040}
+          claseTabla="w-full text-left text-sm"
+          claseThead="border-b-2 border-[var(--brand)]/15 bg-[var(--brand)]/5"
+          thBase={TH}
+          tdBase="px-3 py-3"
+        />
+      )}
       <Paginador pagina={pagina} totalPaginas={totalPaginas} total={total} porPagina={POR_PAGINA} setPagina={setPagina} />
     </section>
   );
@@ -337,71 +376,107 @@ function TablaPagos({ moneda, proveedor, setProveedor, proveedores, recarga, esA
   }, [moneda, q, proveedor, anulados, pagina, recarga, recargaLocal]);
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR));
-  return (
-    <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 px-5 py-3">
-        <div className="relative min-w-[240px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por número de orden (OP-…) o proveedor…" className={BUSCADOR} />
+  const contador = <p className="text-xs text-slate-500">{total} {total === 1 ? "orden de pago" : "órdenes de pago"}</p>;
+  const medios = (p: PagoProveedor) => (p.medios ?? []).map((m) => `${nombreMetodoPago(m.metodo)}${m.referencia ? ` (${m.referencia})` : ""}`).join(" + ");
+
+  // Tabla en ≥ 768 px; en celular cada orden de pago es una tarjeta (tocarla abre el detalle).
+  const columnas: ColumnaTabla<PagoProveedor>[] = [
+    {
+      key: "numero", titulo: "Número", movil: "subtitulo", claseTh: "pl-5", claseTd: "whitespace-nowrap pl-5",
+      celda: (p) => {
+        const anulado = !!p.anulado_at;
+        return (
+          <>
+            <button onClick={() => setViendo(p.id)} className={`font-mono text-xs font-semibold hover:text-[var(--brand)] ${anulado ? "text-slate-400 line-through" : "text-slate-800"}`}>{p.numero}</button>
+            {anulado ? <span className="ml-2 rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600">Anulada</span> : null}
+          </>
+        );
+      },
+      celdaMovil: (p) => <><span className={`font-mono text-xs ${p.anulado_at ? "line-through" : ""}`}>{p.numero}</span> · {fechaHora(p.fecha)}</>,
+    },
+    { key: "proveedor", titulo: "Proveedor", movil: "titulo", claseTd: "font-semibold text-slate-800", celda: (p) => p.proveedor_nombre },
+    { key: "fecha", titulo: "Fecha", movil: "oculto", claseTd: "whitespace-nowrap text-xs text-slate-600", celda: (p) => fechaHora(p.fecha) },
+    {
+      key: "medios", titulo: "Medios", movil: "dato", claseTd: "text-xs text-slate-600",
+      celda: (p) => (
+        <>
+          {medios(p)}
+          {p.anulado_at && p.anulado_motivo ? <span className="block text-[11px] text-rose-600">anulada: {p.anulado_motivo}</span> : null}
+        </>
+      ),
+    },
+    { key: "anulada", titulo: "Estado", movil: "chip", claseTh: "hidden", claseTd: "hidden", celda: (p) => (p.anulado_at ? <span className="rounded-full bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-600">Anulada</span> : null) },
+    {
+      key: "total", titulo: "Total", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-bold tabular-nums",
+      celda: (p) => <span className={p.anulado_at ? "text-slate-400 line-through" : "text-slate-900"}>{din(p.total)}</span>,
+    },
+    { key: "usuario", titulo: "Usuario", movil: "dato", claseTd: "text-xs text-slate-600", celda: (p) => p.usuario_nombre ?? "—" },
+    {
+      key: "acciones", titulo: "", movil: "acciones", claseTh: "w-px pr-5", claseTd: "pr-5",
+      celda: (p) => (
+        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+          <button onClick={() => setViendo(p.id)} title="Ver" className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"><Eye className="h-3.5 w-3.5" /> Ver</button>
+          <button onClick={() => imprimirOrdenPago(p.id, p.numero).catch(() => {})} title="Orden de pago en PDF" className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"><Printer className="h-3.5 w-3.5" /> PDF</button>
+          {!p.anulado_at && esAdmin ? (
+            <button onClick={() => setAnulando(p)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Ban className="h-3.5 w-3.5" /> Anular</button>
+          ) : null}
         </div>
-        <FiltroProveedor proveedor={proveedor} setProveedor={setProveedor} proveedores={proveedores} />
-        <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
-          <input type="checkbox" checked={anulados} onChange={(e) => setAnulados(e.target.checked)} className="h-4 w-4 accent-[var(--brand)]" />
-          Ver también las anuladas
-        </label>
-        <p className="text-xs text-slate-500">{total} {total === 1 ? "orden de pago" : "órdenes de pago"}</p>
+      ),
+      celdaMovil: (p) => (
+        <>
+          <button onClick={() => imprimirOrdenPago(p.id, p.numero).catch(() => {})} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 text-[13px] font-medium text-slate-600"><Printer className="h-4 w-4" /> PDF</button>
+          {!p.anulado_at && esAdmin ? (
+            <button onClick={() => setAnulando(p)} className="inline-flex items-center gap-1.5 rounded-lg px-3 text-[13px] font-medium text-rose-600"><Ban className="h-4 w-4" /> Anular</button>
+          ) : null}
+        </>
+      ),
+    },
+  ];
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-100 px-3 py-3 sm:px-5">
+        <BarraFiltros
+          plano
+          activos={(proveedor ? 1 : 0) + (anulados ? 1 : 0)}
+          onLimpiar={() => { setProveedor(""); setAnulados(false); }}
+          busqueda={
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input type="search" value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por número de orden (OP-…) o proveedor…"
+                aria-label="Buscar órdenes de pago" enterKeyHint="search" className={BUSCADOR} />
+            </div>
+          }
+          extra={<div className="max-md:hidden">{contador}</div>}
+        >
+          <FiltroProveedor proveedor={proveedor} setProveedor={setProveedor} proveedores={proveedores} />
+          <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600 max-md:min-h-11 max-md:text-sm">
+            <input type="checkbox" checked={anulados} onChange={(e) => setAnulados(e.target.checked)} className="h-4 w-4 accent-[var(--brand)] max-md:h-5 max-md:w-5" />
+            Ver también las anuladas
+          </label>
+        </BarraFiltros>
+        <div className="mt-2 md:hidden">{contador}</div>
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[960px] text-left text-sm">
-          <thead>
-            <tr className="border-b-2 text-[11px] font-bold uppercase tracking-wider" style={{ borderColor: `${TEAL}26`, backgroundColor: `${TEAL}0d`, color: TEAL }}>
-              <th className="px-5 py-3">Número</th>
-              <th className="px-3 py-3">Proveedor</th>
-              <th className="px-3 py-3">Fecha</th>
-              <th className="px-3 py-3">Medios</th>
-              <th className="px-3 py-3 text-right">Total</th>
-              <th className="px-3 py-3">Usuario</th>
-              <th className="w-px px-5 py-3" />
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {cargando && rows.length === 0 ? (
-              <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</td></tr>
-            ) : rows.length === 0 ? (
-              <tr><td colSpan={7} className="px-5 py-16 text-center text-sm text-slate-400">{q || proveedor ? "Ninguna orden de pago coincide." : "Todavía no registraste pagos a proveedores."}</td></tr>
-            ) : (
-              rows.map((p) => {
-                const anulado = !!p.anulado_at;
-                return (
-                  <tr key={p.id} className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""} ${anulado ? "opacity-60" : ""}`}>
-                    <td className="px-5 py-3">
-                      <button onClick={() => setViendo(p.id)} className={`font-mono text-xs font-semibold hover:text-[var(--brand)] ${anulado ? "text-slate-400 line-through" : "text-slate-800"}`}>{p.numero}</button>
-                      {anulado ? <span className="ml-2 rounded-full bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-600">Anulada</span> : null}
-                    </td>
-                    <td className="px-3 py-3 font-semibold text-slate-800">{p.proveedor_nombre}</td>
-                    <td className="whitespace-nowrap px-3 py-3 text-xs text-slate-600">{fechaHora(p.fecha)}</td>
-                    <td className="px-3 py-3 text-xs text-slate-600">
-                      {(p.medios ?? []).map((m) => `${nombreMetodoPago(m.metodo)}${m.referencia ? ` (${m.referencia})` : ""}`).join(" + ")}
-                      {anulado && p.anulado_motivo ? <span className="block text-[11px] text-rose-600">anulada: {p.anulado_motivo}</span> : null}
-                    </td>
-                    <td className={`whitespace-nowrap px-3 py-3 text-right font-bold tabular-nums ${anulado ? "text-slate-400 line-through" : "text-slate-900"}`}>{din(p.total)}</td>
-                    <td className="px-3 py-3 text-xs text-slate-600">{p.usuario_nombre ?? "—"}</td>
-                    <td className="px-5 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setViendo(p.id)} title="Ver" className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"><Eye className="h-3.5 w-3.5" /> Ver</button>
-                        <button onClick={() => imprimirOrdenPago(p.id, p.numero).catch(() => {})} title="Orden de pago en PDF" className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"><Printer className="h-3.5 w-3.5" /> PDF</button>
-                        {!anulado && esAdmin ? (
-                          <button onClick={() => setAnulando(p)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Ban className="h-3.5 w-3.5" /> Anular</button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+
+      {cargando && rows.length === 0 ? (
+        <p className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</p>
+      ) : rows.length === 0 ? (
+        <p className="px-5 py-16 text-center text-sm text-slate-400">{q || proveedor ? "Ninguna orden de pago coincide." : "Todavía no registraste pagos a proveedores."}</p>
+      ) : (
+        <TablaTarjetas
+          filas={rows}
+          columnas={columnas}
+          claveFila={(p) => p.id}
+          onFila={(p) => setViendo(p.id)}
+          cargando={cargando}
+          claseFila={(p) => (p.anulado_at ? "opacity-60" : "")}
+          minAncho={960}
+          claseTabla="w-full text-left text-sm"
+          claseThead="border-b-2 border-[var(--brand)]/15 bg-[var(--brand)]/5"
+          thBase={TH}
+          tdBase="px-3 py-3"
+        />
+      )}
       <Paginador pagina={pagina} totalPaginas={totalPaginas} total={total} porPagina={POR} setPagina={setPagina} />
 
       {viendo ? <DetallePago id={viendo} puedeAnular={esAdmin} onClose={() => setViendo(null)} onAnular={(p) => { setViendo(null); setAnulando(p); }} /> : null}
@@ -415,11 +490,11 @@ function TablaPagos({ moneda, proveedor, setProveedor, proveedores, recarga, esA
 function Paginador({ pagina, totalPaginas, total, porPagina, setPagina }: { pagina: number; totalPaginas: number; total: number; porPagina: number; setPagina: (f: (p: number) => number) => void }) {
   if (total <= porPagina) return null;
   return (
-    <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
-      <span>Página {pagina} de {totalPaginas}</span>
+    <div className="flex flex-col gap-2 border-t border-slate-100 px-3 py-3 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+      <span className="text-center sm:text-left">Página {pagina} de {totalPaginas}</span>
       <div className="flex gap-2">
-        <button disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">Anterior</button>
-        <button disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">Siguiente</button>
+        <button disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40 max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">Anterior</button>
+        <button disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40 max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">Siguiente</button>
       </div>
     </div>
   );

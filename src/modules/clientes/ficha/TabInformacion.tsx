@@ -218,10 +218,10 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
       {/* Vista de lectura: tarjetas compactas; para cambiar algo se abre el modal. */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-slate-500">Datos del cliente. Para cambiarlos usá <b className="font-semibold text-slate-700">Editar información</b>.</p>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
           {guardado ? <span className="text-xs font-medium text-emerald-600">Cambios guardados</span> : null}
           <button type="button" onClick={abrir} onMouseEnter={cargarCatalogos} onFocus={cargarCatalogos}
-            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl sm:min-h-0 sm:w-auto px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95"
             style={{ backgroundColor: TEAL }}>
             <Pencil className="h-4 w-4" /> Editar información
           </button>
@@ -270,14 +270,14 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
             className={`relative flex w-full max-w-4xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15`}
             style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
             <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-6 pb-5 pt-6">
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <span aria-hidden="true" className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
                   <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4FAEB2]">Editar</p>
                 </div>
-                <h2 id="cli-info-titulo" className="mt-1 truncate text-2xl font-semibold tracking-tight text-slate-900">{cliente.nombre}</h2>
-                <p className="mt-1 text-sm text-slate-500">Todos los datos del cliente. La Actividad registra cada cambio.</p>
+                <h2 id="cli-info-titulo" className="mt-1 truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{cliente.nombre}</h2>
+                <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">Todos los datos del cliente. La Actividad registra cada cambio.</p>
               </div>
               <button type="button" onClick={() => setAbierto(false)} disabled={busy} aria-label="Cerrar"
                 className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
@@ -285,9 +285,9 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
               </button>
             </div>
 
-            <form id="cli-info-form" onSubmit={guardar} className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-slate-50/50 px-6 py-5">
+            <form id="cli-info-form" onSubmit={guardar} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-slate-50/50 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-5">
       {/* Identificación */}
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <SectionTitle>Datos de identificación</SectionTitle>
         <div>
           <span className={LABEL}>Tipo de cliente</span>
@@ -305,15 +305,15 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         <div>
           <span className={LABEL}>Categoría</span>
           <div className="flex items-center gap-2">
-            <div className="flex-1"><Select value={f.categoria_id} onChange={(v) => set("categoria_id", v)} block options={opcionesCat} /></div>
+            <div className="min-w-0 flex-1"><Select value={f.categoria_id} onChange={(v) => set("categoria_id", v)} block options={opcionesCat} etiqueta="Categoría" /></div>
             {esAdmin && nuevaCat === null ? (
-              <button type="button" onClick={() => setNuevaCat("")} className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
+              <button type="button" onClick={() => setNuevaCat("")} className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-lg sm:min-h-0 border border-slate-200 px-2.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50">
                 <Plus className="h-3.5 w-3.5" /> Nueva
               </button>
             ) : null}
           </div>
           {nuevaCat !== null ? (
-            <div className="mt-2 flex items-center gap-2">
+            <div className="mt-2 flex flex-wrap items-center gap-2 sm:flex-nowrap max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1">
               <input autoFocus value={nuevaCat} onChange={(e) => setNuevaCat(e.target.value)} maxLength={60} placeholder="Nombre de la categoría"
                 onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void crearCategoria(); } if (e.key === "Escape") setNuevaCat(null); }}
                 className={INPUT} />
@@ -349,7 +349,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
       </section>
 
       {/* Contacto */}
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <SectionTitle>Contacto</SectionTitle>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo label="Email"><input type="email" {...inp("email")} maxLength={120} className={INPUT} /></Campo>
@@ -362,7 +362,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         </div>
 
         <details className="rounded-xl border border-slate-200 bg-slate-50/40 open:bg-white" open={!!(cliente.sifen_naturaleza || cliente.sifen_ti_ope || cliente.sifen_extranjero || cliente.sifen_tipo_documento) || undefined}>
-          <summary className="cursor-pointer select-none px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
+          <summary className="min-h-11 cursor-pointer select-none px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
             Datos SIFEN del receptor (avanzado)
           </summary>
           <div className="space-y-4 border-t border-slate-100 px-4 pb-4 pt-3">
@@ -371,15 +371,15 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
             </p>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Campo label="Naturaleza del receptor">
-                <Select value={f.sifen_naturaleza} onChange={(v) => set("sifen_naturaleza", v)} block
+                <Select value={f.sifen_naturaleza} onChange={(v) => set("sifen_naturaleza", v)} block etiqueta="Naturaleza del receptor"
                   options={[["", "— Automática —"], ["contribuyente", "Contribuyente (tiene RUC)"], ["no_contribuyente", "No contribuyente"]]} />
               </Campo>
               <Campo label="Tipo de operación">
-                <Select value={f.sifen_ti_ope} onChange={(v) => set("sifen_ti_ope", v)} block
+                <Select value={f.sifen_ti_ope} onChange={(v) => set("sifen_ti_ope", v)} block etiqueta="Tipo de operación"
                   options={[["", "— Automática —"], ["B2B", "B2B (a empresa)"], ["B2C", "B2C (a consumidor)"], ["B2G", "B2G (al Estado)"], ["B2F", "B2F (con el exterior)"]]} />
               </Campo>
             </div>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-800">
+            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-slate-800 sm:min-h-0">
               <input type="checkbox" checked={f.sifen_extranjero} onChange={(e) => set("sifen_extranjero", e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]" />
               Receptor extranjero
             </label>
@@ -391,7 +391,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
             ) : null}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Campo label="Tipo de documento">
-                <Select value={f.sifen_tipo_documento} onChange={(v) => set("sifen_tipo_documento", v)} block
+                <Select value={f.sifen_tipo_documento} onChange={(v) => set("sifen_tipo_documento", v)} block etiqueta="Tipo de documento"
                   options={[["", "— Según naturaleza —"], ["cedula", "Cédula paraguaya"], ["pasaporte", "Pasaporte"], ["carnet_extranjero", "Cédula / carnet extranjero"], ["otro", "Otro"]]} />
               </Campo>
               <Campo label="Número de documento"><input {...inp("sifen_num_id")} maxLength={40} placeholder="Si está vacío, se usa el del cliente" className={INPUT} /></Campo>
@@ -412,11 +412,11 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
       </section>
 
       {/* Comercial */}
-      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
         <SectionTitle>Datos comerciales</SectionTitle>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo label="Condición de pago">
-            <Select value={f.condicion_pago} onChange={(v) => set("condicion_pago", v as Form["condicion_pago"])} block options={[["CONTADO", "Contado"], ["CREDITO", "Crédito (cuenta corriente)"]]} />
+            <Select value={f.condicion_pago} onChange={(v) => set("condicion_pago", v as Form["condicion_pago"])} block etiqueta="Condición de pago" options={[["CONTADO", "Contado"], ["CREDITO", "Crédito (cuenta corriente)"]]} />
           </Campo>
           <Campo label={`Valor anual estimado (${f.moneda_preferida === "USD" ? "US$" : "Gs."})`}>
             <MontoInput value={f.valor_anual || ""} onChange={(n) => set("valor_anual", n)} decimals={f.moneda_preferida === "USD"} className={`${INPUT} text-right tabular-nums`} />
@@ -435,13 +435,13 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         ) : null}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Campo label="Moneda">
-            <Select value={f.moneda_preferida} onChange={(v) => set("moneda_preferida", v as Form["moneda_preferida"])} block options={[["GS", "Guaraníes (Gs.)"], ["USD", "Dólares (US$)"]]} />
+            <Select value={f.moneda_preferida} onChange={(v) => set("moneda_preferida", v as Form["moneda_preferida"])} block etiqueta="Moneda" options={[["GS", "Guaraníes (Gs.)"], ["USD", "Dólares (US$)"]]} />
           </Campo>
         </div>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <span className={LABEL}>Vendedor responsable (usuario del sistema)</span>
-            <Select value={f.vendedor_usuario_id} onChange={(v) => set("vendedor_usuario_id", v)} block
+            <Select value={f.vendedor_usuario_id} onChange={(v) => set("vendedor_usuario_id", v)} block etiqueta="Vendedor responsable"
               options={[["", "— Sin asignar —"], ...(usuarios ?? []).map((u) => [u.id, u.nombre] as [string, string])]} />
             {errorUsuarios ? <p className="mt-1 text-xs text-rose-600">{errorUsuarios}</p>
               : usuarios && usuarios.length === 0 ? <p className="mt-1 text-xs text-slate-500">No hay usuarios activos para asignar.</p> : null}
@@ -451,7 +451,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <span className={LABEL}>Estado</span>
-            <Select value={f.activo ? "activo" : "inactivo"} onChange={(v) => set("activo", v === "activo")} block options={[["activo", "Activo"], ["inactivo", "Inactivo"]]} />
+            <Select value={f.activo ? "activo" : "inactivo"} onChange={(v) => set("activo", v === "activo")} block etiqueta="Estado" options={[["activo", "Activo"], ["inactivo", "Inactivo"]]} />
             {cliente.baja_at && f.activo ? <p className="mt-1 text-[11px] text-amber-700">Al guardar se levanta la baja y vuelve a ser cliente activo.</p> : null}
           </div>
         </div>
@@ -465,7 +465,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
       ) : null}
             </form>
 
-            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-white px-6 py-4">
+            <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-white px-4 py-3 sm:px-6 sm:py-4 max-sm:[&>button]:flex-1 max-sm:[&>button]:justify-center">
               <button type="button" onClick={() => setAbierto(false)} disabled={busy}
                 className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
                 Cancelar
@@ -486,11 +486,11 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
 function Tarjeta({ titulo, icono: Icono, children, ancho = false }: { titulo: string; icono: React.ComponentType<{ className?: string }>; children: React.ReactNode; ancho?: boolean }) {
   return (
     <section className={`h-full rounded-2xl border border-slate-200 bg-white shadow-sm ${ancho ? "lg:col-span-2" : ""}`}>
-      <div className="flex items-center gap-2.5 border-b border-slate-100 px-5 py-3.5">
+      <div className="flex items-center gap-2.5 border-b border-slate-100 px-4 py-3 sm:px-5 sm:py-3.5">
         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#4FAEB2]/12 text-[#3F8E91]"><Icono className="h-3.5 w-3.5" /></span>
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">{titulo}</h3>
       </div>
-      <dl className={`grid grid-cols-1 gap-x-6 gap-y-3.5 px-5 py-4 sm:grid-cols-2 ${ancho ? "lg:grid-cols-4" : ""}`}>{children}</dl>
+      <dl className={`grid grid-cols-1 gap-x-6 gap-y-3 px-4 py-3.5 sm:grid-cols-2 sm:gap-y-3.5 sm:px-5 sm:py-4 ${ancho ? "lg:grid-cols-4" : ""}`}>{children}</dl>
     </section>
   );
 }

@@ -160,7 +160,7 @@ export default function CitaDetalleModal({
         <div className="shrink-0">
         <div aria-hidden="true" className={`h-1 ${est.dot}`} />
         <Spotlight color="rgba(79, 174, 178, 0.14)">
-          <div className="flex items-start gap-3 border-b border-slate-100 px-5 py-4">
+          <div className="flex items-start gap-3 border-b border-slate-100 py-3 pl-4 pr-2 sm:px-5 sm:py-4">
             <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${est.chip}`}>
@@ -185,7 +185,7 @@ export default function CitaDetalleModal({
         </Spotlight>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
           {/* Fecha y hora: hoja de calendario con el día + rango grande con la duración. */}
           <div className="flex items-center gap-4 rounded-2xl border border-[#4FAEB2]/25 bg-gradient-to-br from-[#4FAEB2]/[0.07] via-white to-white p-3.5">
             <div className="flex w-14 shrink-0 flex-col overflow-hidden rounded-xl border border-[#4FAEB2]/30 bg-white text-center shadow-sm">
@@ -303,7 +303,7 @@ export default function CitaDetalleModal({
 
         {/* Acciones con jerarquía: la de avance va llena, el resto en contorno, y "Cancelar"
             queda separada a la izquierda porque es la destructiva. */}
-        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3.5">
+        <div className="flex shrink-0 flex-wrap items-center gap-2 border-t border-slate-100 bg-slate-50/60 px-4 py-3 sm:px-5 sm:py-3.5">
           {terminal ? (
             <span className="flex items-center gap-2 text-xs text-slate-500">
               <Lock className="h-3.5 w-3.5 shrink-0 text-slate-400" aria-hidden="true" />
@@ -321,7 +321,7 @@ export default function CitaDetalleModal({
               >
                 Cancelar cita
               </button>
-              <div className="ml-auto flex flex-wrap items-center gap-2">
+              <div className="ml-auto flex flex-wrap items-center gap-2 max-sm:order-first max-sm:ml-0 max-sm:grid max-sm:w-full max-sm:grid-cols-2">
                 <BtnSec disabled={busy} onClick={() => onEditar(cita)}>
                   Editar
                 </BtnSec>

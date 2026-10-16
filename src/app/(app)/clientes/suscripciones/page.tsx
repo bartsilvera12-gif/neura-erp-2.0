@@ -8,14 +8,18 @@
  * siempre con confirmación (nunca se emite nada solo). Pestaña "Planes": alta y edición.
  */
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CalendarClock, ChevronLeft, ChevronRight, Loader2, Repeat, Search } from "lucide-react";
+import { AccionesPagina, BarraFiltros, EncabezadoPagina, GrillaKpis } from "@/components/EncabezadoPagina";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
+import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
-import { CodigoChip, TEAL, codigoCliente } from "@/modules/clientes/ui";
+import { CodigoChip, PIE_MODAL, TEAL, codigoCliente } from "@/modules/clientes/ui";
 import type { FilaSuscripcion, KpisSuscripciones, ListadoSuscripciones, ResultadoEmitirMes } from "@/modules/clientes/suscripciones/tipos";
 import { BadgeSuscripcion, mesActual, monto, nombreMes, sumarMes } from "@/modules/clientes/suscripciones/ui";
 import { PanelPlanes } from "@/modules/clientes/suscripciones/PanelPlanes";
@@ -28,6 +32,8 @@ const precioDelMes = (r: FilaSuscripcion, periodo: string) =>
 
 export default function SuscripcionesPage() {
   const me = useUsuario();
+  const router = useRouter();
+  const vistaTarjetas = useVistaTarjetas();
   const esAdmin = me?.rol === "ADMIN";
   const puedeEmitir = me?.rol === "ADMIN" || me?.rol === "VENDEDOR";
   const [vista, setVista] = useState<Vista>("suscripciones");
@@ -134,91 +140,145 @@ export default function SuscripcionesPage() {
   const futuro = periodo > actual;
   const hayFiltros = !!(q || borrador || estado);
 
+  // Navegador de mes: en celular va en su propia fila (siempre a la vista); en tablet /
+  // escritorio, dentro de la barra de filtros.
+  const selectorMes = (
+    <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm max-md:flex-1">
+        <button type="button" onClick={() => setPeriodo((p) => sumarMes(p, -1))} aria-label="Mes anterior"
+          className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:bg-slate-100 max-md:h-10 max-md:w-10"><ChevronLeft className="h-4 w-4" /></button>
+        <span className="min-w-[8.5rem] flex-1 text-center text-xs font-semibold text-slate-800 max-md:text-sm">{nombreMes(periodo)}</span>
+        <button type="button" onClick={() => setPeriodo((p) => sumarMes(p, 1))} aria-label="Mes siguiente"
+          className="inline-flex items-center justify-center rounded-md p-1.5 text-slate-500 hover:bg-slate-100 max-md:h-10 max-md:w-10"><ChevronRight className="h-4 w-4" /></button>
+      </div>
+      {periodo !== actual ? (
+        <button type="button" onClick={() => setPeriodo(actual)} className="shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold hover:bg-slate-100 max-md:min-h-11 max-md:text-xs" style={{ color: TEAL }}>Este mes</button>
+      ) : null}
+    </div>
+  );
+
+  const columnas: ColumnaTabla<FilaSuscripcion>[] = [
+    {
+      key: "cliente", titulo: "Cliente", movil: "titulo",
+      celda: (r) => (
+        <div className="flex min-w-48 items-center gap-2">
+          <CodigoChip codigo={codigoCliente({ id: r.cliente_id, codigo: r.cliente_codigo })} />
+          <Link href={`/clientes/${r.cliente_id}`} className="truncate font-semibold text-slate-900 hover:underline">{r.cliente_nombre}</Link>
+        </div>
+      ),
+      celdaMovil: (r) => r.cliente_nombre,
+    },
+    {
+      key: "plan", titulo: "Plan", movil: "subtitulo", claseTd: "md:min-w-[14rem]",
+      celda: (r) => (
+        <>
+          <p className="font-medium text-slate-800 max-md:inline max-md:font-normal max-md:text-slate-500">{r.plan_nombre}</p>
+          {r.plan_pendiente_nombre && r.pendiente_desde ? (
+            <span className="mt-1 flex w-fit max-w-full items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
+              <CalendarClock className="h-3 w-3 shrink-0" /> Desde {nombreMes(r.pendiente_desde)}: {r.plan_pendiente_nombre}
+            </span>
+          ) : null}
+        </>
+      ),
+    },
+    { key: "precio", titulo: "Precio", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-semibold tabular-nums text-slate-800", celda: (r) => monto(r.precio, r.moneda) },
+    { key: "dias", titulo: "Día fact. / venc.", movil: "dato", claseTd: "whitespace-nowrap tabular-nums text-slate-600", celda: (r) => `${r.dia_facturacion} / ${r.dia_vencimiento}` },
+    { key: "estado", titulo: "Estado", movil: "chip", celda: (r) => <BadgeSuscripcion estado={r.estado} /> },
+    { key: "cuota", titulo: `Cuota de ${nombreMes(periodo)}`, etiquetaMovil: "Cuota del mes", movil: "dato", claseTd: "whitespace-nowrap", celda: (r) => <CuotaDelMes r={r} /> },
+    {
+      key: "acc", titulo: "Acción", movil: "acciones", claseTh: "text-right", claseTd: "whitespace-nowrap text-right",
+      celda: (r) => (r.cuota_venta_id ? (
+        <button type="button" onClick={() => setViendo(r.cuota_venta_id)}
+          className="rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold transition hover:brightness-95"
+          style={{ borderColor: `${TEAL}66`, color: TEAL }}>
+          Ver venta
+        </button>
+      ) : r.corresponde_mes && puedeEmitir ? (
+        <button type="button" disabled={!!emitiendo} onClick={() => (futuro ? setConfirmarFila(r) : void emitirFila(r))}
+          className="inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 disabled:opacity-50 max-md:px-4"
+          style={{ backgroundColor: TEAL }}>
+          {emitiendo === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+          {emitiendo === r.id ? "Emitiendo…" : "Emitir"}
+        </button>
+      ) : (
+        <Link href={`/clientes/${r.cliente_id}`} className="inline-flex items-center text-xs font-semibold text-slate-500 hover:text-slate-800 max-md:min-h-11 max-md:px-2">Ver ficha</Link>
+      )),
+    },
+  ];
+
   return (
     <div className="space-y-4 pb-10">
-      {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Cobros recurrentes</p>
-          </div>
-          <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">Suscripciones</h1>
-          <p className="text-xs text-slate-500">Cuotas, abonos y todo lo que tus clientes pagan cada mes</p>
-        </div>
-        {vista === "suscripciones" && esAdmin ? (
-          <button type="button" onClick={() => setConfirmarMes(true)} disabled={cargando || pendientes.length === 0}
-            className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
-            style={{ backgroundColor: TEAL }}>
-            <Repeat className="h-3.5 w-3.5" /> Emitir cuotas de {nombreMes(periodo)} ({pendientes.length})
-          </button>
-        ) : null}
-      </div>
+      <EncabezadoPagina
+        kicker="Cobros recurrentes"
+        titulo="Suscripciones"
+        subtitulo="Cuotas, abonos y todo lo que tus clientes pagan cada mes"
+        acciones={vista === "suscripciones" && esAdmin ? (
+          <AccionesPagina acciones={[{
+            etiqueta: `Emitir cuotas de ${nombreMes(periodo)} (${pendientes.length})`,
+            icono: <Repeat />, primaria: true, onClick: () => setConfirmarMes(true),
+            deshabilitada: cargando || pendientes.length === 0,
+          }]} />
+        ) : undefined}
+      />
 
       {/* Pestañas */}
-      <div className="flex gap-1 border-b border-slate-200">
+      <ScrollHorizontal role="tablist" className="border-b border-slate-200" claseFila="gap-1" dependencias={[vista]}>
         {([["suscripciones", "Suscripciones"], ["planes", "Planes"]] as [Vista, string][]).map(([id, label]) => (
-          <button key={id} type="button" onClick={() => setVista(id)}
-            className={`border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${vista === id ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
+          <button key={id} type="button" role="tab" aria-selected={vista === id} onClick={() => setVista(id)}
+            className={`min-h-11 shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors ${vista === id ? "border-slate-900 text-slate-900" : "border-transparent text-slate-500 hover:text-slate-700"}`}>
             {label}
           </button>
         ))}
-      </div>
+      </ScrollHorizontal>
 
       {vista === "planes" ? (
         <PanelPlanes esAdmin={esAdmin} onCambio={refrescar} />
       ) : (
         <>
           {/* KPIs */}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <GrillaKpis columnas={4}>
             <Kpi titulo="Activas" valor={String(kpis?.activas ?? 0)} sub={kpis?.canceladas ? `${kpis.canceladas} cancelada${kpis.canceladas === 1 ? "" : "s"}` : undefined} />
             <Kpi titulo="Pausadas" valor={String(kpis?.pausadas ?? 0)} sub="no emiten cuotas" />
             <Kpi titulo="Ingreso mensual" valor={monto(kpis?.mensual_gs ?? 0, "GS")} sub={Number(kpis?.mensual_usd) > 0 ? `+ ${monto(kpis!.mensual_usd, "USD")}` : "de las activas"} />
             <Kpi titulo={`Por emitir · ${nombreMes(periodo)}`} valor={String(kpis?.por_emitir ?? 0)}
               sub={`${kpis?.emitidas_mes ?? 0} ya emitida${kpis?.emitidas_mes === 1 ? "" : "s"}`} tono={(kpis?.por_emitir ?? 0) > 0 ? "ambar" : undefined} />
-          </div>
+          </GrillaKpis>
 
-          {/* Filtros */}
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm">
-            <div className="flex items-center gap-1 rounded-lg border border-slate-200 bg-white p-0.5 shadow-sm">
-              <button type="button" onClick={() => setPeriodo((p) => sumarMes(p, -1))} aria-label="Mes anterior" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"><ChevronLeft className="h-4 w-4" /></button>
-              <span className="min-w-[8.5rem] text-center text-xs font-semibold text-slate-800">{nombreMes(periodo)}</span>
-              <button type="button" onClick={() => setPeriodo((p) => sumarMes(p, 1))} aria-label="Mes siguiente" className="rounded-md p-1.5 text-slate-500 hover:bg-slate-100"><ChevronRight className="h-4 w-4" /></button>
-            </div>
-            {periodo !== actual ? (
-              <button type="button" onClick={() => setPeriodo(actual)} className="rounded-lg px-2.5 py-1.5 text-[11px] font-semibold hover:bg-slate-100" style={{ color: TEAL }}>Este mes</button>
-            ) : null}
-            <div className="relative min-w-[200px] flex-1">
-              <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: TEAL }} />
-              <input type="text" value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por cliente, código o plan…"
-                className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-xs text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]" />
-            </div>
-            <Select value={estado} onChange={setEstado} minWidth={150}
+          {/* Filtros (en celular: mes en su fila; buscador + "Filtros" con el estado en una hoja) */}
+          {vistaTarjetas ? selectorMes : null}
+          <BarraFiltros
+            activos={[estado, q || borrador].filter(Boolean).length}
+            onLimpiar={hayFiltros ? () => { setBorrador(""); setQ(""); setEstado(""); } : undefined}
+            busqueda={
+              <div className="relative">
+                <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: TEAL }} />
+                <input type="search" value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por cliente, código o plan…"
+                  aria-label="Buscar suscripciones" enterKeyHint="search"
+                  className="h-11 w-full rounded-lg border border-slate-200 bg-white pl-9 pr-3 text-xs text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)] md:h-auto md:py-2" />
+              </div>
+            }
+          >
+            {vistaTarjetas ? null : selectorMes}
+            <Select value={estado} onChange={setEstado} minWidth={150} etiqueta="Estado"
               options={[["", "Todos los estados"], ["activa", "Activas"], ["pausada", "Pausadas"], ["cancelada", "Canceladas"]]} />
-            {hayFiltros ? (
-              <button type="button" onClick={() => { setBorrador(""); setQ(""); setEstado(""); }}
-                className="shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700">
-                Limpiar filtros
-              </button>
-            ) : null}
-          </div>
+          </BarraFiltros>
 
-          {aviso ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-800">✓ {aviso}</p> : null}
-          {error ? <p className="rounded-xl bg-rose-50 px-3 py-2.5 text-sm text-rose-700">{error}</p> : null}
+          {aviso ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-800 [overflow-wrap:anywhere]">✓ {aviso}</p> : null}
+          {error ? <p className="rounded-xl bg-rose-50 px-3 py-2.5 text-sm text-rose-700 [overflow-wrap:anywhere]">{error}</p> : null}
           {futuro ? (
             <p className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
               Estás viendo {nombreMes(periodo)}, que todavía no llegó: si emitís, la cuota queda en la cuenta a cobrar con su vencimiento de ese mes.
             </p>
           ) : null}
 
-          {/* Tabla */}
+          {/* Tabla (en celular, tarjetas: tocar abre la ficha del cliente) */}
           <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             {cargando && rows.length === 0 ? (
               <div className="flex items-center justify-center gap-3 py-20 text-sm text-slate-500">
                 <span className="inline-block h-2 w-2 animate-pulse rounded-full" style={{ backgroundColor: TEAL }} /> Cargando suscripciones…
               </div>
             ) : rows.length === 0 ? (
-              <div className="py-20 text-center">
+              <div className="px-4 py-20 text-center">
                 <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border" style={{ borderColor: `${TEAL}40`, backgroundColor: `${TEAL}1a`, color: TEAL }}>
                   <Repeat className="h-5 w-5" />
                 </div>
@@ -228,63 +288,10 @@ export default function SuscripcionesPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[920px] text-sm">
-                  <thead className="border-b border-slate-200 bg-slate-50/80">
-                    <tr className="text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">
-                      <th className="px-4 py-2.5">Cliente</th>
-                      <th className="px-4 py-2.5">Plan</th>
-                      <th className="px-4 py-2.5 text-right">Precio</th>
-                      <th className="whitespace-nowrap px-4 py-2.5">Día fact. / venc.</th>
-                      <th className="px-4 py-2.5">Estado</th>
-                      <th className="whitespace-nowrap px-4 py-2.5">Cuota de {nombreMes(periodo)}</th>
-                      <th className="px-4 py-2.5 text-right">Acción</th>
-                    </tr>
-                  </thead>
-                  <tbody className={`divide-y divide-slate-100 ${cargando ? "opacity-60" : ""}`}>
-                    {rows.map((r) => (
-                      <tr key={r.id} className={`hover:bg-[var(--brand-50)] ${r.estado === "cancelada" ? "opacity-60" : ""}`}>
-                        <td className="px-4 py-3">
-                          <div className="flex min-w-48 items-center gap-2">
-                            <CodigoChip codigo={codigoCliente({ id: r.cliente_id, codigo: r.cliente_codigo })} />
-                            <Link href={`/clientes/${r.cliente_id}`} className="truncate font-semibold text-slate-900 hover:underline">{r.cliente_nombre}</Link>
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          <p className="font-medium text-slate-800">{r.plan_nombre}</p>
-                          {r.plan_pendiente_nombre && r.pendiente_desde ? (
-                            <span className="mt-1 flex w-fit items-center gap-1 rounded-md border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">
-                              <CalendarClock className="h-3 w-3" /> Desde {nombreMes(r.pendiente_desde)}: {r.plan_pendiente_nombre}
-                            </span>
-                          ) : null}
-                        </td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right font-semibold tabular-nums text-slate-800">{monto(r.precio, r.moneda)}</td>
-                        <td className="whitespace-nowrap px-4 py-3 tabular-nums text-slate-600">{r.dia_facturacion} / {r.dia_vencimiento}</td>
-                        <td className="px-4 py-3"><BadgeSuscripcion estado={r.estado} /></td>
-                        <td className="whitespace-nowrap px-4 py-3"><CuotaDelMes r={r} /></td>
-                        <td className="whitespace-nowrap px-4 py-3 text-right">
-                          {r.cuota_venta_id ? (
-                            <button type="button" onClick={() => setViendo(r.cuota_venta_id)}
-                              className="rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold transition hover:brightness-95"
-                              style={{ borderColor: `${TEAL}66`, color: TEAL }}>
-                              Ver venta
-                            </button>
-                          ) : r.corresponde_mes && puedeEmitir ? (
-                            <button type="button" disabled={!!emitiendo} onClick={() => (futuro ? setConfirmarFila(r) : void emitirFila(r))}
-                              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 disabled:opacity-50"
-                              style={{ backgroundColor: TEAL }}>
-                              {emitiendo === r.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-                              {emitiendo === r.id ? "Emitiendo…" : "Emitir"}
-                            </button>
-                          ) : (
-                            <Link href={`/clientes/${r.cliente_id}`} className="text-xs font-semibold text-slate-500 hover:text-slate-800">Ver ficha</Link>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <TablaTarjetas filas={rows} columnas={columnas} claveFila={(r) => r.id} minAncho={920} cargando={cargando}
+                onFila={vistaTarjetas ? (r) => router.push(`/clientes/${r.cliente_id}`) : undefined}
+                claseFila={(r) => `hover:bg-[var(--brand-50)] ${r.estado === "cancelada" ? "opacity-60" : ""}`}
+                thBase="whitespace-nowrap px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500" tdBase="px-4 py-3" />
             )}
           </div>
         </>
@@ -296,7 +303,7 @@ export default function SuscripcionesPage() {
             {nombreMes(periodo)} todavía no llegó. ¿Emitir ya la cuota de <strong>{confirmarFila.cliente_nombre}</strong> ({confirmarFila.plan_nombre} ·{" "}
             {monto(precioDelMes(confirmarFila, periodo), confirmarFila.moneda)})?
           </p>
-          <div className="mt-4 flex justify-end gap-2">
+          <div className={`mt-4 ${PIE_MODAL}`}>
             <button type="button" onClick={() => setConfirmarFila(null)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50">Volver</button>
             <button type="button" onClick={() => void emitirFila(confirmarFila)} className="rounded-lg px-3 py-2 text-sm font-semibold text-white hover:brightness-95" style={{ backgroundColor: TEAL }}>Sí, emitir</button>
           </div>
@@ -310,13 +317,13 @@ export default function SuscripcionesPage() {
               Se emite la cuota de {nombreMes(periodo)} de cada suscripción activa que todavía no la tiene. Cada una queda como venta a crédito en la cuenta a cobrar del cliente.
             </p>
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3">
+              <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3 sm:px-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Cuotas</p>
                 <p className="mt-0.5 text-2xl font-bold tabular-nums text-slate-900">{pendientes.length}</p>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3">
+              <div className="min-w-0 rounded-xl border border-slate-200 bg-slate-50/70 px-3 py-3 sm:px-4">
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Total</p>
-                <p className="mt-0.5 text-lg font-bold tabular-nums text-slate-900">{monto(totalPendGs, "GS")}</p>
+                <p className="mt-0.5 text-base font-bold tabular-nums text-slate-900 [overflow-wrap:anywhere] sm:text-lg">{monto(totalPendGs, "GS")}</p>
                 {totalPendUsd > 0 ? <p className="text-sm font-semibold tabular-nums text-slate-700">+ {monto(totalPendUsd, "USD")}</p> : null}
               </div>
             </div>
@@ -324,12 +331,12 @@ export default function SuscripcionesPage() {
             <ul className="max-h-48 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200 text-xs">
               {pendientes.map((r) => (
                 <li key={r.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                  <span className="truncate text-slate-700">{r.cliente_nombre} <span className="text-slate-400">· {r.plan_nombre}</span></span>
+                  <span className="min-w-0 truncate text-slate-700">{r.cliente_nombre} <span className="text-slate-400">· {r.plan_nombre}</span></span>
                   <span className="shrink-0 font-semibold tabular-nums text-slate-800">{monto(precioDelMes(r, periodo), r.moneda)}</span>
                 </li>
               ))}
             </ul>
-            <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+            <div className={PIE_MODAL}>
               <button type="button" onClick={() => setConfirmarMes(false)} disabled={emitiendoMes} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
               <button type="button" onClick={() => void emitirMes()} disabled={emitiendoMes || pendientes.length === 0}
                 className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50" style={{ backgroundColor: TEAL }}>
@@ -351,12 +358,12 @@ export default function SuscripcionesPage() {
             {resultado.errores.length > 0 ? (
               <div className="rounded-xl border border-rose-200 bg-rose-50 p-3">
                 <p className="mb-1.5 text-sm font-semibold text-rose-800">{resultado.errores.length} no se pudo emitir:</p>
-                <ul className="space-y-1 text-xs text-rose-800">
+                <ul className="space-y-1 text-xs text-rose-800 [overflow-wrap:anywhere]">
                   {resultado.errores.map((e, i) => <li key={i}><strong>{e.cliente}:</strong> {e.error}</li>)}
                 </ul>
               </div>
             ) : null}
-            <div className="flex justify-end">
+            <div className={PIE_MODAL}>
               <button type="button" onClick={() => setResultado(null)} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50">Cerrar</button>
             </div>
           </div>
@@ -386,9 +393,9 @@ function CuotaDelMes({ r }: { r: FilaSuscripcion }) {
 
 function Kpi({ titulo, valor, sub, tono }: { titulo: string; valor: string; sub?: string; tono?: "ambar" }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+    <div className="min-w-0 rounded-2xl border border-slate-200 bg-white px-3 py-3 shadow-sm sm:px-4">
       <p className={`text-[11px] font-semibold uppercase tracking-wide ${tono === "ambar" ? "text-amber-700" : "text-slate-500"}`}>{titulo}</p>
-      <p className={`mt-1 text-xl font-bold tabular-nums ${tono === "ambar" ? "text-amber-700" : "text-slate-900"}`}>{valor}</p>
+      <p className={`mt-1 text-lg font-bold tabular-nums [overflow-wrap:anywhere] sm:text-xl ${tono === "ambar" ? "text-amber-700" : "text-slate-900"}`}>{valor}</p>
       {sub ? <p className="text-[11px] text-slate-400">{sub}</p> : null}
     </div>
   );

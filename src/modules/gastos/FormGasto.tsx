@@ -35,7 +35,7 @@ import {
   type Catalogos, type DetalleGasto, type IvaTipo, type MedioPagoGasto, type Moneda, type TipoPago,
 } from "@/modules/gastos/tipos";
 
-const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 disabled:bg-slate-50 disabled:text-slate-400";
+const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 max-sm:py-2.5 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 disabled:bg-slate-50 disabled:text-slate-400";
 const LABEL = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500";
 
 type Linea = { key: string; categoria_id: string | null; descripcion: string; monto: number; iva_tipo: IvaTipo; sucursal_id: string | null; empleado_id: string | null };
@@ -353,7 +353,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
   return (
     <CapaModal onClose={busy ? undefined : onClose}>
       <div className={`flex w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${ALTO_MAX_MODAL}`} style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-6 py-4">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
           <div>
             <h2 className="text-lg font-semibold text-slate-800">{hecho ? (hecho.confirmado ? "Gasto confirmado" : "Borrador guardado") : titulo}</h2>
             {programado && !hecho ? <p className="text-xs text-slate-500">De la plantilla <b>{programado.recurrente}</b>{programado.fecha ? ` · vence el ${programado.fecha.split("-").reverse().join("/")}` : ""}</p> : null}
@@ -361,7 +361,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
           <button onClick={onClose} disabled={!!busy} aria-label="Cerrar" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"><X className="h-5 w-5" /></button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-5">
+        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:px-6 sm:py-5">
           {hecho ? (
             <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><CheckCircle2 className="h-8 w-8" /></div>
@@ -390,10 +390,10 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
 
               {/* ¿Con o sin comprobante fiscal? */}
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex rounded-xl bg-slate-100 p-1" role="radiogroup" aria-label="Comprobante">
-                  {([[true, "Con comprobante fiscal"], [false, "Sin comprobante"]] as const).map(([v, l]) => (
+                <div className="flex rounded-xl bg-slate-100 p-1 max-sm:w-full" role="radiogroup" aria-label="Comprobante">
+                  {([[true, "Con comprobante", " fiscal"], [false, "Sin comprobante", ""]] as const).map(([v, l, extra]) => (
                     <button key={l} type="button" role="radio" aria-checked={form.con_comprobante === v} onClick={() => set("con_comprobante", v)}
-                      className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition ${form.con_comprobante === v ? "bg-white text-[#3F8E91] shadow-sm" : "text-slate-500"}`}>{l}</button>
+                      className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition max-sm:min-h-11 max-sm:flex-1 ${form.con_comprobante === v ? "bg-white text-[#3F8E91] shadow-sm" : "text-slate-500"}`}>{l}{extra ? <span className="max-sm:hidden">{extra}</span> : null}</button>
                   ))}
                 </div>
                 {!form.con_comprobante ? (
@@ -452,7 +452,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                         setPorLinea((x) => !x);
                         setForm((f) => ({ ...f, items: f.items.map((it) => ({ ...it, sucursal_id: it.sucursal_id ?? f.sucursal_id })) }));
                       }} title="Repartir las líneas entre sucursales"
-                        className={`inline-flex shrink-0 items-center gap-1 rounded-xl border px-2.5 text-xs font-semibold ${porLinea ? "border-[#4FAEB2] bg-[#4FAEB2]/10 text-[#3F8E91]" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                        className={`inline-flex shrink-0 items-center gap-1 rounded-xl border px-2.5 text-xs font-semibold max-sm:min-h-11 ${porLinea ? "border-[#4FAEB2] bg-[#4FAEB2]/10 text-[#3F8E91]" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
                         <Split className="h-3.5 w-3.5" /> Por línea
                       </button>
                     ) : null}
@@ -464,7 +464,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                     <div className="flex rounded-xl bg-slate-100 p-1">
                       {(["GS", "USD"] as const).map((m) => (
                         <button key={m} type="button" onClick={() => setForm((f) => ({ ...f, moneda: m, medio_pago: m === "USD" && f.medio_pago === "efectivo" ? "transferencia" : f.medio_pago }))}
-                          className={`rounded-lg px-3 py-1 text-sm font-semibold ${form.moneda === m ? "bg-white text-[#3F8E91] shadow-sm" : "text-slate-500"}`}>{m === "GS" ? "Gs." : "USD"}</button>
+                          className={`rounded-lg px-3 py-1 text-sm font-semibold max-sm:min-h-11 max-sm:px-4 ${form.moneda === m ? "bg-white text-[#3F8E91] shadow-sm" : "text-slate-500"}`}>{m === "GS" ? "Gs." : "USD"}</button>
                       ))}
                     </div>
                     {usd ? (
@@ -484,7 +484,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                   <div className="flex rounded-xl bg-white p-1 ring-1 ring-slate-200">
                     {(["contado", "credito"] as const).map((t) => (
                       <button key={t} type="button" onClick={() => setForm((f) => ({ ...f, tipo_pago: t, medio_pago: t === "contado" && !f.medio_pago ? "transferencia" : f.medio_pago }))}
-                        className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition ${form.tipo_pago === t ? "bg-[#4FAEB2] text-white shadow-sm" : "text-slate-500"}`}>
+                        className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition max-sm:min-h-11 ${form.tipo_pago === t ? "bg-[#4FAEB2] text-white shadow-sm" : "text-slate-500"}`}>
                         {t === "contado" ? "Contado" : "Crédito"}
                       </button>
                     ))}
@@ -522,7 +522,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                   <>
                     <div className="sm:col-span-2">
                       <label className={LABEL}>Plazo (días)</label>
-                      <input type="number" min={0} max={3650} className={INPUT} placeholder="30" value={form.plazo_dias}
+                      <input type="number" inputMode="numeric" enterKeyHint="next" min={0} max={3650} className={INPUT} placeholder="30" value={form.plazo_dias}
                         onChange={(e) => setForm((f) => ({ ...f, plazo_dias: e.target.value, fecha_vencimiento: "" }))} />
                     </div>
                     <div className="sm:col-span-2">
@@ -540,9 +540,9 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
               {/* Líneas */}
               <div>
                 <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Detalle</h3>
+                  <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Detalle{form.items.length > 1 ? ` (${form.items.length} líneas)` : ""}</h3>
                   <button type="button" onClick={() => set("items", [...form.items, nuevaLinea(porLinea ? form.sucursal_id : null)])}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-[#3F8E91] hover:bg-slate-50" title="Alt+N">
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-[#3F8E91] hover:bg-slate-50 max-sm:min-h-11 max-sm:px-3" title="Alt+N">
                     <Plus className="h-3.5 w-3.5" /> Agregar línea
                   </button>
                 </div>
@@ -550,8 +550,17 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                   {form.items.map((it, i) => {
                     const c = it.categoria_id ? indice.get(it.categoria_id) : undefined;
                     const m = Number(it.monto) || 0;
+                    const quitar = () => set("items", form.items.filter((_, j) => j !== i));
                     return (
                       <div key={it.key} className="space-y-2 rounded-xl border border-slate-200 bg-white p-3">
+                        {/* Celular: encabezado de la tarjeta con "quitar" de 44 px */}
+                        {form.items.length > 1 ? (
+                          <div className="-mr-1.5 -mt-1.5 flex items-center justify-between sm:hidden">
+                            <span className="text-[11px] font-bold uppercase tracking-wide text-slate-400">Línea {i + 1}</span>
+                            <button type="button" onClick={quitar} aria-label={`Quitar la línea ${i + 1}`}
+                              className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-400 active:bg-rose-50 active:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+                          </div>
+                        ) : null}
                         <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
                           <div className="sm:col-span-5">
                             <label className={LABEL}>Subcategoría *</label>
@@ -560,15 +569,15 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                                 <Select value={nuevaSub.rubro} onChange={(v) => setNuevaSub({ ...nuevaSub, rubro: v })} block compacto
                                   options={(cat?.rubros ?? []).map((r): [string, string] => [r.id, `Rubro: ${r.nombre}`])} />
                                 <div className="flex gap-1.5">
-                                  <input autoFocus className={INPUT} placeholder="Nombre (ej. Seguridad)" value={nuevaSub.nombre}
+                                  <input autoFocus className={`${INPUT} min-w-0`} placeholder="Nombre (ej. Seguridad)" enterKeyHint="done" value={nuevaSub.nombre}
                                     onChange={(e) => setNuevaSub({ ...nuevaSub, nombre: e.target.value })}
                                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void crearSubcategoria(); } }} />
                                   <Select value={nuevaSub.tipo} onChange={(v) => setNuevaSub({ ...nuevaSub, tipo: v as "fijo" | "variable" })} compacto
                                     options={[["variable", "Variable"], ["fijo", "Fijo"]]} />
                                 </div>
                                 <div className="flex justify-end gap-1.5">
-                                  <button type="button" onClick={() => setNuevaSub(null)} className="rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-white">Cancelar</button>
-                                  <button type="button" onClick={() => void crearSubcategoria()} className="rounded-lg bg-[#4FAEB2] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[#3F8E91]">Crear</button>
+                                  <button type="button" onClick={() => setNuevaSub(null)} className="rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-white max-sm:min-h-11 max-sm:flex-1 max-sm:border max-sm:border-slate-200 max-sm:bg-white max-sm:text-sm">Cancelar</button>
+                                  <button type="button" onClick={() => void crearSubcategoria()} className="rounded-lg bg-[#4FAEB2] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[#3F8E91] max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">Crear</button>
                                 </div>
                               </div>
                             ) : (
@@ -583,44 +592,46 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                           </div>
                           <div className="sm:col-span-7">
                             <label className={LABEL}>Descripción *</label>
-                            <input className={INPUT} placeholder="Detalle de la línea" maxLength={300} value={it.descripcion} onChange={(e) => setItem(i, { descripcion: e.target.value })} />
+                            <input className={INPUT} placeholder="Detalle de la línea" maxLength={300} enterKeyHint="next" value={it.descripcion} onChange={(e) => setItem(i, { descripcion: e.target.value })} />
                           </div>
                         </div>
-                        <div className="grid grid-cols-1 gap-2 sm:grid-cols-12">
-                          <div className="sm:col-span-4">
-                            <label className={LABEL}>Monto{form.con_comprobante ? " (IVA incluido)" : ""} *</label>
+                        {/* Celular: monto e IVA lado a lado (grilla de 2); empleado / sucursal y el total de la línea a todo el ancho */}
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-12">
+                          <div className={form.con_comprobante ? "min-w-0 sm:col-span-4" : "col-span-2 sm:col-span-4"}>
+                            <label className={LABEL}>Monto{form.con_comprobante ? <span className="max-sm:hidden"> (IVA incluido)</span> : null} *</label>
                             <div className="relative">
                               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">{usd ? "USD" : "Gs."}</span>
-                              <MontoInput value={it.monto || ""} onChange={(n) => setItem(i, { monto: n })} decimals={usd} placeholder="0" className={`${INPUT} pl-12 text-right tabular-nums`} />
+                              <MontoInput value={it.monto || ""} onChange={(n) => setItem(i, { monto: n })} decimals={usd} placeholder="0" enterKeyHint="done"
+                                aria-label={`Monto de la línea ${i + 1}${form.con_comprobante ? " (IVA incluido)" : ""}`} className={`${INPUT} pl-12 text-right tabular-nums max-sm:pl-11`} />
                             </div>
                           </div>
                           {form.con_comprobante ? (
-                            <div className="sm:col-span-2">
-                              <label className={LABEL}>IVA</label>
-                              <Select value={it.iva_tipo} onChange={(v) => setItem(i, { iva_tipo: v as IvaTipo })} block options={[["10%", "10 %"], ["5%", "5 %"], ["exenta", "Exenta"]]} />
+                            <div className="min-w-0 sm:col-span-2">
+                              <label className={LABEL}>IVA<span className="sm:hidden"> (incluido)</span></label>
+                              <Select value={it.iva_tipo} onChange={(v) => setItem(i, { iva_tipo: v as IvaTipo })} block etiqueta="IVA de la línea" options={[["10%", "10 %"], ["5%", "5 %"], ["exenta", "Exenta"]]} />
                             </div>
                           ) : null}
                           {c?.es_personal ? (
-                            <div className="sm:col-span-3">
+                            <div className="col-span-2 sm:col-span-3">
                               <label className={LABEL}>Empleado{hayEmpleados ? " *" : ""}</label>
-                              {hayEmpleados ? <Select value={it.empleado_id ?? ""} onChange={(v) => setItem(i, { empleado_id: v || null })} options={opcionesEmp} block />
+                              {hayEmpleados ? <Select value={it.empleado_id ?? ""} onChange={(v) => setItem(i, { empleado_id: v || null })} options={opcionesEmp} block etiqueta="Empleado" />
                                 : <p className="pt-2 text-xs text-slate-500">Cargá empleados en Catálogos.</p>}
                             </div>
                           ) : null}
                           {porLinea ? (
-                            <div className="sm:col-span-3">
+                            <div className="col-span-2 sm:col-span-3">
                               <label className={LABEL}>Sucursal</label>
-                              <Select value={it.sucursal_id ?? form.sucursal_id} onChange={(v) => setItem(i, { sucursal_id: v })} options={opcionesSuc} block />
+                              <Select value={it.sucursal_id ?? form.sucursal_id} onChange={(v) => setItem(i, { sucursal_id: v })} options={opcionesSuc} block etiqueta="Sucursal de la línea" />
                             </div>
                           ) : null}
-                          <div className="flex items-end justify-between gap-2 sm:col-span-12 sm:justify-end">
-                            <span className="text-xs text-slate-500">
-                              {form.con_comprobante && it.iva_tipo !== "exenta" ? <>IVA {it.iva_tipo}: <b className="text-slate-700">{monto(ivaDe(m, it.iva_tipo, form.moneda), form.moneda)}</b> · </> : null}
-                              Línea: <b className="text-slate-800">{monto(m, form.moneda)}</b>
+                          <div className="col-span-2 flex items-end justify-between gap-2 max-sm:border-t max-sm:border-slate-100 max-sm:pt-2 sm:col-span-12 sm:justify-end">
+                            <span className="flex w-full flex-wrap items-baseline justify-between gap-x-3 text-xs text-slate-500 sm:w-auto sm:justify-end">
+                              {form.con_comprobante && it.iva_tipo !== "exenta" ? <span>IVA {it.iva_tipo}: <b className="text-slate-700">{monto(ivaDe(m, it.iva_tipo, form.moneda), form.moneda)}</b><span className="max-sm:hidden"> · </span></span> : null}
+                              <span className="max-sm:ml-auto">Línea: <b className="text-slate-800 max-sm:text-sm">{monto(m, form.moneda)}</b></span>
                             </span>
                             {form.items.length > 1 ? (
-                              <button type="button" onClick={() => set("items", form.items.filter((_, j) => j !== i))} aria-label="Eliminar línea"
-                                className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+                              <button type="button" onClick={quitar} aria-label="Eliminar línea"
+                                className="rounded-lg p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600 max-sm:hidden"><Trash2 className="h-4 w-4" /></button>
                             ) : null}
                           </div>
                         </div>
@@ -628,6 +639,11 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                     );
                   })}
                 </div>
+                {/* Celular: agregar otra línea al final de la lista (sin volver arriba) */}
+                <button type="button" onClick={() => set("items", [...form.items, nuevaLinea(porLinea ? form.sucursal_id : null)])}
+                  className="mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 text-sm font-semibold text-[#3F8E91] active:bg-[#4FAEB2]/5 sm:hidden">
+                  <Plus className="h-4 w-4" /> Agregar otra línea
+                </button>
               </div>
 
               <div className="rounded-xl bg-slate-50 p-3">
@@ -649,7 +665,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                   <input ref={fileRef} type="file" multiple accept={ACCEPT_COMPROBANTE} className="hidden"
                     onChange={(e) => { const fs = Array.from(e.target.files ?? []); setArchivos((a) => [...a, ...fs].slice(0, 20)); e.target.value = ""; }} />
                   <button type="button" onClick={() => fileRef.current?.click()}
-                    className="flex w-full items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-left text-sm text-slate-600 hover:border-[#4FAEB2] hover:bg-[#4FAEB2]/5">
+                    className="flex w-full items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-left text-sm text-slate-600 hover:border-[#4FAEB2] hover:bg-[#4FAEB2]/5 max-sm:min-h-11">
                     <Paperclip className="h-4 w-4 shrink-0 text-slate-400" />
                     <span>Factura, recibo, comprobante de transferencia…</span>
                   </button>
@@ -659,7 +675,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                       {archivos.map((a, i) => (
                         <li key={`${a.name}-${i}`} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2 py-1 text-xs text-slate-600">
                           <span className="min-w-0 flex-1 truncate">{a.name}</span><span className="text-slate-400">{tamano(a.size)}</span>
-                          <button type="button" onClick={() => setArchivos((x) => x.filter((_, j) => j !== i))} aria-label="Quitar" className="text-slate-400 hover:text-rose-600"><X className="h-3.5 w-3.5" /></button>
+                          <button type="button" onClick={() => setArchivos((x) => x.filter((_, j) => j !== i))} aria-label={`Quitar ${a.name}`} className="inline-flex shrink-0 items-center justify-center text-slate-400 hover:text-rose-600 max-sm:-my-1 max-sm:-mr-2 max-sm:h-11 max-sm:w-11"><X className="h-3.5 w-3.5 max-sm:h-4 max-sm:w-4" /></button>
                         </li>
                       ))}
                     </ul>
@@ -668,7 +684,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                 <div className="space-y-3">
                   <div>
                     <label className={LABEL}>Descripción general</label>
-                    <input className={INPUT} maxLength={500} placeholder="Ej. alquiler de octubre" value={form.descripcion} onChange={(e) => set("descripcion", e.target.value)} />
+                    <input className={INPUT} maxLength={500} enterKeyHint="next" placeholder="Ej. alquiler de octubre" value={form.descripcion} onChange={(e) => set("descripcion", e.target.value)} />
                   </div>
                   <div>
                     <label className={LABEL}>Notas</label>
@@ -680,24 +696,31 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
           )}
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
           {hecho ? (
             <>
-              {!gastoId ? <button onClick={otro} className="rounded-xl border border-[#4FAEB2]/50 px-4 py-2 text-sm font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/5">Cargar otro</button> : null}
-              <button onClick={onClose} className="rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91]">Cerrar</button>
+              {!gastoId ? <button onClick={otro} className="rounded-xl border border-[#4FAEB2]/50 px-4 py-2 text-sm font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/5 max-sm:flex-1">Cargar otro</button> : null}
+              <button onClick={onClose} className="rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] max-sm:flex-1">Cerrar</button>
             </>
           ) : (
             <>
-              <span className="mr-auto text-xs text-slate-400">
-                {faltante && !cargando ? faltante : <span className="hidden sm:inline">Ctrl+Enter confirma · Ctrl+S borrador · Alt+N línea</span>}
-              </span>
-              <button onClick={onClose} disabled={!!busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
+              {/* Celular: el total y lo que falta, pegados a los botones (el pie queda fijo) */}
+              <div className="flex w-full min-w-0 items-baseline justify-between gap-3 sm:mr-auto sm:w-auto sm:flex-1">
+                <span className="min-w-0 text-xs text-slate-400">
+                  {faltante && !cargando ? faltante : <span className="hidden sm:inline">Ctrl+Enter confirma · Ctrl+S borrador · Alt+N línea</span>}
+                </span>
+                {!cargando && cat ? (
+                  <span className="shrink-0 text-sm text-slate-600 sm:hidden">Total <b className="text-base tabular-nums text-slate-900">{monto(totales.total, form.moneda)}</b></span>
+                ) : null}
+              </div>
+              {/* En celular "Cancelar" se omite: la ✕ de arriba (44 px) cierra igual y los dos botones entran cómodos. */}
+              <button onClick={onClose} disabled={!!busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 max-sm:hidden">Cancelar</button>
               <button onClick={() => void guardar(false)} disabled={!!busy || cargando}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-[#4FAEB2]/50 px-4 py-2 text-sm font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/5 disabled:opacity-50">
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#4FAEB2]/50 px-4 py-2 text-sm font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/5 disabled:opacity-50 max-sm:flex-1 max-sm:px-3">
                 {busy === "borrador" ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar borrador
               </button>
               <button onClick={() => void guardar(true)} disabled={!!busy || cargando || !!faltante}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50">
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 max-sm:flex-1 max-sm:px-3">
                 {busy === "confirmar" ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {busy === "confirmar" ? "Confirmando…" : "Confirmar gasto"}
               </button>
             </>

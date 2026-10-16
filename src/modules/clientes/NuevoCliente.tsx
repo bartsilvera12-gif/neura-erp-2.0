@@ -5,6 +5,7 @@ import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
+import { PIE_MODAL } from "@/modules/clientes/ui";
 import type { Cliente } from "@/modules/caja/lib";
 
 const BRAND = clienteConfig.color;
@@ -64,7 +65,7 @@ export function NuevoCliente({
               key={t}
               type="button"
               onClick={() => setTipo(t)}
-              className="flex-1 rounded-xl border-2 py-2 text-xs font-semibold capitalize transition-colors"
+              className="min-h-11 flex-1 rounded-xl border-2 py-2 text-xs font-semibold capitalize transition-colors sm:min-h-0"
               style={tipo === t ? { borderColor: BRAND, backgroundColor: "var(--brand-50)", color: BRAND } : { borderColor: "#e2e8f0", color: "#64748b" }}
             >
               {t}
@@ -77,22 +78,22 @@ export function NuevoCliente({
           <input autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} className={INPUT} placeholder={tipo === "empresa" ? "Nombre de la empresa" : "Nombre y apellido"} />
         </label>
 
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-slate-600">{tipo === "empresa" ? "RUC" : "Documento"}</span>
             <input value={documento} onChange={(e) => setDocumento(e.target.value)} className={INPUT} placeholder="Opcional" />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-slate-600">Teléfono</span>
-            <input value={telefono} onChange={(e) => setTelefono(e.target.value)} className={INPUT} placeholder="Opcional" />
+            <input type="tel" value={telefono} onChange={(e) => setTelefono(e.target.value)} className={INPUT} placeholder="Opcional" />
           </label>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="block">
             <span className="mb-1 block text-xs font-medium text-slate-600">Condición</span>
-            <Select value={condicion} onChange={(v) => setCondicion(v as "CONTADO" | "CREDITO")} block options={[["CONTADO", "Contado"], ["CREDITO", "Crédito"]]} />
-          </label>
+            <Select value={condicion} onChange={(v) => setCondicion(v as "CONTADO" | "CREDITO")} block options={[["CONTADO", "Contado"], ["CREDITO", "Crédito"]]} etiqueta="Condición" />
+          </div>
           {condicion === "CREDITO" ? (
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-slate-600">Límite de crédito</span>
@@ -103,7 +104,7 @@ export function NuevoCliente({
 
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
 
-        <div className="flex gap-2 pt-1">
+        <div className={PIE_MODAL}>
           <button type="button" onClick={onClose} className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
             Cancelar
           </button>

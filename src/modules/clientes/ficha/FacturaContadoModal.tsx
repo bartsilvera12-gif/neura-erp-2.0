@@ -72,13 +72,13 @@ export function FacturaContadoModal({ clienteId, clienteNombre, moneda, onClose,
           </label>
           <div>
             <span className={LABEL}>IVA</span>
-            <Select value={iva} onChange={(v) => setIva(v as typeof iva)} block
+            <Select value={iva} onChange={(v) => setIva(v as typeof iva)} block etiqueta="IVA"
               options={[["10%", "IVA 10%"], ["5%", "IVA 5%"], ["exenta", "Exenta"]]} />
           </div>
           {error ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p> : null}
         </div>
 
-        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3.5">
+        <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3.5 max-sm:[&>button]:flex-1 max-sm:[&>button]:justify-center">
           <button type="button" onClick={onClose} disabled={busy}
             className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
             Cancelar

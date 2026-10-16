@@ -12,6 +12,7 @@
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { AlarmClock, ChevronDown, Flame, Lock, RefreshCw, Search, Timer, UserX } from "lucide-react";
 import { Select } from "@/components/Select";
+import { BarraFiltros } from "@/components/EncabezadoPagina";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { msLaborables } from "@/modules/soporte/dominio";
@@ -62,7 +63,7 @@ const FilaProyecto = memo(function FilaProyecto({
 }) {
   const prio = estiloPrioridad(m.prioridad);
   return (
-    <li className={`px-4 py-3 transition-colors hover:bg-slate-50/70 ${guardando ? "pointer-events-none opacity-50" : ""}`}>
+    <li className={`px-3 py-3 transition-colors hover:bg-slate-50/70 sm:px-4 ${guardando ? "pointer-events-none opacity-50" : ""}`}>
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <span className={`h-2 w-2 shrink-0 rounded-full ${prio.punto}`} title={`Prioridad ${PRIORIDAD_LABEL[m.prioridad] ?? m.prioridad}`} />
         <div className="min-w-0 flex-1 basis-[13rem]">
@@ -90,13 +91,13 @@ const FilaProyecto = memo(function FilaProyecto({
         </div>
         <ContadorVivo m={m} generadoAt={generadoAt} horario={horario} />
         {puedeMover ? (
-          <div className="w-[10.5rem] shrink-0" title="Mover a">
-            <Select value={m.estado_id} onChange={(v) => onMover(m, v)} options={opcionesEstado} block className="[&>button]:py-1.5 [&>button]:text-xs" />
+          <div className="w-[10.5rem] shrink-0 max-sm:min-w-[9rem] max-sm:flex-1" title="Mover a">
+            <Select value={m.estado_id} onChange={(v) => onMover(m, v)} options={opcionesEstado} block etiqueta="Mover a" className="[&>button]:py-1.5 [&>button]:text-xs [@media(pointer:coarse)]:[&>button]:min-h-11" />
           </div>
         ) : null}
         {puedeAsignar ? (
-          <div className="w-[9.5rem] shrink-0" title="Técnico responsable">
-            <Select value={m.responsable_tecnico_id ?? ""} onChange={(v) => onAsignar(m, v)} options={opcionesTecnico} block className="[&>button]:py-1.5 [&>button]:text-xs" />
+          <div className="w-[9.5rem] shrink-0 max-sm:min-w-[9rem] max-sm:flex-1" title="Técnico responsable">
+            <Select value={m.responsable_tecnico_id ?? ""} onChange={(v) => onAsignar(m, v)} options={opcionesTecnico} block etiqueta="Técnico responsable" className="[&>button]:py-1.5 [&>button]:text-xs [@media(pointer:coarse)]:[&>button]:min-h-11" />
           </div>
         ) : null}
       </div>
@@ -140,7 +141,7 @@ function TarjetaTecnico({ g, wip, estados, abierta, onToggle, children }: {
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-shadow hover:shadow-[0_8px_24px_-12px_rgba(15,23,42,0.12)]">
       <button type="button" onClick={onToggle} aria-expanded={abierta}
-        className={`flex w-full items-center gap-3 px-4 py-3 text-left transition-colors ${abierta ? "bg-slate-50/80" : "hover:bg-slate-50/60"}`}>
+        className={`flex w-full items-center gap-2.5 px-3 py-3 text-left transition-colors sm:gap-3 sm:px-4 ${abierta ? "bg-slate-50/80" : "hover:bg-slate-50/60"}`}>
         {sinTecnico ? (
           <span aria-hidden className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-400"><UserX className="h-4 w-4" /></span>
         ) : <Avatar nombre={g.nombre} tam={36} />}
@@ -336,26 +337,37 @@ export function TareasEquipo({ yo, esAdmin, version, onAbrir, avisar }: {
               <span key={s} className="inline-flex items-center gap-1"><i className={`h-2 w-2 rounded-full ${SEMAFORO_PUNTO[s]}`} aria-hidden />{["<70%", "70%+", "90%+", "vencido"][i]}</span>
             ))}
           </span>
-          <button type="button" onClick={() => void cargar()} title="Actualizar ahora" className="rounded-lg p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"><RefreshCw className="h-3.5 w-3.5" /></button>
+          <button type="button" onClick={() => void cargar()} title="Actualizar ahora" aria-label="Actualizar ahora" className="inline-flex items-center justify-center rounded-lg p-1 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"><RefreshCw className="h-3.5 w-3.5" /></button>
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 lg:flex-row lg:flex-wrap lg:items-center">
-        <div className="relative min-w-[220px] flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--brand)]" />
-          <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setBusqueda("")}
-            placeholder="Buscar por proyecto, número, cliente o técnico…" aria-label="Buscar en el equipo"
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20" />
-        </div>
-        <Select value={fTecnico} onChange={setFTecnico} minWidth={190} options={opcionesFiltroTecnico} />
-        <Select value={fEstado} onChange={setFEstado} minWidth={180} options={[["", "Todos los estados"], ...abiertos.map((e) => [e.id, e.nombre] as [string, string])]} />
-        <Select value={fPrioridad} onChange={setFPrioridad} minWidth={170} options={[["", "Todas las prioridades"], ...PRIORIDADES.map((p) => [p, PRIORIDAD_LABEL[p]] as [string, string])]} />
+      <BarraFiltros
+        plano
+        activos={[fTecnico, fEstado, fPrioridad, soloAlertas].filter(Boolean).length}
+        onLimpiar={() => {
+          setFTecnico("");
+          setFEstado("");
+          setFPrioridad("");
+          setSoloAlertas(false);
+        }}
+        busqueda={
+          <div className="relative min-w-0 md:min-w-[220px]">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--brand)]" />
+            <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} onKeyDown={(e) => e.key === "Escape" && setBusqueda("")}
+              placeholder="Buscar por proyecto, número, cliente o técnico…" aria-label="Buscar en el equipo" enterKeyHint="search"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20 max-md:h-11" />
+          </div>
+        }
+      >
+        <Select value={fTecnico} onChange={setFTecnico} minWidth={190} options={opcionesFiltroTecnico} etiqueta="Técnico" />
+        <Select value={fEstado} onChange={setFEstado} minWidth={180} etiqueta="Estado" options={[["", "Todos los estados"], ...abiertos.map((e) => [e.id, e.nombre] as [string, string])]} />
+        <Select value={fPrioridad} onChange={setFPrioridad} minWidth={170} etiqueta="Prioridad" options={[["", "Todas las prioridades"], ...PRIORIDADES.map((p) => [p, PRIORIDAD_LABEL[p]] as [string, string])]} />
         <button type="button" onClick={() => setSoloAlertas((v) => !v)} aria-pressed={soloAlertas}
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-colors ${soloAlertas ? "border-rose-300 bg-rose-50 text-rose-700" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}
+          className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-colors max-md:min-h-11 max-md:justify-center max-md:text-sm ${soloAlertas ? "border-rose-300 bg-rose-50 text-rose-700" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}
           title="Vencidos, SLA vencido, bloqueados o sin movimiento">
           <AlarmClock className="h-3.5 w-3.5" /> Solo con alertas
         </button>
-      </div>
+      </BarraFiltros>
 
       {error ? <ErrorCaja error={error} onReintentar={() => void cargar()} /> : null}
 
@@ -370,7 +382,7 @@ export function TareasEquipo({ yo, esAdmin, version, onAbrir, avisar }: {
         </div>
         {grupos.length ? (
           <button type="button" onClick={toggleTodas}
-            className="shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700">
+            className="shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700 [@media(pointer:coarse)]:min-h-10 [@media(pointer:coarse)]:px-3.5">
             {todasAbiertas ? "Contraer todo" : "Expandir todo"}
           </button>
         ) : null}

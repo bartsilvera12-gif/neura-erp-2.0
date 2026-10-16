@@ -13,7 +13,7 @@ import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 import { Dona, Leyenda, Lineas, SERIES, C_OTROS } from "@/components/graficos/Graficos";
 import { corto, gs, mesCorto, nombreMes, pct } from "@/components/graficos/formato";
 import { derivados } from "@/modules/reportes/estado-cuenta";
-import { Descargas, EncabezadoReporte, EstadoCarga, FiltrosReporte, Kpi, Nota, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
+import { Descargas, EncabezadoReporte, EstadoCarga, FilaKpis, FiltrosReporte, Kpi, Nota, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
 import type { EstadoCuenta } from "@/modules/reportes/tipos";
 
 const ATAJOS: Atajo[] = ["mes", "mes_anterior", "3m", "6m", "anio"];
@@ -54,7 +54,7 @@ function EstadoDeCuenta() {
 
       {!d || !x ? <EstadoCarga error={error} /> : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <FilaKpis n={5}>
             <Kpi acento label="Ventas netas" valor={gs(x.ventas)} hint={`${d.ventas.cantidad} ventas · IVA incluido`}
               href={`/reportes/ventas?desde=${d.desde}&hasta=${d.hasta}`} />
             <Kpi label="Margen bruto" valor={gs(x.margen)} hint={`${pct(x.margen, x.ventas)} de las ventas`} tono={x.margen < 0 ? "malo" : undefined} />
@@ -63,13 +63,13 @@ function EstadoDeCuenta() {
             <Kpi label="Pérdidas de producto" valor={gs(x.perdidas)} hint={`${pct(x.perdidas, x.ventas)} de las ventas`} tono={x.perdidas ? "alerta" : undefined}
               href={`/reportes/perdidas?desde=${d.desde}&hasta=${d.hasta}${d.sucursal_id ? `&sucursal=${d.sucursal_id}` : ""}`} />
             <Kpi label="Resultado" valor={gs(x.resultado)} hint={`${pct(x.resultado, x.ventas)} sobre ventas`} tono={x.resultado < 0 ? "malo" : "bueno"} />
-          </div>
+          </FilaKpis>
 
           {d.ventas.productos_sin_costo ? (
-            <p className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800 sm:px-4">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              {d.ventas.productos_sin_costo} producto(s) se vendieron sin costo cargado: el margen está sobreestimado.
-              <Link href={`/reportes/ventas?desde=${d.desde}&hasta=${d.hasta}`} className="ml-auto font-semibold underline">Corregir costos</Link>
+              <span className="min-w-0 flex-1 max-sm:basis-[calc(100%-1.5rem)]">{d.ventas.productos_sin_costo} producto(s) se vendieron sin costo cargado: el margen está sobreestimado.</span>
+              <Link href={`/reportes/ventas?desde=${d.desde}&hasta=${d.hasta}`} className="ml-auto inline-flex items-center font-semibold underline max-sm:-mb-2 max-sm:ml-6 max-sm:min-h-11">Corregir costos</Link>
             </p>
           ) : null}
 
@@ -79,12 +79,12 @@ function EstadoDeCuenta() {
                 <Linea l="Ventas netas" v={x.ventas} nota={`${d.ventas.cantidad} ventas`} />
                 <Linea l="Costo de lo vendido" v={-x.cmv} nota={pct(x.cmv, x.ventas)} gris />
                 <Linea l="Margen bruto" v={x.margen} nota={pct(x.margen, x.ventas)} total />
-                <button type="button" onClick={() => setVerRubros((v) => !v)} className="w-full text-left">
+                <button type="button" onClick={() => setVerRubros((v) => !v)} className="w-full text-left max-sm:[&>div]:min-h-11 max-sm:[&>div]:items-center">
                   <Linea l={<span className="inline-flex items-center gap-1">{verRubros ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}Gastos operativos</span>}
                     v={-x.operativos} nota={pct(x.operativos, x.ventas)} gris />
                 </button>
                 {verRubros ? d.gastos.por_rubro.map((r) => <Linea key={r.nombre} l={r.nombre} v={-Number(r.total)} nota={pct(Number(r.total), x.ventas)} sub />) : null}
-                <Link href={`/reportes/perdidas?desde=${d.desde}&hasta=${d.hasta}${d.sucursal_id ? `&sucursal=${d.sucursal_id}` : ""}`} className="block">
+                <Link href={`/reportes/perdidas?desde=${d.desde}&hasta=${d.hasta}${d.sucursal_id ? `&sucursal=${d.sucursal_id}` : ""}`} className="block max-sm:[&>div]:min-h-11 max-sm:[&>div]:items-center">
                   <Linea l={<span className="underline decoration-dotted underline-offset-2">Pérdidas de producto</span>} v={-x.perdidas} nota={pct(x.perdidas, x.ventas)} gris />
                 </Link>
                 <Linea l="Resultado" v={x.resultado} nota={pct(x.resultado, x.ventas)} total fuerte />
@@ -120,8 +120,8 @@ function EstadoDeCuenta() {
             </Tarjeta>
             <Tarjeta titulo="Cuentas al cierre" sub={`saldos al ${d.hasta.split("-").reverse().join("/")}`}>
               <dl className="text-sm">
-                <Link href="/reportes/cuentas-cobrar" className="block hover:bg-slate-50"><Linea l="Por cobrar" v={Number(d.cxc.saldo)} nota={`vencido ${corto(d.cxc.vencido)}`} /></Link>
-                <Link href="/reportes/cuentas-pagar" className="block hover:bg-slate-50"><Linea l="Por pagar" v={-Number(d.cxp.saldo)} nota={`vencido ${corto(d.cxp.vencido)}`} /></Link>
+                <Link href="/reportes/cuentas-cobrar" className="block hover:bg-slate-50 max-sm:[&>div]:min-h-11 max-sm:[&>div]:items-center"><Linea l="Por cobrar" v={Number(d.cxc.saldo)} nota={`vencido ${corto(d.cxc.vencido)}`} /></Link>
+                <Link href="/reportes/cuentas-pagar" className="block hover:bg-slate-50 max-sm:[&>div]:min-h-11 max-sm:[&>div]:items-center"><Linea l="Por pagar" v={-Number(d.cxp.saldo)} nota={`vencido ${corto(d.cxp.vencido)}`} /></Link>
                 <Linea l="Neto" v={Number(d.cxc.saldo) - Number(d.cxp.saldo)} total />
               </dl>
             </Tarjeta>
@@ -145,9 +145,10 @@ function EstadoDeCuenta() {
 function Linea({ l, v, nota, gris, total, fuerte, sub }: { l: React.ReactNode; v: number; nota?: string; gris?: boolean; total?: boolean; fuerte?: boolean; sub?: boolean }) {
   const color = total ? (v < 0 ? "text-rose-600" : fuerte ? "text-emerald-700" : "text-slate-900") : gris ? "text-slate-600" : "text-slate-800";
   return (
+    // Celular: el concepto puede ir en 2 renglones; el monto nunca se parte.
     <div className={`flex items-baseline justify-between gap-3 px-1 ${total ? "mt-1 border-t-2 border-slate-200 pt-2 font-semibold" : "py-1.5"} ${sub ? "pl-6 text-[13px] text-slate-500" : ""}`}>
-      <dt className={sub ? "text-slate-500" : total ? "text-slate-900" : "text-slate-600"}>{l}</dt>
-      <dd className={`flex items-baseline gap-2 tabular-nums ${color} ${fuerte ? "text-base" : ""}`}>
+      <dt className={`min-w-0 ${sub ? "text-slate-500" : total ? "text-slate-900" : "text-slate-600"}`}>{l}</dt>
+      <dd className={`flex shrink-0 items-baseline gap-2 whitespace-nowrap tabular-nums ${color} ${fuerte ? "text-base" : ""}`}>
         {nota ? <span className="text-[11px] font-normal text-slate-400">{nota}</span> : null}
         {v < 0 ? "−" : ""}{gs(Math.abs(v))}
       </dd>

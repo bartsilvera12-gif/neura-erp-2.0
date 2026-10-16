@@ -73,7 +73,7 @@ export function ZonaArchivos({
           <UploadCloud className="h-5 w-5" aria-hidden />
         </span>
         <p className="mt-2 text-[13px] font-semibold text-slate-700">
-          Arrastrá archivos aquí o <span className="underline underline-offset-2" style={{ color: TEAL }}>elegilos</span>
+          <span className="[@media(pointer:coarse)]:hidden">Arrastrá archivos aquí o </span><span className="underline underline-offset-2" style={{ color: TEAL }}><span className="[@media(pointer:coarse)]:hidden">elegilos</span><span className="hidden [@media(pointer:coarse)]:inline">Tocá para elegir archivos</span></span>
         </p>
         <p className="mt-0.5 text-[11.5px] text-slate-400">
           Imágenes, videos, PDF, Excel, Word y cualquier otro archivo (máx. {tamanoLegible(ARCHIVO_MAX_BYTES)} c/u)
@@ -109,7 +109,7 @@ export function ZonaArchivos({
                 type="button"
                 onClick={() => onCambio(archivos.filter((_, j) => j !== i))}
                 disabled={deshabilitada}
-                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11.5px] font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[11.5px] font-medium text-slate-400 hover:bg-slate-100 hover:text-slate-700 [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-2.5"
               >
                 <X className="h-3.5 w-3.5" /> Quitar
               </button>

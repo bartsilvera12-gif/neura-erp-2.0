@@ -11,7 +11,7 @@ import { useRouter } from "next/navigation";
 import { ChevronRight } from "lucide-react";
 import { Columnas, Leyenda, colorMetodo } from "@/components/graficos/Graficos";
 import { diaSemana, gs, num } from "@/components/graficos/formato";
-import { Descargas, EncabezadoReporte, EstadoCarga, FiltrosReporte, Kpi, Nota, Tabla, Tarjeta, useFiltrosReporte, useReporte } from "@/modules/reportes/ui";
+import { Descargas, EncabezadoReporte, EstadoCarga, FilaKpis, FiltrosReporte, Kpi, Nota, Tabla, Tarjeta, useFiltrosReporte, useReporte } from "@/modules/reportes/ui";
 import type { CierresDias } from "@/modules/reportes/tipos";
 
 const conSigno = (n: number) => (n === 0 ? "Cuadró" : `${n > 0 ? "+" : "−"} ${gs(Math.abs(n))}`);
@@ -48,7 +48,7 @@ function CierresPorDia() {
 
       {!d || !t ? <EstadoCarga error={error} /> : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <FilaKpis n={5}>
             <Kpi acento label="Total vendido" valor={gs(t.total)} hint={`${num(t.cantidad)} ventas · ${t.dias} día${t.dias === 1 ? "" : "s"}`} />
             <Kpi label="Contado" valor={gs(t.contado)} hint={`${num(t.turnos)} turnos${t.abiertos ? ` · ${t.abiertos} abierto${t.abiertos === 1 ? "" : "s"}` : ""}`} />
             <Kpi label="Crédito" valor={gs(t.credito)} hint="ventas a cuenta" />
@@ -56,7 +56,7 @@ function CierresPorDia() {
               tono={t.con_diferencia ? (Number(t.diferencia) + Number(t.diferencia_otros) < 0 ? "malo" : "alerta") : "bueno"}
               hint={t.con_diferencia ? `${t.con_diferencia} turno${t.con_diferencia === 1 ? "" : "s"} con diferencia` : "Todos los turnos cuadraron"} />
             <Kpi label="Anuladas" valor={num(t.anuladas)} tono={t.anuladas ? "alerta" : undefined} hint={gs(t.anuladas_total)} />
-          </div>
+          </FilaKpis>
 
           <Tarjeta titulo="Vendido por día" sub="por forma de pago · tocá una columna para ver el cierre del día"
             extra={<Leyenda items={series.map((s) => ({ color: s.color, label: s.label }))} />}>
@@ -78,7 +78,7 @@ function CierresPorDia() {
                   titulo: "Ver el cierre del día",
                   celdas: [
                     <span key="d" className="font-medium capitalize">{diaSemana(x.dia)}</span>,
-                    <span key="s" className="text-xs text-slate-500">{x.sucursales.join(", ")}</span>,
+                    <span key="s" className="block max-w-[240px] truncate text-xs text-slate-500" title={x.sucursales.join(", ")}>{x.sucursales.join(", ")}</span>,
                     <span key="t">{x.turnos}{x.abiertos ? <span className="ml-1 rounded-full bg-amber-50 px-1.5 text-[10px] font-semibold text-amber-700">{x.abiertos} abierta{x.abiertos === 1 ? "" : "s"}</span> : null}</span>,
                     ...d.metodos.map((m) => (x.por_metodo[m.metodo] ? gs(x.por_metodo[m.metodo]) : <span key={m.metodo} className="text-slate-300">—</span>)),
                     x.credito ? gs(x.credito) : <span key="c" className="text-slate-300">—</span>,

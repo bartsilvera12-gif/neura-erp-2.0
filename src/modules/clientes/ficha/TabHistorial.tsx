@@ -100,10 +100,10 @@ export function TabHistorial({ clienteId, recarga }: { clienteId: string; recarg
 
   return (
     <div className="max-w-3xl">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-slate-700">Historial de cambios</h3>
         <button type="button" onClick={() => void cargar(true)} disabled={cargando}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
+          className="min-h-11 shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors sm:min-h-0 hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
           {cargando ? "Actualizando…" : "Actualizar"}
         </button>
       </div>
@@ -121,7 +121,7 @@ export function TabHistorial({ clienteId, recarga }: { clienteId: string; recarg
             const cambios = Array.isArray(h.detalle?.cambios) ? h.detalle!.cambios! : [];
             const motivo = typeof h.detalle?.motivo === "string" && h.detalle.motivo ? h.detalle.motivo : null;
             return (
-              <li key={h.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+              <li key={h.id} className="min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm [overflow-wrap:anywhere] sm:px-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.color}`}>{meta.label}</span>
                   <span className="text-xs text-slate-400">{fechaHora(h.created_at)}</span>

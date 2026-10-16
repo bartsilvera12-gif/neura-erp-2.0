@@ -9,6 +9,10 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, Inbox, Search, UserPen, X } from "lucide-react";
+import { BarraFiltros } from "@/components/EncabezadoPagina";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
+import { TablaTarjetas } from "@/components/TablaResponsive";
+import { useMediaQuery } from "@/lib/ui/responsive";
 import { numeroTicket, fechaHora, puedeEstarACargo, type Persona } from "@/modules/soporte/dominio";
 import {
   apiSoporte,
@@ -214,11 +218,12 @@ export default function TablaTickets({
   const desde = total === 0 ? 0 : (pagina - 1) * POR_PAGINA + 1;
   const hasta = Math.min(total, pagina * POR_PAGINA);
   const href = (id: string) => `/soporte/tickets/${id}`;
+  const angosta = useMediaQuery("(max-width: 767.98px)");
 
   return (
     <div className="space-y-4">
       {/* Pestañas con contador */}
-      <div className="flex gap-1.5 overflow-x-auto rounded-2xl border border-slate-200/80 bg-white/80 p-1.5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
+      <ScrollHorizontal claseFila="gap-1.5" dependencias={[pestana.id]} className="rounded-2xl border border-slate-200/80 bg-white/80 p-1.5 shadow-[0_1px_3px_rgba(15,23,42,0.04)]">
         {pestanas.map((p) => {
           const sel = p.id === pestana.id;
           const t = TONOS[tonoPestana(p)];
@@ -227,7 +232,8 @@ export default function TablaTickets({
               key={p.id}
               type="button"
               onClick={() => cambiar({ pestana: p.id === pestanas[0].id ? null : p.id })}
-              className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 text-[13px] font-semibold transition ${
+              aria-current={sel ? "page" : undefined}
+              className={`flex shrink-0 items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 text-[13px] font-semibold transition max-md:min-h-11 ${
                 sel ? `${t.suave} ${t.texto} ring-1 ring-inset ${t.borde}` : "text-slate-500 hover:bg-slate-100 hover:text-slate-800"
               }`}
             >
@@ -239,11 +245,60 @@ export default function TablaTickets({
             </button>
           );
         })}
-      </div>
+      </ScrollHorizontal>
 
       <div className={`overflow-visible ${TARJETA}`}>
-        {/* Filtros */}
-        <div className="grid gap-2 rounded-t-2xl border-b border-slate-100 bg-gradient-to-r from-[#4FAEB2]/[0.05] via-white to-sky-50/40 px-4 py-3 sm:grid-cols-2 lg:grid-cols-[minmax(220px,1.4fr)_repeat(4,minmax(140px,1fr))_auto_auto]">
+        {/* Filtros (celular / tablet chica: búsqueda + "Filtros" con el resto en una hoja) */}
+        {angosta ? (
+          <div className="rounded-t-2xl border-b border-slate-100 bg-gradient-to-r from-[#4FAEB2]/[0.05] via-white to-sky-50/40 px-3 py-2.5">
+            <BarraFiltros
+              plano
+              busqueda={<label className="relative block">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#4FAEB2]" aria-hidden />
+            <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Buscar por asunto o #número…" aria-label="Buscar tickets" className={`${claseInput} h-11 pl-9`} type="search" enterKeyHint="search" />
+          </label>}
+              activos={[filtros.cliente_id, filtros.estado, filtros.tipo, filtros.responsable_id, filtros.cargados].filter(Boolean).length}
+              onLimpiar={() => cambiar({ cliente_id: null, estado: null, tipo: null, responsable_id: null, cargados: null })}
+            >
+              <SelectorBuscable
+              avatares
+              ariaLabel="Cliente"
+              opciones={[{ value: "", label: "Todos los clientes" }, ...clientes.map((c) => ({ value: c.id, label: c.nombre }))]}
+              value={filtros.cliente_id}
+              onChange={(v) => cambiar({ cliente_id: v || null })}
+              placeholder="Todos los clientes"
+              buscarPlaceholder="Buscar cliente…"
+              vacio="Ningún cliente coincide"
+          />
+              <Desplegable value={filtros.estado} onChange={(v) => cambiar({ estado: v || null })} options={op.estado} etiqueta="Estado" />
+              <Desplegable value={filtros.tipo} onChange={(v) => cambiar({ tipo: v || null })} options={op.tipo} etiqueta="Tipo" />
+              {ocultarResponsable ? null : (
+                <SelectorBuscable
+                avatares
+                ariaLabel="Asignado a"
+                value={filtros.responsable_id}
+                onChange={(v) => cambiar({ responsable_id: v || null })}
+                opciones={op.responsable}
+                placeholder="Cualquier responsable"
+                buscarPlaceholder="Buscar persona o área…"
+                vacio="Nadie coincide"
+            />
+              )}
+              <button
+              type="button"
+              onClick={() => cambiar({ cargados: soloCargados ? null : "1" })}
+              aria-pressed={soloCargados}
+              title="Sólo los tickets que cargué yo"
+              className={`inline-flex h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-[12px] font-semibold transition-colors ${
+                soloCargados ? "border-[#4FAEB2] bg-[#4FAEB2]/10 text-[#2F6E71]" : "border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/60 hover:text-[#2F6E71]"
+              }`}
+          >
+              <UserPen className="h-3.5 w-3.5" aria-hidden /> Cargados por mí
+          </button>
+            </BarraFiltros>
+          </div>
+        ) : (
+        <div className="grid gap-2 rounded-t-2xl border-b border-slate-100 bg-gradient-to-r from-[#4FAEB2]/[0.05] via-white to-sky-50/40 px-4 py-3 sm:grid-cols-2 lg:grid-cols-[minmax(200px,1.4fr)_repeat(4,minmax(0,1fr))_auto_auto]">
           <label className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#4FAEB2]" aria-hidden />
             <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Buscar por asunto o #número…" aria-label="Buscar tickets" className={`${claseInput} h-[42px] pl-9`} />
@@ -258,8 +313,8 @@ export default function TablaTickets({
             buscarPlaceholder="Buscar cliente…"
             vacio="Ningún cliente coincide"
           />
-          <Desplegable value={filtros.estado} onChange={(v) => cambiar({ estado: v || null })} options={op.estado} />
-          <Desplegable value={filtros.tipo} onChange={(v) => cambiar({ tipo: v || null })} options={op.tipo} />
+          <Desplegable value={filtros.estado} onChange={(v) => cambiar({ estado: v || null })} options={op.estado} etiqueta="Estado" />
+          <Desplegable value={filtros.tipo} onChange={(v) => cambiar({ tipo: v || null })} options={op.tipo} etiqueta="Tipo" />
           {ocultarResponsable ? (
             <span className="hidden lg:block" />
           ) : (
@@ -301,6 +356,7 @@ export default function TablaTickets({
           )}
         </div>
 
+        )}
         <div className={`h-0.5 overflow-hidden transition-opacity ${cargando && datos ? "opacity-100" : "opacity-0"}`}>
           <div className="h-full w-full animate-pulse bg-gradient-to-r from-transparent via-[#4FAEB2] to-transparent" />
         </div>
@@ -320,63 +376,106 @@ export default function TablaTickets({
           />
         ) : (
           <>
-            {/* Desktop */}
-            <div className="hidden overflow-x-auto md:block">
-              <table className="w-full min-w-[1000px] text-left text-[13px]">
-                <thead>
-                  <tr className="border-b border-slate-100 text-[11px] font-bold uppercase tracking-wide text-slate-400">
-                    <th className="w-24 px-5 py-3">#</th>
-                    <th className="px-3 py-3">Asunto</th>
-                    <th className="px-3 py-3">Cliente</th>
-                    <th className="px-3 py-3">Tipo</th>
-                    <th className="px-3 py-3">Estado</th>
-                    <th className="px-3 py-3">Clasificación</th>
-                    {ocultarResponsable ? null : <th className="px-3 py-3">Asignado a</th>}
-                    <th className="px-3 py-3">Cargado por</th>
-                    <th className="px-5 py-3 text-right">Actualizado</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {datos.tickets.map((t) => (
-                    <tr
-                      key={t.id}
-                      onMouseEnter={() => {
-                        precargarTicket(t.id);
-                        router.prefetch(href(t.id));
-                      }}
-                      onClick={() => router.push(href(t.id))}
-                      className="group relative cursor-pointer border-b border-slate-100 transition-colors last:border-0 hover:bg-[#4FAEB2]/[0.04]"
-                    >
-                      <td className="relative px-5 py-3.5">
-                        <span className="absolute inset-y-2 left-0 w-1 rounded-r-full opacity-0 transition-opacity group-hover:opacity-100" style={{ backgroundColor: t.estado_color }} aria-hidden />
-                        <span className="font-bold tabular-nums text-slate-400 group-hover:text-[#2F6E71]">{numeroTicket(t.numero)}</span>
-                      </td>
-                      <td className="max-w-[340px] px-3 py-3.5">
-                        <Link href={href(t.id)} onClick={(e) => e.stopPropagation()} className="line-clamp-2 font-semibold text-slate-800 no-underline group-hover:text-[#2F6E71]">
-                          {t.asunto}
-                        </Link>
-                        <span className="mt-1 flex">
-                          <ChipSla estado={t.sla.estado} compacto />
-                        </span>
-                      </td>
-                      <td className="max-w-[190px] truncate px-3 py-3.5 font-medium text-slate-600">{t.cliente_nombre ?? "—"}</td>
-                      <td className="px-3 py-3.5 text-slate-600">{cat?.tipos.find((x) => x.codigo === t.tipo_codigo)?.nombre ?? t.tipo_etiqueta}</td>
-                      <td className="px-3 py-3.5">
-                        <Insignia color={t.estado_color} punto>
-                          {t.estado_nombre}
-                        </Insignia>
-                        <Fase n={t.fase} bloque />
-                      </td>
-                      <td className="px-3 py-3.5">
-                        <span className="text-slate-600">{t.clasificacion_nombre ?? <span className="text-slate-300">—</span>}</span>
-                      </td>
-                      {ocultarResponsable ? null : (
-                        <td className="px-3 py-3.5">
+            {/* Tabla (≥ 768 px) / tarjetas (celular) */}
+            <TablaTarjetas
+              filas={datos.tickets}
+              claveFila={(t) => t.id}
+              onFila={(t) => router.push(href(t.id))}
+              onIntencion={(t) => {
+                precargarTicket(t.id);
+                router.prefetch(href(t.id));
+              }}
+              minAncho={1000}
+              claseTabla="w-full text-left text-[13px]"
+              claseThead="border-b border-slate-100"
+              thBase="px-3 py-3 text-[11px] font-bold uppercase tracking-wide text-slate-400"
+              tdBase="px-3 py-3.5"
+              claseFila={() => "relative border-b border-slate-100 last:border-0 hover:!bg-[#4FAEB2]/[0.04]"}
+              columnas={[
+                {
+                  key: "num",
+                  titulo: "#",
+                  movil: "subtitulo",
+                  claseTh: "w-24 !px-5",
+                  claseTd: "relative !px-5",
+                  celda: (t) => (
+                    <>
+                      <span className="absolute inset-y-2 left-0 w-1 rounded-r-full opacity-0 transition-opacity group-hover:opacity-100" style={{ backgroundColor: t.estado_color }} aria-hidden />
+                      <span className="font-bold tabular-nums text-slate-400 group-hover:text-[#2F6E71]">{numeroTicket(t.numero)}</span>
+                    </>
+                  ),
+                  celdaMovil: (t) => (
+                    <span className="font-semibold tabular-nums">
+                      {numeroTicket(t.numero)} · {t.cliente_nombre ?? "Sin cliente"}
+                    </span>
+                  ),
+                },
+                {
+                  key: "asunto",
+                  titulo: "Asunto",
+                  movil: "titulo",
+                  claseTd: "max-w-[340px]",
+                  celda: (t) => (
+                    <>
+                      <Link href={href(t.id)} onClick={(e) => e.stopPropagation()} className="line-clamp-2 font-semibold text-slate-800 no-underline group-hover:text-[#2F6E71]">
+                        {t.asunto}
+                      </Link>
+                      <span className="mt-1 flex">
+                        <ChipSla estado={t.sla.estado} compacto />
+                      </span>
+                    </>
+                  ),
+                  celdaMovil: (t) => t.asunto,
+                },
+                {
+                  key: "cliente",
+                  titulo: "Cliente",
+                  movil: "oculto",
+                  claseTd: "max-w-[190px] truncate font-medium text-slate-600",
+                  celda: (t) => t.cliente_nombre ?? "—",
+                },
+                { key: "tipo", titulo: "Tipo", movil: "detalle", claseTd: "text-slate-600", celda: (t) => cat?.tipos.find((x) => x.codigo === t.tipo_codigo)?.nombre ?? t.tipo_etiqueta },
+                {
+                  key: "estado",
+                  titulo: "Estado",
+                  movil: "chip",
+                  celda: (t) => (
+                    <>
+                      <Insignia color={t.estado_color} punto>
+                        {t.estado_nombre}
+                      </Insignia>
+                      <Fase n={t.fase} bloque />
+                    </>
+                  ),
+                  celdaMovil: (t) => (
+                    <span className="flex flex-wrap items-center gap-1.5">
+                      <Insignia color={t.estado_color} punto>
+                        {t.estado_nombre}
+                      </Insignia>
+                      <Fase n={t.fase} />
+                      <ChipSla estado={t.sla.estado} compacto />
+                    </span>
+                  ),
+                },
+                {
+                  key: "clasif",
+                  titulo: "Clasificación",
+                  movil: "dato",
+                  celda: (t) => <span className="text-slate-600">{t.clasificacion_nombre ?? <span className="text-slate-300">—</span>}</span>,
+                },
+                ...(ocultarResponsable
+                  ? []
+                  : [
+                      {
+                        key: "resp",
+                        titulo: "Asignado a",
+                        movil: "dato" as const,
+                        celda: (t: TicketLista) => (
                           <div className="flex items-center gap-2">
                             {t.responsable ? (
-                              <span className="inline-flex items-center gap-2 font-medium text-slate-700">
+                              <span className="inline-flex min-w-0 items-center gap-2 font-medium text-slate-700">
                                 <Avatar nombre={t.responsable.nombre} tam={24} />
-                                {t.responsable.nombre}
+                                <span className="min-w-0 truncate">{t.responsable.nombre}</span>
                               </span>
                             ) : (
                               <span className="text-[12px] italic text-slate-400">Sin asignar</span>
@@ -390,60 +489,42 @@ export default function TablaTickets({
                                   void tomar(t.id);
                                 }}
                                 title="Asignarme este ticket"
-                                className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-lg border border-[#4FAEB2]/40 bg-white px-2 py-1 text-[11px] font-bold text-[#2F6E71] opacity-0 transition hover:bg-[#4FAEB2]/10 focus:opacity-100 group-hover:opacity-100 disabled:opacity-60"
+                                className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-lg border border-[#4FAEB2]/40 bg-white px-2 py-1 text-[11px] font-bold text-[#2F6E71] opacity-0 transition hover:bg-[#4FAEB2]/10 focus:opacity-100 group-hover:opacity-100 disabled:opacity-60 max-md:min-h-10 max-md:px-3 max-md:text-xs max-md:opacity-100 [@media(hover:none)]:opacity-100"
                               >
                                 {tomando === t.id ? "…" : "Tomar"}
                               </button>
                             ) : null}
                           </div>
-                        </td>
-                      )}
-                      <td className="px-3 py-3.5">
-                        {t.creador ? (
-                          <span className="inline-flex items-center gap-2 font-medium text-slate-700">
-                            <Avatar nombre={t.creador.nombre} tam={24} />
-                            {t.creador.nombre}
-                          </span>
-                        ) : (
-                          <span className="text-[12px] italic text-slate-400">—</span>
-                        )}
-                      </td>
-                      <td className="whitespace-nowrap px-5 py-3.5 text-right text-[12.5px] tabular-nums text-slate-500">{fechaHora(t.updated_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Móvil */}
-            <ul className="divide-y divide-slate-100 md:hidden">
-              {datos.tickets.map((t) => (
-                <li key={t.id}>
-                  <Link href={href(t.id)} className="relative block px-4 py-3 no-underline active:bg-slate-50">
-                    <span className="absolute inset-y-3 left-0 w-1 rounded-r-full" style={{ backgroundColor: t.estado_color }} aria-hidden />
-                    <div className="flex items-center justify-between gap-2 text-[12px] text-slate-500">
-                      <span className="font-bold tabular-nums">
-                        {numeroTicket(t.numero)} · {t.cliente_nombre ?? "Sin cliente"}
+                        ),
+                      },
+                    ]),
+                {
+                  key: "creador",
+                  titulo: "Cargado por",
+                  movil: "dato",
+                  celda: (t) =>
+                    t.creador ? (
+                      <span className="inline-flex min-w-0 items-center gap-2 font-medium text-slate-700">
+                        <Avatar nombre={t.creador.nombre} tam={24} />
+                        <span className="min-w-0 truncate">{t.creador.nombre}</span>
                       </span>
-                      <span className="tabular-nums">{fechaHora(t.updated_at)}</span>
-                    </div>
-                    <p className="mt-1 text-sm font-semibold text-slate-900">{t.asunto}</p>
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      <Insignia color={t.estado_color} punto>
-                        {t.estado_nombre}
-                      </Insignia>
-                      <Fase n={t.fase} />
-                      <ChipSla estado={t.sla.estado} compacto />
-                      {t.clasificacion_nombre ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11.5px] font-semibold text-slate-600">{t.clasificacion_nombre}</span> : null}
-                    </div>
-                    {t.creador ? <p className="mt-1 text-[11.5px] text-slate-400">Cargado por {t.creador.nombre}</p> : null}
-                  </Link>
-                </li>
-              ))}
-            </ul>
+                    ) : (
+                      <span className="text-[12px] italic text-slate-400">—</span>
+                    ),
+                },
+                {
+                  key: "act",
+                  titulo: "Actualizado",
+                  movil: "detalle",
+                  claseTh: "!px-5 text-right",
+                  claseTd: "whitespace-nowrap !px-5 text-right text-[12.5px] tabular-nums text-slate-500",
+                  celda: (t) => fechaHora(t.updated_at),
+                },
+              ]}
+            />
 
             {/* Paginación */}
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-b-2xl border-t border-slate-100 bg-slate-50/60 px-5 py-3 text-[12px] text-slate-500">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-b-2xl border-t border-slate-100 bg-slate-50/60 px-3 py-3 text-[12px] text-slate-500 sm:px-5 max-sm:justify-center">
               <span className="tabular-nums">
                 Mostrando <b className="text-slate-700">{desde}</b> a <b className="text-slate-700">{hasta}</b> de <b className="text-slate-700">{total}</b> tickets
               </span>
@@ -452,7 +533,7 @@ export default function TablaTickets({
                   type="button"
                   disabled={pagina <= 1}
                   onClick={() => cambiar({ pagina: String(pagina - 1) })}
-                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/50 disabled:opacity-40"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/50 disabled:opacity-40 max-md:h-11 max-md:w-11"
                   aria-label="Página anterior"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -466,7 +547,7 @@ export default function TablaTickets({
                         type="button"
                         onClick={() => cambiar({ pagina: String(n) })}
                         aria-current={n === pagina ? "page" : undefined}
-                        className={`h-8 min-w-8 rounded-lg px-2 font-semibold tabular-nums ${
+                        className={`h-8 min-w-8 rounded-lg px-2 font-semibold tabular-nums max-md:h-11 max-md:min-w-11 ${
                           n === pagina ? "bg-[#4FAEB2] text-white shadow-[0_4px_12px_-4px_rgba(79,174,178,0.8)]" : "border border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/50"
                         }`}
                       >
@@ -478,7 +559,7 @@ export default function TablaTickets({
                   type="button"
                   disabled={pagina >= paginas}
                   onClick={() => cambiar({ pagina: String(pagina + 1) })}
-                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/50 disabled:opacity-40"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/50 disabled:opacity-40 max-md:h-11 max-md:w-11"
                   aria-label="Página siguiente"
                 >
                   <ChevronRight className="h-4 w-4" />

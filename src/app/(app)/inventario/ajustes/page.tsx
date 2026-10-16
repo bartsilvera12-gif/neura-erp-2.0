@@ -14,6 +14,8 @@ import { CheckCircle2, ClipboardCheck, Loader2, PackageMinus, Search, X } from "
 import { apiFetch } from "@/lib/api/client-fetch";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Select } from "@/components/Select";
+import { BarraFiltros } from "@/components/EncabezadoPagina";
+import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { invalidarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { hayVariosDepositos, invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
 import {
@@ -29,6 +31,43 @@ type Pagina = {
   pendientes: number;
   totales: { perdidas_valor: number; perdidas_unidades: number; ajustes_entrada_valor: number; ajustes_salida_valor: number };
 };
+
+const sinMover = (a: FilaAjuste) => a.estado === "pendiente" || a.estado === "rechazado";
+const valorDe = (a: FilaAjuste) => Number(a.valor_entrada) - Number(a.valor_salida);
+
+/** Celular (< 768 px): cada documento es una tarjeta (la tabla de escritorio queda igual). */
+const columnasMovil: ColumnaTabla<FilaAjuste>[] = [
+  { key: "numero", titulo: "Documento", movil: "titulo", celda: (a) => <span className="font-mono">{a.numero}</span> },
+  {
+    key: "tipo", titulo: "Tipo", movil: "subtitulo",
+    celda: (a) => <><span className={`font-semibold ${a.tipo === "perdida" ? "text-rose-600" : "text-slate-600"}`}>{a.tipo === "perdida" ? "Pérdida" : "Ajuste"}</span> · {motivoAjuste(a.motivo)}</>,
+  },
+  {
+    key: "valor", titulo: "Valor al costo", movil: "valor",
+    celda: (a) => {
+      const v = valorDe(a);
+      return sinMover(a) ? <span className="text-slate-400">—</span>
+        : <span className={v < 0 ? "text-red-600" : v > 0 ? "text-emerald-700" : "text-slate-400"}>{`${v < 0 ? "−" : v > 0 ? "+" : ""}${gs(Math.abs(v))}`}</span>;
+    },
+  },
+  { key: "estado", titulo: "Estado", movil: "chip", celda: (a) => { const e = ESTADO_AJUSTE[a.estado]; return <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${e.clase}`}>{e.label}</span>; } },
+  { key: "deposito", titulo: "Depósito", movil: "dato", celda: (a) => a.deposito.nombre },
+  {
+    key: "unidades", titulo: "Unidades", movil: "dato",
+    celda: (a) => sinMover(a) ? "—" : (
+      <span className="tabular-nums">
+        {Number(a.total_entrada) > 0 ? <span className="font-semibold text-emerald-700">+{cant(a.total_entrada)} </span> : null}
+        {Number(a.total_salida) > 0 ? <span className="font-semibold text-red-600">−{cant(a.total_salida)}</span> : null}
+        {!Number(a.total_entrada) && !Number(a.total_salida) ? <span className="text-slate-400">sin diferencias</span> : null}
+      </span>
+    ),
+  },
+  { key: "fecha", titulo: "Cargado", movil: "dato", celda: (a) => fechaHora(a.created_at) },
+  { key: "items", titulo: "Productos", movil: "dato", celda: (a) => a.items },
+  { key: "usuario", titulo: "Usuario", movil: "detalle", celda: (a) => a.usuario_nombre ?? "—" },
+  { key: "sucursal", titulo: "Sucursal", movil: "detalle", celda: (a) => a.deposito.sucursal },
+  { key: "detalle", titulo: "Detalle", movil: "detalle", celda: (a) => a.detalle || "—" },
+];
 
 export default function AjustesPage() {
   return (
@@ -85,8 +124,10 @@ function Ajustes() {
     setRecarga((k) => k + 1);
   };
 
+  const vistaTarjetas = useVistaTarjetas();
+
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-5 pb-10 sm:space-y-6">
       <Cabecera kicker="Inventario · Documentos" titulo="Ajustes y pérdidas" subtitulo="Conteos, correcciones y bajas de mercadería, documentados y valorizados al costo">
         {puedePerdida ? (
           <Link href="/inventario/ajustes/nuevo?tipo=perdida" className={BOTON_SECUNDARIO}>
@@ -101,36 +142,70 @@ function Ajustes() {
       </Cabecera>
 
       {tot ? (
-        <div className="grid gap-3 sm:grid-cols-3">
-          <Cifra etiqueta="Pérdidas (aplicadas)" valor={gs(tot.perdidas_valor)} detalle={`${cant(tot.perdidas_unidades)} unidades`} tono="rose" />
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-3">
+          <Cifra etiqueta="Pérdidas (aplicadas)" valor={gs(tot.perdidas_valor)} detalle={`${cant(tot.perdidas_unidades)} unidades`} tono="rose" clase="max-sm:col-span-2" />
           <Cifra etiqueta="Ajustes que sumaron" valor={gs(tot.ajustes_entrada_valor)} detalle="al costo" tono="emerald" />
           <Cifra etiqueta="Ajustes que restaron" valor={gs(tot.ajustes_salida_valor)} detalle="al costo" tono="slate" />
         </div>
       ) : null}
 
       <section className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: `${TEAL}33` }}>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3" style={{ borderColor: `${TEAL}22`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
-          <Pestanas valor={vista} onChange={(v) => { setVista(v); setPagina(1); }}
-            opciones={[
-              { id: "", label: "Todos" },
-              { id: "ajuste", label: "Ajustes" },
-              { id: "perdida", label: "Pérdidas" },
-              { id: "pendiente", label: "Pendientes", badge: lista.datos?.pendientes ?? 0 },
-            ]} />
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="N°, producto, detalle…" className={`${INPUT_FILTRO} w-56 pl-9`} />
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-3 py-3 sm:px-5" style={{ borderColor: `${TEAL}22`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
+          <div className="min-w-0 max-md:w-full">
+            <Pestanas valor={vista} onChange={(v) => { setVista(v); setPagina(1); }}
+              opciones={[
+                { id: "", label: "Todos" },
+                { id: "ajuste", label: "Ajustes" },
+                { id: "perdida", label: "Pérdidas" },
+                { id: "pendiente", label: "Pendientes", badge: lista.datos?.pendientes ?? 0 },
+              ]} />
+          </div>
+          {/* Celular: búsqueda + "Filtros" (hoja inferior con depósito y fechas); desde md, en línea. */}
+          <BarraFiltros plano className="max-md:w-full" activos={(deposito ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0)}
+            onLimpiar={() => { setDeposito(""); setDesde(""); setHasta(""); setPagina(1); }}
+            busqueda={
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="N°, producto, detalle…" type="search" enterKeyHint="search" aria-label="Buscar ajustes y pérdidas"
+                  className={`${INPUT_FILTRO} w-full pl-9 max-md:h-11 md:w-56`} />
+              </div>
+            }>
             {hayVariosDepositos(deps.datos) ? (
-              <Select value={deposito} onChange={(v) => { setDeposito(v); setPagina(1); }} minWidth={200}
+              <Select value={deposito} onChange={(v) => { setDeposito(v); setPagina(1); }} minWidth={200} etiqueta="Depósito" className="max-sm:!min-w-0"
                 options={[["", "Todos los depósitos"], ...opcionesDepositos(deps.datos, { soloActivos: false })]} />
             ) : null}
-            <input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} max={hasta || undefined} className={INPUT_FILTRO} aria-label="Desde" />
-            <input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} min={desde || undefined} className={INPUT_FILTRO} aria-label="Hasta" />
-          </div>
+            <label className="flex flex-col gap-1 md:block">
+              <span className="text-xs font-medium text-slate-600 md:sr-only">Desde</span>
+              <input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} max={hasta || undefined} className={`${INPUT_FILTRO} max-md:h-11 max-md:w-full`} aria-label="Desde" />
+            </label>
+            <label className="flex flex-col gap-1 md:block">
+              <span className="text-xs font-medium text-slate-600 md:sr-only">Hasta</span>
+              <input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} min={desde || undefined} className={`${INPUT_FILTRO} max-md:h-11 max-md:w-full`} aria-label="Hasta" />
+            </label>
+          </BarraFiltros>
         </div>
 
+        {vistaTarjetas ? (
+          <TablaTarjetas
+            filas={rows}
+            columnas={columnasMovil}
+            claveFila={(a) => a.id}
+            onFila={(a) => abrir(a.id)}
+            cargando={lista.cargando}
+            vacio={
+              <div className="px-4 py-14 text-center">
+                {lista.cargando ? <Loader2 className="mx-auto h-5 w-5 animate-spin text-slate-400" /> : (
+                  <>
+                    <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-2xl border" style={{ backgroundColor: `${TEAL}14`, borderColor: `${TEAL}33` }}>
+                      <ClipboardCheck className="h-6 w-6" style={{ color: TEAL }} />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-700">{vista === "pendiente" ? "No hay pérdidas pendientes de aprobar" : "No hay documentos"}</p>
+                  </>
+                )}
+              </div>
+            }
+          />
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="bg-slate-50/70 text-[11px] uppercase tracking-wider text-slate-500">
@@ -197,6 +272,7 @@ function Ajustes() {
             </tbody>
           </table>
         </div>
+        )}
         <Paginador pagina={pagina} porPagina={POR_PAGINA} total={total} cargando={lista.cargando} onCambiar={setPagina} />
       </section>
 
@@ -205,12 +281,12 @@ function Ajustes() {
   );
 }
 
-function Cifra({ etiqueta, valor, detalle, tono }: { etiqueta: string; valor: string; detalle: string; tono: "rose" | "emerald" | "slate" }) {
+function Cifra({ etiqueta, valor, detalle, tono, clase = "" }: { etiqueta: string; valor: string; detalle: string; tono: "rose" | "emerald" | "slate"; clase?: string }) {
   const color = tono === "rose" ? "text-rose-600" : tono === "emerald" ? "text-emerald-700" : "text-slate-700";
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+    <div className={`min-w-0 rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm sm:px-5 sm:py-4 ${clase}`}>
       <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">{etiqueta}</p>
-      <p className={`mt-1 text-xl font-semibold tabular-nums ${color}`}>{valor}</p>
+      <p className={`mt-1 text-lg font-semibold tabular-nums [overflow-wrap:anywhere] sm:text-xl ${color}`}>{valor}</p>
       <p className="text-[11px] text-slate-400">{detalle}</p>
     </div>
   );
@@ -258,21 +334,21 @@ function DetalleAjuste({ id, onClose, onCambio }: { id: string; onClose: () => v
         onClose={onClose}
         footer={
           <>
-            {error ? <p className="mr-auto text-xs font-medium text-rose-600">{error}</p> : null}
+            {error ? <p className="mr-auto text-xs font-medium text-rose-600 max-sm:basis-full">{error}</p> : null}
             {puedeAnular ? (
-              <button onClick={() => setAccion("anular")} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50">
+              <button onClick={() => setAccion("anular")} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 max-sm:min-h-11 max-sm:flex-1">
                 <X className="h-4 w-4" /> Anular
               </button>
             ) : null}
             {puedeAprobar && a.estado === "pendiente" ? (
               <>
-                <button onClick={() => setAccion("rechazar")} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50">Rechazar</button>
-                <button onClick={aprobar} disabled={aprobando} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
+                <button onClick={() => setAccion("rechazar")} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 max-sm:min-h-11 max-sm:flex-1">Rechazar</button>
+                <button onClick={aprobar} disabled={aprobando} className={`${BOTON_PRIMARIO} max-sm:min-h-11 max-sm:flex-[2]`} style={{ backgroundColor: TEAL }}>
                   {aprobando ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Aprobar y aplicar
                 </button>
               </>
             ) : (
-              <button onClick={onClose} className={BOTON_SECUNDARIO}>Cerrar</button>
+              <button onClick={onClose} className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:flex-1`}>Cerrar</button>
             )}
           </>
         }>
@@ -298,7 +374,48 @@ function DetalleAjuste({ id, onClose, onCambio }: { id: string; onClose: () => v
         {a.rechazado_motivo ? <p className="mt-3 rounded-xl border border-rose-100 bg-rose-50 px-4 py-3 text-xs text-rose-700"><strong>Rechazado:</strong> {a.rechazado_motivo}</p> : null}
         {a.anulado_motivo ? <p className="mt-3 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600"><strong>Anulado:</strong> {a.anulado_motivo}. El stock volvió a como estaba.</p> : null}
 
-        <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
+        {/* Celular: cada producto es una tarjeta; desde sm, la tabla. */}
+        <ul className="mt-4 space-y-2 sm:hidden">
+          {a.items.map((i) => {
+            const dif = Number(i.diferencia);
+            const lotes = i.lotes?.filter((l) => l.numero) ?? [];
+            const loteTxt = i.lote_actual ?? i.lote_numero;
+            return (
+              <li key={i.id} className="rounded-xl border border-slate-200 px-3 py-2.5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium leading-snug text-slate-800 [overflow-wrap:anywhere]">{i.producto_nombre}</p>
+                    <p className="font-mono text-[11px] text-slate-400">{i.producto_sku}</p>
+                  </div>
+                  <p className={`shrink-0 text-right font-semibold tabular-nums ${dif > 0 ? "text-emerald-700" : dif < 0 ? "text-red-600" : "text-slate-400"}`}>
+                    {i.modo === "conteo" && !aplicado ? <span className="text-xs font-medium">al aprobar</span> : `${dif > 0 ? "+" : dif < 0 ? "−" : ""}${cant(Math.abs(dif))}`}
+                  </p>
+                </div>
+                {i.nota ? <p className="mt-1 text-[11px] text-slate-500">{i.nota}</p> : null}
+                <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                  {conConteo ? (
+                    <>
+                      <div><dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Sistema</dt><dd className="tabular-nums text-slate-700">{i.cantidad_sistema == null ? "—" : cant(i.cantidad_sistema)}</dd></div>
+                      <div><dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Contado</dt><dd className="tabular-nums text-slate-700">{i.cantidad_contada == null ? "—" : cant(i.cantidad_contada)}</dd></div>
+                    </>
+                  ) : null}
+                  <div><dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Costo</dt><dd className="tabular-nums text-slate-700">{gs(i.costo_unitario)}</dd></div>
+                  {aplicado ? <div><dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Valor</dt><dd className={`font-semibold tabular-nums ${Number(i.valor) < 0 ? "text-red-600" : "text-slate-700"}`}>{gs(i.valor)}</dd></div> : null}
+                  {lotes.length || loteTxt || i.vencimiento ? (
+                    <div className="col-span-2 min-w-0">
+                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Lote</dt>
+                      <dd className="text-slate-600 [overflow-wrap:anywhere]">
+                        {lotes.length ? lotes.map((l) => <span key={`${l.lote_id}`} className="block"><span className="font-mono">{l.numero}</span> · {cant(l.cantidad)} · vence {dia(l.vencimiento)}</span>)
+                          : <>{loteTxt ? <span className="font-mono">{loteTxt}</span> : null}{loteTxt && i.vencimiento ? " · " : ""}{i.vencimiento ? `vence ${dia(i.vencimiento)}` : ""}</>}
+                      </dd>
+                    </div>
+                  ) : null}
+                </dl>
+              </li>
+            );
+          })}
+        </ul>
+        <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200 max-sm:hidden">
           <table className="w-full min-w-[600px] text-left text-sm">
             <thead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               <tr>

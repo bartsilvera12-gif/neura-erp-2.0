@@ -8,14 +8,21 @@
  * estables (los arma CrmClient con useCallback + refs). Mover una tarjeta re-renderiza solo
  * las dos columnas involucradas; el resto ni se entera. Arrastrar solo cambia el resaltado
  * de la columna de destino.
+ *
+ * Táctil / celular: el drag nativo no anda con el dedo → la tarjeta no es arrastrable y
+ * ofrece "Mover a…" (el selector de etapa, a 44 px) y los atajos Ganado / Perdido siempre
+ * visibles. En celular las columnas ocupan casi todo el ancho y se pasa de una a otra con
+ * scroll horizontal con imán (snap), dejando ver el borde de la siguiente.
  */
 import { memo, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, Clock, Copy, Loader2, Pencil, Phone, X } from "lucide-react";
+import { ArrowRightLeft, Check, ChevronDown, Clock, Copy, Loader2, Pencil, Phone, X } from "lucide-react";
+import { MenuAcciones } from "@/components/MenuAcciones";
 import {
   ORIGEN_LABEL, diaMes, fechaSimple, gsCompleto, gsCorto, telefonoLindo, tonoEtapa,
   type Columna as ColumnaT, type Etapa, type Tarjeta,
 } from "@/modules/crm/tipos";
+import { useEsTactil } from "@/lib/ui/responsive";
 import { AvatarIni } from "./comun";
 
 export type AccionesTarjeta = {
@@ -55,6 +62,7 @@ export const ProspectoCard = memo(function ProspectoCard({
   acciones: AccionesTarjeta;
 }) {
   const [copiado, setCopiado] = useState(false);
+  const tactil = useEsTactil();
   const etapa = etapas.find((e) => e.codigo === t.etapa);
   const tono = tonoEtapa(etapa?.color);
   const abierta = !!etapa && !etapa.es_ganado && !etapa.es_perdido;
@@ -63,7 +71,7 @@ export const ProspectoCard = memo(function ProspectoCard({
 
   return (
     <div
-      draggable
+      draggable={!tactil}
       onDragStart={(e) => {
         e.dataTransfer.setData("text/plain", t.id);
         e.dataTransfer.effectAllowed = "move";
@@ -71,18 +79,18 @@ export const ProspectoCard = memo(function ProspectoCard({
       }}
       onDragEnd={acciones.onDragEnd}
       onClick={() => acciones.onAbrir(t.id)}
-      className={`group cursor-grab select-none rounded-2xl border border-l-4 border-slate-200 bg-white p-3 shadow-sm transition-all [contain-intrinsic-size:auto_220px] [content-visibility:auto] hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing ${tono.borderLeft}`}
+      className={`group select-none rounded-2xl border border-l-4 border-slate-200 bg-white p-3 shadow-sm transition-all [contain-intrinsic-size:auto_220px] [content-visibility:auto] ${tactil ? "cursor-pointer active:bg-slate-50" : "cursor-grab hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing"} ${tono.borderLeft}`}
     >
       <div className="flex items-start gap-2">
         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${tono.dot}`} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-semibold leading-tight text-slate-900">{t.empresa || t.contacto}</p>
+          <p className="truncate text-[13px] font-semibold leading-tight text-slate-900 max-md:text-sm">{t.empresa || t.contacto}</p>
           <p className="mt-0.5 font-mono text-[10px] text-slate-400">{t.numero_control}</p>
         </div>
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); acciones.onAbrir(t.id); }}
-          className="shrink-0 rounded-md p-1 text-slate-300 opacity-0 transition-all hover:bg-[var(--brand)]/10 hover:text-[var(--brand)] group-hover:opacity-100"
+          className="shrink-0 rounded-md p-1 text-slate-300 opacity-0 transition-all hover:bg-[var(--brand)]/10 hover:text-[var(--brand)] group-hover:opacity-100 [@media(hover:none)]:hidden"
           title="Editar"
           aria-label="Editar prospecto"
         >
@@ -124,7 +132,7 @@ export const ProspectoCard = memo(function ProspectoCard({
             window.setTimeout(() => setCopiado(false), 1500);
           }}
           title={copiado ? "Copiado" : "Hacé click para copiar el número"}
-          className={`mt-2 flex w-full items-center justify-between gap-2 rounded-xl border px-2.5 py-1.5 text-left text-[11px] transition-colors ${
+          className={`mt-2 flex w-full items-center justify-between gap-2 rounded-xl border px-2.5 py-1.5 text-left text-[11px] transition-colors [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-[13px] ${
             copiado ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--brand)]/30 bg-[var(--brand)]/[0.08] text-[var(--brand-600)] hover:border-[var(--brand)]/50"
           }`}
         >
@@ -164,13 +172,38 @@ export const ProspectoCard = memo(function ProspectoCard({
 
       {/* Mover a etapa: el select no arrastra la tarjeta ni abre el detalle. */}
       <div
-        className="mt-2 rounded-xl border border-slate-100 bg-slate-50/70 px-2 py-1.5"
+        className={`mt-2 rounded-xl border border-slate-100 bg-slate-50/70 ${tactil ? "p-1" : "px-2 py-1.5"}`}
         draggable={false}
         onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
         onPointerDown={parar}
         onMouseDown={parar}
         onClick={parar}
       >
+        {tactil ? (
+          // Táctil: "Mover a…" abre la lista de etapas (hoja inferior en celular).
+          <MenuAcciones
+            etiqueta="Mover a…"
+            items={etapas
+              .filter((e) => e.codigo !== t.etapa)
+              .map((e) => ({
+                etiqueta: e.nombre,
+                icono: <span className={`h-2.5 w-2.5 rounded-full ${tonoEtapa(e.color).dot}`} />,
+                onClick: () => acciones.onMover(t, e.codigo),
+                tono: e.es_ganado ? ("exito" as const) : e.es_perdido ? ("peligro" as const) : undefined,
+              }))}
+            className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-left text-sm font-medium text-slate-700"
+          >
+            <span className="flex min-w-0 items-center gap-2">
+              <ArrowRightLeft className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+              <span className="truncate">Mover a…</span>
+            </span>
+            <span className="flex min-w-0 items-center gap-1 text-xs text-slate-500">
+              <span className="truncate">{etapa?.nombre ?? t.etapa}</span>
+              <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+            </span>
+          </MenuAcciones>
+        ) : (
+        <>
         <label className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-500">Mover a etapa</label>
         <select
           value={t.etapa}
@@ -180,16 +213,18 @@ export const ProspectoCard = memo(function ProspectoCard({
         >
           {etapas.map((e) => <option key={e.codigo} value={e.codigo}>{e.nombre}</option>)}
         </select>
+        </>
+        )}
       </div>
 
       {abierta && ganado && perdido ? (
-        <div className="mt-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="mt-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100">
           <button type="button" onClick={(e) => { e.stopPropagation(); acciones.onMover(t, ganado); }}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-200 px-2 py-1 text-[10px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-50">
+            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-200 px-2 py-1 text-[10px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-xs">
             <Check className="h-3 w-3" /> Ganado
           </button>
           <button type="button" onClick={(e) => { e.stopPropagation(); acciones.onMover(t, perdido); }}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-[10px] font-semibold text-rose-700 transition-colors hover:bg-rose-50">
+            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-[10px] font-semibold text-rose-700 transition-colors hover:bg-rose-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-xs">
             <X className="h-3 w-3" /> Perdido
           </button>
         </div>
@@ -197,13 +232,13 @@ export const ProspectoCard = memo(function ProspectoCard({
 
       {t.cliente_id ? (
         <Link href={`/clientes/${t.cliente_id}`} onClick={parar} draggable={false}
-          className="mt-2 flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50/80 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100">
+          className="mt-2 flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50/80 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-xs">
           <Check className="h-3 w-3" /> Cliente creado · ver ficha
         </Link>
       ) : (
         <button type="button" onClick={(e) => { e.stopPropagation(); acciones.onTransformar(t); }}
           title="Crear el cliente con estos datos y marcar el lead como Ganado"
-          className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg bg-[var(--brand)] px-2 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-[var(--brand-600)]">
+          className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg bg-[var(--brand)] px-2 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-[var(--brand-600)] [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-xs">
           <Check className="h-3 w-3" /> Transformar a cliente
         </button>
       )}
@@ -228,9 +263,10 @@ export const ColumnaKanban = memo(function ColumnaKanban({
 }) {
   const tono = tonoEtapa(col.color);
   const faltan = col.cantidad - col.tarjetas.length;
+  const tactil = useEsTactil();
   return (
     <div
-      className={`flex w-64 min-w-64 flex-col rounded-2xl border bg-white/60 backdrop-blur-sm transition-all duration-150 ${
+      className={`flex w-64 min-w-64 snap-start flex-col rounded-2xl border bg-white/60 backdrop-blur-sm transition-all duration-150 max-md:w-[calc(100vw-3.5rem)] max-md:min-w-[calc(100vw-3.5rem)] max-md:max-w-80 ${
         resaltada ? "border-[var(--brand)] bg-[var(--brand)]/[0.04] ring-2 ring-[var(--brand)]/30" : tono.headerBorder
       }`}
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; onDragSobre(col.codigo); }}
@@ -248,12 +284,12 @@ export const ColumnaKanban = memo(function ColumnaKanban({
         {col.total > 0 ? <span className="shrink-0 text-[10px] font-semibold tabular-nums text-slate-500" title={gsCompleto(col.total)}>Gs. {gsCorto(col.total)}</span> : null}
       </div>
 
-      <div className="flex max-h-[calc(100vh-260px)] min-h-16 flex-1 flex-col gap-2 overflow-y-auto p-2">
+      <div className="flex max-h-[calc(100dvh-17rem)] min-h-16 flex-1 flex-col gap-2 overflow-y-auto overscroll-contain p-2 md:max-h-[calc(100dvh-260px)]">
         {col.tarjetas.length === 0 ? (
           <div className={`flex h-16 items-center justify-center rounded-xl border-2 border-dashed text-[11px] transition-colors ${
             resaltada ? "border-[var(--brand)]/60 bg-[var(--brand)]/5 text-[var(--brand-600)]" : "border-slate-200 text-slate-300"
           }`}>
-            Soltá tarjetas aquí
+            {tactil ? "Sin prospectos" : "Soltá tarjetas aquí"}
           </div>
         ) : (
           col.tarjetas.map((t) => (
@@ -262,7 +298,7 @@ export const ColumnaKanban = memo(function ColumnaKanban({
         )}
         {faltan > 0 ? (
           <button type="button" onClick={() => onCargarMas(col.codigo)} disabled={cargandoMas}
-            className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white/70 px-3 py-2 text-[11px] font-semibold text-slate-600 transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)] disabled:opacity-60">
+            className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white/70 px-3 py-2 text-[11px] font-semibold text-slate-600 transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)] disabled:opacity-60 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-xs">
             {cargandoMas ? <Loader2 className="h-3 w-3 animate-spin" /> : null}
             Cargar más ({faltan.toLocaleString("es-PY")})
           </button>
@@ -325,7 +361,7 @@ export function KanbanScroller({ children }: { children: React.ReactNode }) {
         onMouseLeave={() => setDir(0)}
         onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDir(0); }}
         onDrop={() => setDir(0)}
-        className="h-full overflow-x-auto"
+        className="h-full snap-x overflow-x-auto overscroll-x-contain max-md:snap-mandatory max-md:scroll-px-1 md:snap-none"
       >
         {children}
       </div>

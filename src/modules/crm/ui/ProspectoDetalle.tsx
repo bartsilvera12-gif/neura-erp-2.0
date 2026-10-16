@@ -149,13 +149,13 @@ export function ProspectoDetalle({
     );
   } else {
     cuerpo = (
-      <div className={variant === "modal" ? "h-full space-y-5 overflow-y-auto bg-slate-50/50 px-6 py-5" : "space-y-5"}>
+      <div className={variant === "modal" ? "h-full space-y-4 overflow-y-auto overscroll-contain bg-slate-50/50 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-5" : "space-y-5"}>
         {confirmarEliminar ? (
-          <div className="flex items-center justify-between gap-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3">
             <p className="text-sm font-medium text-rose-700">¿Eliminar permanentemente este prospecto y sus notas?</p>
             <div className="flex shrink-0 gap-2">
-              <button onClick={eliminar} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700">Sí, eliminar</button>
-              <button onClick={() => setConfirmarEliminar(false)} className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-100">Cancelar</button>
+              <button onClick={eliminar} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700 max-sm:min-h-11 max-sm:px-4">Sí, eliminar</button>
+              <button onClick={() => setConfirmarEliminar(false)} className="rounded-lg border border-rose-200 px-3 py-1.5 text-xs text-rose-600 hover:bg-rose-100 max-sm:min-h-11 max-sm:px-4">Cancelar</button>
             </div>
           </div>
         ) : null}
@@ -163,7 +163,7 @@ export function ProspectoDetalle({
         {okMsg ? <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-medium text-emerald-700">✓ {okMsg}</div> : null}
 
         {/* Etapa del funnel */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <SectionTitle>Etapa del funnel</SectionTitle>
           <div className="flex flex-wrap gap-2">
             {etapas.map((e) => {
@@ -171,7 +171,7 @@ export function ProspectoDetalle({
               const activa = p.etapa === e.codigo;
               return (
                 <button key={e.codigo} type="button" onClick={() => moverA(e.codigo)} disabled={!!moviendo}
-                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all ${
+                  className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-semibold transition-all [@media(pointer:coarse)]:min-h-11 ${
                     activa ? `${t.badge} ring-2 ring-[var(--brand)]/30 ring-offset-1` : "border-slate-200 bg-white text-slate-600 hover:border-[var(--brand)]/60 hover:text-[var(--brand)]"
                   }`}>
                   {moviendo === e.codigo ? <Loader2 className="h-3 w-3 animate-spin" /> : <span className={`h-1.5 w-1.5 rounded-full ${t.dot}`} />}
@@ -186,7 +186,7 @@ export function ProspectoDetalle({
           {p.cliente_id ? (
             <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
               <p className="text-sm font-medium text-emerald-700">✓ Cliente creado</p>
-              <Link href={`/clientes/${p.cliente_id}`} className="text-sm font-semibold text-emerald-700 underline hover:text-emerald-900">Ver cliente →</Link>
+              <Link href={`/clientes/${p.cliente_id}`} className="text-sm font-semibold text-emerald-700 underline hover:text-emerald-900 max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">Ver cliente →</Link>
             </div>
           ) : etapaActual?.es_ganado ? (
             <div className="mt-3 flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5">
@@ -197,8 +197,8 @@ export function ProspectoDetalle({
         </section>
 
         {/* Datos */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <div className="mb-4 flex items-center justify-between gap-3 text-sm text-slate-600">
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm text-slate-600">
             <span><span className="font-semibold text-slate-700">Origen:</span> {ORIGEN_LABEL[p.origen_creacion] ?? "—"}{p.origen_detalle ? ` · ${p.origen_detalle}` : ""}</span>
             <span className="text-xs text-slate-400">Creado {fechaHora(p.created_at)}</span>
           </div>
@@ -219,13 +219,13 @@ export function ProspectoDetalle({
         </section>
 
         {/* Notas */}
-        <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
           <SectionTitle>Notas internas ({notas.length})</SectionTitle>
           <form onSubmit={agregarNota} className="mb-5">
             <div className="mb-2 flex flex-wrap gap-1.5">
               {TIPOS_NOTA.map(({ v, t, I }) => (
                 <button key={v} type="button" onClick={() => setTipoNota(v)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors ${tipoNota === v ? "border-[var(--brand)]/50 bg-[var(--brand-50)] text-[var(--brand-700)]" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
+                  className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors [@media(pointer:coarse)]:min-h-10 [@media(pointer:coarse)]:px-3.5 ${tipoNota === v ? "border-[var(--brand)]/50 bg-[var(--brand-50)] text-[var(--brand-700)]" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
                   <I className="h-3 w-3" /> {t}
                 </button>
               ))}
@@ -270,7 +270,7 @@ export function ProspectoDetalle({
 
         <div className="flex justify-end">
           <button type="button" onClick={() => setConfirmarEliminar(true)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-50">
+            className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-50 max-sm:min-h-11">
             <Trash2 className="h-4 w-4" /> Eliminar prospecto
           </button>
         </div>

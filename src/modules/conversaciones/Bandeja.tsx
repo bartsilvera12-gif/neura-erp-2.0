@@ -7,11 +7,21 @@
  * Arriba, el estado del asesor (Disponible / Ocupado / En pausa): la bandeja late cada 30 s
  * con la pestaña visible (presencia para la asignación automática y el Monitoreo).
  * ?c=<conversación> abre ese chat (también si se llega desde un aviso estando acá).
+ *
+ * RESPONSIVE: celular (< 768 px) navega por pasos como WhatsApp: la lista ocupa la pantalla
+ * y el chat se abre ENCIMA a pantalla completa (capa fija que sigue al viewport visible: el
+ * compositor queda sobre el teclado), con "volver" (también el botón atrás del teléfono).
+ * Tablet (≥ 768): lista + chat lado a lado; la ficha del contacto se abre en hoja (< 1024).
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { CheckCircle2, FlaskConical, MessagesSquare, Zap } from "lucide-react";
+import { createPortal } from "react-dom";
+import { CheckCircle2, FlaskConical, MessagesSquare, MoreHorizontal, Zap } from "lucide-react";
+import { BarraFiltros } from "@/components/EncabezadoPagina";
+import { MenuAcciones } from "@/components/MenuAcciones";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
+import { useMediaQuery, useViewportVisible } from "@/lib/ui/responsive";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { olvidarOpciones, pedirOpciones } from "@/modules/conversaciones/api";
 import { VISTAS, esVista, type FilaBandeja, type OpcionesBandeja, type Vista } from "@/modules/conversaciones/dominio";
@@ -29,10 +39,15 @@ const CLAVE_VISTA = "zentra:conversaciones:vista";
 const flecha =
   "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234FAEB2' stroke-width='2.5'><path stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/></svg>\")";
 const claseSelect =
-  "appearance-none rounded-lg border border-slate-200 bg-white bg-[length:13px_13px] bg-[right_0.55rem_center] bg-no-repeat px-2.5 py-2 pr-7 text-xs font-medium text-slate-700 shadow-sm outline-none transition-colors hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 min-w-[8.5rem] max-w-[min(16rem,60vw)] shrink-0";
+  "h-11 md:h-auto appearance-none rounded-lg border border-slate-200 bg-white bg-[length:13px_13px] bg-[right_0.55rem_center] bg-no-repeat px-2.5 py-2 pr-7 text-xs font-medium text-slate-700 shadow-sm outline-none transition-colors hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 min-w-[8.5rem] max-w-[min(16rem,60vw)] shrink-0";
+
+/** Debajo de este ancho el chat se abre a pantalla completa sobre la lista. */
+const MQ_CHAT_ENCIMA = "(max-width: 767.98px)";
 
 export function Bandeja() {
   const me = useUsuario();
+  const chatEncima = useMediaQuery(MQ_CHAT_ENCIMA);
+  const capaChat = useRef<HTMLDivElement>(null);
   const presencia = usePresencia();
   const [opciones, setOpciones] = useState<OpcionesBandeja | null>(null);
   const [errorOpciones, setErrorOpciones] = useState<string | null>(null);
@@ -85,18 +100,54 @@ export function Bandeja() {
     if (cUrl && /^[0-9a-f-]{36}$/i.test(cUrl)) b.abrir(cUrl);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opciones, cUrl, b.abrir]);
+  // En celular, abrir un chat desde la lista suma una entrada al historial: el botón "atrás"
+  // del teléfono vuelve a la lista (y "volver" hace history.back() para no dejarla colgada).
+  const empujado = useRef(false);
   const abrir = useCallback(
     (id: string | null) => {
+      if (!id && empujado.current) {
+        empujado.current = false;
+        window.history.back();
+        return;
+      }
+      const empujar = !!id && !b.selId && window.matchMedia(MQ_CHAT_ENCIMA).matches;
       ultimoC.current = id;
       b.abrir(id);
       const url = new URL(window.location.href);
       if (id) url.searchParams.set("c", id);
       else url.searchParams.delete("c");
-      window.history.replaceState(window.history.state, "", url);
+      if (empujar) {
+        empujado.current = true;
+        window.history.pushState(window.history.state, "", url);
+      } else window.history.replaceState(window.history.state, "", url);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [b.abrir],
+    [b.abrir, b.selId],
   );
+  // "Atrás" del navegador/teléfono sobre un chat abierto con pushState → vuelve a la lista.
+  useEffect(() => {
+    const alVolver = () => {
+      if (new URL(window.location.href).searchParams.get("c")) return;
+      empujado.current = false;
+      ultimoC.current = null;
+      b.abrir(null);
+    };
+    window.addEventListener("popstate", alVolver);
+    return () => window.removeEventListener("popstate", alVolver);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [b.abrir]);
+  // Celular: el chat va en una capa fija que sigue al viewport visible (teclado de iOS).
+  const encima = chatEncima && !!b.selId;
+  // Encima va en un portal a <body>: el contenido de la página tiene su propio contexto de
+  // apilado (animación de entrada) y la cabecera de la app quedaría por arriba.
+  const conPortal = (n: React.ReactNode) => (encima && typeof document !== "undefined" ? createPortal(n, document.body) : n);
+  useViewportVisible(capaChat, encima);
+  useEffect(() => {
+    // El hook deja top/alto en línea: al dejar de estar encima (cerrar, girar a tablet) se limpian.
+    const el = capaChat.current;
+    if (encima || !el) return;
+    for (const p of ["top", "height", "bottom", "--capa-alto"]) el.style.removeProperty(p);
+  }, [encima]);
 
   const avisar = useCallback((t: string, tono: "ok" | "error" = "ok") => setAviso({ texto: t, tono }), []);
   useEffect(() => {
@@ -116,6 +167,7 @@ export function Bandeja() {
 
   const sugeridas = useMemo(() => [...new Set(b.filas.flatMap((f) => f.etiquetas))].sort(), [b.filas]);
   const yoNombre = useMemo(() => opciones?.equipo.find((u) => u.id === opciones.yo)?.nombre ?? me?.email ?? "Vos", [opciones, me]);
+  const hayFiltros = !!opciones && (opciones.canales.length > 1 || vista === "todas" || vista === "cerradas");
   const contador = (v: Vista) =>
     v === "mias" ? b.contadores.mias : v === "sin_asignar" ? b.contadores.sin_asignar : v === "todas" ? b.contadores.abiertas : null;
 
@@ -125,13 +177,26 @@ export function Bandeja() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
-      {/* Barra superior: pestañas, búsqueda y filtros */}
-      <div className="flex min-w-0 shrink-0 flex-wrap items-center gap-2">
-        <div className="flex w-fit shrink-0 flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1">
+      {/* Barra superior: pestañas, búsqueda y filtros (en celular: pestañas con scroll,
+          búsqueda a lo ancho y canal/asesor en "Filtros"; el estado y el resto a la derecha). */}
+      <div className="flex min-w-0 shrink-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center">
+        <ScrollHorizontal
+          role="tablist"
+          ariaLabel="Vistas de la bandeja"
+          dependencias={[vista]}
+          className="shrink-0 rounded-xl border border-slate-200 bg-slate-100/80 p-1 md:w-fit"
+        >
           {VISTAS.map((v) => {
             const n = contador(v.id);
             return (
-              <button key={v.id} type="button" className={tabClass(vista === v.id)} onClick={() => setVista(v.id)}>
+              <button
+                key={v.id}
+                type="button"
+                role="tab"
+                aria-selected={vista === v.id}
+                className={`${tabClass(vista === v.id)} shrink-0 whitespace-nowrap max-md:min-h-10 max-md:flex-1 max-md:justify-center`}
+                onClick={() => setVista(v.id)}
+              >
                 {v.label}
                 {n ? (
                   <span className={`rounded-full px-1.5 text-[10px] font-bold tabular-nums ${vista === v.id ? "bg-white/25 text-white" : "bg-slate-200 text-slate-600"}`}>{n}</span>
@@ -140,59 +205,95 @@ export function Bandeja() {
               </button>
             );
           })}
-        </div>
-        <div className="relative min-w-[10rem] flex-1">
-          <input
-            type="search"
-            value={texto}
-            onChange={(e) => setTexto(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), setQ(texto.trim()))}
-            placeholder="Buscar por nombre, número o mensaje"
-            className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 pr-24 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
-            aria-label="Buscar conversaciones"
-          />
-          {texto.trim() && (texto.trim() !== q || b.cargando) ? (
-            <span className="pointer-events-none absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 text-[11px] font-medium text-[#3F8E91]">
-              <Girando /> Buscando…
-            </span>
+        </ScrollHorizontal>
+        <BarraFiltros
+          plano
+          className="min-w-0 md:min-w-[18rem] md:flex-1"
+          activos={(canal ? 1 : 0) + ((vista === "todas" || vista === "cerradas") && asesor ? 1 : 0)}
+          onLimpiar={() => {
+            setCanal("");
+            setAsesor("");
+          }}
+          busqueda={
+            <div className="relative min-w-0">
+              <input
+                type="search"
+                value={texto}
+                onChange={(e) => setTexto(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), setQ(texto.trim()))}
+                placeholder="Buscar por nombre, número o mensaje"
+                enterKeyHint="search"
+                className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 pr-10 text-xs md:pr-24 text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 md:h-auto"
+                aria-label="Buscar conversaciones"
+              />
+              {texto.trim() && (texto.trim() !== q || b.cargando) ? (
+                <span className="pointer-events-none absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 text-[11px] font-medium text-[#3F8E91]">
+                  <Girando /> <span className="max-sm:sr-only">Buscando…</span>
+                </span>
+              ) : null}
+            </div>
+          }
+          extra={
+            <>
+              <SelectorEstado estado={presencia.estado} error={presencia.error} onCambiar={(e) => void presencia.cambiar(e)} compacto={chatEncima} />
+              {opciones?.es_admin ? (
+                chatEncima ? (
+                  <MenuAcciones
+                    etiqueta="Más opciones de la bandeja"
+                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm"
+                    items={[
+                      { etiqueta: "Respuestas rápidas", icono: <Zap className="h-4 w-4" />, onClick: () => setModal("respuestas") },
+                      ...(opciones.canales.some((c) => c.proveedor === "simulador" && c.activo)
+                        ? [{ etiqueta: "Simular entrante", icono: <FlaskConical className="h-4 w-4" />, onClick: () => setModal("simular") }]
+                        : []),
+                    ]}
+                  >
+                    <MoreHorizontal className="h-5 w-5" aria-hidden />
+                  </MenuAcciones>
+                ) : (
+                  <>
+                    <button type="button" onClick={() => setModal("respuestas")} title="Respuestas rápidas" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">
+                      <Zap className="h-3.5 w-3.5" /> Respuestas
+                    </button>
+                    {opciones.canales.some((c) => c.proveedor === "simulador" && c.activo) ? (
+                      <button type="button" onClick={() => setModal("simular")} title="Simular un mensaje entrante (canal simulador)" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-dashed border-violet-300 bg-violet-50 px-2.5 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100">
+                        <FlaskConical className="h-3.5 w-3.5" /> Simular entrante
+                      </button>
+                    ) : null}
+                  </>
+                )
+              ) : null}
+            </>
+          }
+        >
+          {hayFiltros ? (
+            <>
+              {opciones && opciones.canales.length > 1 ? (
+                <select className={claseSelect} style={{ backgroundImage: flecha }} value={canal} onChange={(e) => setCanal(e.target.value)} aria-label="Filtrar por canal">
+                  <option value="">Todos los canales</option>
+                  {opciones.canales.map((c) => (
+                    <option key={c.id} value={c.id}>{c.nombre}</option>
+                  ))}
+                </select>
+              ) : null}
+              {opciones && (vista === "todas" || vista === "cerradas") ? (
+                <select className={claseSelect} style={{ backgroundImage: flecha }} value={asesor} onChange={(e) => setAsesor(e.target.value)} aria-label="Filtrar por asesor">
+                  <option value="">Todos los asesores</option>
+                  {opciones.equipo.map((u) => (
+                    <option key={u.id} value={u.id}>{u.nombre}</option>
+                  ))}
+                </select>
+              ) : null}
+            </>
           ) : null}
-        </div>
-        {opciones && opciones.canales.length > 1 ? (
-          <select className={claseSelect} style={{ backgroundImage: flecha }} value={canal} onChange={(e) => setCanal(e.target.value)} aria-label="Filtrar por canal">
-            <option value="">Todos los canales</option>
-            {opciones.canales.map((c) => (
-              <option key={c.id} value={c.id}>{c.nombre}</option>
-            ))}
-          </select>
-        ) : null}
-        {opciones && (vista === "todas" || vista === "cerradas") ? (
-          <select className={claseSelect} style={{ backgroundImage: flecha }} value={asesor} onChange={(e) => setAsesor(e.target.value)} aria-label="Filtrar por asesor">
-            <option value="">Todos los asesores</option>
-            {opciones.equipo.map((u) => (
-              <option key={u.id} value={u.id}>{u.nombre}</option>
-            ))}
-          </select>
-        ) : null}
-        <SelectorEstado estado={presencia.estado} error={presencia.error} onCambiar={(e) => void presencia.cambiar(e)} />
-        {opciones?.es_admin ? (
-          <>
-            <button type="button" onClick={() => setModal("respuestas")} title="Respuestas rápidas" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-xs font-semibold text-slate-600 shadow-sm hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">
-              <Zap className="h-3.5 w-3.5" /> Respuestas
-            </button>
-            {opciones.canales.some((c) => c.proveedor === "simulador" && c.activo) ? (
-              <button type="button" onClick={() => setModal("simular")} title="Simular un mensaje entrante (canal simulador)" className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-dashed border-violet-300 bg-violet-50 px-2.5 py-2 text-xs font-semibold text-violet-700 hover:bg-violet-100">
-                <FlaskConical className="h-3.5 w-3.5" /> Simular entrante
-              </button>
-            ) : null}
-          </>
-        ) : null}
+        </BarraFiltros>
       </div>
 
       {b.error ? <div className="shrink-0 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-800">{b.error}</div> : null}
 
       <div className="relative flex min-h-0 flex-1 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-        {/* Lista */}
-        <div className={`min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-slate-50/80 lg:flex lg:w-[320px] xl:w-[350px] ${b.selId ? "hidden" : "flex"}`}>
+        {/* Lista (en celular queda montada debajo del chat: al volver conserva el scroll) */}
+        <div className="flex min-h-0 w-full shrink-0 flex-col border-slate-200 bg-slate-50/80 md:w-[280px] md:border-r lg:w-[320px] xl:w-[350px]">
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-3 py-1.5">
             <span className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">Chats</span>
             <span
@@ -218,8 +319,20 @@ export function Bandeja() {
           </div>
         </div>
 
-        {/* Chat */}
-        <div className={`min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex ${b.selId ? "flex" : "hidden"}`}>
+        {/* Chat: al lado de la lista (≥ 768) o encima, a pantalla completa (celular) */}
+        {conPortal(
+        <div
+          ref={capaChat}
+          role={encima ? "dialog" : undefined}
+          aria-modal={encima || undefined}
+          aria-label={encima ? "Chat" : undefined}
+          className={
+            encima
+              ? "pt-safe fixed inset-0 z-[45] flex min-h-0 min-w-0 flex-col overflow-hidden bg-white"
+              : "hidden min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:flex"
+          }
+          style={encima ? { animation: "drawer-in 0.22s cubic-bezier(0.16,1,0.3,1)" } : undefined}
+        >
           {!b.selId || !opciones ? (
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-2 text-sm text-slate-400">
               <MessagesSquare className="h-10 w-10 text-slate-300" />
@@ -241,17 +354,18 @@ export function Bandeja() {
               onAviso={avisar}
             />
           )}
-        </div>
+        </div>,
+        )}
       </div>
 
       {aviso ? (
         <div
           role="status"
-          className={`fixed bottom-5 left-1/2 z-[140] flex -translate-x-1/2 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-white shadow-xl ${aviso.tono === "error" ? "bg-red-600" : "bg-slate-900"}`}
+          className={`fixed left-1/2 z-[140] flex w-max max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium text-white shadow-xl ${encima ? "bottom-[calc(5.5rem+env(safe-area-inset-bottom))]" : "bottom-[calc(1.25rem+env(safe-area-inset-bottom))]"} ${aviso.tono === "error" ? "bg-red-600" : "bg-slate-900"}`}
           style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
         >
-          {aviso.tono === "ok" ? <CheckCircle2 className="h-4 w-4 text-emerald-400" /> : null}
-          {aviso.texto}
+          {aviso.tono === "ok" ? <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-400" /> : null}
+          <span className="min-w-0 [overflow-wrap:anywhere]">{aviso.texto}</span>
         </div>
       ) : null}
 

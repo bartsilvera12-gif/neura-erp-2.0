@@ -59,7 +59,7 @@ export function PanelChat({
   const nombre = nombreContacto(conv);
 
   return (
-    <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="@container relative flex min-h-0 flex-1 flex-col overflow-hidden">
       <CabeceraChat
         conv={conv}
         yo={opciones.yo}

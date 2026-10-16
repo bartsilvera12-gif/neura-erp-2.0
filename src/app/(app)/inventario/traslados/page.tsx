@@ -15,6 +15,8 @@ import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Select } from "@/components/Select";
+import { BarraFiltros } from "@/components/EncabezadoPagina";
+import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { invalidarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { hayVariosDepositos, invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
 import {
@@ -25,6 +27,56 @@ import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, Dato, ET, INPUT, INPUT_FILT
 
 const POR_PAGINA = 25;
 type Pagina = { rows: FilaTraslado[]; total: number; en_transito: number };
+
+const bajarRemision = (t: FilaTraslado) => void descargarArchivo(`/api/inventario/traslados/${t.id}/remision`, `remision-${t.remision_numero}.pdf`);
+
+/** Celular (< 768 px): cada traslado es una tarjeta (la tabla de escritorio queda igual). */
+const columnasMovil: ColumnaTabla<FilaTraslado>[] = [
+  { key: "numero", titulo: "Traslado", movil: "titulo", celda: (t) => <span className="font-mono">{t.numero}</span> },
+  {
+    key: "ruta", titulo: "Origen → destino", movil: "subtitulo",
+    celda: (t) => (
+      <span className="flex min-w-0 flex-wrap items-center gap-x-1.5">
+        <span className="font-medium text-slate-700">{t.origen.nombre}</span>
+        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+        <span className="font-medium text-slate-700">{t.destino.nombre}</span>
+      </span>
+    ),
+  },
+  {
+    key: "unidades", titulo: "Unidades", movil: "valor",
+    celda: (t) => <>{cant(t.total_unidades)}<span className="block text-[11px] font-normal text-slate-400">{t.total_items} {t.total_items === 1 ? "producto" : "productos"}</span></>,
+  },
+  {
+    key: "estado", titulo: "Estado", movil: "chip",
+    celda: (t) => {
+      const e = ESTADO_TRASLADO[t.estado];
+      return (
+        <span className="inline-flex flex-wrap items-center gap-1.5">
+          <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${e.clase}`}>{e.label}</span>
+          {Number(t.diferencia_unidades) > 0 ? <span className="text-[11px] text-orange-600">Faltaron {cant(t.diferencia_unidades)}</span> : null}
+        </span>
+      );
+    },
+  },
+  { key: "fecha", titulo: "Fecha", movil: "dato", celda: (t) => dia(t.fecha_inicio) },
+  { key: "valor", titulo: "Valor al costo", movil: "dato", celda: (t) => <span className="tabular-nums">{gs(t.valor_costo)}</span> },
+  { key: "remision", titulo: "Remisión", movil: "dato", celda: (t) => <span className="font-mono">{t.remision_numero}</span> },
+  { key: "usuario", titulo: "Enviado por", movil: "dato", celda: (t) => t.usuario_nombre ?? "—" },
+  {
+    key: "sucursal", titulo: "Sucursales", movil: "detalle",
+    celda: (t) => (t.origen.sucursal === t.destino.sucursal ? t.origen.sucursal : `${t.origen.sucursal} → ${t.destino.sucursal}`),
+  },
+  {
+    key: "acc", titulo: "", movil: "acciones",
+    celda: (t) => (
+      <button type="button" onClick={() => bajarRemision(t)} aria-label="Descargar nota de remisión"
+        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-600 active:bg-slate-100">
+        <FileDown className="h-4 w-4" /> Remisión
+      </button>
+    ),
+  },
+];
 
 export default function TrasladosPage() {
   return (
@@ -73,8 +125,10 @@ function Traslados() {
     setRecarga((k) => k + 1);
   };
 
+  const vistaTarjetas = useVistaTarjetas();
+
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-5 pb-10 sm:space-y-6">
       <Cabecera kicker="Inventario · Documentos" titulo="Traslados" subtitulo="Mercadería que se mueve entre depósitos y sucursales, con su nota de remisión">
         {esAdmin ? (
           <Link href="/inventario/traslados/nuevo" className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
@@ -84,26 +138,54 @@ function Traslados() {
       </Cabecera>
 
       <section className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: `${TEAL}33` }}>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3" style={{ borderColor: `${TEAL}22`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
-          <Pestanas valor={estado} onChange={(v) => { setEstado(v); setPagina(1); }}
-            opciones={[
-              { id: "en_transito", label: "En tránsito", badge: enTransito },
-              { id: "recibido", label: "Recibidos" },
-              { id: "anulado", label: "Anulados" },
-              { id: "", label: "Todos" },
-            ]} />
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="N°, remisión, producto, chofer…" className={`${INPUT_FILTRO} w-64 pl-9`} />
-            </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-3 py-3 sm:px-5" style={{ borderColor: `${TEAL}22`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
+          <div className="min-w-0 max-md:w-full">
+            <Pestanas valor={estado} onChange={(v) => { setEstado(v); setPagina(1); }}
+              opciones={[
+                { id: "en_transito", label: "En tránsito", badge: enTransito },
+                { id: "recibido", label: "Recibidos" },
+                { id: "anulado", label: "Anulados" },
+                { id: "", label: "Todos" },
+              ]} />
+          </div>
+          {/* Celular: búsqueda + "Filtros" (hoja inferior con el depósito); desde md, en línea. */}
+          <BarraFiltros plano className="max-md:w-full" activos={deposito ? 1 : 0} onLimpiar={() => { setDeposito(""); setPagina(1); }}
+            busqueda={
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="N°, remisión, producto, chofer…" type="search" enterKeyHint="search" aria-label="Buscar traslados"
+                  className={`${INPUT_FILTRO} w-full pl-9 max-md:h-11 md:w-64`} />
+              </div>
+            }>
             {hayVariosDepositos(deps.datos) ? (
-              <Select value={deposito} onChange={(v) => { setDeposito(v); setPagina(1); }} minWidth={200}
+              <Select value={deposito} onChange={(v) => { setDeposito(v); setPagina(1); }} minWidth={200} etiqueta="Depósito" className="max-sm:!min-w-0"
                 options={[["", "Todos los depósitos"], ...opcionesDepositos(deps.datos, { soloActivos: false })]} />
             ) : null}
-          </div>
+          </BarraFiltros>
         </div>
 
+        {vistaTarjetas ? (
+          <TablaTarjetas
+            filas={rows}
+            columnas={columnasMovil}
+            claveFila={(t) => t.id}
+            onFila={(t) => abrir(t.id)}
+            cargando={lista.cargando}
+            vacio={
+              <div className="px-4 py-14 text-center">
+                {lista.cargando ? <Loader2 className="mx-auto h-5 w-5 animate-spin text-slate-400" /> : (
+                  <>
+                    <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-2xl border" style={{ backgroundColor: `${TEAL}14`, borderColor: `${TEAL}33` }}>
+                      <Truck className="h-6 w-6" style={{ color: TEAL }} />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-700">{estado === "en_transito" ? "No hay traslados en tránsito" : "No hay traslados"}</p>
+                    <p className="mt-1 text-xs text-slate-500">Un traslado saca la mercadería de un depósito y la deja en tránsito hasta que se recibe en el otro.</p>
+                  </>
+                )}
+              </div>
+            }
+          />
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[900px] text-left text-sm">
             <thead className="bg-slate-50/70 text-[11px] uppercase tracking-wider text-slate-500">
@@ -171,6 +253,7 @@ function Traslados() {
             </tbody>
           </table>
         </div>
+        )}
         <Paginador pagina={pagina} porPagina={POR_PAGINA} total={total} cargando={lista.cargando} onCambiar={setPagina} />
       </section>
 
@@ -220,17 +303,17 @@ function DetalleTraslado({ id, onClose, onCambio }: { id: string; onClose: () =>
         onClose={onClose}
         footer={
           <>
-            <button onClick={pdf} disabled={bajando} className={BOTON_SECUNDARIO}>
-              {bajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} Nota de remisión (PDF)
+            <button onClick={pdf} disabled={bajando} className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:flex-1`}>
+              {bajando ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />} <span className="sm:hidden">Remisión (PDF)</span><span className="max-sm:hidden">Nota de remisión (PDF)</span>
             </button>
             {t.puede_anular ? (
-              <button onClick={() => setAnulando(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50">
+              <button onClick={() => setAnulando(true)} className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-600 transition hover:bg-rose-50 max-sm:min-h-11 max-sm:flex-1">
                 <X className="h-4 w-4" /> Anular
               </button>
             ) : null}
             {t.puede_recibir ? (
-              <button onClick={() => setRecibiendo(true)} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
-                <PackageCheck className="h-4 w-4" /> Recibir en {t.destino.nombre}
+              <button onClick={() => setRecibiendo(true)} className={`${BOTON_PRIMARIO} max-sm:min-h-11 max-sm:w-full max-sm:basis-full`} style={{ backgroundColor: TEAL }}>
+                <PackageCheck className="h-4 w-4 shrink-0" /> <span className="truncate">Recibir en {t.destino.nombre}</span>
               </button>
             ) : null}
           </>
@@ -265,7 +348,11 @@ function DetalleTraslado({ id, onClose, onCambio }: { id: string; onClose: () =>
           <p className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs text-slate-600"><strong>Anulado:</strong> {t.anulado_motivo}. La mercadería volvió a {t.origen.nombre}.</p>
         ) : null}
 
-        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200">
+        {/* Celular: cada producto es una tarjeta (lotes debajo); desde sm, la tabla. */}
+        <ul className="mt-4 space-y-2 sm:hidden">
+          {t.items.map((it) => <TarjetaItem key={it.id} it={it} recibido={recibido} />)}
+        </ul>
+        <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 max-sm:hidden">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
               <tr>
@@ -338,6 +425,48 @@ function FilaItem({ it, recibido }: { it: ItemTraslado; recibido: boolean }) {
   );
 }
 
+function TarjetaItem({ it, recibido }: { it: ItemTraslado; recibido: boolean }) {
+  const u = it.unidad_medida === "Unidad" || !it.unidad_medida ? "" : ` ${it.unidad_medida}`;
+  const falta = recibido && Number(it.cantidad_recibida ?? 0) < Number(it.cantidad);
+  const lote1 = it.lotes.length === 1 ? it.lotes[0] : null;
+  return (
+    <li className="rounded-xl border border-slate-200 px-3 py-2.5">
+      <p className="font-medium leading-snug text-slate-800 [overflow-wrap:anywhere]">{it.producto_nombre}</p>
+      <p className="font-mono text-[11px] text-slate-400">{it.producto_sku}</p>
+      <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+        <div className="min-w-0">
+          <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Enviado</dt>
+          <dd className="font-semibold tabular-nums text-slate-900">{cant(it.cantidad)}{u}</dd>
+        </div>
+        {recibido ? (
+          <div className="min-w-0">
+            <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Recibido</dt>
+            <dd className={`font-semibold tabular-nums ${falta ? "text-orange-600" : "text-emerald-700"}`}>{cant(it.cantidad_recibida)}{u}</dd>
+          </div>
+        ) : lote1 ? (
+          <div className="min-w-0">
+            <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Lote</dt>
+            <dd className="text-xs text-slate-600 [overflow-wrap:anywhere]">{lote1.lote_numero ? <><span className="font-mono">{lote1.lote_numero}</span> · vence {dia(lote1.vencimiento)}</> : "Sin lote"}</dd>
+          </div>
+        ) : null}
+      </dl>
+      {recibido && lote1 ? (
+        <p className="mt-1.5 text-xs text-slate-600">Lote {lote1.lote_numero ? <><span className="font-mono">{lote1.lote_numero}</span> · vence {dia(lote1.vencimiento)}</> : "sin lote"}</p>
+      ) : null}
+      {it.lotes.length > 1 ? (
+        <ul className="mt-2 divide-y divide-slate-100 rounded-lg bg-slate-50/70 text-xs">
+          {it.lotes.map((l) => (
+            <li key={l.id} className="flex items-center justify-between gap-3 px-2.5 py-1.5">
+              <span className="min-w-0 text-slate-600 [overflow-wrap:anywhere]">{l.lote_numero ? <><span className="font-mono">{l.lote_numero}</span> · vence {dia(l.vencimiento)}</> : "Sin lote"}</span>
+              <span className="shrink-0 tabular-nums text-slate-700">{cant(l.cantidad)}{recibido ? <span className="text-slate-400"> → {cant(l.cantidad_recibida)}</span> : null}</span>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </li>
+  );
+}
+
 /** Recepción: por defecto llegó todo; se corrige lo que llegó de menos (por lote si tiene). */
 function RecibirTraslado({ t, onClose, onHecho }: { t: TrasladoDetalle; onClose: () => void; onHecho: () => void }) {
   // Recibido por ítem (sin lotes) o por lote (traslados_lotes.id).
@@ -386,12 +515,12 @@ function RecibirTraslado({ t, onClose, onHecho }: { t: TrasladoDetalle; onClose:
     }
   }
 
-  const campo = (id: string, env: number) => {
+  const campo = (id: string, env: number, nombre: string) => {
     const n = num(rec[id] ?? "");
     const mal = !Number.isFinite(n) || n < 0 || n > env;
     return (
-      <input inputMode="decimal" value={rec[id] ?? ""} onChange={(e) => setRec((p) => ({ ...p, [id]: e.target.value.replace(/[^\d.,]/g, "") }))}
-        className={`w-24 rounded-lg border px-2 py-1.5 text-right text-sm tabular-nums outline-none focus:ring-2 ${mal ? "border-rose-300 focus:ring-rose-100" : n < env ? "border-orange-300 bg-orange-50/50 focus:ring-orange-100" : "border-slate-200 focus:border-[var(--brand)] focus:ring-[var(--brand-100)]"}`} />
+      <input inputMode="decimal" enterKeyHint="next" aria-label={`Llegó de ${nombre}`} value={rec[id] ?? ""} onChange={(e) => setRec((p) => ({ ...p, [id]: e.target.value.replace(/[^\d.,]/g, "") }))}
+        className={`w-24 rounded-lg border px-2 py-1.5 text-right text-sm tabular-nums outline-none focus:ring-2 max-sm:min-h-11 max-sm:w-28 ${mal ? "border-rose-300 focus:ring-rose-100" : n < env ? "border-orange-300 bg-orange-50/50 focus:ring-orange-100" : "border-slate-200 focus:border-[var(--brand)] focus:ring-[var(--brand-100)]"}`} />
     );
   };
 
@@ -400,14 +529,41 @@ function RecibirTraslado({ t, onClose, onHecho }: { t: TrasladoDetalle; onClose:
       onClose={busy ? undefined : onClose}
       footer={
         <>
-          <button onClick={onClose} disabled={busy} className={BOTON_SECUNDARIO}>Volver</button>
-          <button onClick={confirmar} disabled={busy || invalido || (falta > 0 && !motivo.trim())} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-            {falta > 0 ? `Recibir con diferencia (faltan ${cant(falta)})` : "Confirmar recepción completa"}
+          <button onClick={onClose} disabled={busy} className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:shrink-0`}>Volver</button>
+          <button onClick={confirmar} disabled={busy || invalido || (falta > 0 && !motivo.trim())} className={`${BOTON_PRIMARIO} max-sm:min-h-11 max-sm:min-w-0 max-sm:flex-1`} style={{ backgroundColor: TEAL }}>
+            {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : <CheckCircle2 className="h-4 w-4 shrink-0" />}
+            <span className="max-sm:text-left max-sm:leading-tight">{falta > 0 ? `Recibir con diferencia (faltan ${cant(falta)})` : "Confirmar recepción completa"}</span>
           </button>
         </>
       }>
-      <div className="overflow-hidden rounded-xl border border-slate-200">
+      {/* Celular: cada producto (y cada lote) en una tarjeta con "Enviado" y el campo "Llegó" de 44 px. */}
+      <ul className="space-y-2 sm:hidden">
+        {t.items.map((it) => (
+          <li key={it.id} className="rounded-xl border border-slate-200 px-3 py-2.5">
+            <p className="font-medium leading-snug text-slate-800 [overflow-wrap:anywhere]">{it.producto_nombre}</p>
+            <p className="font-mono text-[11px] text-slate-400">{it.producto_sku}</p>
+            {it.lotes.length ? (
+              <ul className="mt-2 divide-y divide-slate-100">
+                {it.lotes.map((l) => (
+                  <li key={l.id} className="flex items-center justify-between gap-3 py-1.5">
+                    <div className="min-w-0 text-xs">
+                      <p className="text-slate-600 [overflow-wrap:anywhere]">{l.lote_numero ? <><span className="font-mono font-semibold">{l.lote_numero}</span> · vence {dia(l.vencimiento)}</> : "Sin lote"}</p>
+                      <p className="text-slate-400">Enviado <span className="font-semibold tabular-nums text-slate-700">{cant(l.cantidad)}</span></p>
+                    </div>
+                    {campo(l.id, Number(l.cantidad), `${it.producto_nombre} lote ${l.lote_numero ?? "sin lote"}`)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <p className="text-xs text-slate-400">Enviado <span className="font-semibold tabular-nums text-slate-700">{cant(it.cantidad)}</span></p>
+                {campo(it.id, Number(it.cantidad), it.producto_nombre)}
+              </div>
+            )}
+          </li>
+        ))}
+      </ul>
+      <div className="overflow-hidden rounded-xl border border-slate-200 max-sm:hidden">
         <table className="w-full text-left text-sm">
           <thead className="bg-slate-50/70 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
             <tr>
@@ -424,7 +580,7 @@ function RecibirTraslado({ t, onClose, onHecho }: { t: TrasladoDetalle; onClose:
                   <tr key={l.id} className="text-xs">
                     <td className="px-3 py-1.5 pl-6 text-slate-600">{l.lote_numero ? <><span className="font-mono">{l.lote_numero}</span> · vence {dia(l.vencimiento)}</> : "Sin lote"}</td>
                     <td className="px-3 py-1.5 text-right tabular-nums text-slate-600">{cant(l.cantidad)}</td>
-                    <td className="px-3 py-1.5 text-right">{campo(l.id, Number(l.cantidad))}</td>
+                    <td className="px-3 py-1.5 text-right">{campo(l.id, Number(l.cantidad), `${it.producto_nombre} lote ${l.lote_numero ?? "sin lote"}`)}</td>
                   </tr>
                 )),
               ]
@@ -432,7 +588,7 @@ function RecibirTraslado({ t, onClose, onHecho }: { t: TrasladoDetalle; onClose:
               <tr key={it.id}>
                 <td className="px-3 py-2"><p className="font-medium text-slate-800">{it.producto_nombre}</p><p className="font-mono text-[11px] text-slate-400">{it.producto_sku}</p></td>
                 <td className="px-3 py-2 text-right tabular-nums text-slate-700">{cant(it.cantidad)}</td>
-                <td className="px-3 py-2 text-right">{campo(it.id, Number(it.cantidad))}</td>
+                <td className="px-3 py-2 text-right">{campo(it.id, Number(it.cantidad), it.producto_nombre)}</td>
               </tr>
             ))}
           </tbody>
@@ -444,13 +600,13 @@ function RecibirTraslado({ t, onClose, onHecho }: { t: TrasladoDetalle; onClose:
           <p className="text-xs text-orange-700">Lo que no llegó queda documentado en el traslado como diferencia (no vuelve al origen).</p>
           <label className="block">
             <span className={ET}>Motivo de la diferencia *</span>
-            <input autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} placeholder="Ej. 2 cajas llegaron rotas" className={INPUT} />
+            <input enterKeyHint="next" value={motivo} onChange={(e) => setMotivo(e.target.value)} maxLength={300} placeholder="Ej. 2 cajas llegaron rotas" className={INPUT} />
           </label>
         </div>
       ) : null}
       <label className="mt-4 block">
         <span className={ET}>Observación de la recepción <span className="font-normal text-slate-400">(opcional)</span></span>
-        <input value={obs} onChange={(e) => setObs(e.target.value)} maxLength={1000} className={INPUT} />
+        <input enterKeyHint="done" value={obs} onChange={(e) => setObs(e.target.value)} maxLength={1000} className={INPUT} />
       </label>
       {error ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p> : null}
     </ModalDocumento>

@@ -14,6 +14,7 @@ import { catalogosEnMemoria, obtenerCatalogos, obtenerTicket, precargarPestanas,
 import { TicketContext, type TicketCtx, type TicketDetalle } from "@/modules/soporte/detalle/TicketContexto";
 import EstadoRapido from "@/modules/soporte/detalle/EstadoRapido";
 import { Aviso, ChipSla, Esqueleto, Pagina, TARJETA, claseBoton } from "@/modules/soporte/ui";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 
 type Detalle = { ticket: TicketDetalle; contadores: TicketCtx["contadores"] };
 
@@ -169,7 +170,7 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
     <TicketContext.Provider value={ctx}>
       <Pagina>
         <nav className="mb-3 flex items-center gap-2 text-[13.5px] text-slate-400" aria-label="Ruta">
-          <Link href="/soporte/tickets" className="font-medium text-slate-500 no-underline hover:text-[#2F6E71]">
+          <Link href="/soporte/tickets" className="font-medium text-slate-500 no-underline hover:text-[#2F6E71] max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">
             Tickets
           </Link>
           <span aria-hidden>/</span>
@@ -184,16 +185,16 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
           ) : null}
         </nav>
 
-        <header className="mb-5 flex flex-wrap items-start justify-between gap-4">
+        <header className="mb-4 flex flex-wrap items-start justify-between gap-3 sm:mb-5 sm:gap-4">
           <div className="min-w-0 max-w-4xl">
-            <h1 className="text-[26px] font-bold leading-tight tracking-tight text-slate-900 md:text-[30px]">{t.asunto}</h1>
-            {subtitulo ? <p className="mt-2 line-clamp-2 text-[15px] leading-relaxed text-slate-500">{subtitulo}</p> : null}
+            <h1 className="text-xl font-bold leading-tight tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-[26px] md:text-[30px]">{t.asunto}</h1>
+            {subtitulo ? <p className="mt-2 line-clamp-2 text-[14px] leading-relaxed text-slate-500 sm:text-[15px]">{subtitulo}</p> : null}
           </div>
           {editando ? null : (
-            <div className="flex shrink-0 items-center gap-2.5">
+            <div className="flex shrink-0 items-center gap-2.5 max-sm:w-full">
               <Link
                 href={`${base}/editar`}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#1F8F7A] px-5 py-2.5 text-[14.5px] font-semibold text-white no-underline shadow-[0_8px_18px_-8px_rgba(31,143,122,0.8)] transition hover:bg-[#197866]"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#1F8F7A] px-5 py-2.5 text-[14.5px] font-semibold text-white no-underline shadow-[0_8px_18px_-8px_rgba(31,143,122,0.8)] transition hover:bg-[#197866] max-sm:min-h-11 max-sm:flex-1"
               >
                 <Pencil className="h-4 w-4" aria-hidden /> Editar
               </Link>
@@ -203,15 +204,15 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
                   onClick={() => setMenu((m) => !m)}
                   aria-label="Más acciones"
                   aria-expanded={menu}
-                  className="grid h-[42px] w-[46px] place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#4FAEB2]/50"
+                  className="grid h-[42px] w-[46px] place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#4FAEB2]/50 max-sm:h-11"
                 >
                   <MoreHorizontal className="h-5 w-5" />
                 </button>
                 {menu ? (
-                  <div className="absolute right-0 top-12 z-30 w-60 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 text-[13px] shadow-xl">
+                  <div className="absolute right-0 top-12 z-30 w-60 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 text-[13px] shadow-xl">
                     {menuItems.map((it) => {
                       const Ic = it.ic;
-                      const cls = "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-medium text-slate-700 no-underline hover:bg-[#4FAEB2]/8 hover:text-[#2F6E71]";
+                      const cls = "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-medium text-slate-700 no-underline hover:bg-[#4FAEB2]/8 hover:text-[#2F6E71] max-sm:min-h-12 max-sm:text-[15px]";
                       return it.href ? (
                         <Link key={it.et} href={it.href} onClick={() => setMenu(false)} className={cls}>
                           <Ic className="h-4 w-4" aria-hidden />
@@ -244,7 +245,7 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
         ) : (
           <>
             {/* Franja de resumen */}
-            <section className={`${TARJETA} mb-5 grid grid-cols-1 divide-y divide-slate-100 p-2 sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-3 xl:grid-cols-[1.4fr_0.9fr_1fr_1fr_1fr] xl:divide-x`}>
+            <section className={`${TARJETA} mb-4 grid grid-cols-2 gap-y-1 p-2 sm:mb-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.4fr_0.9fr_1fr_1fr_1fr] xl:divide-x xl:divide-slate-100 [&>*]:min-w-0 max-sm:[&>:first-child]:col-span-2`}>
               <div className="min-w-0 rounded-xl bg-[#4FAEB2]/10 px-4 py-3">
                 <p className="flex items-center gap-1.5 text-[11.5px] font-medium text-[#3F8E91]">
                   <UserRound className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
@@ -295,9 +296,10 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
             </section>
 
             <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
-              <div className={`${TARJETA} min-w-0 p-5`}>
+              <div className={`${TARJETA} min-w-0 p-3.5 sm:p-5`}>
                 <EstadoRapido />
-                <nav className="mt-5 flex gap-1 overflow-x-auto border-b border-slate-100" aria-label="Secciones">
+                <nav className="mt-4 border-b border-slate-100 sm:mt-5" aria-label="Secciones">
+                <ScrollHorizontal claseFila="gap-1" dependencias={[activo]}>
                   {pestanas.map((p) => {
                     const sel = p.id === activo;
                     return (
@@ -306,7 +308,7 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
                         href={p.href}
                         scroll={false}
                         aria-current={sel ? "page" : undefined}
-                        className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-4 py-2.5 text-[14px] no-underline transition ${
+                        className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3.5 py-2.5 text-[14px] no-underline transition max-md:min-h-11 sm:px-4 ${
                           sel ? "border-[#1F8F7A] font-semibold text-[#1F8F7A]" : "border-transparent font-medium text-slate-500 hover:text-slate-800"
                         }`}
                       >
@@ -315,12 +317,13 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
                       </Link>
                     );
                   })}
+                </ScrollHorizontal>
                 </nav>
-                <div className="pt-5">{children}</div>
+                <div className="pt-4 sm:pt-5">{children}</div>
               </div>
 
               <aside className="min-w-0 space-y-5">
-                <section className={`${TARJETA} px-5 py-4`}>
+                <section className={`${TARJETA} px-4 py-4 sm:px-5`}>
                   <h2 className="mb-1 flex items-center gap-1.5 text-[14.5px] font-bold text-slate-800">
                     Información clave
                     <Info className="h-3 w-3 text-slate-300" aria-hidden />

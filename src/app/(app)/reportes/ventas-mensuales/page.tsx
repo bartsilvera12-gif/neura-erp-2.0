@@ -9,7 +9,7 @@ import { Suspense, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { BarrasH, Columnas, Dona, Leyenda, SERIES, C_OTROS, colorMetodo } from "@/components/graficos/Graficos";
 import { corto, gs, mesCorto, nombreMes, num, pct, variacion } from "@/components/graficos/formato";
-import { Descargas, EncabezadoReporte, EstadoCarga, FiltrosReporte, Kpi, Segmentos, Tabla, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
+import { Descargas, EncabezadoReporte, EstadoCarga, FilaKpis, FiltrosReporte, Kpi, Segmentos, Tabla, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
 import type { VentasMes } from "@/modules/reportes/tipos";
 
 const ATAJOS: Atajo[] = ["12m", "24m", "anio"];
@@ -63,7 +63,7 @@ function VentasPorMes() {
 
       {!d || !t ? <EstadoCarga error={error} /> : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <FilaKpis n={5}>
             <Kpi acento label="Ventas del período" valor={gs(t.total)} delta={{ actual: Number(t.total), anterior: Number(t.anterior), texto: "vs. año anterior" }}
               hint={`${d.meses.length} meses`} />
             <Kpi label="Cantidad de ventas" valor={num(t.cantidad)} delta={{ actual: Number(t.cantidad), anterior: Number(t.anterior_cantidad), texto: "vs. año anterior" }} />
@@ -71,7 +71,7 @@ function VentasPorMes() {
             <Kpi label="Mejor mes" valor={mejor && Number(mejor.total) ? <span className="capitalize">{nombreMes(mejor.mes)}</span> : "—"} hint={mejor ? gs(mejor.total) : undefined}
               onClick={mejor ? () => irMes(mejor.mes) : undefined} />
             <Kpi label="Vendido a crédito" valor={pct(Number(t.credito), Number(t.total), 0)} hint={gs(t.credito)} />
-          </div>
+          </FilaKpis>
 
           <Tarjeta titulo="Ventas por mes" sub="la raya punteada es el mismo mes del año anterior · tocá un mes para ver su detalle"
             extra={<Segmentos<Vista> valor={v} onChange={setVista} opciones={[

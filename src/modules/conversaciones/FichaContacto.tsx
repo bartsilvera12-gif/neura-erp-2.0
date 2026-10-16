@@ -5,10 +5,13 @@
  * nada de lugar). Muestra la tarjeta del cliente del 2.0 (código, deuda, suscripción activa,
  * últimos tickets, última tipificación) y el prospecto del CRM, con "Ver ficha", "Crear
  * cliente" y "Crear prospecto en CRM". Se pide una vez por conversación (cache en memoria).
+ * Debajo de 1024 px (celular / tablet) se abre en una HOJA (inferior en celular).
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ExternalLink, Sparkles, UserPlus, X } from "lucide-react";
+import { HojaInferior } from "@/components/HojaInferior";
+import { useEsEscritorio } from "@/lib/ui/responsive";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
 import { crearProspecto, pedirFicha, vincularCliente, type Ficha } from "@/modules/conversaciones/api";
 import { telefonoLegible, type FilaBandeja } from "@/modules/conversaciones/dominio";
@@ -23,6 +26,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [creandoCliente, setCreandoCliente] = useState(false);
+  const escritorio = useEsEscritorio();
 
   const cargar = useCallback(
     async (fresco = false) => {
@@ -74,23 +78,19 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
   const c = ficha?.cliente ?? null;
   const p = ficha?.prospecto ?? null;
 
-  return (
-    <>
-      <button type="button" aria-label="Cerrar ficha" onClick={onCerrar} className="absolute inset-0 z-20 cursor-default bg-slate-900/10" />
-      <aside
-        role="dialog"
-        aria-label="Ficha del contacto"
-        className="absolute inset-y-0 right-0 z-30 flex w-[min(26rem,92%)] flex-col border-l border-slate-200 bg-white shadow-2xl"
-        style={{ animation: "drawer-in 0.2s cubic-bezier(0.16,1,0.3,1)" }}
-      >
-        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-semibold text-slate-900">Ficha del contacto</h2>
-          <button type="button" onClick={onCerrar} aria-label="Cerrar" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+  const nuevoCliente = creandoCliente ? (
+    <NuevoCliente
+      inicial={{ nombre: conv.contacto_nombre ?? "", telefono: conv.contacto_telefono ?? "" }}
+      onClose={() => setCreandoCliente(false)}
+      onCreado={(cli) => {
+        setCreandoCliente(false);
+        void accion("vincular", () => vincularCliente(conv.id, cli.id));
+      }}
+    />
+  ) : null;
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+  const cuerpo = (
+        <>
           {error ? <p className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">{error}</p> : null}
           {!ficha ? (
             <div className="flex animate-pulse flex-col gap-3" aria-hidden>
@@ -145,7 +145,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                           {!c.activo ? <span className="rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Inactivo</span> : null}
                         </div>
                       </div>
-                      <Link href={`/clientes/${c.id}`} className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-[#3F8E91] hover:underline">
+                      <Link href={`/clientes/${c.id}`} className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-[#3F8E91] hover:underline max-lg:-my-2 max-lg:min-h-10 max-lg:text-xs">
                         Ver ficha <ExternalLink className="h-3 w-3" />
                       </Link>
                     </div>
@@ -178,7 +178,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                       type="button"
                       disabled={!!ocupado}
                       onClick={() => window.confirm("¿Desvincular este cliente del contacto?") && void accion("desvincular", () => vincularCliente(conv.id, null))}
-                      className="mt-1.5 text-[10px] font-semibold text-slate-500 underline-offset-2 hover:text-[#3F8E91] hover:underline"
+                      className="mt-1.5 text-[10px] font-semibold text-slate-500 underline-offset-2 hover:text-[#3F8E91] hover:underline max-lg:min-h-10 max-lg:text-xs"
                     >
                       No es este cliente
                     </button>
@@ -189,7 +189,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                     <button
                       type="button"
                       onClick={() => setCreandoCliente(true)}
-                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#4FAEB2] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#3F8E91]"
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#4FAEB2] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#3F8E91] max-lg:min-h-11 max-lg:px-4 max-lg:text-sm"
                     >
                       <UserPlus className="h-3.5 w-3.5" /> Crear cliente
                     </button>
@@ -202,7 +202,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                   <ul className="flex flex-col gap-1">
                     {c.tickets.map((t) => (
                       <li key={t.id}>
-                        <Link href={`/soporte/tickets/${t.id}`} className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] hover:border-[#4FAEB2]/50 hover:bg-slate-50">
+                        <Link href={`/soporte/tickets/${t.id}`} className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] hover:border-[#4FAEB2]/50 hover:bg-slate-50 max-lg:min-h-11">
                           <span className="font-mono font-semibold text-slate-700">{numeroTicket(t.numero)}</span>
                           <span className="min-w-0 flex-1 truncate text-slate-600">{t.asunto}</span>
                           <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: `${t.estado_color ?? "#94a3b8"}22`, color: t.estado_color ?? "#475569" }}>
@@ -239,7 +239,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                         <p className="font-mono text-[11px] font-semibold text-violet-700">{p.numero_control}</p>
                         <p className="truncate text-xs font-semibold text-slate-800">{p.empresa || p.contacto}</p>
                       </div>
-                      <Link href={`/crm?p=${p.id}`} className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-violet-700 hover:underline">
+                      <Link href={`/crm?p=${p.id}`} className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-violet-700 hover:underline max-lg:-my-2 max-lg:min-h-10 max-lg:text-xs">
                         Ver en CRM <ExternalLink className="h-3 w-3" />
                       </Link>
                     </div>
@@ -255,7 +255,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                       type="button"
                       disabled={!!ocupado}
                       onClick={() => void accion("prospecto", async () => (await crearProspecto(conv.id)).fila)}
-                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50"
+                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-violet-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50 max-lg:min-h-11 max-lg:px-4 max-lg:text-sm"
                     >
                       <Sparkles className="h-3.5 w-3.5" /> {ocupado === "prospecto" ? "Creando…" : "Crear prospecto en CRM"}
                     </button>
@@ -264,18 +264,39 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
               </Seccion>
             </div>
           )}
+        </>
+  );
+
+  // Celular / tablet: hoja (z por debajo de los modales, para que "Crear cliente" quede arriba).
+  if (!escritorio) {
+    return (
+      <>
+        <HojaInferior titulo="Ficha del contacto" onClose={onCerrar} z="z-[48]" ancho="sm:max-w-lg">
+          {cuerpo}
+        </HojaInferior>
+        {nuevoCliente}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <button type="button" aria-label="Cerrar ficha" onClick={onCerrar} className="absolute inset-0 z-20 cursor-default bg-slate-900/10" />
+      <aside
+        role="dialog"
+        aria-label="Ficha del contacto"
+        className="absolute inset-y-0 right-0 z-30 flex w-[min(26rem,92%)] flex-col border-l border-slate-200 bg-white shadow-2xl"
+        style={{ animation: "drawer-in 0.2s cubic-bezier(0.16,1,0.3,1)" }}
+      >
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-slate-200 px-4 py-3">
+          <h2 className="text-sm font-semibold text-slate-900">Ficha del contacto</h2>
+          <button type="button" onClick={onCerrar} aria-label="Cerrar" className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:border-slate-300 hover:text-slate-700">
+            <X className="h-4 w-4" />
+          </button>
         </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">{cuerpo}</div>
       </aside>
-      {creandoCliente ? (
-        <NuevoCliente
-          inicial={{ nombre: conv.contacto_nombre ?? "", telefono: conv.contacto_telefono ?? "" }}
-          onClose={() => setCreandoCliente(false)}
-          onCreado={(cli) => {
-            setCreandoCliente(false);
-            void accion("vincular", () => vincularCliente(conv.id, cli.id));
-          }}
-        />
-      ) : null}
+      {nuevoCliente}
     </>
   );
 }
@@ -314,7 +335,7 @@ function BotonCopiar({ valor }: { valor: string }) {
           .catch(() => undefined)
       }
       title="Copiar número"
-      className="text-[10px] font-semibold text-slate-400 transition-colors hover:text-[#3F8E91]"
+      className="text-[10px] font-semibold text-slate-400 transition-colors hover:text-[#3F8E91] max-lg:-my-2 max-lg:min-h-10 max-lg:px-2 max-lg:text-xs"
     >
       {copiado ? "copiado" : "copiar"}
     </button>

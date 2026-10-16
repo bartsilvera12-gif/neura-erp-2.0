@@ -105,7 +105,7 @@ export function BuscadorCliente({ variant, seleccionado, onSelect, onClear }: {
     return (
       <div className="flex min-w-0 flex-1 items-center gap-2">
         <button type="button" onClick={() => { setQuery(""); setOpen(true); }} title="Buscar otro cliente"
-          className="inline-flex min-w-0 max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left text-xs font-medium text-slate-800 shadow-sm transition-colors hover:border-[var(--brand)]">
+          className="inline-flex min-h-11 min-w-0 max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-left sm:min-h-0 text-xs font-medium text-slate-800 shadow-sm transition-colors hover:border-[var(--brand)]">
           <IconoLupa className="h-3.5 w-3.5 shrink-0" style={{ color: TEAL }} />
           <span className="min-w-0 truncate">{seleccionado}</span>
           <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>
@@ -114,7 +114,7 @@ export function BuscadorCliente({ variant, seleccionado, onSelect, onClear }: {
         </button>
         {onClear ? (
           <button type="button" onClick={onClear} title="Quitar cliente" aria-label="Quitar cliente"
-            className="shrink-0 rounded-md p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600">
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600 sm:h-auto sm:w-auto sm:p-1.5">
             <X className="h-3.5 w-3.5" strokeWidth={2.25} />
           </button>
         ) : null}
@@ -130,7 +130,7 @@ export function BuscadorCliente({ variant, seleccionado, onSelect, onClear }: {
   return (
     <div ref={containerRef} className={`relative ${variant === "landing" ? "mx-auto w-full max-w-2xl" : "min-w-0 flex-1"}`}>
       <div className={shell}>
-        <div className="flex items-center gap-2 px-3 py-2 sm:py-2.5">
+        <div className="flex min-h-11 items-center gap-2 px-3 py-1 sm:min-h-0 sm:py-2.5">
           <IconoLupa className="h-4 w-4 shrink-0" style={{ color: TEAL }} />
           <input ref={inputRef} type="search" autoComplete="off" value={query}
             onChange={(e) => { setQuery(e.target.value); setOpen(true); }}
@@ -141,13 +141,13 @@ export function BuscadorCliente({ variant, seleccionado, onSelect, onClear }: {
             aria-label="Buscar cliente" />
           {query ? (
             <button type="button" onClick={() => setQuery("")}
-              className="shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800">
+              className="min-h-9 shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium text-slate-500 sm:min-h-0 transition-colors hover:bg-slate-100 hover:text-slate-800">
               Limpiar
             </button>
           ) : null}
           {variant === "toolbar" && seleccionado && open ? (
             <button type="button" onClick={() => { setOpen(false); setQuery(""); }}
-              className="shrink-0 text-[11px] font-semibold transition-colors hover:brightness-90" style={{ color: TEAL }}>
+              className="min-h-9 shrink-0 px-1 text-[11px] font-semibold transition-colors hover:brightness-90 sm:min-h-0 sm:px-0" style={{ color: TEAL }}>
               Listo
             </button>
           ) : null}
@@ -156,7 +156,7 @@ export function BuscadorCliente({ variant, seleccionado, onSelect, onClear }: {
 
       {open ? (
         <div className="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
-          <div className={`max-h-64 overflow-y-auto overscroll-y-contain ${cargando && resultadosDe !== t ? "opacity-60" : ""}`}>
+          <div className={`max-h-[min(16rem,50dvh)] overflow-y-auto overscroll-y-contain ${cargando && resultadosDe !== t ? "opacity-60" : ""}`}>
             {resultadosDe === null ? (
               <div className="px-4 py-8 text-center text-xs text-slate-400">Buscando…</div>
             ) : resultados.length === 0 ? (
@@ -166,7 +166,7 @@ export function BuscadorCliente({ variant, seleccionado, onSelect, onClear }: {
             ) : (
               resultados.map((c, i) => (
                 <button key={c.id} type="button" onClick={() => elegir(c)}
-                  className="w-full border-b border-slate-100 px-3 py-2 text-left transition-colors last:border-0 hover:bg-slate-50"
+                  className="block min-h-11 w-full border-b border-slate-100 px-3 py-2 text-left transition-colors last:border-0 hover:bg-slate-50"
                   style={i === 0 && t ? { backgroundColor: `${TEAL}14` } : undefined}>
                   <p className="truncate text-xs font-semibold text-slate-900">{c.nombre}</p>
                   <div className="mt-0.5 flex flex-wrap gap-x-2 gap-y-0.5">
@@ -179,7 +179,7 @@ export function BuscadorCliente({ variant, seleccionado, onSelect, onClear }: {
               ))
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 bg-slate-50 px-3 py-1.5 text-[10px] text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 bg-slate-50 px-3 py-1.5 text-[10px] text-slate-400 [@media(pointer:coarse)]:hidden">
             <span className="inline-flex items-center gap-1">
               <kbd className="rounded border border-slate-200 bg-white px-1 py-0.5 font-mono text-[9px] leading-none">↵</kbd>
               primer resultado

@@ -87,7 +87,7 @@ export function ProyectoForm({ variant, clienteInicial, onCreado, onCancel }: {
 
   return (
     <form onSubmit={guardar} className={isModal ? "flex min-h-0 flex-1 flex-col" : "space-y-6 rounded-2xl border border-[var(--brand)]/45 bg-white p-6 shadow-sm"}>
-      <div className={isModal ? "min-h-0 flex-1 space-y-5 overflow-y-auto bg-slate-50/50 px-6 py-5" : "space-y-6"}>
+      <div className={isModal ? "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-slate-50/50 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-5" : "space-y-6"}>
         <section className={seccion}>
           <TituloPanel>Datos generales</TituloPanel>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
@@ -157,7 +157,7 @@ export function ProyectoForm({ variant, clienteInicial, onCreado, onCancel }: {
         {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-medium text-rose-700">{error}</div> : null}
       </div>
 
-      <div className={isModal ? "flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-white px-6 py-4" : "flex flex-wrap items-center justify-end gap-2 pt-2"}>
+      <div className={isModal ? "flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-white px-4 py-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:[&>*]:flex-1 sm:px-6 sm:py-4" : "flex flex-wrap items-center justify-end gap-2 pt-2"}>
         {progreso ? <span className="mr-auto text-xs text-slate-500">{progreso}</span> : null}
         {onCancel ? <button type="button" onClick={onCancel} className={BTN_SECUNDARIO} disabled={saving}>Cancelar</button> : null}
         <button type="submit" disabled={saving || !titulo.trim()} className={BTN_PRIMARIO}>{saving ? "Creando…" : "Crear proyecto"}</button>

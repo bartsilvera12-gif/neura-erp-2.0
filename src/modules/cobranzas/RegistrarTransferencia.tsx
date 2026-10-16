@@ -190,7 +190,7 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
   return (
     <CapaModal onClose={busy ? undefined : onClose} z="z-[120]">
       <div onClick={(e) => e.stopPropagation()} className={`flex w-full max-w-lg ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl`} style={{ animation: "rb-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 sm:px-5 sm:py-4">
           <div className="min-w-0">
             <h3 className="text-base font-semibold text-slate-900">{fija ? "Registrar cobro" : "Registrar transferencia"}</h3>
             <p className="mt-0.5 text-[11px] text-slate-500">
@@ -202,7 +202,7 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
           {error ? <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div> : null}
 
           {fija ? (
@@ -251,7 +251,7 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
             <div>
               <div className="mb-1 flex items-center justify-between gap-2">
                 <span className={`${LABEL} mb-0`}>Facturas de {cliente.nombre}</span>
-                <button type="button" onClick={() => { setCliente(null); setCuotas([]); setElegidas({}); }} className="text-[11px] font-semibold text-[#3F8E91] hover:underline">
+                <button type="button" onClick={() => { setCliente(null); setCuotas([]); setElegidas({}); }} className="shrink-0 text-[11px] font-semibold text-[#3F8E91] hover:underline max-sm:-my-2 max-sm:min-h-11 max-sm:px-2 max-sm:text-xs">
                   Cambiar
                 </button>
               </div>
@@ -264,18 +264,21 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
                     const max = disponible(c);
                     return (
                       <li key={c.id} className={`flex items-center gap-2 px-3 py-2 text-xs ${sel ? "bg-[#4FAEB2]/[0.05]" : ""}`}>
-                        <input type="checkbox" checked={sel} disabled={!sel && max <= 0} onChange={() => alternar(c)} className="h-4 w-4 shrink-0 cursor-pointer accent-[#4FAEB2]" aria-label={`Incluir ${c.numero}`} />
+                        {/* El tilde con objetivo táctil de 44 px (sin agrandar la fila en escritorio). */}
+                        <label className="-m-2 flex shrink-0 cursor-pointer items-center justify-center p-2 max-sm:h-11 max-sm:w-11">
+                          <input type="checkbox" checked={sel} disabled={!sel && max <= 0} onChange={() => alternar(c)} className="h-4 w-4 cursor-pointer accent-[#4FAEB2] max-sm:h-5 max-sm:w-5" aria-label={`Incluir ${c.numero}`} />
+                        </label>
                         <span className="min-w-0 flex-1">
-                          <span className={`block font-mono ${c.vencida ? "text-rose-600" : "text-slate-700"}`}>{c.numero} · vence {fechaCorta(c.vencimiento)}</span>
+                          <span className={`block font-mono [overflow-wrap:anywhere] ${c.vencida ? "text-rose-600" : "text-slate-700"}`}>{c.numero} · vence {fechaCorta(c.vencimiento)}</span>
                           <span className="text-[10px] text-slate-400">
                             {c.plan} · saldo {gs(c.saldo)}{Number(c.en_aprobacion) > 0 ? ` · ${gs(c.en_aprobacion)} en aprobación` : ""}
                           </span>
                         </span>
                         {sel ? (
                           <MontoInput value={elegidas[c.id] ?? 0} decimals={false} onChange={(v) => setElegidas((m) => ({ ...m, [c.id]: v }))}
-                            className={`w-28 rounded-lg border px-2 py-1 text-right text-xs tabular-nums outline-none focus:ring-2 focus:ring-[#4FAEB2]/20 ${(elegidas[c.id] ?? 0) > max || !((elegidas[c.id] ?? 0) > 0) ? "border-rose-300" : "border-slate-200"}`} />
+                            className={`w-28 shrink-0 rounded-lg border px-2 py-1 text-right max-sm:min-h-11 text-xs tabular-nums outline-none focus:ring-2 focus:ring-[#4FAEB2]/20 ${(elegidas[c.id] ?? 0) > max || !((elegidas[c.id] ?? 0) > 0) ? "border-rose-300" : "border-slate-200"}`} />
                         ) : (
-                          <span className="w-28 text-right tabular-nums text-slate-400">{gs(max)}</span>
+                          <span className="w-28 shrink-0 text-right tabular-nums text-slate-400">{gs(max)}</span>
                         )}
                       </li>
                     );
@@ -288,14 +291,14 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
               <span className={LABEL}>Fecha de la transferencia</span>
-              <input type="date" value={fecha} max={hoy} onChange={(e) => setFecha(e.target.value)} className={INPUT} />
+              <input type="date" value={fecha} max={hoy} onChange={(e) => setFecha(e.target.value)} className={`${INPUT} max-sm:min-h-11`} />
             </label>
             <div>
               <span className={LABEL}>Banco de origen</span>
-              <Select value={bancoId} onChange={cambiarBanco} options={opcionesBanco} block />
+              <Select value={bancoId} onChange={cambiarBanco} options={opcionesBanco} block etiqueta="Banco de origen" />
             </div>
           </div>
           <label className="block">
@@ -308,7 +311,7 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
               <input value={operacion} onChange={(e) => { setOperacion(e.target.value); setOpAuto(false); }} placeholder="Nº de operación de la transferencia" className={`${INPUT} font-mono`} />
               {banco?.sin_referencia ? (
                 <button type="button" onClick={() => { setOperacion(generarReferencia(banco.prefijo)); setOpAuto(true); }} title="Generar una referencia nueva"
-                  className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/10 px-3 text-xs font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/20">
+                  className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/10 px-3 text-xs font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/20 max-sm:min-h-11">
                   <RefreshCw className="h-3.5 w-3.5" /> Generar
                 </button>
               ) : null}
@@ -326,19 +329,20 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
             ) : (
               <div className="flex items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm">
                 <span className="flex min-w-0 items-center gap-2 text-slate-700"><FileText className="h-4 w-4 shrink-0 text-slate-400" /><span className="truncate">{archivo.name}</span></span>
-                <button type="button" onClick={() => { setArchivo(null); if (fileRef.current) fileRef.current.value = ""; }} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50">Quitar</button>
+                <button type="button" onClick={() => { setArchivo(null); if (fileRef.current) fileRef.current.value = ""; }} className="shrink-0 rounded-lg px-2 py-1 text-xs font-semibold text-red-600 hover:bg-red-50 max-sm:-my-2 max-sm:min-h-11 max-sm:px-3">Quitar</button>
               </div>
             )}
             <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,application/pdf" className="hidden" onChange={(e) => elegirArchivo(e.target.files?.[0] ?? null)} />
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-100 px-5 py-3">
-          <p className="min-w-0 truncate text-[11px] text-slate-400">{faltan.length ? `Falta ${faltan.join(", ")}.` : ""}</p>
+        {/* Pie: en celular lo que falta va arriba (completo) y los botones se reparten el ancho. */}
+        <div className="flex shrink-0 flex-col gap-2 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          {faltan.length ? <p className="min-w-0 text-[11px] text-slate-400 sm:truncate" title={`Falta ${faltan.join(", ")}.`}>Falta {faltan.join(", ")}.</p> : <span className="max-sm:hidden" />}
           <div className="flex shrink-0 gap-2">
-            <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancelar</button>
+            <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 max-sm:flex-1 max-sm:text-sm">Cancelar</button>
             <button type="button" onClick={() => void guardar()} disabled={busy || invalido}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#3F8E91] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#357a7d] disabled:opacity-50">
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#3F8E91] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#357a7d] disabled:opacity-50 max-sm:flex-[2] max-sm:text-sm">
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
               {busy ? "Enviando…" : fija ? "Enviar a aprobación" : "Registrar (queda pendiente)"}
             </button>

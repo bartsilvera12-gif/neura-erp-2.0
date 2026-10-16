@@ -10,12 +10,14 @@
  */
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowLeft, CalendarClock, Download, Loader2, Search, X } from "lucide-react";
+import { CalendarClock, Download, Loader2, Search, X } from "lucide-react";
 import { invalidarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
+import { AccionesPagina, BarraFiltros, EncabezadoPagina, GrillaKpis } from "@/components/EncabezadoPagina";
+import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { DarDeBajaLote } from "@/modules/inventario/LotesProducto";
 import { hayVariosDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
 import {
@@ -83,162 +85,165 @@ export default function VencimientosPage() {
   const t = datos?.totales;
   const items = useMemo(() => datos?.items ?? [], [datos]);
   const sinLotes = datos && !datos.hay_productos_con_lotes;
-  // Filas memorizadas: con miles de lotes, escribir en el buscador no re-renderiza la tabla
-  // en cada tecla (solo cuando cambian los datos).
-  const filas = useMemo(() => (
-    items.map((f) => {
-      const vencido = f.estado === "vencido";
-      return (
-        <tr key={f.lote_id} className={`transition-colors hover:bg-[var(--brand-50)] ${cargando ? "opacity-60" : ""}`}>
-          <td className="px-5 py-3">
+  // Columnas: en celular cada lote es una tarjeta (producto, días como chip, valor, lote,
+  // depósito, vence, unidades; "Dar de baja" al pie). Desde tablet, la tabla de siempre.
+  const columnas = useMemo<ColumnaTabla<FilaVencimiento>[]>(() => {
+    const cols: ColumnaTabla<FilaVencimiento>[] = [
+      {
+        key: "producto", titulo: "Producto", movil: "titulo", claseTh: "!pl-5", claseTd: "!pl-5",
+        celda: (f) => (
+          <>
             <p className="font-semibold text-slate-900">{f.producto}</p>
-            <p className="font-mono text-[11px] text-slate-500">{f.sku}</p>
-          </td>
-          <td className="px-3 py-3 font-mono text-xs font-semibold text-slate-700">{f.numero}</td>
-          <td className="px-3 py-3 text-xs">
+            <p className="font-mono text-[11px] font-normal text-slate-500">{f.sku}</p>
+          </>
+        ),
+      },
+      { key: "lote", titulo: "Lote", movil: "dato", claseTd: "font-mono text-xs font-semibold text-slate-700", celda: (f) => f.numero },
+      {
+        key: "deposito", titulo: "Depósito", movil: "dato", claseTd: "text-xs",
+        celda: (f) => (
+          <>
             <p className="font-medium text-slate-700">{f.deposito ?? "—"}</p>
             {variosDepositos && f.sucursal ? <p className="text-[11px] text-slate-400">{f.sucursal}</p> : null}
-          </td>
-          <td className="whitespace-nowrap px-3 py-3 text-slate-700">{fechaCorta(f.vencimiento)}</td>
-          <td className="whitespace-nowrap px-3 py-3">
+          </>
+        ),
+      },
+      { key: "vence", titulo: "Vence", movil: "dato", claseTd: "whitespace-nowrap text-slate-700", celda: (f) => fechaCorta(f.vencimiento) },
+      {
+        key: "dias", titulo: "Días", movil: "chip", claseTd: "whitespace-nowrap",
+        celda: (f) => {
+          const vencido = f.estado === "vencido";
+          return (
             <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${vencido ? "bg-rose-50 text-rose-700 ring-1 ring-rose-200" : "bg-amber-50 text-amber-700 ring-1 ring-amber-200"}`}>
               {vencido ? `Vencido ${textoDias(f.dias)}` : `Vence ${textoDias(f.dias)}`}
             </span>
-          </td>
-          <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums text-slate-900">{cant(f.cantidad)} <span className="text-[10px] font-normal text-slate-400">{f.unidad_medida === "Unidad" ? "u." : f.unidad_medida}</span></td>
-          <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-slate-700">{gs(f.valor)}</td>
-          {esAdmin ? (
-            <td className="px-5 py-3 text-right">
-              <button onClick={() => setBaja(f)} className="whitespace-nowrap rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700">
-                Dar de baja
-              </button>
-            </td>
-          ) : null}
-        </tr>
-      );
-    })
-  ), [items, cargando, esAdmin, variosDepositos]);
+          );
+        },
+      },
+      {
+        key: "unidades", titulo: "Unidades", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-semibold tabular-nums text-slate-900 max-md:text-left",
+        celda: (f) => <>{cant(f.cantidad)} <span className="text-[10px] font-normal text-slate-400">{f.unidad_medida === "Unidad" ? "u." : f.unidad_medida}</span></>,
+      },
+      { key: "valor", titulo: "Valor al costo", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-slate-700", celda: (f) => gs(f.valor) },
+    ];
+    if (esAdmin) {
+      cols.push({
+        key: "acciones", titulo: "", movil: "acciones", claseTh: "w-px", claseTd: "!pr-5 text-right",
+        celda: (f) => (
+          <button onClick={() => setBaja(f)} className="whitespace-nowrap rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-slate-600 transition hover:border-rose-200 hover:bg-rose-50 hover:text-rose-700 max-md:px-3.5 max-md:text-[13px] max-md:active:bg-rose-50">
+            Dar de baja
+          </button>
+        ),
+      });
+    }
+    return cols;
+  }, [esAdmin, variosDepositos]);
   const hayFiltros = !!(busqueda || estado || deposito);
-  const input = "h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
+  const input = "h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] md:h-10";
+
+  const vacio = (
+    <div className="px-5 py-14 text-center">
+      {cargando && !datos ? <Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" />
+      : error ? <p className="text-sm text-rose-600">No se pudieron cargar los vencimientos. Probá de nuevo.</p>
+      : sinLotes ? (
+        <>
+          <CalendarClock className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-3 text-sm font-medium text-slate-700">Todavía no hay productos con lotes</p>
+          <p className="mx-auto mt-1 max-w-md text-xs text-slate-500">
+            Para perecibles (alimentos, medicamentos, veterinaria), abrí el producto en <Link href="/inventario" className="font-semibold text-[var(--brand)] hover:underline">Inventario</Link> y
+            activá <strong>Controla lotes y vencimiento</strong>. Desde ahí cada compra pide lote y vencimiento, la caja vende primero el que vence antes y acá vas a ver lo que vence.
+          </p>
+        </>
+      ) : (
+        <>
+          <CalendarClock className="mx-auto h-8 w-8 text-slate-300" />
+          <p className="mt-3 text-sm font-medium text-slate-700">{hayFiltros ? "Ningún lote coincide con los filtros" : `Nada vencido ni por vencer en los próximos ${dias} días`}</p>
+          <p className="mt-1 text-xs text-slate-500">{hayFiltros ? "Probá con otra búsqueda o cambiá el estado." : "Probá con un rango de días más largo."}</p>
+        </>
+      )}
+    </div>
+  );
 
   return (
-    <div className="space-y-6 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Inventario · Lotes</p>
-          </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Vencimientos</h1>
-          <p className="mt-1 text-sm text-slate-500">Lotes vencidos y los que vencen pronto, por depósito, para venderlos o darlos de baja a tiempo</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button onClick={exportar} disabled={exportando || items.length === 0} className="inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-semibold transition hover:bg-[var(--brand-50)] disabled:opacity-50" style={{ borderColor: `${TEAL}55`, color: TEAL }}>
-            {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
-            {exportando ? "Generando..." : "Exportar Excel"}
-          </button>
-          <Link href="/inventario" className="group inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
-            <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" /> Inventario
-          </Link>
-        </div>
-      </header>
+    <div className="space-y-5 pb-10 sm:space-y-6">
+      <EncabezadoPagina
+        volver={{ href: "/inventario", label: "Inventario" }}
+        kicker="Inventario · Lotes"
+        titulo="Vencimientos"
+        subtitulo="Lotes vencidos y los que vencen pronto, por depósito, para venderlos o darlos de baja a tiempo"
+        acciones={
+          <AccionesPagina acciones={[
+            { etiqueta: exportando ? "Generando..." : "Exportar Excel", icono: <Download />, onClick: exportar, cargando: exportando, deshabilitada: items.length === 0 },
+          ]} />
+        }
+      />
 
       <section className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: `${TEAL}33` }}>
-        {/* Franja de cifras (una línea) */}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b px-5 py-3 text-sm" style={{ borderColor: `${TEAL}22`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
-          <span className="text-slate-600">
-            <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-rose-500 align-middle" />
-            Vencidos: <strong className="tabular-nums text-rose-700">{t ? cant(t.vencidos_unidades) : "—"} unid.</strong>
-            <span className="text-slate-400"> · </span><strong className="tabular-nums text-slate-800">{t ? gs(t.vencidos_valor) : "—"}</strong>
-          </span>
-          <span className="text-slate-600">
-            <span className="mr-1.5 inline-block h-2 w-2 rounded-full bg-amber-500 align-middle" />
-            Vencen en {dias ?? 30} días: <strong className="tabular-nums text-amber-700">{t ? cant(t.por_vencer_unidades) : "—"} unid.</strong>
-            <span className="text-slate-400"> · </span><strong className="tabular-nums text-slate-800">{t ? gs(t.por_vencer_valor) : "—"}</strong>
-          </span>
-          <span className="ml-auto text-[11px] text-slate-400">Valor al costo de cada lote</span>
+        {/* Cifras: vencidos y por vencer (2 columnas también en celular). */}
+        <div className="border-b px-3 py-3 sm:px-5" style={{ borderColor: `${TEAL}22`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
+          <GrillaKpis columnas={2} className="lg:max-w-2xl">
+            <div className="min-w-0 rounded-xl border border-rose-100 bg-white px-3 py-2.5">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-rose-500" /> Vencidos
+              </p>
+              <p className="mt-0.5 text-[15px] font-semibold tabular-nums text-rose-700">{t ? cant(t.vencidos_unidades) : "—"} unid.</p>
+              <p className="text-xs tabular-nums text-slate-600 [overflow-wrap:anywhere]">{t ? gs(t.vencidos_valor) : "—"}</p>
+            </div>
+            <div className="min-w-0 rounded-xl border border-amber-100 bg-white px-3 py-2.5">
+              <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+                <span className="inline-block h-2 w-2 shrink-0 rounded-full bg-amber-500" /> Vencen en {dias ?? 30} días
+              </p>
+              <p className="mt-0.5 text-[15px] font-semibold tabular-nums text-amber-700">{t ? cant(t.por_vencer_unidades) : "—"} unid.</p>
+              <p className="text-xs tabular-nums text-slate-600 [overflow-wrap:anywhere]">{t ? gs(t.por_vencer_valor) : "—"}</p>
+            </div>
+          </GrillaKpis>
+          <p className="mt-2 text-[11px] text-slate-400">Valor al costo de cada lote</p>
         </div>
 
-        {/* Filtros */}
-        <div className="border-b border-slate-100 bg-slate-50/40 px-5 py-4">
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
-            <div className={`relative ${variosDepositos ? "md:col-span-4" : "md:col-span-6"}`}>
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input placeholder="Buscar por producto, SKU o lote..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className={`${input} w-full pl-9 pr-9`} />
-              {busqueda ? (
-                <button onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700">
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              ) : null}
-            </div>
-            {variosDepositos ? (
-              <div className="md:col-span-3">
-                <Select value={deposito} onChange={setDeposito} block options={[["", "Todos los depósitos"], ...opcionesDepositos(deps.datos, { soloActivos: false })]} />
+        {/* Filtros: búsqueda siempre visible; depósito, estado y días en "Filtros" en celular. */}
+        <div className="border-b border-slate-100 bg-slate-50/40 px-3 py-3 sm:px-5 sm:py-4">
+          <BarraFiltros
+            plano
+            activos={(estado ? 1 : 0) + (deposito ? 1 : 0)}
+            onLimpiar={() => { setBusqueda(""); setEstado(""); setDeposito(""); }}
+            busqueda={
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input type="search" enterKeyHint="search" aria-label="Buscar lotes" placeholder="Buscar por producto, SKU o lote..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className={`${input} w-full pl-9 pr-10`} />
+                {busqueda ? (
+                  <button onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
               </div>
+            }
+          >
+            {variosDepositos ? (
+              <Select value={deposito} onChange={setDeposito} minWidth={200} etiqueta="Depósito" options={[["", "Todos los depósitos"], ...opcionesDepositos(deps.datos, { soloActivos: false })]} />
             ) : null}
-            <div className={variosDepositos ? "md:col-span-3" : "md:col-span-3"}>
-              <Select value={estado} onChange={setEstado} block options={[["", "Vencidos y por vencer"], ["vencido", "Solo vencidos"], ["por_vencer", "Solo por vencer"]]} />
-            </div>
-            <div className={variosDepositos ? "md:col-span-2" : "md:col-span-3"}>
-              <Select value={String(dias ?? 30)} onChange={cambiarDias} block options={OPCIONES_DIAS.map((n): [string, string] => [String(n), `Próximos ${n} días`])} />
-            </div>
-          </div>
-          {hayFiltros ? (
-            <div className="mt-2 flex justify-end">
-              <button onClick={() => { setBusqueda(""); setEstado(""); setDeposito(""); }} className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-500 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)]">
-                <X className="h-3.5 w-3.5" /> Limpiar filtros
-              </button>
-            </div>
-          ) : null}
+            <Select value={estado} onChange={setEstado} minWidth={190} etiqueta="Estado" options={[["", "Vencidos y por vencer"], ["vencido", "Solo vencidos"], ["por_vencer", "Solo por vencer"]]} />
+            <Select value={String(dias ?? 30)} onChange={cambiarDias} minWidth={160} etiqueta="Rango de días" options={OPCIONES_DIAS.map((n): [string, string] => [String(n), `Próximos ${n} días`])} />
+          </BarraFiltros>
         </div>
 
-        {/* Lista */}
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
-            <thead className="bg-slate-50/70 text-[11px] uppercase tracking-wider text-slate-500">
-              <tr>
-                <th className="px-5 py-3 font-semibold">Producto</th>
-                <th className="px-3 py-3 font-semibold">Lote</th>
-                <th className="px-3 py-3 font-semibold">Depósito</th>
-                <th className="px-3 py-3 font-semibold">Vence</th>
-                <th className="px-3 py-3 font-semibold">Días</th>
-                <th className="px-3 py-3 text-right font-semibold">Unidades</th>
-                <th className="px-3 py-3 text-right font-semibold">Valor al costo</th>
-                {esAdmin ? <th className="w-px px-5 py-3" /> : null}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {cargando && !datos ? (
-                <tr><td colSpan={8} className="px-5 py-16 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" /></td></tr>
-              ) : error ? (
-                <tr><td colSpan={8} className="px-5 py-12 text-center text-sm text-rose-600">No se pudieron cargar los vencimientos. Probá de nuevo.</td></tr>
-              ) : sinLotes ? (
-                <tr>
-                  <td colSpan={8} className="px-5 py-14 text-center">
-                    <CalendarClock className="mx-auto h-8 w-8 text-slate-300" />
-                    <p className="mt-3 text-sm font-medium text-slate-700">Todavía no hay productos con lotes</p>
-                    <p className="mx-auto mt-1 max-w-md text-xs text-slate-500">
-                      Para perecibles (alimentos, medicamentos, veterinaria), abrí el producto en <Link href="/inventario" className="font-semibold text-[var(--brand)] hover:underline">Inventario</Link> y
-                      activá <strong>Controla lotes y vencimiento</strong>. Desde ahí cada compra pide lote y vencimiento, la caja vende primero el que vence antes y acá vas a ver lo que vence.
-                    </p>
-                  </td>
-                </tr>
-              ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={8} className="px-5 py-14 text-center">
-                    <CalendarClock className="mx-auto h-8 w-8 text-slate-300" />
-                    <p className="mt-3 text-sm font-medium text-slate-700">{hayFiltros ? "Ningún lote coincide con los filtros" : `Nada vencido ni por vencer en los próximos ${dias} días`}</p>
-                    <p className="mt-1 text-xs text-slate-500">{hayFiltros ? "Probá con otra búsqueda o cambiá el estado." : "Probá con un rango de días más largo."}</p>
-                  </td>
-                </tr>
-              ) : (
-                filas
-              )}
-            </tbody>
-          </table>
-        </div>
+        {/* Lista: tarjetas en celular, tabla desde tablet. */}
+        {(cargando && !datos) || error || sinLotes ? vacio : (
+          <TablaTarjetas
+            filas={items}
+            columnas={columnas}
+            claveFila={(f) => f.lote_id}
+            cargando={cargando}
+            minAncho={820}
+            vacio={vacio}
+            claseTabla="w-full text-left text-sm"
+            claseThead="bg-slate-50/70"
+            thBase="whitespace-nowrap px-3 py-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500"
+            tdBase="px-3 py-3"
+            claseFila={() => "hover:bg-[var(--brand-50)]"}
+          />
+        )}
         {items.length ? (
-          <p className="border-t border-slate-100 px-5 py-2.5 text-[11px] text-slate-500">
+          <p className="border-t border-slate-100 px-3 py-2.5 text-[11px] text-slate-500 sm:px-5">
             {items.length} {items.length === 1 ? "lote" : "lotes"}. La caja no vende los vencidos: dalos de baja (o devolvelos al proveedor) para que el stock quede al día.
           </p>
         ) : null}

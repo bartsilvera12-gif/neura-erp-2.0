@@ -13,6 +13,7 @@ import { Suspense, useCallback, useEffect, useState } from "react";
 import { Bell, Check, CircleDot, Flag, Plus, Settings2, SlidersHorizontal, Tags, Timer, Users, type LucideIcon } from "lucide-react";
 import { apiSoporte, invalidarCatalogos, obtenerCatalogos, type CatalogosConEquipo } from "@/modules/soporte/api";
 import { Aviso, Avatar, Boton, Cargando, Desplegable, Encabezado, Interruptor, Pagina, SelectorBuscable, TONOS, TONO_AREA, Tarjeta, claseInput, type Tono } from "@/modules/soporte/ui";
+import { TablaScroll } from "@/components/TablaResponsive";
 
 type Catalogo = "estados" | "tipos" | "clasificaciones" | "prioridades";
 
@@ -66,7 +67,7 @@ function CeldaTexto({ valor, onGuardar, tipo = "text", ancho = "" }: { valor: st
 
 function Tabla({ columnas, children }: { columnas: string[]; children: React.ReactNode }) {
   return (
-    <div className="overflow-x-auto">
+    <TablaScroll primeraFija>
       <table className="w-full min-w-[640px] text-left text-[13px]">
         <thead>
           <tr className="border-b border-slate-100 text-[11.5px] text-slate-500">
@@ -79,7 +80,7 @@ function Tabla({ columnas, children }: { columnas: string[]; children: React.Rea
         </thead>
         <tbody>{children}</tbody>
       </table>
-    </div>
+    </TablaScroll>
   );
 }
 
@@ -268,7 +269,7 @@ function Contenido() {
             type="button"
             onClick={() => router.replace(`${pathname}?tab=${p.id}`, { scroll: false })}
             aria-current={tab === p.id ? "page" : undefined}
-            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition ${
+            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border px-3.5 py-1.5 text-[13px] font-semibold transition max-md:min-h-10 ${
               tab === p.id ? `${TONOS[p.tono].suave} ${TONOS[p.tono].texto} ${TONOS[p.tono].borde} shadow-sm` : "border-slate-200 bg-white text-slate-500 hover:border-slate-300 hover:text-slate-800"
             }`}
           >

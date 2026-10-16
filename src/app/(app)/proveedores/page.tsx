@@ -18,6 +18,8 @@ import { buscar } from "@/lib/busqueda";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { MenuAcciones } from "@/components/MenuAcciones";
+import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { ProveedorForm } from "@/modules/proveedores/ProveedorForm";
 import { EstadoCuentaProveedor } from "@/modules/proveedores/EstadoCuentaProveedor";
 import { ExcelImportWizard } from "@/modules/inventario/ExcelImportWizard";
@@ -96,155 +98,200 @@ export default function ProveedoresPage() {
     }
   }
 
+  const accionesFila = (p: Proveedor) => {
+    const nombre = nombreProveedor(p);
+    return (
+      <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+        <button onClick={() => setCuenta(p)} title="Estado de cuenta" className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50 max-md:px-3.5 max-md:text-[13px]">
+          <ReceiptText className="h-3.5 w-3.5" /> Estado de cuenta
+        </button>
+        {esAdmin ? (
+          <MenuAcciones
+            etiqueta={`Acciones de ${nombre}`}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+            items={[
+              { etiqueta: "Editar", icono: <Pencil className="h-4 w-4" />, onClick: () => setForm({ open: true, prov: p }) },
+              p.activo
+                ? { etiqueta: "Desactivar", icono: <Ban className="h-4 w-4" />, onClick: () => cambiarEstado(p), tono: "peligro" }
+                : { etiqueta: "Activar", icono: <CheckCircle2 className="h-4 w-4" />, onClick: () => cambiarEstado(p), tono: "exito" },
+              ...(p.compras === 0 ? [{ etiqueta: "Eliminar", icono: <Trash2 className="h-4 w-4" />, onClick: () => setBorrando(p), tono: "peligro" as const }] : []),
+            ]}
+          >
+            <MoreHorizontal className="h-5 w-5" />
+          </MenuAcciones>
+        ) : null}
+      </div>
+    );
+  };
+
+  const condicion = (p: Proveedor) => (
+    <>
+      <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${p.condicion_pago === "credito" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{condicionTexto(p)}</span>
+      {p.moneda === "USD" ? <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">USD</span> : null}
+    </>
+  );
+  const rubros = (p: Proveedor) => (
+    <div className="flex flex-wrap gap-1">
+      {p.categorias.length ? p.categorias.map((c) => (
+        <span key={c.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{c.nombre}</span>
+      )) : <span className="text-xs text-slate-400">—</span>}
+    </div>
+  );
+
+  // Tabla en ≥ 768 px; en celular cada proveedor es una tarjeta (tocar = editar, si sos admin).
+  const columnas: ColumnaTabla<Proveedor>[] = [
+    {
+      key: "proveedor", titulo: "Proveedor", movil: "titulo", claseTh: "pl-5", claseTd: "pl-5",
+      celda: (p) => {
+        const nombre = nombreProveedor(p);
+        return (
+          <div className="flex items-center gap-3">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>
+              {nombre.charAt(0).toUpperCase()}
+            </span>
+            <div className="min-w-0 max-w-[18rem] xl:max-w-[24rem]">
+              <p className="truncate font-bold text-slate-900">
+                {nombre}
+                {!p.activo ? <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500">Inactivo</span> : null}
+              </p>
+              {p.nombre_comercial && p.nombre_comercial.trim() !== p.nombre ? <p className="truncate text-[11px] text-slate-500">{p.nombre}</p> : null}
+            </div>
+          </div>
+        );
+      },
+      celdaMovil: (p) => (
+        <>
+          {nombreProveedor(p)}
+          {!p.activo ? <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500">Inactivo</span> : null}
+          {p.nombre_comercial && p.nombre_comercial.trim() !== p.nombre ? <span className="block text-[12px] font-normal text-slate-500">{p.nombre}</span> : null}
+        </>
+      ),
+    },
+    { key: "ruc", titulo: "RUC", movil: "subtitulo", claseTd: "whitespace-nowrap font-mono text-xs text-slate-600", celda: (p) => p.ruc ?? "—", celdaMovil: (p) => (p.ruc ? <span className="font-mono text-[12px]">RUC {p.ruc}</span> : null) },
+    {
+      key: "contacto", titulo: "Contacto", movil: "dato", claseTd: "whitespace-nowrap text-xs text-slate-600",
+      celda: (p) => (
+        <>
+          <p>{p.contacto ?? (p.telefono ? "" : "—")}</p>
+          <p className="text-slate-400">{p.contacto_telefono || p.telefono || ""}</p>
+        </>
+      ),
+      celdaMovil: (p) => {
+        const tel = p.contacto_telefono || p.telefono;
+        return (
+          <>
+            {p.contacto ? <span className="block">{p.contacto}</span> : null}
+            {tel ? <a href={`tel:${tel}`} onClick={(e) => e.stopPropagation()} className="-my-3 inline-block py-3 text-[var(--brand)] hover:underline">{tel}</a> : !p.contacto ? "—" : null}
+          </>
+        );
+      },
+    },
+    { key: "condicion", titulo: "Condición", movil: "chip", celda: condicion },
+    { key: "rubros", titulo: "Rubros", movil: "chip", celda: rubros, celdaMovil: (p) => (p.categorias.length ? rubros(p) : null) },
+    {
+      key: "compras", titulo: "Compras", movil: "dato", claseTh: "text-right", claseTd: "text-right",
+      celda: (p) => (
+        <>
+          <p className="font-semibold tabular-nums text-slate-800">{p.compras}</p>
+          {p.ultima_compra ? <p className="text-[11px] text-slate-400">última {fechaCorta(p.ultima_compra)}</p> : null}
+        </>
+      ),
+      celdaMovil: (p) => (
+        <>
+          <span className="font-semibold tabular-nums text-slate-800">{p.compras}</span>
+          {p.ultima_compra ? <span className="block text-[11px] text-slate-400">última {fechaCorta(p.ultima_compra)}</span> : null}
+        </>
+      ),
+    },
+    { key: "acciones", titulo: "", movil: "acciones", claseTh: "w-px pr-5", claseTd: "pr-5", celda: accionesFila },
+  ];
+
+  const filtrosActivos = (rubro ? 1 : 0) + (verInactivos ? 1 : 0);
+  const conteo = <>{visibles.length} de {verInactivos ? lista.length : activos}</>;
+
   return (
-    <div className="space-y-6 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Proveedores</h1>
-          <p className="mt-1 text-sm text-slate-500">A quién le comprás: datos de contacto, rubros y condiciones de pago.</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <button onClick={exportar} disabled={exportando || lista.length === 0} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
-            {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />} Exportar Excel
-          </button>
-          {esAdmin ? (
-            <button onClick={() => setImportando(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50">
-              <Upload className="h-4 w-4" /> Importar Excel
-            </button>
-          ) : null}
-          {esAdmin ? (
-            <button onClick={() => setForm({ open: true, prov: null })} className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
-              <Plus className="h-4 w-4" /> Nuevo proveedor
-            </button>
-          ) : null}
-        </div>
-      </header>
+    <div className="space-y-4 pb-10 sm:space-y-6">
+      <EncabezadoPagina
+        titulo="Proveedores"
+        subtitulo="A quién le comprás: datos de contacto, rubros y condiciones de pago."
+        acciones={
+          <AccionesPagina acciones={[
+            { etiqueta: "Exportar Excel", icono: <Download />, onClick: () => void exportar(), cargando: exportando, deshabilitada: lista.length === 0 },
+            ...(esAdmin ? [
+              { etiqueta: "Importar Excel", icono: <Upload />, onClick: () => setImportando(true) },
+              { etiqueta: "Nuevo proveedor", icono: <Plus />, onClick: () => setForm({ open: true, prov: null }), primaria: true },
+            ] : []),
+          ]} />
+        }
+      />
 
       {error ? (
         <div className="flex items-start justify-between gap-3 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
-          <span>{error}</span>
-          <button onClick={() => setError(null)} aria-label="Cerrar" className="text-rose-400 hover:text-rose-600"><X className="h-4 w-4" /></button>
+          <span className="min-w-0 [overflow-wrap:anywhere]">{error}</span>
+          <button onClick={() => setError(null)} aria-label="Cerrar" className="-m-1 flex shrink-0 items-center justify-center rounded-lg p-1 text-rose-400 hover:text-rose-600 max-sm:-m-3 max-sm:h-11 max-sm:w-11"><X className="h-4 w-4" /></button>
         </div>
       ) : null}
 
-      <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-5 py-3">
-          <div className="relative min-w-[240px] flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar por nombre, RUC, vendedor, teléfono o rubro…"
-              className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
-          </div>
-          {categorias.length ? (
-            <Select value={rubro} onChange={setRubro} minWidth={170} options={[["", "Todos los rubros"], ...categorias.map((c): [string, string] => [c.id, c.nombre])]} />
-          ) : null}
-          {inactivos > 0 ? (
-            <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
-              <input type="checkbox" checked={verInactivos} onChange={(e) => setVerInactivos(e.target.checked)} className="h-4 w-4 accent-[var(--brand)]" />
-              Ver inactivos ({inactivos})
-            </label>
-          ) : null}
-          <p className="text-xs text-slate-500">{visibles.length} de {verInactivos ? lista.length : activos}</p>
+      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-3 py-3 sm:px-5">
+          <BarraFiltros
+            plano
+            activos={filtrosActivos}
+            onLimpiar={() => { setRubro(""); setVerInactivos(false); }}
+            busqueda={
+              <div className="relative md:min-w-[240px]">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                <input type="search" value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar por nombre, RUC, vendedor, teléfono o rubro…" aria-label="Buscar proveedores" enterKeyHint="search"
+                  className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] max-md:h-11 max-md:py-0" />
+              </div>
+            }
+            extra={<p className="shrink-0 text-xs text-slate-500 max-md:hidden">{conteo}</p>}
+          >
+            {categorias.length || inactivos > 0 ? (
+              <>
+                {categorias.length ? (
+                  <Select value={rubro} onChange={setRubro} minWidth={170} etiqueta="Rubro" options={[["", "Todos los rubros"], ...categorias.map((c): [string, string] => [c.id, c.nombre])]} />
+                ) : null}
+                {inactivos > 0 ? (
+                  <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600 max-md:min-h-11 max-md:text-sm">
+                    <input type="checkbox" checked={verInactivos} onChange={(e) => setVerInactivos(e.target.checked)} className="h-4 w-4 accent-[var(--brand)] max-md:h-5 max-md:w-5" />
+                    Ver inactivos ({inactivos})
+                  </label>
+                ) : null}
+              </>
+            ) : undefined}
+          </BarraFiltros>
+          <p className="mt-2 px-1 text-xs text-slate-500 md:hidden">{conteo} proveedores</p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
-            <thead>
-              <tr className="border-b-2 text-[11px] font-bold uppercase tracking-wider" style={{ borderColor: `${TEAL}26`, backgroundColor: `${TEAL}0d`, color: TEAL }}>
-                <th className="px-5 py-3">Proveedor</th>
-                <th className="px-3 py-3">RUC</th>
-                <th className="px-3 py-3">Contacto</th>
-                <th className="px-3 py-3">Condición</th>
-                <th className="px-3 py-3">Rubros</th>
-                <th className="px-3 py-3 text-right">Compras</th>
-                <th className="w-px px-5 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {cargando ? (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</td></tr>
-              ) : lista.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-5 py-16 text-center">
-                    <Truck className="mx-auto h-8 w-8 text-slate-300" />
-                    <p className="mt-3 text-sm font-medium text-slate-700">Todavía no cargaste proveedores</p>
-                    <p className="mt-1 text-xs text-slate-500">Cargalos para registrar a quién le comprás y a qué precio.</p>
-                    {esAdmin ? (
-                      <button onClick={() => setForm({ open: true, prov: null })} className="mt-4 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>
-                        <Plus className="h-4 w-4" /> Nuevo proveedor
-                      </button>
-                    ) : null}
-                  </td>
-                </tr>
-              ) : visibles.length === 0 ? (
-                <tr><td colSpan={7} className="px-5 py-12 text-center text-sm text-slate-400">Ningún proveedor coincide con la búsqueda.</td></tr>
-              ) : (
-                visibles.map((p) => {
-                  const nombre = nombreProveedor(p);
-                  return (
-                    <tr key={p.id} onClick={() => esAdmin && setForm({ open: true, prov: p })} className={`transition-colors hover:bg-[var(--brand-50)] ${esAdmin ? "cursor-pointer" : ""} ${p.activo ? "" : "opacity-60"}`}>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>
-                            {nombre.charAt(0).toUpperCase()}
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate font-bold text-slate-900">
-                              {nombre}
-                              {!p.activo ? <span className="ml-2 rounded-full bg-slate-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-slate-500">Inactivo</span> : null}
-                            </p>
-                            {p.nombre_comercial && p.nombre_comercial.trim() !== p.nombre ? <p className="truncate text-[11px] text-slate-500">{p.nombre}</p> : null}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 font-mono text-xs text-slate-600">{p.ruc ?? "—"}</td>
-                      <td className="px-3 py-3 text-xs text-slate-600">
-                        <p>{p.contacto ?? (p.telefono ? "" : "—")}</p>
-                        <p className="text-slate-400">{p.contacto_telefono || p.telefono || ""}</p>
-                      </td>
-                      <td className="px-3 py-3">
-                        <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${p.condicion_pago === "credito" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>{condicionTexto(p)}</span>
-                        {p.moneda === "USD" ? <span className="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">USD</span> : null}
-                      </td>
-                      <td className="px-3 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {p.categorias.length ? p.categorias.map((c) => (
-                            <span key={c.id} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">{c.nombre}</span>
-                          )) : <span className="text-xs text-slate-400">—</span>}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 text-right">
-                        <p className="font-semibold tabular-nums text-slate-800">{p.compras}</p>
-                        {p.ultima_compra ? <p className="text-[11px] text-slate-400">última {fechaCorta(p.ultima_compra)}</p> : null}
-                      </td>
-                      <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setCuenta(p)} title="Estado de cuenta" className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 transition hover:bg-slate-50">
-                          <ReceiptText className="h-3.5 w-3.5" /> Estado de cuenta
-                        </button>
-                        {esAdmin ? (
-                          <MenuAcciones
-                            etiqueta={`Acciones de ${nombre}`}
-                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
-                            items={[
-                              { etiqueta: "Editar", icono: <Pencil className="h-4 w-4" />, onClick: () => setForm({ open: true, prov: p }) },
-                              p.activo
-                                ? { etiqueta: "Desactivar", icono: <Ban className="h-4 w-4" />, onClick: () => cambiarEstado(p), tono: "peligro" }
-                                : { etiqueta: "Activar", icono: <CheckCircle2 className="h-4 w-4" />, onClick: () => cambiarEstado(p), tono: "exito" },
-                              ...(p.compras === 0 ? [{ etiqueta: "Eliminar", icono: <Trash2 className="h-4 w-4" />, onClick: () => setBorrando(p), tono: "peligro" as const }] : []),
-                            ]}
-                          >
-                            <MoreHorizontal className="h-5 w-5" />
-                          </MenuAcciones>
-                        ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        {cargando ? (
+          <p className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</p>
+        ) : lista.length === 0 ? (
+          <div className="px-5 py-16 text-center">
+            <Truck className="mx-auto h-8 w-8 text-slate-300" />
+            <p className="mt-3 text-sm font-medium text-slate-700">Todavía no cargaste proveedores</p>
+            <p className="mt-1 text-xs text-slate-500">Cargalos para registrar a quién le comprás y a qué precio.</p>
+            {esAdmin ? (
+              <button onClick={() => setForm({ open: true, prov: null })} className="mt-4 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white max-sm:min-h-11" style={{ backgroundColor: TEAL }}>
+                <Plus className="h-4 w-4" /> Nuevo proveedor
+              </button>
+            ) : null}
+          </div>
+        ) : (
+          <TablaTarjetas
+            filas={visibles}
+            columnas={columnas}
+            claveFila={(p) => p.id}
+            onFila={esAdmin ? (p) => setForm({ open: true, prov: p }) : undefined}
+            claseFila={(p) => (p.activo ? "" : "opacity-60")}
+            minAncho={820}
+            claseTabla="w-full text-left text-sm"
+            claseThead="border-b-2 border-[var(--brand-100)] bg-[var(--brand-50)]"
+            thBase="whitespace-nowrap px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[var(--brand)]"
+            tdBase="px-3 py-3"
+            vacio={<p className="px-5 py-12 text-center text-sm text-slate-400">Ningún proveedor coincide con la búsqueda.</p>}
+          />
+        )}
       </section>
 
       {form.open ? (
@@ -308,11 +355,11 @@ function ConfirmarBorrado({ nombre, onCancelar, onConfirmar }: { nombre: string;
           {error ? <p className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
         </div>
         <div className="flex shrink-0 justify-end gap-2 px-6 pt-5 pb-6">
-          <button onClick={onCancelar} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+          <button onClick={onCancelar} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 max-sm:flex-1">Cancelar</button>
           <button
             disabled={busy}
             onClick={async () => { setBusy(true); setError(null); try { await onConfirmar(); } catch (e) { setError((e as Error).message); setBusy(false); } }}
-            className="inline-flex items-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50 max-sm:flex-1"
           >
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Eliminar
           </button>

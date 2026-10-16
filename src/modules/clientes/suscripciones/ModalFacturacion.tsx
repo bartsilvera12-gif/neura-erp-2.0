@@ -58,7 +58,7 @@ export function ModalFacturacion({ clienteNombre, suscripcion: s, puedeEmitir, o
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }} onClick={(e) => e.stopPropagation()}>
         <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 z-10 h-1" style={{ background: `linear-gradient(to right, ${TEAL}, ${TEAL}cc, ${TEAL}66)` }} />
 
-        <div className="shrink-0 border-b border-slate-100 px-6 py-4">
+        <div className="shrink-0 border-b border-slate-100 px-4 py-4 sm:px-6">
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
@@ -70,7 +70,7 @@ export function ModalFacturacion({ clienteNombre, suscripcion: s, puedeEmitir, o
             <button type="button" onClick={onClose} aria-label="Cerrar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-5 w-5" /></button>
           </div>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-2 rounded-full border px-3 py-0.5 text-xs font-semibold" style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}1a`, color: TEAL }}>
+            <span className="inline-flex max-w-full flex-wrap items-center gap-x-2 rounded-xl border sm:rounded-full px-3 py-0.5 text-xs font-semibold" style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}1a`, color: TEAL }}>
               {s.plan} · Suscripción mensual · <span className="tabular-nums">{monto(s.precio, s.moneda)}</span>
             </span>
             <BadgeSuscripcion estado={s.estado} />
@@ -85,7 +85,7 @@ export function ModalFacturacion({ clienteNombre, suscripcion: s, puedeEmitir, o
           ) : null}
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/50 px-6 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto bg-slate-50/50 px-3 py-3 sm:px-6 sm:py-4">
           {error ? <p className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700">{error}</p> : null}
           {aviso ? <p className="mb-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800">{aviso}</p> : null}
           {!activa ? (
@@ -103,7 +103,7 @@ export function ModalFacturacion({ clienteNombre, suscripcion: s, puedeEmitir, o
                 const esActual = ym === actual;
                 return (
                   <li key={m.periodo}
-                    className={`rounded-xl border bg-white px-4 py-3 shadow-sm transition-colors ${esActual ? "border-[var(--brand)]/40" : "border-slate-200"}`}>
+                    className={`rounded-xl border bg-white px-3.5 py-3 shadow-sm transition-colors sm:px-4 ${esActual ? "border-[var(--brand)]/40" : "border-slate-200"}`}>
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-sm font-semibold tracking-tight text-slate-800">
@@ -119,7 +119,7 @@ export function ModalFacturacion({ clienteNombre, suscripcion: s, puedeEmitir, o
                           ) : null}
                         </div>
                       </div>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 max-sm:w-full max-sm:justify-between max-sm:[&>button]:min-h-11">
                         <span className="text-sm font-semibold tabular-nums text-slate-700">{monto(m.monto, s.moneda)}</span>
                         {m.venta_id ? (
                           <button type="button" onClick={() => setViendo(m.venta_id)}
@@ -143,7 +143,7 @@ export function ModalFacturacion({ clienteNombre, suscripcion: s, puedeEmitir, o
                         <p className="text-xs text-amber-800">
                           {m.nombre} todavía no llegó. ¿Emitir ya la cuota? Queda en la cuenta a cobrar con vencimiento {fechaDia(m.vencimiento)}.
                         </p>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 max-sm:w-full max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1">
                           <button type="button" onClick={() => void emitir(m.periodo)} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">Sí, emitir</button>
                           <button type="button" onClick={() => setConfirmarFuturo(null)} className="rounded-lg border border-amber-200 bg-white px-3 py-1.5 text-xs text-amber-700 hover:bg-amber-100">No</button>
                         </div>
@@ -156,7 +156,7 @@ export function ModalFacturacion({ clienteNombre, suscripcion: s, puedeEmitir, o
           )}
         </div>
 
-        <div className="shrink-0 border-t border-slate-100 bg-white px-6 py-3">
+        <div className="shrink-0 border-t border-slate-100 bg-white px-4 py-3 sm:px-6">
           <button type="button" onClick={onClose}
             className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-sm font-medium text-slate-700 transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
             Cerrar

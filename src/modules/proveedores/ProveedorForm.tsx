@@ -98,8 +98,8 @@ export function ProveedorForm({
       onClose={onClose}
       footer={
         <>
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
-          <button type="submit" form="prov-form" disabled={busy || !f.nombre.trim()} className="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: BRAND }}>
+          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 max-sm:flex-1">Cancelar</button>
+          <button type="submit" form="prov-form" disabled={busy || !f.nombre.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 max-sm:flex-[2] max-sm:px-4 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: BRAND }}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {busy ? "Guardando…" : editando ? "Guardar cambios" : "Crear proveedor"}
           </button>
@@ -112,7 +112,7 @@ export function ProveedorForm({
             <span className={ET}>Razón social *</span>
             <input autoFocus value={f.nombre} onChange={(e) => set("nombre", e.target.value)} maxLength={200} placeholder="Ej: Distribuidora Paresa S.A." className={INPUT} />
           </label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
               <span className={ET}>Nombre comercial {OPC}</span>
               <input value={f.nombre_comercial} onChange={(e) => set("nombre_comercial", e.target.value)} maxLength={200} placeholder="Ej: Paresa" className={INPUT} />
@@ -129,24 +129,24 @@ export function ProveedorForm({
                 const on = catIds.includes(c.id);
                 return (
                   <button key={c.id} type="button" onClick={() => toggleCat(c.id)}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${on ? "text-white" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition max-sm:min-h-11 max-sm:px-4 max-sm:text-[13px] ${on ? "text-white" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}
                     style={on ? { backgroundColor: BRAND, borderColor: BRAND } : undefined}>
                     {c.nombre}
                   </button>
                 );
               })}
               {nuevos.map((n) => (
-                <span key={n} className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-white" style={{ backgroundColor: BRAND }}>
+                <span key={n} className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-white max-sm:min-h-11 max-sm:pr-1 max-sm:text-[13px]" style={{ backgroundColor: BRAND }}>
                   {n}
-                  <button type="button" onClick={() => setNuevos((p) => p.filter((x) => x !== n))} aria-label={`Quitar ${n}`} className="opacity-80 hover:opacity-100"><X className="h-3 w-3" /></button>
+                  <button type="button" onClick={() => setNuevos((p) => p.filter((x) => x !== n))} aria-label={`Quitar ${n}`} className="flex items-center justify-center opacity-80 hover:opacity-100 max-sm:h-9 max-sm:w-9"><X className="h-3 w-3 max-sm:h-4 max-sm:w-4" /></button>
                 </span>
               ))}
-              <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 py-0.5 pl-3 pr-1">
+              <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-300 py-0.5 pl-3 pr-1 max-sm:min-h-11 max-sm:w-full max-sm:py-0 max-sm:pr-0">
                 <input value={rubro} onChange={(e) => setRubro(e.target.value)}
                   onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); agregarRubro(); } }}
-                  placeholder={visibles.length || nuevos.length ? "Otro rubro…" : "Ej: Bebidas"} maxLength={60}
-                  className="w-28 bg-transparent text-xs outline-none placeholder:text-slate-400" />
-                <button type="button" onClick={agregarRubro} disabled={!rubro.trim()} aria-label="Agregar rubro" className="rounded-full p-1 text-slate-400 hover:text-[var(--brand)] disabled:opacity-40"><Plus className="h-3.5 w-3.5" /></button>
+                  placeholder={visibles.length || nuevos.length ? "Otro rubro…" : "Ej: Bebidas"} maxLength={60} enterKeyHint="done"
+                  className="w-28 bg-transparent text-xs outline-none placeholder:text-slate-400 max-sm:min-w-0 max-sm:flex-1" />
+                <button type="button" onClick={agregarRubro} disabled={!rubro.trim()} aria-label="Agregar rubro" className="flex items-center justify-center rounded-full p-1 text-slate-400 hover:text-[var(--brand)] disabled:opacity-40 max-sm:h-11 max-sm:w-11"><Plus className="h-3.5 w-3.5 max-sm:h-5 max-sm:w-5" /></button>
               </span>
             </div>
             <p className="mt-1 text-[11px] text-slate-400">Tocá para elegir, o escribí uno nuevo y Enter. Sirve para filtrar y buscar.</p>
@@ -154,7 +154,7 @@ export function ProveedorForm({
         </Bloque>
 
         <Bloque titulo="Contacto">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block">
               <span className={ET}>Teléfono {OPC}</span>
               <input value={f.telefono} onChange={(e) => set("telefono", e.target.value)} maxLength={40} placeholder="Ej: 021 555 000" className={INPUT} />
@@ -183,7 +183,7 @@ export function ProveedorForm({
         </Bloque>
 
         <Bloque titulo="Condiciones de pago">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
               <span className={ET}>Cómo le pagás</span>
               <Segmentado valor={f.condicion_pago} onChange={(v) => set("condicion_pago", v as "contado" | "credito")} opciones={[["contado", "Contado"], ["credito", "Crédito"]]} />
@@ -196,12 +196,12 @@ export function ProveedorForm({
           {f.condicion_pago === "credito" ? (
             <label className="block">
               <span className={ET}>Plazo para pagar</span>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <input inputMode="numeric" value={f.plazo_pago_dias} onChange={(e) => set("plazo_pago_dias", e.target.value.replace(/\D/g, "").slice(0, 4))} className={`${INPUT} w-24 text-right tabular-nums`} />
                 <span className="text-sm text-slate-500">días</span>
-                <div className="ml-2 flex gap-1">
+                <div className="flex gap-1 sm:ml-2">
                   {["15", "30", "60", "90"].map((d) => (
-                    <button key={d} type="button" onClick={() => set("plazo_pago_dias", d)} className={`rounded-lg px-2 py-1 text-xs font-semibold transition ${f.plazo_pago_dias === d ? "bg-[var(--brand-50)] text-[var(--brand)]" : "text-slate-500 hover:bg-slate-100"}`}>{d}</button>
+                    <button key={d} type="button" onClick={() => set("plazo_pago_dias", d)} className={`rounded-lg px-2 py-1 text-xs font-semibold transition max-sm:min-h-11 max-sm:min-w-11 max-sm:text-sm ${f.plazo_pago_dias === d ? "bg-[var(--brand-50)] text-[var(--brand)]" : "text-slate-500 hover:bg-slate-100"}`}>{d}</button>
                   ))}
                 </div>
               </div>
@@ -236,7 +236,7 @@ function Segmentado({ valor, onChange, opciones }: { valor: string; onChange: (v
     <div className="flex rounded-xl bg-slate-100 p-1">
       {opciones.map(([v, l]) => (
         <button key={v} type="button" onClick={() => onChange(v)}
-          className={`flex-1 rounded-lg py-1.5 text-sm font-semibold transition ${valor === v ? "bg-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
+          className={`flex-1 rounded-lg py-1.5 text-sm font-semibold transition max-sm:min-h-11 ${valor === v ? "bg-white shadow-sm" : "text-slate-500 hover:text-slate-700"}`}
           style={valor === v ? { color: BRAND } : undefined}>
           {l}
         </button>

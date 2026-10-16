@@ -18,6 +18,9 @@ import {
   Link2, Receipt, RefreshCw, SlidersHorizontal, Users,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { Select } from "@/components/Select";
+import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
 import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
@@ -34,7 +37,7 @@ import {
   FILTROS_VACIOS, type ClienteBuscado, type DocumentoCliente, type Documentos, type EstadoDocumento, type FiltrosDocumentos,
 } from "@/modules/clientes/gestion/tipos";
 
-const F_INPUT = "w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm shadow-sm outline-none transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]";
+const F_INPUT = "min-h-11 w-full min-w-0 rounded-lg md:min-h-0 border border-slate-200 bg-white px-2.5 py-1.5 text-sm shadow-sm outline-none transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]";
 const F_LABEL = "mb-0.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400";
 
 export default function GestionClientesPage() {
@@ -53,6 +56,7 @@ function GestionClientes() {
   const me = useUsuario();
   const puedeOperar = me?.rol === "ADMIN" || me?.rol === "VENDEDOR";
   const puedeCobrar = puedeOperar || me?.rol === "CAJERO";
+  const vistaTarjetas = useVistaTarjetas();
 
   // Cliente abierto. La URL (?cliente=) es la fuente al entrar / al ir atrás; al elegir se
   // cambia el estado en el acto y la URL después (router.replace no actualiza searchParams
@@ -207,6 +211,12 @@ function GestionClientes() {
     setAccionSusc({ tipo, id: lista.length === 1 ? lista[0].suscripcion_id : null });
   }
 
+  const columnasDocs = useMemo(() => columnasDocumentos({
+    puedeCobrar,
+    onVer: (d) => setViendoVenta(d.id),
+    onCobrar: (d) => setCobrando({ cxc: d.cxc_id }),
+  }), [puedeCobrar]);
+
   const rows = docs?.rows ?? [];
   const k = docs?.kpis ?? null;
   const saldoTotal = Number(k?.saldo_pendiente ?? 0);
@@ -215,25 +225,19 @@ function GestionClientes() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-2">
-      <header className="shrink-0 border-b border-slate-200/80 pb-2">
-        <div className="flex flex-wrap items-end justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <span aria-hidden className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Gestión</p>
-            </div>
-            <h1 className="mt-0.5 text-lg font-semibold tracking-tight text-slate-900">Gestión del Cliente</h1>
-            <p className="text-[11px] text-slate-500">Panel operativo · consultas y tipificaciones</p>
-          </div>
-          {cartera != null && cartera > 0 ? (
-            <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide tabular-nums"
-              style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}1a`, color: TEAL }}>
-              <span aria-hidden className="h-1 w-1 rounded-full" style={{ backgroundColor: TEAL }} />
-              {cartera.toLocaleString("es-PY")} en cartera
-            </span>
-          ) : null}
-        </div>
-      </header>
+      <EncabezadoPagina
+        className="shrink-0 border-b border-slate-200/80 pb-2"
+        kicker="Gestión"
+        titulo="Gestión del Cliente"
+        subtitulo="Panel operativo · consultas y tipificaciones"
+        acciones={cartera != null && cartera > 0 ? (
+          <span className="inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide tabular-nums"
+            style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}1a`, color: TEAL }}>
+            <span aria-hidden className="h-1 w-1 rounded-full" style={{ backgroundColor: TEAL }} />
+            {cartera.toLocaleString("es-PY")} en cartera
+          </span>
+        ) : undefined}
+      />
 
       {aviso ? (
         <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-emerald-800">
@@ -242,8 +246,10 @@ function GestionClientes() {
         </div>
       ) : null}
 
-      <div className="flex shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"
-        style={{ height: "max(560px, calc(100dvh - 10.5rem))", boxShadow: `0 0 0 1px ${TEAL}26` }}>
+      {/* Escritorio: panel de alto fijo con scroll interno. Celular / tablet: el panel crece y
+          scrollea la página (sin scroll anidado). */}
+      <div className="flex min-h-[60dvh] shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:h-[max(560px,calc(100dvh-10.5rem))] lg:min-h-0"
+        style={{ boxShadow: `0 0 0 1px ${TEAL}26` }}>
         {selId === null ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-5 px-4 py-8">
             <div className="space-y-2 text-center">
@@ -264,17 +270,17 @@ function GestionClientes() {
               <div className="flex flex-wrap items-center gap-2 px-3 py-2 sm:px-4">
                 <BuscadorCliente variant="toolbar" seleccionado={nombre || "Cliente"} onSelect={elegir} onClear={quitarCliente} />
                 <button type="button" onClick={() => setPanelFiltros((v) => !v)} aria-expanded={panelFiltros}
-                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${panelFiltros || filtrosActivos ? "" : "border-slate-200 bg-white text-slate-600 hover:border-[var(--brand)] hover:text-[var(--brand)]"}`}
+                  className={`inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] sm:min-h-0 font-semibold transition-colors ${panelFiltros || filtrosActivos ? "" : "border-slate-200 bg-white text-slate-600 hover:border-[var(--brand)] hover:text-[var(--brand)]"}`}
                   style={panelFiltros || filtrosActivos ? { borderColor: `${TEAL}73`, backgroundColor: `${TEAL}1a`, color: TEAL } : undefined}>
                   <SlidersHorizontal className="h-3.5 w-3.5" aria-hidden />
-                  Filtros facturas
+                  Filtros<span className="max-sm:hidden"> facturas</span>
                   {filtrosActivos ? <span className="ml-0.5 inline-flex h-1.5 w-1.5 rounded-full" style={{ backgroundColor: TEAL }} title="Hay filtros aplicados" /> : null}
                 </button>
               </div>
               {panelFiltros ? (
                 <div className="space-y-3 border-t border-slate-200/70 bg-white px-3 py-3 sm:px-4">
                   <SectionLabel>Filtros sobre el listado de facturas</SectionLabel>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                     <label className="block">
                       <span className={F_LABEL}>Fecha emisión desde</span>
                       <input type="date" value={filtros.emision_desde} onChange={(e) => setFiltro("emision_desde", e.target.value)} className={F_INPUT} />
@@ -292,27 +298,24 @@ function GestionClientes() {
                       <input type="date" value={filtros.venc_hasta} onChange={(e) => setFiltro("venc_hasta", e.target.value)} className={F_INPUT} />
                     </label>
                   </div>
-                  <div className="flex flex-wrap items-center gap-4 border-t border-slate-100 pt-3">
-                    <label className="flex cursor-pointer items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3">
+                    <label className="flex min-h-11 cursor-pointer items-center gap-2 sm:min-h-0">
                       <input type="checkbox" checked={filtros.incluir_saldo_cero} onChange={(e) => setFiltro("incluir_saldo_cero", e.target.checked)}
                         className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]" />
                       <span className="text-xs text-slate-600">Incluir saldo cero</span>
                     </label>
-                    <label className="flex cursor-pointer items-center gap-2">
+                    <label className="flex min-h-11 cursor-pointer items-center gap-2 sm:min-h-0">
                       <input type="checkbox" checked={filtros.incluir_contado} onChange={(e) => setFiltro("incluir_contado", e.target.checked)}
                         className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]" />
                       <span className="text-xs text-slate-600">Incluir factura contado</span>
                     </label>
-                    <label className="block min-w-[10rem] flex-1">
+                    <div className="block min-w-[10rem] flex-1 max-sm:basis-full">
                       <span className={F_LABEL}>Moneda</span>
-                      <select value={filtros.moneda} onChange={(e) => setFiltro("moneda", e.target.value as FiltrosDocumentos["moneda"])} className={F_INPUT}>
-                        <option value="">Todas</option>
-                        <option value="GS">Guaraníes (GS)</option>
-                        <option value="USD">Dólares (USD)</option>
-                      </select>
-                    </label>
+                      <Select value={filtros.moneda} onChange={(v) => setFiltro("moneda", v as FiltrosDocumentos["moneda"])} block compacto etiqueta="Moneda"
+                        options={[["", "Todas"], ["GS", "Guaraníes (GS)"], ["USD", "Dólares (USD)"]]} />
+                    </div>
                     <button type="button" onClick={() => setFiltros(FILTROS_VACIOS)}
-                      className="self-end rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
+                      className="min-h-11 self-end rounded-lg border max-sm:w-full sm:min-h-0 border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
                       Restablecer filtros
                     </button>
                   </div>
@@ -320,7 +323,7 @@ function GestionClientes() {
               ) : null}
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain">
+            <div className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overscroll-y-contain">
               {/* Tarjeta del cliente */}
               <section className="border-b border-slate-200/80 px-3 py-3 sm:px-5 sm:py-4">
                 {!c ? (
@@ -338,7 +341,7 @@ function GestionClientes() {
                   <>
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 space-y-1">
-                        <h2 className="text-base font-semibold tracking-tight text-slate-900 sm:text-lg">{c.nombre}</h2>
+                        <h2 className="text-base font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-lg">{c.nombre}</h2>
                         <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
                           <span className="font-mono text-slate-400">{codigoCliente(c)}</span>
                           {c.ruc ? <span>· RUC {c.ruc}</span> : null}
@@ -366,12 +369,13 @@ function GestionClientes() {
                       ].map((it) => (
                         <div key={it.label} className="min-w-0">
                           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-400">{it.label}</p>
-                          <p className="mt-0.5 truncate text-xs font-medium text-slate-800" title={it.value}>{it.value}</p>
+                          <p className="mt-0.5 text-xs font-medium text-slate-800 [overflow-wrap:anywhere] sm:truncate" title={it.value}>{it.value}</p>
                         </div>
                       ))}
                     </div>
 
-                    <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 pt-3">
+                    {/* Botones operativos: en celular, grilla de 2 columnas con objetivos de 44 px. */}
+                    <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-slate-100 pt-3 sm:flex sm:flex-wrap">
                       <BotonOperativo label="Tipificación" icon={<ClipboardList className="h-3.5 w-3.5" />} href={`/clientes/${encodeURIComponent(c.id)}/tipificacion`} />
                       <BotonOperativo label="Contactos" icon={<Users className="h-3.5 w-3.5" />} onClick={() => setModalContactos(true)} />
                       <BotonOperativo label="Facturación" icon={<Calendar className="h-3.5 w-3.5" />} onClick={() => sobreSuscripcion("facturacion")} />
@@ -443,23 +447,10 @@ function GestionClientes() {
                         ) : null}
                       </div>
                     ) : rows.length > 0 ? (
-                      <div className="overflow-x-auto">
-                        <table className="w-full min-w-[980px] text-sm">
-                          <thead className="sticky top-0 z-[1] border-b border-slate-200 bg-slate-50 shadow-sm">
-                            <tr>
-                              {["Tipo", "Nro. factura", "Fecha emisión", "Fecha vencimiento", "Monto", "Saldo", "Días mora", "Estado", "Pago registrado", "Operación"].map((h) => (
-                                <th key={h} className={`whitespace-nowrap px-2 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:px-3 ${h === "Operación" ? "text-center" : h === "Días mora" ? "text-center" : "text-left"}`}>{h}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {rows.map((d) => (
-                              <FilaDocumento key={d.id} d={d} puedeCobrar={puedeCobrar}
-                                onVer={() => setViendoVenta(d.id)} onCobrar={() => setCobrando({ cxc: d.cxc_id })} />
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
+                      <TablaTarjetas filas={rows} columnas={columnasDocs} claveFila={(d) => d.id} minAncho={980}
+                        onFila={vistaTarjetas ? (d) => setViendoVenta(d.id) : undefined}
+                        claseThead="border-b border-slate-200 bg-slate-50 shadow-sm"
+                        claseFila={claseFilaDocumento} thBase={TH_DOC} tdBase="px-2 py-2 sm:px-3" />
                     ) : null}
 
                     {rows.length > 0 ? (
@@ -577,48 +568,79 @@ function BadgeTipo({ d }: { d: DocumentoCliente }) {
   );
 }
 
-function FilaDocumento({ d, puedeCobrar, onVer, onCobrar }: { d: DocumentoCliente; puedeCobrar: boolean; onVer: () => void; onCobrar: () => void }) {
-  const vencido = d.estado === "vencido";
-  const anulado = d.estado === "anulado";
-  const cobrable = !anulado && Number(d.saldo) > 0 && !!d.cxc_id;
-  return (
-    <tr className={`transition-colors ${vencido ? "bg-red-50/50 hover:bg-red-50/80" : "hover:bg-slate-50/80"} ${anulado ? "opacity-60" : ""}`}>
-      <td className="px-2 py-2 sm:px-3"><BadgeTipo d={d} /></td>
-      <td className="px-2 py-2 sm:px-3">
-        <button type="button" onClick={onVer} title="Ver la venta"
-          className={`font-mono text-xs font-semibold transition-colors hover:underline ${anulado ? "line-through" : ""}`} style={{ color: TEAL }}>
+const TH_DOC = "whitespace-nowrap px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 sm:px-3";
+
+const claseFilaDocumento = (d: DocumentoCliente) =>
+  `transition-colors ${d.estado === "vencido" ? "bg-red-50/50 hover:bg-red-50/80" : "hover:bg-slate-50/80"} ${d.estado === "anulado" ? "opacity-60" : ""}`;
+
+/**
+ * Columnas de las facturas del cliente: tabla ancha (980 px, scroll interno) en tablet /
+ * escritorio y, en celular, tarjetas con número, saldo, tipo y estado arriba, fechas y monto a
+ * la vista y el resto en "Ver más"; tocar la tarjeta abre la venta y "Cobrar" queda en su pie.
+ */
+function columnasDocumentos({ puedeCobrar, onVer, onCobrar }: {
+  puedeCobrar: boolean; onVer: (d: DocumentoCliente) => void; onCobrar: (d: DocumentoCliente) => void;
+}): ColumnaTabla<DocumentoCliente>[] {
+  const cobrable = (d: DocumentoCliente) => d.estado !== "anulado" && Number(d.saldo) > 0 && !!d.cxc_id && puedeCobrar;
+  return [
+    { key: "tipo", titulo: "Tipo", movil: "chip", celda: (d) => <BadgeTipo d={d} /> },
+    {
+      key: "numero", titulo: "Nro. factura", movil: "titulo", claseTd: "whitespace-nowrap",
+      celda: (d) => (
+        <button type="button" onClick={() => onVer(d)} title="Ver la venta"
+          className={`font-mono text-xs font-semibold transition-colors hover:underline ${d.estado === "anulado" ? "line-through" : ""}`} style={{ color: TEAL }}>
           {d.numero}
         </button>
-      </td>
-      <td className="whitespace-nowrap px-2 py-2 text-xs text-slate-500 sm:px-3">{fechaDia(d.emision) || "—"}</td>
-      <td className={`whitespace-nowrap px-2 py-2 text-xs font-medium sm:px-3 ${vencido ? "text-red-600" : "text-slate-600"}`}>{d.vencimiento ? fechaDia(d.vencimiento) : "—"}</td>
-      <td className={`whitespace-nowrap px-2 py-2 text-xs tabular-nums text-slate-800 sm:px-3 ${anulado ? "line-through" : ""}`}>{monto(d.monto, d.moneda)}</td>
-      <td className={`whitespace-nowrap px-2 py-2 text-xs font-semibold tabular-nums sm:px-3 ${Number(d.saldo) > 0 ? "text-red-600" : "text-slate-400"}`}>{monto(d.saldo, d.moneda)}</td>
-      <td className="px-2 py-2 text-center text-xs sm:px-3">
-        {d.dias_mora > 0 ? <span className="font-bold tabular-nums text-red-600">{d.dias_mora}</span> : <span className="text-slate-300">—</span>}
-      </td>
-      <td className="px-2 py-2 sm:px-3"><BadgeDocumento estado={d.estado} /></td>
-      <td className="whitespace-nowrap px-2 py-2 text-xs text-slate-600 sm:px-3">
-        {d.pago_registrado ? fechaDia(d.pago_registrado) : "—"}
-        {d.recibos > 0 ? <span className="ml-1 text-[10px] text-slate-400">({d.recibos} {d.recibos === 1 ? "recibo" : "recibos"})</span> : null}
-      </td>
-      <td className="px-2 py-2 sm:px-3">
+      ),
+      celdaMovil: (d) => <span className={`font-mono ${d.estado === "anulado" ? "line-through" : ""}`}>{d.numero}</span>,
+    },
+    { key: "emision", titulo: "Fecha emisión", movil: "dato", etiquetaMovil: "Emisión", claseTd: "whitespace-nowrap text-xs text-slate-500", celda: (d) => fechaDia(d.emision) || "—" },
+    {
+      key: "vencimiento", titulo: "Fecha vencimiento", movil: "dato", etiquetaMovil: "Vencimiento",
+      claseTd: "whitespace-nowrap text-xs font-medium",
+      celda: (d) => <span className={d.estado === "vencido" ? "text-red-600" : "text-slate-600"}>{d.vencimiento ? fechaDia(d.vencimiento) : "—"}</span>,
+    },
+    {
+      key: "monto", titulo: "Monto", movil: "dato", claseTd: "whitespace-nowrap text-xs tabular-nums text-slate-800",
+      celda: (d) => <span className={d.estado === "anulado" ? "line-through" : ""}>{monto(d.monto, d.moneda)}</span>,
+    },
+    {
+      key: "saldo", titulo: "Saldo", movil: "valor", claseTd: "whitespace-nowrap text-xs font-semibold tabular-nums",
+      celda: (d) => <span className={Number(d.saldo) > 0 ? "text-red-600" : "text-slate-400"}>{monto(d.saldo, d.moneda)}</span>,
+    },
+    {
+      key: "mora", titulo: "Días mora", movil: "dato", claseTh: "!text-center", claseTd: "text-center text-xs",
+      celda: (d) => (d.dias_mora > 0 ? <span className="font-bold tabular-nums text-red-600">{d.dias_mora}</span> : <span className="text-slate-300">—</span>),
+    },
+    { key: "estado", titulo: "Estado", movil: "chip", celda: (d) => <BadgeDocumento estado={d.estado} /> },
+    {
+      key: "pago", titulo: "Pago registrado", claseTd: "whitespace-nowrap text-xs text-slate-600",
+      celda: (d) => (
+        <>
+          {d.pago_registrado ? fechaDia(d.pago_registrado) : "—"}
+          {d.recibos > 0 ? <span className="ml-1 text-[10px] text-slate-400">({d.recibos} {d.recibos === 1 ? "recibo" : "recibos"})</span> : null}
+        </>
+      ),
+    },
+    {
+      key: "operacion", titulo: "Operación", movil: "acciones", claseTh: "!text-center",
+      celda: (d) => (
         <div className="flex items-center justify-center gap-1.5">
-          <button type="button" onClick={onVer} title="Ver la venta e imprimir el comprobante"
-            className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
+          <button type="button" onClick={() => onVer(d)} title="Ver la venta e imprimir el comprobante"
+            className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)] max-md:hidden">
             Ver
           </button>
-          {cobrable && puedeCobrar ? (
-            <button type="button" onClick={onCobrar} title="Registrar un cobro de esta factura"
-              className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:brightness-95"
+          {cobrable(d) ? (
+            <button type="button" onClick={() => onCobrar(d)} title="Registrar un cobro de esta factura"
+              className="inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-lg px-2.5 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:brightness-95 max-md:px-4 max-md:text-sm"
               style={{ backgroundColor: TEAL }}>
               Cobrar
             </button>
           ) : null}
         </div>
-      </td>
-    </tr>
-  );
+      ),
+    },
+  ];
 }
 
 function Kpi({ titulo, valor, chico, tono, borde, marca }: {
@@ -643,7 +665,7 @@ function BotonOperativo({ label, icon, href, onClick, title }: {
   /** tooltip (en los deshabilitados, el porqué) */
   title?: string;
 }) {
-  const base = "flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11px] font-semibold transition";
+  const base = "flex min-h-11 items-center justify-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-center text-xs font-semibold transition sm:min-h-0 sm:justify-start sm:text-[11px]";
   const activo = `${base} text-white shadow-sm hover:brightness-90`;
   const estilo = { borderColor: TEAL, backgroundColor: TEAL };
   if (href) {
@@ -653,8 +675,8 @@ function BotonOperativo({ label, icon, href, onClick, title }: {
     return <button type="button" onClick={onClick} className={activo} style={estilo} title={title}>{icon}{label}</button>;
   }
   return (
-    <span title={title} className="inline-flex">
-      <button type="button" disabled className={`${base} cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400`}>{icon}{label}</button>
+    <span title={title} className="flex sm:inline-flex">
+      <button type="button" disabled className={`${base} w-full cursor-not-allowed border-slate-200 bg-slate-50 text-slate-400`}>{icon}{label}</button>
     </span>
   );
 }

@@ -17,7 +17,7 @@ export function PestanasGastos() {
   const coincide = (h: string) => pathname === h || pathname.startsWith(`${h}/`);
   const activa = PESTANAS_GASTOS.filter((t) => coincide(t.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
-    <div className="mb-6">
+    <div className="mb-4 sm:mb-6">
       <div className="flex items-center gap-2">
         <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4FAEB2]">Finanzas · Gastos empresariales</p>

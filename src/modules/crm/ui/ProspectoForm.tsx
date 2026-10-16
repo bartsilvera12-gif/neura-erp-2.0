@@ -138,16 +138,16 @@ export function ProspectoForm({
   }
 
   const isModal = variant === "modal";
-  const seccion = isModal || modo === "editar" ? "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm" : "";
+  const seccion = isModal || modo === "editar" ? "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" : "";
   const opcionesResp: [string, string][] = [["", "— Sin asignar —"], ...usuarios.map((u) => [u.id, u.nombre] as [string, string])];
   const creadoPor = modo === "nuevo" ? (me?.email ?? "Tu usuario") : prospecto?.creado_por_nombre || "—";
 
   return (
     <form
       onSubmit={guardar}
-      className={isModal ? "flex h-full min-h-0 flex-col" : modo === "nuevo" ? "space-y-6 rounded-2xl border border-[var(--brand)]/45 bg-white p-6 shadow-sm" : "space-y-5"}
+      className={isModal ? "flex h-full min-h-0 flex-col" : modo === "nuevo" ? "space-y-6 rounded-2xl border border-[var(--brand)]/45 bg-white p-4 shadow-sm sm:p-6" : "space-y-5"}
     >
-      <div className={isModal ? "min-h-0 flex-1 space-y-5 overflow-y-auto bg-slate-50/50 px-6 py-5" : "space-y-6"}>
+      <div className={isModal ? "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-slate-50/50 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-5" : "space-y-6"}>
         <section className={seccion}>
           <SectionTitle>Datos del prospecto</SectionTitle>
           <div className="space-y-4">
@@ -268,7 +268,7 @@ export function ProspectoForm({
       </div>
 
       {isModal || modo === "nuevo" ? (
-        <div className={isModal ? "flex flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-white px-6 py-4" : "flex flex-wrap items-center justify-end gap-2 pt-2"}>
+        <div className={isModal ? "flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-white px-4 py-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:[&>*]:flex-1 sm:px-6 sm:py-4" : "flex flex-wrap items-center justify-end gap-2 pt-2"}>
           {onCancel ? <button type="button" onClick={onCancel} className={BTN_SECUNDARIO}>Cancelar</button> : null}
           <button type="submit" disabled={saving} className={BTN_PRIMARIO}>
             {saving ? "Guardando…" : modo === "nuevo" ? "Guardar prospecto" : "Guardar cambios"}

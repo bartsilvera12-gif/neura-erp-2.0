@@ -5,9 +5,18 @@
  * emojis, respuestas rápidas con "/", plantillas (obligatorias fuera de las 24 h), nota
  * interna (amarilla, no le llega al cliente) y responder citando.
  * Enter envía · Shift+Enter salto de línea.
+ *
+ * Responsive por ancho del chat (PanelChat es `@container`): con el chat angosto (< 512 px:
+ * celular, tablet) queda como WhatsApp: "+" (adjuntar, plantilla, respuestas, emojis, nota
+ * interna en un menú / hoja), el texto a lo ancho (16 px) y a la derecha "Enviar" o, con el
+ * texto vacío, el micrófono; todo a 44 px. En celular emojis, respuestas y plantillas se abren
+ * en hoja inferior (sobre el teclado). Con el chat ancho, igual que siempre.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Lock, Mic, Paperclip, Smile, Square, Trash2, X, Zap } from "lucide-react";
+import { FileText, Lock, Mic, Paperclip, Plus, SendHorizontal, Smile, Square, Trash2, X, Zap } from "lucide-react";
+import { HojaInferior } from "@/components/HojaInferior";
+import { MenuAcciones, type ItemMenu } from "@/components/MenuAcciones";
+import { useEsMovil, useEsTactil } from "@/lib/ui/responsive";
 import {
   MAX_ADJUNTO_BYTES, previewMensaje, rellenarPlantilla, tamanoLegible, variablesDePlantilla, ventanaAbierta,
   type FilaBandeja, type Mensaje, type Plantilla, type RespuestaRapida,
@@ -58,6 +67,8 @@ export function Composer(p: ComposerProps) {
   const archivoRef = useRef<HTMLInputElement>(null);
   const ventana = ventanaAbierta(conv);
   const cerrada = conv.estado === "cerrada";
+  const esMovil = useEsMovil();
+  const tactil = useEsTactil();
 
   // Borrador por conversación: se conserva al saltar entre chats en la misma pestaña.
   useEffect(() => {
@@ -104,7 +115,8 @@ export function Composer(p: ComposerProps) {
     const nuevo = texto.slice(0, ini) + s + texto.slice(fin);
     setTexto(nuevo);
     requestAnimationFrame(() => {
-      el.focus();
+      // En celular los emojis van en una hoja: no se abre el teclado con cada uno.
+      if (!esMovil) el.focus();
       el.selectionStart = el.selectionEnd = ini + s.length;
     });
   };
@@ -169,9 +181,9 @@ export function Composer(p: ComposerProps) {
 
   if (cerrada) {
     return (
-      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-3 py-2.5">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-t border-slate-200 bg-slate-50 px-3 pt-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))]">
         <span className="text-xs text-slate-500">La conversación está cerrada. Si el cliente vuelve a escribir, se reabre sola.</span>
-        <button type="button" onClick={p.onReabrir} className="rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100">
+        <button type="button" onClick={p.onReabrir} className="shrink-0 rounded-xl border border-emerald-300 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold text-emerald-800 hover:bg-emerald-100 @max-lg:min-h-11 @max-lg:px-4 @max-lg:text-xs">
           Reabrir
         </button>
       </div>
@@ -179,6 +191,33 @@ export function Composer(p: ComposerProps) {
   }
 
   const bloqueado = !ventana && !modoNota;
+  // Menú "+" del chat angosto (sólo lo que se puede usar ahora).
+  const itemsMas: ItemMenu[] = [
+    ...(!(bloqueado || modoNota || voz.grabando)
+      ? [{ etiqueta: "Adjuntar archivo", icono: <Paperclip className="h-4 w-4" />, onClick: () => archivoRef.current?.click() }]
+      : []),
+    {
+      etiqueta: !ventana ? "Recontactar con plantilla" : "Enviar plantilla",
+      icono: <FileText className="h-4 w-4" />,
+      onClick: () => setPanel("plantillas"),
+      tono: !ventana ? ("peligro" as const) : undefined,
+    },
+    {
+      etiqueta: "Respuestas rápidas",
+      icono: <Zap className="h-4 w-4" />,
+      onClick: () => {
+        setQrBusca("");
+        setPanel("respuestas");
+      },
+    },
+    ...(!(voz.grabando || voz.pendiente) ? [{ etiqueta: "Emojis", icono: <Smile className="h-4 w-4" />, onClick: () => setPanel("emoji") }] : []),
+    {
+      etiqueta: modoNota ? "Volver a escribirle al cliente" : "Nota interna (solo la ve el equipo)",
+      icono: <Lock className="h-4 w-4" />,
+      onClick: () => setModoNota((v) => !v),
+    },
+  ];
+  const puedeGrabar = !bloqueado && !modoNota && !voz.grabando && !voz.pendiente;
   return (
     <form
       onSubmit={(e) => {
@@ -190,7 +229,7 @@ export function Composer(p: ComposerProps) {
         }
         enviarTexto();
       }}
-      className={`flex min-h-0 shrink-0 flex-col gap-1 border-t p-1.5 transition-colors ${modoNota ? "border-amber-200 bg-amber-50/70" : "border-slate-200 bg-white"}`}
+      className={`flex min-h-0 shrink-0 flex-col gap-1 border-t p-1.5 pb-[max(0.375rem,env(safe-area-inset-bottom))] transition-colors ${modoNota ? "border-amber-200 bg-amber-50/70" : "border-slate-200 bg-white"}`}
     >
       <input
         ref={archivoRef}
@@ -206,13 +245,13 @@ export function Composer(p: ComposerProps) {
       {error ? (
         <div className="flex items-start justify-between gap-2 rounded-md border border-red-200 bg-red-50 px-2 py-1 text-xs text-red-700">
           <span>{error}</span>
-          <button type="button" onClick={() => setError(null)} aria-label="Cerrar aviso"><X className="h-3.5 w-3.5" /></button>
+          <button type="button" onClick={() => setError(null)} aria-label="Cerrar aviso" className="-m-1 shrink-0 p-1 @max-lg:-my-2 @max-lg:p-2.5"><X className="h-3.5 w-3.5" /></button>
         </div>
       ) : null}
       {bloqueado ? (
-        <div className="flex items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800">
+        <div className="flex items-center justify-between gap-2 rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5 text-[11px] text-amber-800 @max-sm:flex-col @max-sm:items-stretch">
           <span>Pasaron +24 h desde el último mensaje del cliente: para recontactarlo solo se puede enviar una plantilla (o dejar una nota interna).</span>
-          <button type="button" onClick={() => setPanel("plantillas")} className="shrink-0 rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-700">
+          <button type="button" onClick={() => setPanel("plantillas")} className="shrink-0 rounded-lg bg-amber-600 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-amber-700 @max-lg:min-h-10 @max-lg:text-xs">
             Elegir plantilla
           </button>
         </div>
@@ -234,7 +273,7 @@ export function Composer(p: ComposerProps) {
             <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#3F8E91]">Respondiendo a {p.respondiendo.from_me ? "vos" : "el cliente"}</span>
             <span className="block truncate text-[12px] text-slate-600">{previewMensaje(p.respondiendo)}</span>
           </div>
-          <button type="button" onClick={p.onCancelarRespuesta} aria-label="Cancelar respuesta" className="shrink-0 rounded px-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600">
+          <button type="button" onClick={p.onCancelarRespuesta} aria-label="Cancelar respuesta" className="shrink-0 rounded px-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 @max-lg:-my-1 @max-lg:inline-flex @max-lg:h-10 @max-lg:w-10 @max-lg:items-center @max-lg:justify-center">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -242,6 +281,17 @@ export function Composer(p: ComposerProps) {
 
       <div className="flex items-end gap-1">
         <div className="relative flex shrink-0 items-center gap-0.5">
+          {/* Chat angosto: todo en "+" */}
+          <MenuAcciones
+            etiqueta="Adjuntar y más"
+            items={itemsMas}
+            className={`inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors @lg:hidden ${
+              modoNota ? "bg-amber-100 text-amber-800" : panel ? "bg-[#4FAEB2]/10 text-[#3F8E91]" : "text-slate-500 hover:bg-slate-100"
+            }`}
+          >
+            {modoNota ? <Lock className="h-5 w-5" aria-hidden /> : <Plus className="h-6 w-6" aria-hidden />}
+          </MenuAcciones>
+          <div className="hidden items-center gap-0.5 @lg:flex">
           <button
             type="button"
             disabled={bloqueado || modoNota || voz.grabando}
@@ -291,16 +341,17 @@ export function Composer(p: ComposerProps) {
           >
             <Lock className="h-[17px] w-[17px]" aria-hidden />
           </button>
+          </div>
 
           {panel === "emoji" ? (
-            <Flotante onCerrar={() => setPanel(null)} ancho="w-[min(calc(100vw-2rem),18rem)]">
-              <div className="max-h-64 overflow-y-auto overscroll-contain p-2">
+            <Flotante onCerrar={() => setPanel(null)} ancho="w-[min(calc(100vw-2rem),18rem)]" hoja="Emojis">
+              <div className="max-h-64 overflow-y-auto overscroll-contain p-2 max-sm:max-h-none">
                 {EMOJI_GRUPOS.map((g) => (
                   <div key={g.grupo} className="mb-2 last:mb-0">
                     <p className="mb-1 px-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">{g.grupo}</p>
                     <div className="grid grid-cols-8 gap-0.5">
                       {g.items.map((em) => (
-                        <button key={em} type="button" onClick={() => insertar(em)} className="flex h-8 w-8 items-center justify-center rounded-md text-lg leading-none transition-colors hover:bg-slate-100">
+                        <button key={em} type="button" onClick={() => insertar(em)} className="flex h-8 w-8 items-center justify-center rounded-md text-lg leading-none transition-colors hover:bg-slate-100 max-sm:h-11 max-sm:w-full max-sm:text-2xl">
                           {em}
                         </button>
                       ))}
@@ -312,7 +363,7 @@ export function Composer(p: ComposerProps) {
           ) : null}
 
           {qrVisible ? (
-            <Flotante onCerrar={() => (barra ? setTexto("") : setPanel(null))} ancho="w-[min(calc(100vw-2rem),22rem)]">
+            <Flotante onCerrar={() => (barra ? setTexto("") : setPanel(null))} ancho="w-[min(calc(100vw-2rem),22rem)]" hoja={barra ? undefined : "Respuestas rápidas"}>
               {!barra ? (
                 <div className="border-b border-slate-100 px-2 py-1.5">
                   <input
@@ -321,13 +372,13 @@ export function Composer(p: ComposerProps) {
                     value={qrBusca}
                     onChange={(e) => setQrBusca(e.target.value)}
                     placeholder="Buscar…"
-                    className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
+                    className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none max-sm:h-11 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
                   />
                 </div>
               ) : (
                 <div className="border-b border-slate-100 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Respuestas rápidas · ↑↓ y Enter</div>
               )}
-              <div className="max-h-56 overflow-y-auto overscroll-contain p-1">
+              <div className="max-h-56 overflow-y-auto overscroll-contain p-1 max-sm:max-h-none">
                 {respuestasFiltradas.length === 0 ? (
                   <p className="px-2 py-4 text-center text-xs text-slate-500">{p.respuestas.length ? "Sin coincidencias." : "No hay respuestas rápidas configuradas."}</p>
                 ) : (
@@ -338,7 +389,7 @@ export function Composer(p: ComposerProps) {
                           type="button"
                           onMouseEnter={() => setQrIdx(i)}
                           onClick={() => usarRespuesta(r)}
-                          className={`w-full rounded-lg px-2 py-2 text-left text-xs ${barra && i === qrIdx ? "bg-[#4FAEB2]/10" : "hover:bg-slate-50"}`}
+                          className={`w-full rounded-lg px-2 py-2 text-left text-xs max-sm:min-h-12 max-sm:px-3 max-sm:text-sm ${barra && i === qrIdx ? "bg-[#4FAEB2]/10" : "hover:bg-slate-50"}`}
                         >
                           <span className="block font-mono font-semibold text-[#3F8E91]">{r.atajo}</span>
                           <span className="mt-0.5 line-clamp-2 text-[11px] text-slate-500">{r.texto}</span>
@@ -366,26 +417,26 @@ export function Composer(p: ComposerProps) {
         </div>
 
         {voz.grabando ? (
-          <div className="flex min-h-[2.25rem] min-w-0 flex-1 items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3">
+          <div className="flex min-h-[2.25rem] min-w-0 flex-1 items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 @max-lg:min-h-11 @max-lg:pr-1">
             <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden>
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75" />
               <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-red-600" />
             </span>
             <span className="text-sm font-semibold tabular-nums text-red-700">{tiempo(voz.segundos)}</span>
             <span className="truncate text-xs text-red-600">Grabando nota de voz…</span>
-            <button type="button" onClick={() => voz.descartar(true)} className="ml-auto inline-flex h-7 items-center gap-1 rounded-lg border border-red-200 bg-white px-2 text-xs font-semibold text-red-700 hover:bg-red-100">
-              <Trash2 className="h-3.5 w-3.5" aria-hidden /> Cancelar
+            <button type="button" onClick={() => voz.descartar(true)} className="ml-auto inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-red-200 bg-white px-2 text-xs font-semibold text-red-700 hover:bg-red-100 @max-lg:h-10" aria-label="Cancelar grabación">
+              <Trash2 className="h-3.5 w-3.5" aria-hidden /> <span className="@max-sm:sr-only">Cancelar</span>
             </button>
-            <button type="button" onClick={voz.detener} className="inline-flex h-7 items-center gap-1 rounded-lg bg-red-600 px-2.5 text-xs font-semibold text-white hover:bg-red-700">
+            <button type="button" onClick={voz.detener} className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg bg-red-600 px-2.5 text-xs font-semibold text-white hover:bg-red-700 @max-lg:h-10">
               <Square className="h-3 w-3 fill-current" aria-hidden /> Listo
             </button>
           </div>
         ) : voz.pendiente ? (
-          <div className="flex min-h-[2.25rem] min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/[0.06] px-2.5 py-1.5">
-            <Mic className="h-4 w-4 shrink-0 text-[#3F8E91]" aria-hidden />
+          <div className="flex min-h-[2.25rem] min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/[0.06] px-2.5 py-1.5 @max-lg:min-h-11 @max-lg:gap-1 @max-lg:px-1.5 @max-lg:py-1">
+            <Mic className="h-4 w-4 shrink-0 text-[#3F8E91] @max-sm:hidden" aria-hidden />
             <audio src={voz.pendiente.url} controls className="h-8 min-w-0 flex-1" />
-            <button type="button" onClick={() => voz.descartar(true)} className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-red-600">
-              <Trash2 className="h-3.5 w-3.5" aria-hidden /> Descartar
+            <button type="button" onClick={() => voz.descartar(true)} aria-label="Descartar nota de voz" className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-red-600 @max-lg:h-10 @max-lg:w-10 @max-lg:justify-center @max-lg:px-0">
+              <Trash2 className="h-3.5 w-3.5 @max-lg:h-4 @max-lg:w-4" aria-hidden /> <span className="@max-lg:sr-only">Descartar</span>
             </button>
           </div>
         ) : (
@@ -393,13 +444,18 @@ export function Composer(p: ComposerProps) {
             ref={area}
             rows={1}
             disabled={bloqueado}
-            className={`min-w-0 flex-1 resize-none rounded-xl border px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 ${
+            enterKeyHint={tactil ? "send" : undefined}
+            className={`min-w-0 flex-1 resize-none rounded-xl border px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 @max-lg:min-h-11 @max-lg:rounded-[1.375rem] @max-lg:py-2.5 @max-lg:leading-snug ${
               modoNota
                 ? "border-amber-300 bg-amber-50 focus:border-amber-400 focus:ring-amber-200"
                 : "border-slate-200 bg-white hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:ring-[#4FAEB2]/20"
             }`}
             placeholder={
-              modoNota ? "Nota interna para el equipo (el cliente no la ve)…" : bloqueado ? "Fuera de la ventana de 24 h: elegí una plantilla" : "Escribí un mensaje…  (Enter envía · Shift+Enter salto de línea · / respuestas rápidas)"
+              modoNota
+                ? tactil ? "Nota interna (el cliente no la ve)…" : "Nota interna para el equipo (el cliente no la ve)…"
+                : bloqueado
+                  ? tactil ? "Fuera de las 24 h: usá una plantilla" : "Fuera de la ventana de 24 h: elegí una plantilla"
+                  : tactil ? "Mensaje  ( / respuestas rápidas)" : "Escribí un mensaje…  (Enter envía · Shift+Enter salto de línea · / respuestas rápidas)"
             }
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
@@ -413,30 +469,50 @@ export function Composer(p: ComposerProps) {
             }}
           />
         )}
+        {/* Chat angosto con el texto vacío: micrófono (como WhatsApp) en lugar de "Enviar". */}
+        {puedeGrabar && !texto.trim() ? (
+          <button
+            type="button"
+            onClick={() => void voz.iniciar()}
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#4FAEB2] text-white shadow-sm shadow-[#4FAEB2]/20 @lg:hidden"
+            aria-label="Grabar nota de voz"
+          >
+            <Mic className="h-5 w-5" aria-hidden />
+          </button>
+        ) : null}
         <button
           type="submit"
           disabled={voz.grabando || (!texto.trim() && !voz.pendiente) || (bloqueado && !voz.pendiente)}
-          className={`inline-flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-            modoNota ? "bg-amber-500 hover:bg-amber-600" : "bg-[#4FAEB2] shadow-[#4FAEB2]/20 hover:bg-[#3F8E91]"
-          }`}
+          aria-label={modoNota ? "Guardar nota" : "Enviar"}
+          className={`shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 @max-lg:h-11 @max-lg:w-11 @max-lg:justify-center @max-lg:rounded-full @max-lg:p-0 ${
+            puedeGrabar && !texto.trim() ? "hidden @lg:inline-flex" : "inline-flex"
+          } ${modoNota ? "bg-amber-500 hover:bg-amber-600" : "bg-[#4FAEB2] shadow-[#4FAEB2]/20 hover:bg-[#3F8E91]"}`}
         >
-          <span>{modoNota ? "Guardar nota" : "Enviar"}</span>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5" aria-hidden="true">
+          <span className="@max-lg:hidden">{modoNota ? "Guardar nota" : "Enviar"}</span>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 @max-lg:hidden" aria-hidden="true">
             <line x1="22" y1="2" x2="11" y2="13" />
             <polygon points="22 2 15 22 11 13 2 9 22 2" />
           </svg>
+          <SendHorizontal className="hidden h-5 w-5 @max-lg:block" aria-hidden />
         </button>
       </div>
     </form>
   );
 }
 
-/** Panel flotante sobre el composer; se cierra con clic afuera o Esc. */
-function Flotante({ children, onCerrar, ancho }: { children: React.ReactNode; onCerrar: () => void; ancho: string }) {
+/**
+ * Panel flotante sobre el composer; se cierra con clic afuera o Esc. En celular, si tiene
+ * `hoja` (su título), se abre como hoja inferior (las sugerencias de "/" siguen flotando: no
+ * pueden robarle el foco al texto). El alto se limita al viewport visible (--capa-alto de la
+ * capa del chat): con el teclado abierto nunca queda cortado arriba.
+ */
+function Flotante({ children, onCerrar, ancho, hoja }: { children: React.ReactNode; onCerrar: () => void; ancho: string; hoja?: string }) {
   const ref = useRef<HTMLDivElement>(null);
   const cerrar = useRef(onCerrar);
   cerrar.current = onCerrar;
+  const enHoja = useEsMovil() && !!hoja;
   useEffect(() => {
+    if (enHoja) return;
     const fuera = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && cerrar.current();
     const esc = (e: KeyboardEvent) => e.key === "Escape" && cerrar.current();
     const t = window.setTimeout(() => document.addEventListener("mousedown", fuera), 0);
@@ -446,9 +522,16 @@ function Flotante({ children, onCerrar, ancho }: { children: React.ReactNode; on
       document.removeEventListener("mousedown", fuera);
       document.removeEventListener("keydown", esc);
     };
-  }, []);
+  }, [enHoja]);
+  if (enHoja) {
+    return (
+      <HojaInferior titulo={hoja} onClose={onCerrar} sinPadding>
+        {children}
+      </HojaInferior>
+    );
+  }
   return (
-    <div ref={ref} className={`absolute bottom-full left-0 z-30 mb-1 flex ${ancho} max-h-[26rem] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl`}>
+    <div ref={ref} className={`absolute bottom-full left-0 z-30 mb-1 flex ${ancho} max-h-[min(26rem,calc(var(--capa-alto,100dvh)-9rem))] flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl`}>
       {children}
     </div>
   );
@@ -472,8 +555,8 @@ function PanelPlantillas({
   const slots = sel ? variablesDePlantilla(sel.texto) : [];
   const faltan = slots.some((s) => !vars[s]?.trim());
   return (
-    <Flotante onCerrar={onCerrar} ancho="w-[min(calc(100vw-2rem),24rem)]">
-      <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+    <Flotante onCerrar={onCerrar} ancho="w-[min(calc(100vw-2rem),24rem)]" hoja="Recontactar con plantilla">
+      <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2 max-sm:hidden">
         <span className="text-xs font-semibold text-slate-800">Recontactar con plantilla</span>
         <button type="button" onClick={onCerrar} className="text-slate-400 hover:text-slate-600" aria-label="Cerrar"><X className="h-4 w-4" /></button>
       </div>
@@ -482,7 +565,7 @@ function PanelPlantillas({
           Pasaron +24 h desde el último mensaje del cliente: para recontactarlo solo se puede enviar una plantilla aprobada.
         </div>
       ) : null}
-      <div className="max-h-[22rem] overflow-y-auto overscroll-contain p-2">
+      <div className="max-h-[22rem] overflow-y-auto overscroll-contain p-2 max-sm:max-h-none max-sm:p-3">
         {!sel ? (
           plantillas.length === 0 ? (
             <p className="px-2 py-4 text-center text-xs text-slate-500">No hay plantillas aprobadas para este canal.</p>
@@ -497,7 +580,7 @@ function PanelPlantillas({
                       const v = variablesDePlantilla(t.texto);
                       setVars(v.includes("1") && contactoNombre !== "Sin nombre" ? { "1": contactoNombre.split(" ")[0] } : {});
                     }}
-                    className="w-full rounded-lg px-2 py-2 text-left text-xs hover:bg-slate-50"
+                    className="w-full rounded-lg px-2 py-2 text-left text-xs hover:bg-slate-50 max-sm:min-h-12 max-sm:text-sm"
                   >
                     <span className="block font-semibold text-slate-900">{t.nombre}</span>
                     <span className="mt-0.5 line-clamp-2 text-[11px] text-slate-500">{t.texto}</span>
@@ -508,7 +591,7 @@ function PanelPlantillas({
           )
         ) : (
           <div className="space-y-2">
-            <button type="button" onClick={() => setSel(null)} className="text-[11px] text-[#3F8E91] hover:underline">← Elegir otra</button>
+            <button type="button" onClick={() => setSel(null)} className="text-[11px] text-[#3F8E91] hover:underline max-sm:min-h-10 max-sm:text-sm">← Elegir otra</button>
             <p className="text-xs font-semibold text-slate-800">{sel.nombre}</p>
             {slots.map((s) => (
               <label key={s} className="block">
@@ -517,7 +600,7 @@ function PanelPlantillas({
                   type="text"
                   value={vars[s] ?? ""}
                   onChange={(e) => setVars((prev) => ({ ...prev, [s]: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
+                  className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 max-sm:h-11"
                   placeholder={`Valor para {{${s}}}`}
                 />
               </label>
@@ -530,7 +613,7 @@ function PanelPlantillas({
               type="button"
               disabled={faltan}
               onClick={() => onEnviar(sel.id, vars)}
-              className="w-full rounded-lg bg-[#4FAEB2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3F8E91] disabled:bg-slate-200 disabled:text-slate-400"
+              className="w-full rounded-lg bg-[#4FAEB2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3F8E91] disabled:bg-slate-200 disabled:text-slate-400 max-sm:min-h-11 max-sm:text-sm"
             >
               Enviar plantilla
             </button>
@@ -556,8 +639,8 @@ function ImagenPegada({ archivo, onCancelar, onEnviar }: { archivo: File; onCanc
         <p className="font-semibold text-slate-800">Imagen del portapapeles</p>
         <p className="text-[11px] text-slate-500">El texto escrito va como pie de foto.</p>
       </div>
-      <button type="button" onClick={onCancelar} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50">Cancelar</button>
-      <button type="button" onClick={onEnviar} className="rounded-lg bg-[#4FAEB2] px-3 py-1 text-xs font-semibold text-white hover:bg-[#3F8E91]">Enviar</button>
+      <button type="button" onClick={onCancelar} className="shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 @max-lg:min-h-10">Cancelar</button>
+      <button type="button" onClick={onEnviar} className="shrink-0 rounded-lg bg-[#4FAEB2] px-3 py-1 text-xs font-semibold text-white hover:bg-[#3F8E91] @max-lg:min-h-10">Enviar</button>
     </div>
   );
 }

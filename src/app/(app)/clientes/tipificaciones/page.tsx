@@ -26,12 +26,13 @@ const ACCIONES: { value: string; label: string }[] = [
 ];
 const accionLabel = (v?: string | null) => ACCIONES.find((c) => c.value === (v ?? ""))?.label ?? "Sin acción";
 
-const F_INPUT = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/15";
+const F_INPUT = "w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/15 max-sm:min-h-11";
 const F_LABEL = "mb-1 block text-xs font-semibold text-slate-600";
-const BTN_PRIMARY = "rounded-lg px-3.5 py-2 text-sm font-medium text-white transition hover:brightness-95 disabled:opacity-50";
-const BTN_GHOST = "rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50";
-const BTN_DANGER = "rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50";
-const CARD = "rounded-2xl border border-slate-200 bg-white p-5 shadow-sm";
+// Al dedo los botones miden 44 px (min-h: no cambia el escritorio con mouse).
+const BTN_PRIMARY = "rounded-lg px-3.5 py-2 text-sm font-medium text-white transition hover:brightness-95 disabled:opacity-50 max-sm:min-h-11 [@media(pointer:coarse)]:min-h-11";
+const BTN_GHOST = "rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-3.5";
+const BTN_DANGER = "rounded-lg border border-red-200 bg-white px-2.5 py-1 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 disabled:opacity-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-3.5";
+const CARD = "rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5";
 
 export default function ConfiguracionTipificacionesPage() {
   const [estados, setEstados] = useState<EstadoCat[]>([]);
@@ -101,7 +102,7 @@ export default function ConfiguracionTipificacionesPage() {
       return (
         <div className="flex flex-wrap items-center gap-2">
           <input
-            className={`${F_INPUT} min-w-[200px] flex-1`}
+            className={`${F_INPUT} min-w-[min(200px,100%)] flex-1`}
             value={editNombre}
             onChange={(e) => setEditNombre(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") patch(nivel, nodo.id, { nombre: editNombre }); if (e.key === "Escape") setEditId(null); }}
@@ -118,7 +119,7 @@ export default function ConfiguracionTipificacionesPage() {
         {!nodo.activo ? <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-500">Inactivo</span> : null}
         {extra}
         {canEdit ? (
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
             <button type="button" className={BTN_GHOST} onClick={() => { setEditId(nodo.id); setEditNombre(nodo.nombre); }}>Editar</button>
             <button type="button" className={BTN_GHOST} onClick={() => patch(nivel, nodo.id, { activo: !nodo.activo })} disabled={busy}>{nodo.activo ? "Desactivar" : "Activar"}</button>
             <button type="button" className={BTN_DANGER} onClick={() => eliminar(nivel, nodo.id, aviso)} disabled={busy}>Eliminar</button>
@@ -137,7 +138,7 @@ export default function ConfiguracionTipificacionesPage() {
   return (
     <div className="max-w-5xl space-y-5 pb-10">
       <div>
-        <Link href="/clientes/gestion" className="text-xs text-slate-400 hover:text-slate-600">← Gestión de clientes</Link>
+        <Link href="/clientes/gestion" className="text-xs text-slate-400 hover:text-slate-600 max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">← Gestión de clientes</Link>
         <div className="mt-3 flex items-center gap-3">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-teal-50 text-teal-700"><Settings2 className="h-[18px] w-[18px]" /></span>
           <div>
@@ -157,7 +158,7 @@ export default function ConfiguracionTipificacionesPage() {
           <h2 className="text-sm font-semibold text-slate-800">Agregar estado</h2>
           <p className="mt-0.5 text-xs text-slate-500">El estado es el nivel de arriba (Solicitud, Reclamo, Consulta…). Después le cargás sus sub-estados. Lo desactivado no se ofrece al tipificar.</p>
           <div className="mt-3 flex flex-wrap items-end gap-3">
-            <div className="min-w-[240px] flex-1">
+            <div className="min-w-[min(240px,100%)] flex-1">
               <label className={F_LABEL} htmlFor="nuevo-estado">Nombre del estado</label>
               <input
                 id="nuevo-estado"
@@ -202,7 +203,7 @@ export default function ConfiguracionTipificacionesPage() {
                             <span className="text-[10px] font-medium text-slate-400">Acción:</span>
                             {canEdit ? (
                               <select
-                                className="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-[var(--brand)] focus:outline-none"
+                                className="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-[var(--brand)] focus:outline-none max-sm:h-11 max-sm:max-w-[13rem]"
                                 value={s.comportamiento ?? ""}
                                 onChange={(ev) => patch("estado", s.id, { comportamiento: ev.target.value })}
                                 disabled={busy}
@@ -220,14 +221,14 @@ export default function ConfiguracionTipificacionesPage() {
                   {canEdit ? (
                     <div className="flex flex-wrap items-center gap-2 pt-1">
                       <input
-                        className={`${F_INPUT} h-9 min-w-[200px] flex-1`}
+                        className={`${F_INPUT} h-9 min-w-[min(200px,100%)] flex-1`}
                         value={nuevoSub[est.id] ?? ""}
                         onChange={(ev) => setNuevoSub((m) => ({ ...m, [est.id]: ev.target.value }))}
                         onKeyDown={(ev) => { if (ev.key === "Enter") agregarSub(est.id); }}
                         placeholder="Nuevo sub-estado… (ej: Cliente solicita nueva contraseña)"
                       />
                       <select
-                        className="h-9 rounded-md border border-slate-200 bg-white px-2 text-[11px] text-slate-700 focus:border-[var(--brand)] focus:outline-none"
+                        className="h-9 rounded-md border border-slate-200 bg-white px-2 text-[11px] text-slate-700 focus:border-[var(--brand)] focus:outline-none max-sm:h-11 max-sm:flex-1"
                         value={nuevoSubAccion[est.id] ?? ""}
                         onChange={(ev) => setNuevoSubAccion((m) => ({ ...m, [est.id]: ev.target.value }))}
                         title="Acción que dispara este sub-estado"

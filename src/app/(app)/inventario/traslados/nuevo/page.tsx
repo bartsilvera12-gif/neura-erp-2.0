@@ -162,7 +162,7 @@ function NuevoTraslado() {
             Nota de remisión <span className="font-mono font-semibold">{hecho.remision_numero}</span>.
           </p>
         </div>
-        <div className="flex flex-wrap justify-center gap-2">
+        <div className="flex flex-wrap justify-center gap-2 max-sm:flex-col max-sm:[&>*]:min-h-11">
           <button onClick={() => void descargarArchivo(`/api/inventario/traslados/${hecho.id}/remision`, `remision-${hecho.remision_numero}.pdf`)} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
             <FileDown className="h-4 w-4" /> Descargar nota de remisión
           </button>
@@ -176,32 +176,32 @@ function NuevoTraslado() {
   const sinStock = (l: Linea) => l.stock && Number(enOrigen(l)?.cantidad ?? 0) <= 0;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 max-lg:pb-28 sm:space-y-6">
       <Cabecera kicker="Inventario · Traslados" titulo="Nuevo traslado" subtitulo="La mercadería sale del origen al guardar y entra al destino cuando la reciben">
         <Link href="/inventario/traslados" className={BOTON_SECUNDARIO}><ArrowLeft className="h-4 w-4" /> Traslados</Link>
       </Cabecera>
 
       {/* Origen → destino */}
-      <section className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: `${TEAL}33` }}>
-        <div className="grid items-end gap-3 md:grid-cols-[1fr_auto_1fr]">
-          <div>
+      <section className="rounded-2xl border bg-white p-4 shadow-sm sm:p-5" style={{ borderColor: `${TEAL}33` }}>
+        <div className="grid items-end gap-3 max-md:gap-2 md:grid-cols-[1fr_auto_1fr]">
+          <div className="min-w-0">
             <span className={ET}>Sale de</span>
-            <Select value={origenEf} onChange={(v) => { setOrigen(v); if (v === destino) setDestino(""); }} block options={opcionesDepositos(deps.datos)} />
+            <Select value={origenEf} onChange={(v) => { setOrigen(v); if (v === destino) setDestino(""); }} block etiqueta="Sale de" options={opcionesDepositos(deps.datos)} />
           </div>
-          <button type="button" title="Invertir" disabled={!destino} onClick={() => { const o = origenEf; setOrigen(destino); setDestino(o); }}
-            className="mb-0.5 inline-flex h-10 w-10 items-center justify-center self-end rounded-xl border border-slate-200 text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-40">
+          <button type="button" title="Invertir" aria-label="Invertir origen y destino" disabled={!destino} onClick={() => { const o = origenEf; setOrigen(destino); setDestino(o); }}
+            className="mb-0.5 inline-flex h-10 w-10 items-center justify-center self-end rounded-xl border border-slate-200 text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-40 max-md:mb-0 max-md:h-11 max-md:w-11 max-md:rotate-90 max-md:justify-self-center">
             <ArrowLeftRight className="h-4 w-4" />
           </button>
-          <div>
+          <div className="min-w-0">
             <span className={ET}>Llega a</span>
-            <Select value={destino} onChange={setDestino} block options={[["", "Elegí el depósito de destino"], ...opcionesDepositos(deps.datos, { excluir: origenEf })]} />
+            <Select value={destino} onChange={setDestino} block etiqueta="Llega a" options={[["", "Elegí el depósito de destino"], ...opcionesDepositos(deps.datos, { excluir: origenEf })]} />
           </div>
         </div>
       </section>
 
       {/* Productos */}
       <section className="rounded-2xl border bg-white shadow-sm" style={{ borderColor: `${TEAL}33` }}>
-        <div className="border-b px-5 py-4" style={{ borderColor: `${TEAL}22` }}>
+        <div className="border-b px-4 py-4 sm:px-5" style={{ borderColor: `${TEAL}22` }}>
           <h2 className="mb-3 text-sm font-semibold text-slate-900">Productos</h2>
           <BuscadorProductos onElegir={agregar} />
         </div>
@@ -217,27 +217,28 @@ function NuevoTraslado() {
               const lotes = dep?.lotes ?? [];
               const conLotes = !!l.prod.controla_lotes;
               return (
-                <li key={l.prod.id} className="px-5 py-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate font-medium text-slate-800">{l.prod.nombre}</p>
+                <li key={l.prod.id} className="px-4 py-3 sm:px-5">
+                  {/* Celular: nombre + quitar (44 px) arriba; modo de lotes y cantidad debajo, a todo el ancho */}
+                  <div className="flex flex-wrap items-center gap-3 max-sm:gap-2">
+                    <div className="min-w-0 flex-1 max-sm:basis-[calc(100%-3.25rem)]">
+                      <p className="truncate font-medium text-slate-800 max-sm:whitespace-normal max-sm:[overflow-wrap:anywhere]">{l.prod.nombre}</p>
                       <p className="text-[11px] text-slate-500">
                         <span className="font-mono">{l.prod.sku}</span> ·{" "}
                         {l.stock ? <>en {dOrigen?.nombre ?? "origen"}: <strong className={sinStock(l) ? "text-rose-600" : "text-slate-700"}>{cant(dep?.cantidad ?? 0)}</strong> {l.prod.unidad_medida}</> : <Loader2 className="inline h-3 w-3 animate-spin" />}
                       </p>
                     </div>
                     {conLotes ? (
-                      <div className="flex rounded-lg bg-slate-100 p-0.5 text-[11px] font-semibold">
-                        <button type="button" onClick={() => cambiar(l.prod.id, { manual: false })} className={`rounded-md px-2 py-1 ${!l.manual ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500"}`}>Vence primero</button>
-                        <button type="button" onClick={() => cambiar(l.prod.id, { manual: true })} className={`rounded-md px-2 py-1 ${l.manual ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500"}`}>Elegir lotes</button>
+                      <div className="flex rounded-lg bg-slate-100 p-0.5 text-[11px] font-semibold max-sm:order-2 max-sm:w-full max-sm:text-xs">
+                        <button type="button" onClick={() => cambiar(l.prod.id, { manual: false })} className={`rounded-md px-2 py-1 max-sm:min-h-10 max-sm:flex-1 ${!l.manual ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500"}`}>Vence primero</button>
+                        <button type="button" onClick={() => cambiar(l.prod.id, { manual: true })} className={`rounded-md px-2 py-1 max-sm:min-h-10 max-sm:flex-1 ${l.manual ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500"}`}>Elegir lotes</button>
                       </div>
                     ) : null}
                     {!l.manual ? (
-                      <input inputMode="decimal" value={l.cantidad} onChange={(e) => cambiar(l.prod.id, { cantidad: e.target.value.replace(/[^\d.,]/g, "") })}
+                      <input inputMode="decimal" enterKeyHint="done" aria-label={`Cantidad de ${l.prod.nombre}`} value={l.cantidad} onChange={(e) => cambiar(l.prod.id, { cantidad: e.target.value.replace(/[^\d.,]/g, "") })}
                         placeholder="Cantidad" autoFocus={i === lineas.length - 1}
-                        className={`w-28 rounded-xl border px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-4 ${problemas[i] && l.cantidad ? "border-rose-300 focus:ring-rose-100" : "border-slate-200 focus:border-[var(--brand)] focus:ring-[var(--brand-100)]"}`} />
+                        className={`w-28 rounded-xl border px-3 py-2 text-right text-sm tabular-nums outline-none focus:ring-4 max-sm:order-2 max-sm:min-h-11 max-sm:min-w-0 max-sm:flex-1 ${problemas[i] && l.cantidad ? "border-rose-300 focus:ring-rose-100" : "border-slate-200 focus:border-[var(--brand)] focus:ring-[var(--brand-100)]"}`} />
                     ) : null}
-                    <button type="button" onClick={() => setLineas((ls) => ls.filter((x) => x.prod.id !== l.prod.id))} title="Quitar" className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600">
+                    <button type="button" onClick={() => setLineas((ls) => ls.filter((x) => x.prod.id !== l.prod.id))} title="Quitar" aria-label={`Quitar ${l.prod.nombre}`} className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 max-sm:order-1 max-sm:inline-flex max-sm:h-11 max-sm:w-11 max-sm:items-center max-sm:justify-center max-sm:self-start">
                       <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
@@ -250,21 +251,24 @@ function NuevoTraslado() {
                           <tbody className="divide-y divide-slate-100">
                             {lotes.map((lo) => (
                               <tr key={lo.id}>
-                                <td className="px-3 py-1.5"><span className="font-mono font-semibold text-slate-700">{lo.numero}</span> <span className="text-slate-400">· vence {dia(lo.vencimiento)}{lo.vencimiento < hoyPY() ? " (vencido)" : ""}</span></td>
-                                <td className="px-3 py-1.5 text-right text-slate-500">hay {cant(lo.cantidad)}</td>
-                                <td className="w-28 px-3 py-1.5 text-right">
-                                  <input inputMode="decimal" value={l.lotes[lo.id] ?? ""} placeholder="0" onChange={(e) => cambiar(l.prod.id, { lotes: { ...l.lotes, [lo.id]: e.target.value.replace(/[^\d.,]/g, "") } })}
-                                    className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-right tabular-nums outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]" />
+                                <td className="px-3 py-1.5 max-sm:py-2">
+                                  <span className="font-mono font-semibold text-slate-700">{lo.numero}</span>{" "}
+                                  <span className="text-slate-400 max-sm:block">· vence {dia(lo.vencimiento)}{lo.vencimiento < hoyPY() ? " (vencido)" : ""}<span className="sm:hidden"> · hay {cant(lo.cantidad)}</span></span>
+                                </td>
+                                <td className="px-3 py-1.5 text-right text-slate-500 max-sm:hidden">hay {cant(lo.cantidad)}</td>
+                                <td className="w-28 px-3 py-1.5 text-right max-sm:py-2">
+                                  <input inputMode="decimal" enterKeyHint="next" aria-label={`Cantidad del lote ${lo.numero}`} value={l.lotes[lo.id] ?? ""} placeholder="0" onChange={(e) => cambiar(l.prod.id, { lotes: { ...l.lotes, [lo.id]: e.target.value.replace(/[^\d.,]/g, "") } })}
+                                    className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-right tabular-nums outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)] max-sm:min-h-11" />
                                 </td>
                               </tr>
                             ))}
                             {Number(dep?.sin_lote ?? 0) > 0 ? (
                               <tr>
-                                <td className="px-3 py-1.5 text-slate-600">Sin lote</td>
-                                <td className="px-3 py-1.5 text-right text-slate-500">hay {cant(dep?.sin_lote ?? 0)}</td>
-                                <td className="w-28 px-3 py-1.5 text-right">
-                                  <input inputMode="decimal" value={l.lotes.sin ?? ""} placeholder="0" onChange={(e) => cambiar(l.prod.id, { lotes: { ...l.lotes, sin: e.target.value.replace(/[^\d.,]/g, "") } })}
-                                    className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-right tabular-nums outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]" />
+                                <td className="px-3 py-1.5 text-slate-600 max-sm:py-2">Sin lote<span className="block text-slate-400 sm:hidden">hay {cant(dep?.sin_lote ?? 0)}</span></td>
+                                <td className="px-3 py-1.5 text-right text-slate-500 max-sm:hidden">hay {cant(dep?.sin_lote ?? 0)}</td>
+                                <td className="w-28 px-3 py-1.5 text-right max-sm:py-2">
+                                  <input inputMode="decimal" enterKeyHint="next" aria-label="Cantidad sin lote" value={l.lotes.sin ?? ""} placeholder="0" onChange={(e) => cambiar(l.prod.id, { lotes: { ...l.lotes, sin: e.target.value.replace(/[^\d.,]/g, "") } })}
+                                    className="w-24 rounded-lg border border-slate-200 px-2 py-1 text-right tabular-nums outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)] max-sm:min-h-11" />
                                 </td>
                               </tr>
                             ) : null}
@@ -284,13 +288,13 @@ function NuevoTraslado() {
       </section>
 
       {/* Nota de remisión */}
-      <section className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: `${TEAL}33` }}>
+      <section className="rounded-2xl border bg-white p-4 shadow-sm sm:p-5" style={{ borderColor: `${TEAL}33` }}>
         <h2 className="text-sm font-semibold text-slate-900">Nota de remisión</h2>
         <p className="mb-4 text-[11px] text-slate-500">Los datos que pide la remisión (SIFEN). Numeración de {dOrigen?.sucursal ?? "la sucursal de origen"}.</p>
-        <div className="grid gap-3 md:grid-cols-4">
-          <div className="md:col-span-2">
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+          <div className="min-w-0 sm:col-span-2">
             <span className={ET}>Motivo del traslado</span>
-            <Select value={r.motivo_codigo} onChange={(v) => setRem("motivo_codigo", v)} block options={MOTIVOS_TRASLADO.map(([k, v]): [string, string] => [String(k), v])} />
+            <Select value={r.motivo_codigo} onChange={(v) => setRem("motivo_codigo", v)} block etiqueta="Motivo del traslado" options={MOTIVOS_TRASLADO.map(([k, v]): [string, string] => [String(k), v])} />
           </div>
           <label className="block">
             <span className={ET}>Fecha de inicio</span>
@@ -301,47 +305,68 @@ function NuevoTraslado() {
             <input type="date" value={r.fecha_fin_estimada} min={r.fecha_inicio} onChange={(e) => setRem("fecha_fin_estimada", e.target.value)} className={INPUT} />
           </label>
           {r.motivo_codigo === "99" ? (
-            <label className="block md:col-span-4">
+            <label className="block sm:col-span-2 md:col-span-4">
               <span className={ET}>¿Cuál es el motivo? *</span>
-              <input value={r.motivo_descripcion} onChange={(e) => setRem("motivo_descripcion", e.target.value)} maxLength={200} className={INPUT} />
+              <input enterKeyHint="next" value={r.motivo_descripcion} onChange={(e) => setRem("motivo_descripcion", e.target.value)} maxLength={200} className={INPUT} />
             </label>
           ) : null}
           <label className="block md:col-span-3">
             <span className={ET}>Punto de partida</span>
-            <input value={r.punto_partida} onChange={(e) => setRem("punto_partida", e.target.value)} maxLength={200} placeholder={dOrigen ? sucursalDir(deps.datos, dOrigen.sucursal_id) : ""} className={INPUT} />
+            <input enterKeyHint="next" value={r.punto_partida} onChange={(e) => setRem("punto_partida", e.target.value)} maxLength={200} placeholder={dOrigen ? sucursalDir(deps.datos, dOrigen.sucursal_id) : ""} className={INPUT} />
           </label>
           <label className="block">
             <span className={ET}>Ciudad</span>
-            <input value={r.ciudad_partida} onChange={(e) => setRem("ciudad_partida", e.target.value)} maxLength={80} placeholder={dOrigen ? sucursalCiudad(deps.datos, dOrigen.sucursal_id) : ""} className={INPUT} />
+            <input enterKeyHint="next" value={r.ciudad_partida} onChange={(e) => setRem("ciudad_partida", e.target.value)} maxLength={80} placeholder={dOrigen ? sucursalCiudad(deps.datos, dOrigen.sucursal_id) : ""} className={INPUT} />
           </label>
           <label className="block md:col-span-3">
             <span className={ET}>Punto de llegada</span>
-            <input value={r.punto_llegada} onChange={(e) => setRem("punto_llegada", e.target.value)} maxLength={200} placeholder={dDestino ? sucursalDir(deps.datos, dDestino.sucursal_id) : ""} className={INPUT} />
+            <input enterKeyHint="next" value={r.punto_llegada} onChange={(e) => setRem("punto_llegada", e.target.value)} maxLength={200} placeholder={dDestino ? sucursalDir(deps.datos, dDestino.sucursal_id) : ""} className={INPUT} />
           </label>
           <label className="block">
             <span className={ET}>Ciudad</span>
-            <input value={r.ciudad_llegada} onChange={(e) => setRem("ciudad_llegada", e.target.value)} maxLength={80} placeholder={dDestino ? sucursalCiudad(deps.datos, dDestino.sucursal_id) : ""} className={INPUT} />
+            <input enterKeyHint="next" value={r.ciudad_llegada} onChange={(e) => setRem("ciudad_llegada", e.target.value)} maxLength={80} placeholder={dDestino ? sucursalCiudad(deps.datos, dDestino.sucursal_id) : ""} className={INPUT} />
           </label>
-          <p className="-mt-1 text-[11px] text-slate-400 md:col-span-4">Vacíos = la dirección cargada en cada sucursal.</p>
+          <p className="-mt-1 text-[11px] text-slate-400 sm:col-span-2 md:col-span-4">Vacíos = la dirección cargada en cada sucursal.</p>
         </div>
 
         <h3 className="mb-3 mt-5 text-xs font-semibold uppercase tracking-wider text-slate-500">Transporte <span className="font-normal normal-case tracking-normal text-slate-400">(opcional)</span></h3>
-        <div className="grid gap-3 md:grid-cols-4">
-          <label className="block"><span className={ET}>Vehículo (marca)</span><input value={r.vehiculo_marca} onChange={(e) => setRem("vehiculo_marca", e.target.value)} maxLength={60} placeholder="Ej. Toyota Hilux" className={INPUT} /></label>
-          <label className="block"><span className={ET}>Chapa</span><input value={r.vehiculo_chapa} onChange={(e) => setRem("vehiculo_chapa", e.target.value.toUpperCase())} maxLength={20} placeholder="ABC 123" className={`${INPUT} font-mono uppercase`} /></label>
-          <label className="block"><span className={ET}>Chofer</span><input value={r.chofer_nombre} onChange={(e) => setRem("chofer_nombre", e.target.value)} maxLength={120} className={INPUT} /></label>
-          <label className="block"><span className={ET}>CI del chofer</span><input value={r.chofer_documento} onChange={(e) => setRem("chofer_documento", e.target.value)} maxLength={20} className={INPUT} /></label>
-          <label className="block md:col-span-2"><span className={ET}>Transportista (si es una empresa)</span><input value={r.transportista_nombre} onChange={(e) => setRem("transportista_nombre", e.target.value)} maxLength={120} className={INPUT} /></label>
-          <label className="block"><span className={ET}>RUC del transportista</span><input value={r.transportista_ruc} onChange={(e) => setRem("transportista_ruc", e.target.value)} maxLength={20} className={INPUT} /></label>
+        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
+          <label className="block"><span className={ET}>Vehículo (marca)</span><input enterKeyHint="next" value={r.vehiculo_marca} onChange={(e) => setRem("vehiculo_marca", e.target.value)} maxLength={60} placeholder="Ej. Toyota Hilux" className={INPUT} /></label>
+          <label className="block"><span className={ET}>Chapa</span><input enterKeyHint="next" autoCapitalize="characters" value={r.vehiculo_chapa} onChange={(e) => setRem("vehiculo_chapa", e.target.value.toUpperCase())} maxLength={20} placeholder="ABC 123" className={`${INPUT} font-mono uppercase`} /></label>
+          <label className="block"><span className={ET}>Chofer</span><input enterKeyHint="next" autoComplete="off" value={r.chofer_nombre} onChange={(e) => setRem("chofer_nombre", e.target.value)} maxLength={120} className={INPUT} /></label>
+          <label className="block"><span className={ET}>CI del chofer</span><input enterKeyHint="next" autoComplete="off" value={r.chofer_documento} onChange={(e) => setRem("chofer_documento", e.target.value)} maxLength={20} className={INPUT} /></label>
+          <label className="block md:col-span-2"><span className={ET}>Transportista (si es una empresa)</span><input enterKeyHint="next" autoComplete="off" value={r.transportista_nombre} onChange={(e) => setRem("transportista_nombre", e.target.value)} maxLength={120} className={INPUT} /></label>
+          <label className="block"><span className={ET}>RUC del transportista</span><input enterKeyHint="next" autoComplete="off" value={r.transportista_ruc} onChange={(e) => setRem("transportista_ruc", e.target.value)} maxLength={20} className={INPUT} /></label>
         </div>
         <label className="mt-3 block">
           <span className={ET}>Observación <span className="font-normal text-slate-400">(sale en la remisión)</span></span>
-          <input value={r.observacion} onChange={(e) => setRem("observacion", e.target.value)} maxLength={1000} className={INPUT} />
+          <input enterKeyHint="done" value={r.observacion} onChange={(e) => setRem("observacion", e.target.value)} maxLength={1000} className={INPUT} />
         </label>
       </section>
 
-      {/* Barra de acción fija */}
-      <div className="sticky bottom-0 z-20 -mx-6 -mb-6 border-t border-slate-200 bg-white/95 px-6 py-3 backdrop-blur">
+      {/* Celular / tablet: resumen y "Enviar traslado" en un pie fijo (safe-area) */}
+      <div className="fixed inset-x-0 bottom-0 z-30 !mb-0 border-t border-slate-200 bg-white/95 shadow-[0_-10px_30px_-12px_rgba(15,23,42,0.28)] backdrop-blur pb-safe lg:hidden">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2.5 sm:px-4">
+          <div className="min-w-0 flex-1">
+            {error ? (
+              <p className="line-clamp-2 text-xs font-medium text-rose-600">{error}</p>
+            ) : (
+              <>
+                <p className="truncate text-[11px] text-slate-500">{dOrigen && dDestino ? <>{dOrigen.nombre} → {dDestino.nombre}</> : !destino ? "Elegí el depósito de destino" : "Origen y destino"}</p>
+                <p className="truncate text-base font-bold leading-tight text-slate-900">{lineas.length ? <>{lineas.length} {lineas.length === 1 ? "producto" : "productos"}</> : "Agregá productos"}</p>
+              </>
+            )}
+          </div>
+          <button type="button" onClick={() => void guardar()} disabled={!listo || busy}
+            className="inline-flex h-12 max-w-[60%] shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-40" style={{ backgroundColor: TEAL }}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
+            <span className="truncate">Enviar traslado</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Escritorio: barra de acción fija */}
+      <div className="sticky bottom-0 z-20 -mx-6 -mb-6 hidden border-t border-slate-200 bg-white/95 px-6 py-3 backdrop-blur lg:block">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-slate-600">
             {lineas.length ? <>{lineas.length} {lineas.length === 1 ? "producto" : "productos"}{dOrigen && dDestino ? <> · {dOrigen.nombre} → {dDestino.nombre}</> : null}</> : "Agregá productos"}

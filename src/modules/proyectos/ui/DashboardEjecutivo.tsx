@@ -9,6 +9,7 @@
  * proyecto abre el detalle. Exporta todo a CSV. Todos los números salen de la base
  * (proyectos_dashboard_ejecutivo): acá no se recalcula nada.
  */
+import { TablaScroll } from "@/components/TablaResponsive";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlarmClock, CalendarCheck, CalendarClock, CalendarX2, Clock, Download, FolderKanban, Hourglass, Inbox, Lock,
@@ -137,18 +138,18 @@ export function DashboardEjecutivo({ config, version, onAbrir, avisar }: {
       {/* Período */}
       <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
         <Select value={preset} onChange={elegirPreset} minWidth={170} options={PRESETS} />
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1.5 max-sm:grid max-sm:w-full max-sm:grid-cols-[auto_minmax(0,1fr)]">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Desde</span>
           <input type="date" value={desde} max={hasta || undefined} onChange={(e) => { setPreset("personalizado"); setDesde(e.target.value); }} aria-label="Desde"
-            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20" />
+            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm max-sm:h-11 max-sm:w-full max-sm:min-w-0 text-slate-900 outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20" />
           <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Hasta</span>
           <input type="date" value={hasta} min={desde || undefined} onChange={(e) => { setPreset("personalizado"); setHasta(e.target.value); }} aria-label="Hasta"
-            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20" />
+            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm max-sm:h-11 max-sm:w-full max-sm:min-w-0 text-slate-900 outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20" />
         </div>
         <Girando activo={cargando && !!data} />
         <span className="hidden text-[11px] text-slate-400 lg:inline">La cartera es la de hoy; ingresos, entregas y tiempos por estado son del período.</span>
         <button type="button" onClick={() => void exportar()} disabled={exportando || !data}
-          className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)] disabled:opacity-50">
+          className="ml-auto inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold max-sm:min-h-11 max-sm:w-full max-sm:justify-center text-slate-600 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)] disabled:opacity-50">
           <Download className="h-3.5 w-3.5" /> {exportando ? "Exportando…" : "Exportar CSV"}
         </button>
       </div>
@@ -236,7 +237,7 @@ export function DashboardEjecutivo({ config, version, onAbrir, avisar }: {
             <Card>
               <CardTitle sub={`Cartera abierta de cada técnico y sus entregas del período. WIP recomendado: ${config.wip_por_tecnico}.`}>Por técnico</CardTitle>
               {data.por_tecnico.length === 0 ? <p className="text-sm text-slate-400">Sin proyectos abiertos con técnico.</p> : (
-                <div className="-mx-1 overflow-x-auto px-1">
+                <TablaScroll primeraFija>
                   <table className="w-full min-w-[560px] text-left">
                     <thead>
                       <tr className="border-b border-slate-100">
@@ -272,14 +273,14 @@ export function DashboardEjecutivo({ config, version, onAbrir, avisar }: {
                       })}
                     </tbody>
                   </table>
-                </div>
+                </TablaScroll>
               )}
             </Card>
 
             <Card>
               <CardTitle sub="Cartera abierta de cada Project Manager y sus entregas del período.">Por PM</CardTitle>
               {data.por_pm.length === 0 ? <p className="text-sm text-slate-400">Sin proyectos abiertos.</p> : (
-                <div className="-mx-1 overflow-x-auto px-1">
+                <TablaScroll primeraFija>
                   <table className="w-full min-w-[520px] text-left">
                     <thead>
                       <tr className="border-b border-slate-100">
@@ -312,7 +313,7 @@ export function DashboardEjecutivo({ config, version, onAbrir, avisar }: {
                       })}
                     </tbody>
                   </table>
-                </div>
+                </TablaScroll>
               )}
             </Card>
           </div>
@@ -346,7 +347,7 @@ export function TablaAtencion({ filas, onAbrir, columnaExtra }: {
   columnaExtra?: { titulo: string; celda: (m: Metrica) => React.ReactNode };
 }) {
   return (
-    <div className="-mx-1 overflow-x-auto px-1">
+    <TablaScroll primeraFija>
       <table className="w-full min-w-[900px] text-left">
         <thead>
           <tr className="border-b border-slate-100">
@@ -381,6 +382,6 @@ export function TablaAtencion({ filas, onAbrir, columnaExtra }: {
           ))}
         </tbody>
       </table>
-    </div>
+    </TablaScroll>
   );
 }

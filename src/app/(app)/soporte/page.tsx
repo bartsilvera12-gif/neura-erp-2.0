@@ -32,6 +32,7 @@ import { hoyPy, numeroTicket } from "@/modules/soporte/dominio";
 import { apiSoporte } from "@/modules/soporte/api";
 import { Dona, GraficoBarras } from "@/modules/soporte/Graficos";
 import { Aviso, Desplegable, Encabezado, Esqueleto, IconoTile, PALETA_TIPOS, Pagina, TONOS, Tarjeta, TarjetaViva, Vacio, claseBoton, type Tono } from "@/modules/soporte/ui";
+import { TablaScroll } from "@/components/TablaResponsive";
 
 type Item = { id: string; numero: number | null; cliente: string; tipo: string };
 type Dashboard = {
@@ -325,7 +326,7 @@ export default function SoporteDashboardPage() {
                 <Vacio titulo="Sin tickets en el período" icono={Trophy} tono="ambar" />
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <TablaScroll primeraFija>
                 <table className="w-full text-sm">
                   <thead className="border-b border-slate-100 bg-slate-50/70 text-[10px] uppercase tracking-wide text-slate-400">
                     <tr>
@@ -365,7 +366,7 @@ export default function SoporteDashboardPage() {
                     })}
                   </tbody>
                 </table>
-              </div>
+              </TablaScroll>
             )}
           </Tarjeta>
 

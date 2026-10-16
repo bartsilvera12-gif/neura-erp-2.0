@@ -5,10 +5,19 @@
  * encabezado con métricas, "Hoy" con su resumen, navegación del período, vistas Día /
  * Semana (por defecto) / Mes / Listado, rango horario visible, filtros y "Nueva cita".
  * `?cita=<id>` (los avisos de la campanita) abre esa cita.
+ *
+ * Celular: sin la vista Semana (7 columnas no entran): arranca en Día, con una tira de la
+ * semana para saltar de día; Mes muestra puntos por día (tocar un día abre ese día) y
+ * Listado es la lista de citas. Los popovers (Hoy, rango horario) van en hoja inferior,
+ * los filtros en "Filtros" y todo a 44 px.
  */
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus, Settings2 } from "lucide-react";
+import { BarraFiltros } from "@/components/EncabezadoPagina";
+import { HojaInferior } from "@/components/HojaInferior";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
+import { useEsMovil } from "@/lib/ui/responsive";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { AGENDA_ESTADOS, type AgendaCitaEnriquecida } from "@/modules/agenda/dominio";
 import { HORARIO_DEFECTO } from "@/modules/agenda/horario";
@@ -20,8 +29,13 @@ import TimeGridView from "./views/TimeGridView";
 import MonthView from "./views/MonthView";
 import ListView from "./views/ListView";
 import {
+  WEEKDAYS_ES,
   addDays,
   addMonths,
+  diaSemana,
+  isToday,
+  sameDay,
+  startOfWeek,
   ahoraPared,
   aPared,
   deParedIso,
@@ -62,6 +76,11 @@ export default function AgendaClient() {
   // Vista de calendario. `anchor` es una fecha de pared de Paraguay.
   const [view, setView] = useState<AgendaView>("semana"); // default: Semana
   const [anchor, setAnchor] = useState<Date>(() => ahoraPared());
+  const esMovil = useEsMovil();
+  // En celular no hay vista Semana: se pasa a Día (y si se agranda la pantalla, queda en Día).
+  useEffect(() => {
+    if (esMovil && view === "semana") setView("dia");
+  }, [esMovil, view]);
 
   // Preferencias (rango horario visible) — localStorage por navegador
   const [prefs, setPrefs] = useState<AgendaPrefs>(DEFAULT_PREFS);
@@ -219,41 +238,50 @@ export default function AgendaClient() {
   ];
 
   const selectCls =
-    "rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-700 outline-none transition-colors focus:border-teal-500 focus:ring-1 focus:ring-teal-400";
+    "rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-700 outline-none transition-colors focus:border-teal-500 focus:ring-1 focus:ring-teal-400 max-md:h-11";
   const esTimeGrid = view === "dia" || view === "semana";
 
   return (
     <div className="w-full">
-      {/* Encabezado + métricas compactas */}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold text-slate-800">Agenda</h1>
-        <div className="flex flex-wrap items-center gap-1.5">
+      {/* Encabezado + métricas compactas (en celular las métricas van en una fila con scroll) */}
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex w-full items-center justify-between gap-3 sm:w-auto">
+          <h1 className="text-xl font-semibold text-slate-800">Agenda</h1>
+          <button
+            type="button"
+            onClick={() => openCrear()}
+            className="flex h-11 items-center gap-1 rounded-xl bg-teal-500 px-4 text-sm font-semibold text-white shadow-sm hover:bg-teal-600 sm:hidden"
+          >
+            <Plus className="h-4 w-4" /> Nueva cita
+          </button>
+        </div>
+        <ScrollHorizontal claseFila="gap-1.5 items-center" className="max-sm:-mx-1 max-sm:px-1 sm:w-auto">
           {stats.map((s) => (
-            <div key={s.label} className="flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 shadow-sm">
+            <div key={s.label} className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-full border border-slate-200 bg-white px-3 py-1 shadow-sm">
               <span className={`h-2 w-2 rounded-full ${s.dot}`} />
               <span className="text-sm font-semibold text-slate-800">{s.value}</span>
               <span className="text-[11px] text-slate-500">{s.label}</span>
             </div>
           ))}
-        </div>
+        </ScrollHorizontal>
       </div>
 
       {/* Toolbar */}
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          {/* Botón Hoy con popover de resumen */}
-          <div className="relative">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex min-w-0 items-center gap-2 max-sm:w-full">
+          {/* Botón Hoy con popover de resumen (hoja inferior en celular) */}
+          <div className="relative shrink-0">
             <button
               type="button"
               onClick={() => setHoyOpen((v) => !v)}
-              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+              className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors max-sm:h-11 max-sm:px-4 ${
                 hoyOpen ? "border-teal-500 bg-teal-50 text-teal-700" : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50"
               }`}
             >
               Hoy
             </button>
             {hoyOpen && (
-              <Popover onClose={() => setHoyOpen(false)} align="left">
+              <Popover onClose={() => setHoyOpen(false)} align="left" titulo="Hoy">
                 <HoyResumen
                   onSelect={(c) => {
                     setHoyOpen(false);
@@ -265,26 +293,28 @@ export default function AgendaClient() {
             )}
           </div>
 
-          <div className="flex items-center">
-            <button type="button" onClick={() => navegar(-1)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Anterior">
+          <div className="flex shrink-0 items-center">
+            <button type="button" onClick={() => navegar(-1)} className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 max-sm:h-11 max-sm:w-11" aria-label="Anterior">
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <button type="button" onClick={() => navegar(1)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100" aria-label="Siguiente">
+            <button type="button" onClick={() => navegar(1)} className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 max-sm:h-11 max-sm:w-11" aria-label="Siguiente">
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
-          <span className="ml-1 text-sm font-medium capitalize text-slate-700">{tituloPeriodo(view, anchor)}</span>
+          <span className="ml-1 min-w-0 truncate text-sm font-medium capitalize text-slate-700">{tituloPeriodo(view, anchor)}</span>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Selector de vista */}
-          <div className="flex rounded-lg border border-slate-300 bg-white p-0.5 shadow-sm">
-            {VIEWS.map((v) => (
+        <div className="flex items-center gap-2 max-sm:w-full">
+          {/* Selector de vista (en celular sin "Semana": 7 columnas no entran) */}
+          <div className="flex rounded-lg border border-slate-300 bg-white p-0.5 shadow-sm max-sm:flex-1" role="tablist" aria-label="Vista">
+            {VIEWS.filter((v) => !(esMovil && v.key === "semana")).map((v) => (
               <button
                 key={v.key}
                 type="button"
+                role="tab"
+                aria-selected={view === v.key}
                 onClick={() => setView(v.key)}
-                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                className={`rounded-md px-3 py-1 text-xs font-medium transition-colors max-sm:min-h-10 max-sm:flex-1 max-sm:text-sm ${
                   view === v.key ? "bg-teal-500 text-white shadow-sm" : "text-slate-600 hover:bg-slate-100"
                 }`}
               >
@@ -294,13 +324,13 @@ export default function AgendaClient() {
           </div>
 
           {/* Configuración de rango horario (teal) */}
-          <div className="relative">
+          <div className="relative shrink-0">
             <button
               type="button"
               onClick={() => setConfigOpen((v) => !v)}
               disabled={!esTimeGrid}
               title={esTimeGrid ? "Rango horario visible" : "Disponible en Día/Semana"}
-              className={`rounded-lg border p-1.5 transition-colors ${
+              className={`inline-flex items-center justify-center rounded-lg border p-1.5 transition-colors max-sm:h-11 max-sm:w-11 ${
                 configOpen ? "border-teal-500 bg-teal-50 text-teal-600" : "border-slate-300 bg-white text-teal-600 hover:bg-teal-50"
               } disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-white`}
               aria-label="Configurar rango horario"
@@ -308,7 +338,7 @@ export default function AgendaClient() {
               <Settings2 className="h-4 w-4" />
             </button>
             {configOpen && esTimeGrid && (
-              <Popover onClose={() => setConfigOpen(false)} align="right">
+              <Popover onClose={() => setConfigOpen(false)} align="right" titulo="Rango horario visible">
                 <RangoHorarioConfig prefs={prefs} onChange={updatePrefs} />
               </Popover>
             )}
@@ -317,16 +347,35 @@ export default function AgendaClient() {
           <button
             type="button"
             onClick={() => openCrear()}
-            className="flex items-center gap-1 rounded-lg bg-teal-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-teal-600"
+            className="flex items-center gap-1 rounded-lg bg-teal-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-teal-600 max-sm:hidden"
           >
             <Plus className="h-4 w-4" /> Nueva cita
           </button>
         </div>
       </div>
 
-      {/* Filtros sutiles */}
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <select value={estado} onChange={(e) => setEstado(e.target.value)} className={selectCls}>
+      {/* Filtros sutiles (en celular: búsqueda + "Filtros" con estado y responsable en una hoja) */}
+      <BarraFiltros
+        plano
+        className="mb-3"
+        activos={(estado ? 1 : 0) + (responsableId ? 1 : 0)}
+        onLimpiar={() => {
+          setEstado("");
+          setResponsableId("");
+        }}
+        busqueda={
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar título o contacto…"
+            type="search"
+            enterKeyHint="search"
+            className="w-full min-w-0 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 outline-none transition-colors focus:border-teal-500 focus:ring-1 focus:ring-teal-400 max-md:h-11 md:max-w-xs"
+          />
+        }
+        extra={loading ? <span className="shrink-0 text-xs text-slate-400 max-md:sr-only">Cargando…</span> : null}
+      >
+        <select value={estado} onChange={(e) => setEstado(e.target.value)} className={selectCls} aria-label="Estado">
           <option value="">Todos los estados</option>
           {AGENDA_ESTADOS.map((s) => (
             <option key={s} value={s}>
@@ -334,7 +383,7 @@ export default function AgendaClient() {
             </option>
           ))}
         </select>
-        <select value={responsableId} onChange={(e) => setResponsableId(e.target.value)} className={selectCls}>
+        <select value={responsableId} onChange={(e) => setResponsableId(e.target.value)} className={selectCls} aria-label="Responsable">
           <option value="">Todos los responsables</option>
           {options.responsables.map((r) => (
             <option key={r.id} value={r.id}>
@@ -342,16 +391,13 @@ export default function AgendaClient() {
             </option>
           ))}
         </select>
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Buscar título o contacto…"
-          className="min-w-[180px] flex-1 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs text-slate-700 outline-none transition-colors focus:border-teal-500 focus:ring-1 focus:ring-teal-400 sm:max-w-xs"
-        />
-        {loading && <span className="text-xs text-slate-400">Cargando…</span>}
-      </div>
+      </BarraFiltros>
 
       {error && <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}
+
+      {/* Celular, vista Día: tira de la semana para saltar de día con un toque */}
+      {esMovil && view === "dia" ? <TiraSemana anchor={anchor} onElegir={setAnchor} /> : null}
+
 
       {/* Vista activa */}
       {view === "lista" ? (
@@ -400,8 +446,16 @@ export default function AgendaClient() {
   );
 }
 
-/** Popover liviano con cierre por click afuera. */
-function Popover({ children, onClose, align }: { children: React.ReactNode; onClose: () => void; align: "left" | "right" }) {
+/** Popover liviano con cierre por click afuera (en celular, hoja inferior con `titulo`). */
+function Popover({ children, onClose, align, titulo }: { children: React.ReactNode; onClose: () => void; align: "left" | "right"; titulo: string }) {
+  const esMovil = useEsMovil();
+  if (esMovil) {
+    return (
+      <HojaInferior titulo={titulo} onClose={onClose}>
+        {children}
+      </HojaInferior>
+    );
+  }
   return (
     <>
       <button type="button" className="fixed inset-0 z-40 cursor-default" aria-label="Cerrar" onClick={onClose} />
@@ -409,5 +463,34 @@ function Popover({ children, onClose, align }: { children: React.ReactNode; onCl
         {children}
       </div>
     </>
+  );
+}
+
+/** Celular, vista Día: los 7 días de la semana del día elegido (tocar uno lo abre). */
+function TiraSemana({ anchor, onElegir }: { anchor: Date; onElegir: (d: Date) => void }) {
+  const lunes = startOfWeek(anchor);
+  const dias = Array.from({ length: 7 }, (_, i) => addDays(lunes, i));
+  return (
+    <div className="mb-2 grid grid-cols-7 gap-1 rounded-xl border border-slate-200 bg-white p-1 shadow-sm" role="tablist" aria-label="Días de la semana">
+      {dias.map((d) => {
+        const activo = sameDay(d, anchor);
+        const hoy = isToday(d);
+        return (
+          <button
+            key={d.toISOString()}
+            type="button"
+            role="tab"
+            aria-selected={activo}
+            onClick={() => onElegir(d)}
+            className={`flex min-h-12 flex-col items-center justify-center rounded-lg text-center transition-colors ${
+              activo ? "bg-teal-500 text-white shadow-sm" : hoy ? "bg-teal-50 text-teal-700" : "text-slate-600 active:bg-slate-100"
+            }`}
+          >
+            <span className={`text-[10px] font-medium uppercase ${activo ? "text-white/80" : "text-slate-400"}`}>{WEEKDAYS_ES[diaSemana(d)]}</span>
+            <span className="text-[15px] font-semibold tabular-nums">{d.getUTCDate()}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }

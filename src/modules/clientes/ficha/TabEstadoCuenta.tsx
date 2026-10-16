@@ -14,7 +14,8 @@ import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchSWR } from "@/lib/api/cache-cliente";
 import { descargarArchivo } from "@/lib/api/client-blob";
-import { CapaModal } from "@/components/CapaModal";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
+import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { hoyPY, TZ_PY } from "@/lib/fecha/paraguay";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
 import { nombreMetodo, type CuentaCobrar, type EstadoCuenta } from "@/modules/clientes/cobros";
@@ -33,6 +34,8 @@ function formatFecha(iso: string | null | undefined) {
 /** Día en Paraguay de un timestamp (YYYY-MM-DD). */
 const diaPY = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? iso : new Date(iso).toLocaleDateString("en-CA", { timeZone: TZ_PY }));
 const fechaHoraPY = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "numeric" });
+const TH = "whitespace-nowrap px-4 py-3 text-left text-xs font-semibold text-slate-600";
+const TD = "px-4 py-3";
 const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
 
 type EstadoUi = "Pagado" | "Pendiente" | "Vencido" | "Anulado";
@@ -73,6 +76,7 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
   const [busy, setBusy] = useState(false);
   const [bajandoPdf, setBajandoPdf] = useState(false);
   const hoy = hoyPY();
+  const vistaTarjetas = useVistaTarjetas();
 
   // Cache en memoria mientras la ficha está abierta: volver a la pestaña la pinta al instante
   // (sin pedir si se vio hace < 30 s); después de un cambio (`recarga`) se pide fresca.
@@ -126,37 +130,143 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
     try { await descargarArchivo(`/api/clientes/${clienteId}/estado-cuenta/pdf`, "estado-cuenta.pdf"); } catch { /* best-effort */ } finally { setBajandoPdf(false); }
   }
 
+  // Estado de cada venta (pagada / pendiente / vencida / anulada) y su saldo, una sola vez.
+  const infoVenta = useMemo(() => new Map(ventas.map((v) => {
+    const cxc = cxcPorVenta.get(v.id);
+    const est = estadoUi(v, cxc, hoy);
+    return [v.id, { cxc, est, saldo: est === "Anulado" ? 0 : Number(cxc?.saldo ?? 0) }];
+  })), [ventas, cxcPorVenta, hoy]);
+
+  // Facturas y cobros: tabla en ≥ 768 px; en celular, tarjetas (tocar una factura la abre).
+  const colsVentas: ColumnaTabla<Venta>[] = [
+    {
+      key: "numero", titulo: "Número", movil: "titulo", claseTd: "font-mono text-slate-800",
+      celda: (v) => (
+        <button type="button" onClick={() => setViendo(v.id)} className="text-[#4FAEB2] hover:underline font-semibold">
+          {v.numero_control}
+        </button>
+      ),
+      celdaMovil: (v) => <span className="font-mono">{v.numero_control}</span>,
+    },
+    { key: "fecha", titulo: "Fecha", movil: "dato", claseTd: "whitespace-nowrap text-slate-600", celda: (v) => formatFecha(diaPY(v.fecha)) },
+    {
+      key: "venc", titulo: "Vencimiento", movil: "dato", claseTd: "whitespace-nowrap text-slate-600",
+      celda: (v) => formatFecha(infoVenta.get(v.id)?.cxc?.vencimiento ?? diaPY(v.fecha)),
+    },
+    { key: "total", titulo: "Total", movil: "valor", claseTd: "whitespace-nowrap font-semibold text-slate-800", celda: (v) => gs(v.total) },
+    {
+      key: "estado", titulo: "Estado", movil: "chip",
+      celda: (v) => {
+        const est = infoVenta.get(v.id)?.est ?? "Pagado";
+        return <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${CLASES_ESTADO[est]}`}>{est}</span>;
+      },
+    },
+    {
+      key: "acc", titulo: "Acción", movil: "acciones", claseTh: "text-right", claseTd: "text-right whitespace-nowrap",
+      celda: (v) => accionesVenta(v, true),
+      // En la tarjeta "Ver" sobra: tocar la tarjeta ya abre la venta.
+      celdaMovil: (v) => accionesVenta(v, false),
+    },
+  ];
+
+  function accionesVenta(v: Venta, ver: boolean) {
+    const it = infoVenta.get(v.id);
+    return (
+      <div className="flex flex-nowrap items-center justify-end gap-2">
+        {it && it.saldo > 0 && it.cxc ? (
+          <button type="button" onClick={() => onRegistrarPago(it.cxc!.id)} className="rounded-lg px-1 text-xs font-medium text-[#4FAEB2] hover:underline max-sm:px-3 max-sm:text-sm max-sm:font-semibold">
+            Registrar pago
+          </button>
+        ) : null}
+        {ver ? (
+          <button type="button" onClick={() => setViendo(v.id)} className="text-xs font-medium text-slate-500 hover:text-[#4FAEB2] hover:underline">
+            Ver
+          </button>
+        ) : null}
+        {esAdmin && it?.est !== "Anulado" ? (
+          <button
+            type="button"
+            onClick={() => { setError(null); setAnulandoVenta(v); }}
+            title="Anular venta (devuelve el stock y revierte el cobro)"
+            className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-2 py-1 text-[11px] font-semibold text-red-600 transition-colors hover:border-red-300 hover:bg-red-50 max-sm:px-3 max-sm:text-xs"
+          >
+            Anular
+          </button>
+        ) : null}
+      </div>
+    );
+  }
+
+  type CobroFila = EstadoCuenta["cobros"][number];
+  const colsCobros: ColumnaTabla<CobroFila>[] = [
+    {
+      key: "recibo", titulo: "Recibo", movil: "titulo", claseTd: "font-mono text-slate-800",
+      celda: (k) => (
+        <>
+          <span className={k.anulado_at ? "line-through" : ""}>{k.numero_recibo}</span>
+          {k.anulado_at ? <span className="ml-2 text-xs font-sans font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Anulado</span> : null}
+          {k.anulado_at && k.anulado_motivo ? <span className="block font-sans text-[11px] font-normal text-slate-500">{k.anulado_motivo}</span> : null}
+        </>
+      ),
+    },
+    { key: "fecha", titulo: "Fecha", movil: "dato", claseTd: "whitespace-nowrap text-slate-600", celda: (k) => fechaHoraPY(k.fecha) },
+    {
+      key: "medio", titulo: "Medio", movil: "dato", claseTd: "text-slate-600",
+      celda: (k) => (k.pagos ?? []).map((p) => `${nombreMetodo(p.metodo)}${p.referencia ? ` (${p.referencia})` : ""}`).join(" + ") || "—",
+    },
+    { key: "aplicado", titulo: "Aplicado a", movil: "dato", claseTd: "text-slate-600", celda: (k) => (k.aplicado_a?.length ? k.aplicado_a.map((a) => a.numero).join(", ") : "A favor") },
+    {
+      key: "total", titulo: "Total", movil: "valor",
+      claseTd: "whitespace-nowrap font-semibold",
+      celda: (k) => <span className={k.anulado_at ? "text-slate-400 line-through" : "text-slate-800"}>{gs(k.total)}</span>,
+    },
+    {
+      key: "acc", titulo: "Acción", movil: "acciones", claseTh: "text-right", claseTd: "text-right whitespace-nowrap",
+      celda: (k) => (
+        <div className="flex flex-nowrap items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={() => descargarArchivo(`/api/cobros/${k.id}/pdf`, `recibo-${k.numero_recibo}.pdf`).catch(() => {})}
+            className="text-xs font-medium text-slate-500 hover:text-[#4FAEB2] hover:underline max-sm:rounded-lg max-sm:border max-sm:border-slate-200 max-sm:px-3"
+          >
+            Recibo
+          </button>
+          {!k.anulado_at ? (
+            <button
+              type="button"
+              onClick={() => { setError(null); setMotivo(""); setAnulandoCobro(k.id); }}
+              className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-2 py-1 text-[11px] font-semibold text-red-600 transition-colors hover:border-red-300 hover:bg-red-50 max-sm:px-3 max-sm:text-xs"
+            >
+              Anular
+            </button>
+          ) : null}
+        </div>
+      ),
+    },
+  ];
+
+  const BTN = "inline-flex items-center justify-center gap-1.5 text-sm font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded-lg disabled:opacity-50 max-sm:min-h-11";
+  const cerrarAnular = () => { setAnulandoVenta(null); setAnulandoCobro(null); };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <SectionTitle>Facturas del cliente</SectionTitle>
-        <div className="flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void bajarPdf()}
-            disabled={bajandoPdf}
-            className="inline-flex items-center gap-1.5 text-sm font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded-lg disabled:opacity-50"
-          >
+        {/* En celular: grilla de 2 columnas, botones de 44 px. */}
+        <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
+          <button type="button" onClick={() => void bajarPdf()} disabled={bajandoPdf} className={BTN}>
             {bajandoPdf ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Estado de cuenta PDF
           </button>
-          <button
-            type="button"
-            onClick={onFacturaContado}
-            className="text-sm font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded-lg"
-          >
+          <button type="button" onClick={onFacturaContado} className={BTN}>
             Factura al contado
           </button>
-          <button
-            type="button"
-            onClick={onCobroCaja}
-            className="text-sm font-medium border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 px-3 py-1.5 rounded-lg"
-          >
+          <button type="button" onClick={onCobroCaja} className={BTN}>
             Cobro en caja
           </button>
           <button
             type="button"
             onClick={() => onRegistrarPago(null)}
-            className="text-sm font-medium text-[#4FAEB2] hover:text-[#3F8E91]"
+            className="inline-flex items-center justify-center text-sm font-medium text-[#4FAEB2] hover:text-[#3F8E91] max-sm:min-h-11 max-sm:rounded-lg max-sm:border max-sm:border-[#4FAEB2]/40 max-sm:bg-[#4FAEB2]/10 max-sm:font-semibold"
           >
             Registrar pago
           </button>
@@ -168,61 +278,10 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
       {ventas.length === 0 ? (
         <p className="text-sm text-gray-400 py-8 text-center">No hay facturas registradas.</p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-slate-200">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50">
-              <tr>
-                {["Número", "Fecha", "Vencimiento", "Total", "Estado"].map((h) => (
-                  <th key={h} className="text-left text-xs font-semibold text-slate-600 px-4 py-3">{h}</th>
-                ))}
-                <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Acción</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {ventas.map((v) => {
-                const cxc = cxcPorVenta.get(v.id);
-                const est = estadoUi(v, cxc, hoy);
-                const saldo = est === "Anulado" ? 0 : Number(cxc?.saldo ?? 0);
-                return (
-                  <tr key={v.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-mono text-slate-800">
-                      <button type="button" onClick={() => setViendo(v.id)} className="text-[#4FAEB2] hover:underline font-semibold">
-                        {v.numero_control}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{formatFecha(diaPY(v.fecha))}</td>
-                    <td className="px-4 py-3 text-slate-600">{formatFecha(cxc?.vencimiento ?? diaPY(v.fecha))}</td>
-                    <td className="px-4 py-3 font-semibold text-slate-800">{gs(v.total)}</td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${CLASES_ESTADO[est]}`}>{est}</span>
-                    </td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className="flex flex-nowrap items-center justify-end gap-2">
-                        {saldo > 0 && cxc ? (
-                          <button type="button" onClick={() => onRegistrarPago(cxc.id)} className="text-xs font-medium text-[#4FAEB2] hover:underline">
-                            Registrar pago
-                          </button>
-                        ) : null}
-                        <button type="button" onClick={() => setViendo(v.id)} className="text-xs font-medium text-slate-500 hover:text-[#4FAEB2] hover:underline">
-                          Ver
-                        </button>
-                        {esAdmin && est !== "Anulado" ? (
-                          <button
-                            type="button"
-                            onClick={() => { setError(null); setAnulandoVenta(v); }}
-                            title="Anular venta (devuelve el stock y revierte el cobro)"
-                            className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-2 py-1 text-[11px] font-semibold text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
-                          >
-                            Anular
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div className="overflow-hidden rounded-lg border border-slate-200">
+          <TablaTarjetas filas={ventas} columnas={colsVentas} claveFila={(v) => v.id}
+            onFila={vistaTarjetas ? (v) => setViendo(v.id) : undefined}
+            claseThead="bg-slate-50" claseFila={() => (vistaTarjetas ? "" : "hover:bg-slate-50")} thBase={TH} tdBase={TD} />
         </div>
       )}
       {ventas.length >= 50 ? <p className="text-center text-[11px] text-slate-400">Se muestran las últimas 50 ventas.</p> : null}
@@ -231,54 +290,9 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
       {ec && ec.cobros.length > 0 ? (
         <div className="space-y-4 pt-4">
           <SectionTitle>Cobros del cliente</SectionTitle>
-          <div className="overflow-x-auto rounded-lg border border-slate-200">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50">
-                <tr>
-                  {["Recibo", "Fecha", "Medio", "Aplicado a", "Total"].map((h) => (
-                    <th key={h} className="text-left text-xs font-semibold text-slate-600 px-4 py-3">{h}</th>
-                  ))}
-                  <th className="text-right text-xs font-semibold text-slate-600 px-4 py-3">Acción</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {ec.cobros.map((k) => (
-                  <tr key={k.id} className={`hover:bg-slate-50 ${k.anulado_at ? "opacity-60" : ""}`}>
-                    <td className="px-4 py-3 font-mono text-slate-800">
-                      <span className={k.anulado_at ? "line-through" : ""}>{k.numero_recibo}</span>
-                      {k.anulado_at ? <span className="ml-2 text-xs font-sans font-medium px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Anulado</span> : null}
-                      {k.anulado_at && k.anulado_motivo ? <span className="block font-sans text-[11px] text-slate-500">{k.anulado_motivo}</span> : null}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{fechaHoraPY(k.fecha)}</td>
-                    <td className="px-4 py-3 text-slate-600">
-                      {(k.pagos ?? []).map((p) => `${nombreMetodo(p.metodo)}${p.referencia ? ` (${p.referencia})` : ""}`).join(" + ") || "—"}
-                    </td>
-                    <td className="px-4 py-3 text-slate-600">{k.aplicado_a?.length ? k.aplicado_a.map((a) => a.numero).join(", ") : "A favor"}</td>
-                    <td className={`px-4 py-3 font-semibold ${k.anulado_at ? "text-slate-400 line-through" : "text-slate-800"}`}>{gs(k.total)}</td>
-                    <td className="px-4 py-3 text-right whitespace-nowrap">
-                      <div className="flex flex-nowrap items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => descargarArchivo(`/api/cobros/${k.id}/pdf`, `recibo-${k.numero_recibo}.pdf`).catch(() => {})}
-                          className="text-xs font-medium text-slate-500 hover:text-[#4FAEB2] hover:underline"
-                        >
-                          Recibo
-                        </button>
-                        {!k.anulado_at ? (
-                          <button
-                            type="button"
-                            onClick={() => { setError(null); setMotivo(""); setAnulandoCobro(k.id); }}
-                            className="inline-flex items-center justify-center rounded-lg border border-red-200 bg-white px-2 py-1 text-[11px] font-semibold text-red-600 transition-colors hover:border-red-300 hover:bg-red-50"
-                          >
-                            Anular
-                          </button>
-                        ) : null}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="overflow-hidden rounded-lg border border-slate-200">
+            <TablaTarjetas filas={ec.cobros} columnas={colsCobros} claveFila={(k) => k.id}
+              claseThead="bg-slate-50" claseFila={(k) => `${vistaTarjetas ? "" : "hover:bg-slate-50"} ${k.anulado_at ? "opacity-60" : ""}`} thBase={TH} tdBase={TD} />
           </div>
         </div>
       ) : null}
@@ -287,44 +301,49 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
         <VentaDetalle ventaId={viendo} onClose={() => setViendo(null)} onAnulada={() => { setViendo(null); cargar(); onCambio(); }} />
       ) : null}
 
-      {/* Confirmar anulación (mismo modal que el sistema actual) */}
+      {/* Confirmar anulación (mismo modal que el sistema actual). Cabecera y pie fijos, el cuerpo
+          scrollea: en celular es una hoja inferior y el pie queda a la vista con el teclado. */}
       {anulandoVenta || anulandoCobro ? (
-        <CapaModal onClose={busy ? undefined : () => { setAnulandoVenta(null); setAnulandoCobro(null); }} z="z-[120]" fondo="bg-black/50">
-          <div className="w-full max-w-md space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            {anulandoVenta ? (
-              <>
-                <h4 className="text-sm font-bold text-slate-900">Anular venta {anulandoVenta.numero_control}</h4>
+        <CapaModal onClose={busy ? undefined : cerrarAnular} z="z-[120]" fondo="bg-black/50">
+          <div className={`flex w-full max-w-md ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl`}
+            role="dialog" aria-modal="true" aria-labelledby="anular-titulo" onClick={(e) => e.stopPropagation()}>
+            <div className="shrink-0 px-5 pb-2 pt-5">
+              <h4 id="anular-titulo" className="text-sm font-bold text-slate-900">
+                {anulandoVenta ? `Anular venta ${anulandoVenta.numero_control}` : "Anular cobro"}
+              </h4>
+            </div>
+            <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 pb-4">
+              {anulandoVenta ? (
                 <p className="text-xs leading-relaxed text-slate-600">
                   Esta acción marca la venta como <span className="font-semibold">Anulada</span>: devuelve el stock y revierte su cobro.
                   No elimina la venta ni sus registros.
                 </p>
-              </>
-            ) : (
-              <>
-                <h4 className="text-sm font-bold text-slate-900">Anular cobro</h4>
-                <p className="text-xs leading-relaxed text-slate-600">
-                  La deuda vuelve a esas ventas y el movimiento de caja se anula.
-                </p>
-                <label className="block text-xs font-semibold text-slate-600">
-                  Motivo (obligatorio)
-                  <textarea
-                    value={motivo}
-                    onChange={(e) => setMotivo(e.target.value)}
-                    rows={3}
-                    maxLength={500}
-                    className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
-                    placeholder="Ej.: se cargó al cliente equivocado"
-                  />
-                </label>
-              </>
-            )}
-            {error ? <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</div> : null}
-            <div className="flex flex-wrap justify-end gap-2 pt-1">
+              ) : (
+                <>
+                  <p className="text-xs leading-relaxed text-slate-600">
+                    La deuda vuelve a esas ventas y el movimiento de caja se anula.
+                  </p>
+                  <label className="block text-xs font-semibold text-slate-600">
+                    Motivo (obligatorio)
+                    <textarea
+                      value={motivo}
+                      onChange={(e) => setMotivo(e.target.value)}
+                      rows={3}
+                      maxLength={500}
+                      className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-300"
+                      placeholder="Ej.: se cargó al cliente equivocado"
+                    />
+                  </label>
+                </>
+              )}
+              {error ? <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-800">{error}</div> : null}
+            </div>
+            <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 px-5 py-3 max-sm:[&>button]:flex-1">
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => { setAnulandoVenta(null); setAnulandoCobro(null); }}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+                onClick={cerrarAnular}
+                className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-50 max-sm:text-sm"
               >
                 Cancelar
               </button>
@@ -332,7 +351,7 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
                 type="button"
                 disabled={busy || (!!anulandoCobro && !motivo.trim())}
                 onClick={() => void (anulandoVenta ? anularVenta() : anularCobro(anulandoCobro!))}
-                className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                className="rounded-lg bg-red-600 px-3 py-2 text-xs font-semibold text-white hover:bg-red-700 disabled:opacity-50 max-sm:text-sm"
               >
                 {busy ? "Anulando…" : "Confirmar anulación"}
               </button>

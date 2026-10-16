@@ -9,6 +9,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Check, ChevronDown, Loader2, Search, type LucideIcon } from "lucide-react";
 import { Select } from "@/components/Select";
+import { HojaInferior } from "@/components/HojaInferior";
+import { useEsMovil } from "@/lib/ui/responsive";
 
 export const ACENTO = "#4FAEB2";
 export const ACENTO_OSC = "#2F6E71";
@@ -52,7 +54,8 @@ export const SOMBRA = "shadow-[0_1px_3px_rgba(15,23,42,0.05),0_8px_24px_-12px_rg
 export const TARJETA = `rounded-2xl border border-slate-200/80 bg-white ${SOMBRA}`;
 
 export function Pagina({ children, ancho = "max-w-[1400px]" }: { children: ReactNode; ancho?: string }) {
-  return <div className={`mx-auto w-full ${ancho} px-4 pb-14 pt-6 md:px-8`}>{children}</div>;
+  // En celular el <main> ya da el margen lateral: sin padding propio (no doble margen).
+  return <div className={`mx-auto w-full ${ancho} px-0 pb-10 pt-0 sm:px-2 sm:pt-2 md:px-8 md:pb-14 md:pt-6`}>{children}</div>;
 }
 
 export function IconoTile({ icono: Icono, tono = "turquesa", tam = "md" }: { icono: LucideIcon; tono?: Tono; tam?: "sm" | "md" | "lg" }) {
@@ -80,17 +83,17 @@ export function Encabezado({
   tono?: Tono;
 }) {
   return (
-    <header className="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <div className="flex min-w-0 items-center gap-3.5">
+    <header className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6 sm:gap-4">
+      <div className="flex min-w-0 items-center gap-3 sm:gap-3.5">
         {icono ? <IconoTile icono={icono} tono={tono} tam="lg" /> : null}
         <div className="min-w-0">
-          <h1 className="text-[24px] font-bold leading-tight tracking-tight text-slate-900" style={{ animation: "fade-in 0.3s ease-out" }}>
+          <h1 className="text-[20px] font-bold leading-tight tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-[24px]" style={{ animation: "fade-in 0.3s ease-out" }}>
             {titulo}
           </h1>
-          {subtitulo ? <p className="mt-0.5 text-sm text-slate-500">{subtitulo}</p> : null}
+          {subtitulo ? <p className="mt-0.5 text-[13px] text-slate-500 sm:text-sm">{subtitulo}</p> : null}
         </div>
       </div>
-      {acciones ? <div className="flex shrink-0 flex-wrap items-center gap-2">{acciones}</div> : null}
+      {acciones ? <div className="flex shrink-0 flex-wrap items-center gap-2 max-sm:w-full max-sm:[&>*]:min-h-11 max-sm:[&>*]:flex-1">{acciones}</div> : null}
     </header>
   );
 }
@@ -102,7 +105,7 @@ export function Tarjeta({
   icono,
   tono = "turquesa",
   accion,
-  padding = "p-5",
+  padding = "p-4 sm:p-5",
 }: {
   children: ReactNode;
   className?: string;
@@ -149,7 +152,7 @@ const BOTON: Record<VarianteBoton, string> = {
 };
 
 export function claseBoton(v: VarianteBoton = "primario", tam: "sm" | "md" = "md") {
-  const t = tam === "sm" ? "px-2.5 py-1.5 text-[12px]" : "px-4 py-2 text-sm";
+  const t = tam === "sm" ? "px-2.5 py-1.5 text-[12px] [@media(pointer:coarse)]:min-h-10" : "px-4 py-2 text-sm max-sm:min-h-11 [@media(pointer:coarse)]:min-h-11";
   return `inline-flex items-center justify-center gap-1.5 rounded-xl font-semibold no-underline transition disabled:cursor-not-allowed disabled:opacity-50 ${t} ${BOTON[v]}`;
 }
 
@@ -304,14 +307,17 @@ export function Desplegable({
   options,
   disabled,
   minWidth,
+  etiqueta,
 }: {
   value: string;
   onChange: (v: string) => void;
   options: { value: string; label: string }[];
   disabled?: boolean;
   minWidth?: number;
+  /** título de la hoja inferior en celular */
+  etiqueta?: string;
 }) {
-  return <Select block value={value} onChange={onChange} options={options.map((o) => [o.value, o.label] as [string, string])} disabled={disabled} minWidth={minWidth} />;
+  return <Select block value={value} onChange={onChange} options={options.map((o) => [o.value, o.label] as [string, string])} disabled={disabled} minWidth={minWidth} etiqueta={etiqueta} />;
 }
 
 export function EnlaceMiga({ href, children }: { href: string; children: ReactNode }) {
@@ -356,6 +362,8 @@ export function SelectorBuscable({
   const [q, setQ] = useState("");
   const [activo, setActivo] = useState(0);
   const elegida = opciones.find((o) => o.value === value) ?? null;
+  // Celular: la lista va en una hoja inferior (no la corta ningún contenedor con scroll).
+  const esMovil = useEsMovil();
   const visibles = useMemo(() => {
     const t = norm(q.trim());
     const l = t ? opciones.filter((o) => norm(`${o.label} ${o.detalle ?? ""}`).includes(t)) : opciones;
@@ -363,12 +371,12 @@ export function SelectorBuscable({
   }, [opciones, q]);
 
   useEffect(() => {
-    if (!abierto) return;
+    if (!abierto || esMovil) return;
     const fuera = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && setAbierto(false);
     document.addEventListener("mousedown", fuera);
     requestAnimationFrame(() => buscador.current?.focus());
     return () => document.removeEventListener("mousedown", fuera);
-  }, [abierto]);
+  }, [abierto, esMovil]);
 
   const elegir = (v: string) => {
     onChange(v);
@@ -388,14 +396,71 @@ export function SelectorBuscable({
           setAbierto((a) => !a);
           setActivo(0);
         }}
-        className="flex h-[42px] w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-medium text-slate-700 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
+        className="flex h-[42px] w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-left text-sm font-medium text-slate-700 max-sm:h-11 transition hover:border-slate-300 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400"
         style={abierto ? { borderColor: ACENTO, boxShadow: "0 0 0 4px rgba(79,174,178,0.15)" } : undefined}
       >
         {avatares && elegida?.value ? <Avatar nombre={elegida.label} tam={22} tono={elegida.tono} /> : null}
         <span className={`min-w-0 flex-1 truncate ${elegida ? "" : "text-slate-400"}`}>{elegida?.label ?? placeholder}</span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${abierto ? "rotate-180" : ""}`} aria-hidden />
       </button>
-      {abierto ? (
+      {abierto && esMovil ? (
+        <HojaInferior titulo={ariaLabel ?? placeholder} onClose={() => setAbierto(false)} sinPadding>
+          <div className="relative border-b border-slate-100 p-2">
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" aria-hidden />
+            <input
+              ref={buscador}
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value);
+                setActivo(0);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setActivo((a) => Math.min(a + 1, visibles.length - 1));
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setActivo((a) => Math.max(a - 1, 0));
+                } else if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (visibles[activo]) elegir(visibles[activo].value);
+                } else if (e.key === "Escape") {
+                  setAbierto(false);
+                }
+              }}
+              placeholder={buscarPlaceholder}
+              enterKeyHint="search"
+              className="w-full rounded-lg bg-slate-50 py-1.5 pl-7 pr-2 text-[13px] outline-none max-sm:h-11"
+            />
+          </div>
+          <ul role="listbox" className={esMovil ? "p-2" : "max-h-72 overflow-y-auto p-1"}>
+            {visibles.length === 0 ? <li className="px-3 py-2 text-[12.5px] text-slate-400">{vacio}</li> : null}
+            {visibles.map((o, i) => {
+              const sel = o.value === value;
+              return (
+                <li key={o.value || "_vacio"}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={sel}
+                    onMouseEnter={() => setActivo(i)}
+                    onClick={() => elegir(o.value)}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] max-sm:min-h-12 max-sm:px-3 max-sm:text-[15px] ${i === activo ? "bg-slate-50" : ""} ${sel ? "font-semibold text-[#2F6E71]" : "text-slate-700"}`}
+                  >
+                    {avatares && o.value ? <Avatar nombre={o.label} tam={22} tono={o.tono} /> : null}
+                    <span className="min-w-0 flex-1 truncate">{o.label}</span>
+                    {o.detalle ? (
+                      <span className={`shrink-0 rounded-full px-1.5 py-px text-[10.5px] font-bold ${TONOS[o.tono ?? "pizarra"].suave} ${TONOS[o.tono ?? "pizarra"].texto}`}>{o.detalle}</span>
+                    ) : null}
+                    {sel ? <Check className="h-3.5 w-3.5 shrink-0" aria-hidden /> : null}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </HojaInferior>
+      ) : null}
+      {abierto && !esMovil ? (
         <div
           className="absolute left-0 right-0 z-40 mt-1.5 min-w-[240px] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_12px_32px_-8px_rgba(2,48,71,0.25)]"
           style={{ animation: "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)" }}
@@ -424,10 +489,11 @@ export function SelectorBuscable({
                 }
               }}
               placeholder={buscarPlaceholder}
-              className="w-full rounded-lg bg-slate-50 py-1.5 pl-7 pr-2 text-[13px] outline-none"
+              enterKeyHint="search"
+              className="w-full rounded-lg bg-slate-50 py-1.5 pl-7 pr-2 text-[13px] outline-none max-sm:h-11"
             />
           </div>
-          <ul role="listbox" className="max-h-72 overflow-y-auto p-1">
+          <ul role="listbox" className={esMovil ? "p-2" : "max-h-72 overflow-y-auto p-1"}>
             {visibles.length === 0 ? <li className="px-3 py-2 text-[12.5px] text-slate-400">{vacio}</li> : null}
             {visibles.map((o, i) => {
               const sel = o.value === value;
@@ -439,7 +505,7 @@ export function SelectorBuscable({
                     aria-selected={sel}
                     onMouseEnter={() => setActivo(i)}
                     onClick={() => elegir(o.value)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] ${i === activo ? "bg-slate-50" : ""} ${sel ? "font-semibold text-[#2F6E71]" : "text-slate-700"}`}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] max-sm:min-h-12 max-sm:px-3 max-sm:text-[15px] ${i === activo ? "bg-slate-50" : ""} ${sel ? "font-semibold text-[#2F6E71]" : "text-slate-700"}`}
                   >
                     {avatares && o.value ? <Avatar nombre={o.label} tam={22} tono={o.tono} /> : null}
                     <span className="min-w-0 flex-1 truncate">{o.label}</span>

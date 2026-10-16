@@ -11,7 +11,7 @@ import { Suspense, useState } from "react";
 import { useParams } from "next/navigation";
 import { BarrasH, Columnas, Leyenda, C_MERCADERIA, C_OPERATIVOS, SERIES } from "@/components/graficos/Graficos";
 import { fechaCorta, fechaHoraPY, gs, mesCorto, nombreMes, num, pct } from "@/components/graficos/formato";
-import { Descargas, EncabezadoReporte, EstadoCarga, FiltrosReporte, Kpi, Segmentos, Tabla, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
+import { Descargas, EncabezadoReporte, EstadoCarga, FilaKpis, FiltrosReporte, Kpi, Segmentos, Tabla, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
 import type { ProveedorDetalle } from "@/modules/reportes/tipos";
 
 const ATAJOS: Atajo[] = ["mes", "mes_anterior", "3m", "6m", "anio"];
@@ -46,7 +46,7 @@ function FichaProveedor() {
 
       {!d || !k ? <EstadoCarga error={error} /> : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <FilaKpis n={5}>
             <Kpi acento label="Comprado en el período" valor={gs(k.compras)} hint={`${num(k.compras_cant)} compra${Number(k.compras_cant) === 1 ? "" : "s"}`} />
             <Kpi label="Compra promedio" valor={gs(Number(k.compras_cant) ? Number(k.compras) / Number(k.compras_cant) : 0)} hint={`Histórico ${gs(k.compras_historicas)}`} />
             <Kpi label="Última compra" valor={k.ultima_compra ? fechaCorta(k.ultima_compra) : "Nunca"}
@@ -54,7 +54,7 @@ function FichaProveedor() {
             <Kpi label="Le debés" valor={gs(k.deuda_gs)} tono={Number(k.vencido_gs) > 0 ? "malo" : undefined}
               hint={`Vencido ${gs(k.vencido_gs)}${Number(k.deuda_usd) ? ` · USD ${num(k.deuda_usd, 2)}` : ""}`} onClick={() => setVista("cuentas")} />
             <Kpi label="Pagado en el período" valor={gs(k.pagado)} hint={Number(k.gastos) ? `Gastos operativos ${gs(k.gastos)}` : "pagos registrados"} onClick={() => setVista("pagos")} />
-          </div>
+          </FilaKpis>
 
           <div className="grid gap-6 xl:grid-cols-[1.3fr_1fr]">
             <Tarjeta titulo="Compras por mes" sub="últimos 12 meses hasta el fin del rango"
@@ -109,7 +109,7 @@ function FichaProveedor() {
                 filas={d.compras.map((c) => ({
                   key: c.id, tenue: c.estado === "anulada",
                   celdas: [
-                    <Link key="n" href={`/compras?ver=${c.id}`} className="font-mono text-xs text-[var(--brand)] hover:underline">{c.numero_control}</Link>,
+                    <Link key="n" href={`/compras?ver=${c.id}`} className="font-mono text-xs text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">{c.numero_control}</Link>,
                     fechaCorta(c.fecha), c.numero_factura ?? "—",
                     c.tipo_pago === "credito" ? "Crédito" : "Contado",
                     c.sucursal_nombre ?? "—", num(c.items),
@@ -134,7 +134,7 @@ function FichaProveedor() {
                 cols={["Número", "Fecha", "Medios", "Total"]} der={[3]}
                 filas={d.pagos.map((x) => ({
                   key: x.id, tenue: x.anulado,
-                  celdas: [<Link key="n" href="/compras/pagos" className="font-mono text-xs text-[var(--brand)] hover:underline">{x.numero}</Link>, fechaHoraPY(x.fecha),
+                  celdas: [<Link key="n" href="/compras/pagos" className="font-mono text-xs text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">{x.numero}</Link>, fechaHoraPY(x.fecha),
                     x.medios.map((m) => m.metodo).join(" + "), <span key="t" className={x.anulado ? "line-through" : "font-semibold"}>{x.moneda === "USD" ? `USD ${num(x.total, 2)}` : gs(x.total)}</span>],
                 }))} />
             )}

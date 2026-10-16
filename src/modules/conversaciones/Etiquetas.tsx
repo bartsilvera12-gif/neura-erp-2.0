@@ -11,11 +11,14 @@ export function EtiquetasPopover({
   sugeridas,
   onCerrar,
   onListo,
+  enLinea = false,
 }: {
   conv: FilaBandeja;
   sugeridas: string[];
   onCerrar: () => void;
   onListo: (f: FilaBandeja) => void;
+  /** dentro de una hoja (celular / chat angosto): sin flotar ni cerrar con clic afuera */
+  enLinea?: boolean;
 }) {
   const [nueva, setNueva] = useState("");
   const [guardando, setGuardando] = useState(false);
@@ -25,6 +28,7 @@ export function EtiquetasPopover({
   cerrar.current = onCerrar;
 
   useEffect(() => {
+    if (enLinea) return;
     const fuera = (e: MouseEvent) => ref.current && !ref.current.contains(e.target as Node) && cerrar.current();
     const esc = (e: KeyboardEvent) => e.key === "Escape" && cerrar.current();
     const t = window.setTimeout(() => document.addEventListener("mousedown", fuera), 0);
@@ -34,7 +38,7 @@ export function EtiquetasPopover({
       document.removeEventListener("mousedown", fuera);
       document.removeEventListener("keydown", esc);
     };
-  }, []);
+  }, [enLinea]);
 
   const guardar = async (etiquetas: string[]) => {
     setGuardando(true);
@@ -58,24 +62,25 @@ export function EtiquetasPopover({
   const opciones = sugeridas.filter((s) => !conv.etiquetas.includes(s) && (!nueva.trim() || s.includes(nueva.trim().toLowerCase()))).slice(0, 8);
 
   return (
-    <div ref={ref} className="absolute right-0 top-full z-40 mt-1 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl">
-      <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+    <div ref={ref} className={enLinea ? "" : "absolute right-0 top-full z-40 mt-1 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl"}>
+      <p className={`mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-500 ${enLinea ? "sr-only" : ""}`}>
         <Tag className="h-3.5 w-3.5" /> Etiquetas
       </p>
       <div className="mb-2 flex flex-wrap gap-1">
         {conv.etiquetas.length === 0 ? <span className="text-[11px] text-slate-400">Sin etiquetas</span> : null}
         {conv.etiquetas.map((e) => (
-          <span key={e} className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+          <span key={e} className={`inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-indigo-50 font-medium text-indigo-700 ${enLinea ? "py-0.5 pl-3 pr-0.5 text-[13px]" : "px-2 py-0.5 text-[11px]"}`}>
             {e}
-            <button type="button" disabled={guardando} onClick={() => void guardar(conv.etiquetas.filter((x) => x !== e))} aria-label={`Quitar ${e}`} className="text-indigo-400 hover:text-indigo-700">
-              <X className="h-3 w-3" />
+            <button type="button" disabled={guardando} onClick={() => void guardar(conv.etiquetas.filter((x) => x !== e))} aria-label={`Quitar ${e}`} className={`text-indigo-400 hover:text-indigo-700 ${enLinea ? "-my-1.5 inline-flex h-11 w-11 items-center justify-center" : ""}`}>
+              <X className={enLinea ? "h-4 w-4" : "h-3 w-3"} />
             </button>
           </span>
         ))}
       </div>
       <input
-        autoFocus
+        autoFocus={!enLinea}
         value={nueva}
+        enterKeyHint="done"
         disabled={guardando}
         onChange={(e) => setNueva(e.target.value)}
         onKeyDown={(e) => {
@@ -85,12 +90,12 @@ export function EtiquetasPopover({
           }
         }}
         placeholder="Nueva etiqueta + Enter"
-        className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
+        className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs outline-none max-sm:h-11 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
       />
       {opciones.length ? (
         <div className="mt-2 flex flex-wrap gap-1">
           {opciones.map((s) => (
-            <button key={s} type="button" onClick={() => agregar(s)} className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[11px] text-slate-600 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700">
+            <button key={s} type="button" onClick={() => agregar(s)} className={`rounded-full border border-slate-200 bg-slate-50 text-slate-600 hover:border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700 ${enLinea ? "min-h-11 px-3.5 text-[13px]" : "px-2 py-0.5 text-[11px]"}`}>
               + {s}
             </button>
           ))}

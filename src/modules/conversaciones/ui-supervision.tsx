@@ -98,10 +98,13 @@ export function SelectorEstado({
   estado,
   error,
   onCambiar,
+  compacto = false,
 }: {
   estado: EstadoAgente | null;
   error?: string | null;
   onCambiar: (e: Exclude<EstadoAgente, "desconectado">) => void;
+  /** sólo el punto de color (celular: la barra de la bandeja no tiene lugar para el texto) */
+  compacto?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -124,17 +127,18 @@ export function SelectorEstado({
         onClick={() => setAbierto((v) => !v)}
         aria-haspopup="menu"
         aria-expanded={abierto}
+        aria-label={compacto ? `Tu estado: ${estado ? ESTADO_AGENTE_LABEL[estado] : "conectando"}` : undefined}
         title={error ? `No se pudo actualizar tu estado: ${error}` : "Tu estado: define si te llegan chats nuevos"}
-        className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-2 text-xs font-semibold shadow-sm transition-colors ${
+        className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg border px-2.5 py-2 text-xs font-semibold shadow-sm transition-colors max-md:h-11 ${
           c ? c.pill : "border-slate-200 bg-white text-slate-500"
         } ${error ? "ring-2 ring-rose-200" : ""}`}
       >
         <span aria-hidden className={`h-2 w-2 rounded-full ${c ? c.dot : "animate-pulse bg-slate-300"}`} />
-        {estado ? ESTADO_AGENTE_LABEL[estado] : "Conectando…"}
+        <span className={compacto ? "sr-only" : ""}>{estado ? ESTADO_AGENTE_LABEL[estado] : "Conectando…"}</span>
         <ChevronDown className="h-3.5 w-3.5 opacity-70" aria-hidden />
       </button>
       {abierto ? (
-        <div role="menu" className="absolute right-0 z-[60] mt-1 w-64 overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl" style={{ animation: "modal-pop 0.15s cubic-bezier(0.16,1,0.3,1)" }}>
+        <div role="menu" className="absolute right-0 z-[60] mt-1 w-64 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 shadow-xl" style={{ animation: "modal-pop 0.15s cubic-bezier(0.16,1,0.3,1)" }}>
           {ESTADOS_ELEGIBLES.map((o) => (
             <button
               key={o.id}
@@ -145,7 +149,7 @@ export function SelectorEstado({
                 setAbierto(false);
                 if (estado !== o.id) onCambiar(o.id);
               }}
-              className="flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-slate-50"
+              className="flex w-full items-start gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-slate-50 max-md:min-h-12"
             >
               <span aria-hidden className={`mt-1 h-2 w-2 shrink-0 rounded-full ${ESTADO_AGENTE_CLASE[o.id].dot}`} />
               <span className="min-w-0 flex-1">
@@ -164,26 +168,27 @@ export function SelectorEstado({
 // ── Estructura de pantalla (look del Monitoreo actual) ───────────────────────
 export function Encabezado({ eyebrow, titulo, detalle, children }: { eyebrow: string; titulo: string; detalle?: ReactNode; children?: ReactNode }) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-4">
+    <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0">
         <div className="flex items-center gap-2">
           <span aria-hidden className="h-2 w-2 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4FAEB2]">{eyebrow}</p>
         </div>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{titulo}</h1>
-        {detalle ? <p className="mt-1 max-w-2xl text-sm text-slate-500">{detalle}</p> : null}
+        <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{titulo}</h1>
+        {detalle ? <p className="mt-1 max-w-2xl text-[13px] text-slate-500 sm:text-sm">{detalle}</p> : null}
       </div>
       {children ? <div className="flex flex-wrap items-center gap-2">{children}</div> : null}
     </header>
   );
 }
 
+// Al dedo (celular / táctil) los botones miden 44 px (min-h/min-w: no pisan el diseño de escritorio).
 export const btnSecundario =
-  "inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#3F8E91] disabled:cursor-not-allowed disabled:opacity-50";
+  "inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#3F8E91] disabled:cursor-not-allowed disabled:opacity-50 max-sm:min-h-11 [@media(pointer:coarse)]:min-h-11";
 export const btnPrimario =
-  "inline-flex items-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/25 transition-colors hover:bg-[#3F8E91] disabled:opacity-50";
+  "inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/25 transition-colors hover:bg-[#3F8E91] disabled:opacity-50 max-sm:min-h-11 [@media(pointer:coarse)]:min-h-11";
 export const btnIcono =
-  "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:bg-[#4FAEB2]/8 hover:text-[#3F8E91] disabled:opacity-50";
+  "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:bg-[#4FAEB2]/8 hover:text-[#3F8E91] disabled:opacity-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11";
 export const thClase = "px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500";
 
 export function Seccion({
@@ -210,7 +215,7 @@ export function Seccion({
     teal: "border-[#4FAEB2]/30 bg-[#4FAEB2]/10 text-[#3F8E91]",
   }[tonoContador];
   return (
-    <section className={`rounded-2xl border bg-white p-5 shadow-sm sm:p-6 ${destacada ? "border-[#4FAEB2]/45" : "border-slate-200"}`}>
+    <section className={`min-w-0 rounded-2xl border bg-white p-4 shadow-sm sm:p-6 ${destacada ? "border-[#4FAEB2]/45" : "border-slate-200"}`}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -218,7 +223,7 @@ export function Seccion({
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">{titulo}</h2>
             {contador != null ? <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums ${pill}`}>{contador}</span> : null}
           </div>
-          {ayuda ? <p className="mt-1.5 max-w-3xl pl-3 text-[11px] text-slate-500">{ayuda}</p> : null}
+          {ayuda ? <p className="mt-1.5 max-w-3xl pl-3 text-[11px] text-slate-500 max-sm:text-xs">{ayuda}</p> : null}
         </div>
         {acciones ? <div className="flex flex-wrap items-center gap-2">{acciones}</div> : null}
       </div>
@@ -231,8 +236,8 @@ type Tono = "neutral" | "warning" | "success" | "featured" | "danger";
 export function Metrica({ label, valor, icono, tono = "neutral", pie }: { label: string; valor: ReactNode; icono: ReactNode; tono?: Tono; pie?: ReactNode }) {
   const card =
     tono === "featured"
-      ? "relative overflow-hidden rounded-2xl border border-[#4FAEB2]/55 bg-gradient-to-br from-white via-white to-[#4FAEB2]/8 p-4 shadow-[0_4px_18px_rgba(79,174,178,0.08)]"
-      : "rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]";
+      ? "relative min-w-0 overflow-hidden rounded-2xl border border-[#4FAEB2]/55 bg-gradient-to-br from-white via-white to-[#4FAEB2]/8 p-3.5 shadow-[0_4px_18px_rgba(79,174,178,0.08)] sm:p-4"
+      : "min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-4";
   const chip = {
     featured: "border-[#4FAEB2]/30 bg-[#4FAEB2]/12 text-[#4FAEB2]",
     warning: "border-amber-200 bg-amber-50 text-amber-600",

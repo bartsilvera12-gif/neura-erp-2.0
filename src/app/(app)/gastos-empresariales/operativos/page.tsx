@@ -11,11 +11,13 @@
  */
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Ban, CalendarClock, Eye, FolderCog, Paperclip, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { Ban, CalendarClock, Eye, FolderCog, Paperclip, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { Select } from "@/components/Select";
+import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { cargarProveedores } from "@/modules/proveedores/cache";
 import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos";
 import { FormGasto } from "@/modules/gastos/FormGasto";
@@ -114,7 +116,15 @@ function GastosOperativos() {
     ...(cat?.rubros ?? []).flatMap((r): [string, string][] => [[r.id, `${r.nombre} (todo el rubro)`], ...r.subcategorias.map((s): [string, string] => [s.id, `   ${r.nombre} › ${s.nombre}`])]),
   ], [cat]);
   const opcionesProveedor = useMemo<[string, string][]>(() => [["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])], [proveedores]);
-  const hayFiltrosExtra = !!(f.sucursal || f.categoria || f.proveedor || f.tipo_costo || f.deducible || f.origen);
+  // Los handlers sólo usan setters de estado (estables): columnas memorizadas = filas memorizadas.
+  const columnas = useMemo(() => columnasGastos({
+    onVer: (g) => setDetalle(g.id),
+    onEditar: (g) => setForm({ id: g.id }),
+    onEliminar: (g) => setAccion({ modo: "eliminar", gasto: { id: g.id, numero: g.numero } }),
+    onAnular: (g) => setAccion({ modo: "anular", gasto: { id: g.id, numero: g.numero } }),
+  }), []);
+  const filtrosActivos =[f.sucursal, f.categoria, f.proveedor, f.tipo_costo, f.deducible, f.origen].filter(Boolean).length;
+  const limpiarFiltros = () => setF((x) => ({ ...x, sucursal: "", categoria: "", proveedor: "", tipo_costo: "", deducible: "", origen: "" }));
 
   const r = datos?.resumen;
   const filas = datos?.rows ?? [];
@@ -123,121 +133,98 @@ function GastosOperativos() {
 
   return (
     <div className="space-y-5 pb-10">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-slate-900">Gastos operativos</h1>
-          <p className="mt-1 max-w-2xl text-sm text-slate-500">Alquiler, servicios, sueldos, impuestos y todo lo que no es mercadería, con o sin comprobante fiscal.</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button onClick={() => setCatalogos(true)} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">
-            <FolderCog className="h-4 w-4" /> Catálogos
-          </button>
-          <button onClick={() => setForm({ id: null })} className="inline-flex shrink-0 items-center gap-1.5 rounded-xl bg-[#4FAEB2] px-3.5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#3F8E91]">
-            <Plus className="h-4 w-4" /> Nuevo gasto
-          </button>
-        </div>
-      </header>
+      <EncabezadoPagina
+        titulo="Gastos operativos"
+        subtitulo="Alquiler, servicios, sueldos, impuestos y todo lo que no es mercadería, con o sin comprobante fiscal."
+        acciones={<AccionesPagina acciones={[
+          { etiqueta: "Catálogos", icono: <FolderCog />, onClick: () => setCatalogos(true) },
+          { etiqueta: "Nuevo gasto", icono: <Plus />, onClick: () => setForm({ id: null }), primaria: true },
+        ]} />} />
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {/* Contadores por estado (filtran): 4 en fila desde sm, 2 × 2 en celular */}
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3">
         {[
           { l: "Todos", v: r?.total, e: "" },
           { l: "Borradores", v: r?.borrador, e: "borrador" },
           { l: "Confirmados", v: r?.confirmado, e: "confirmado" },
           { l: "Anulados", v: r?.anulado, e: "anulado" },
         ].map((k) => (
-          <button key={k.l} onClick={() => setFiltro("estado", k.e)}
-            className={`rounded-xl border px-4 py-3 text-left transition ${f.estado === k.e ? "border-[#4FAEB2] bg-[#4FAEB2]/5 ring-2 ring-[#4FAEB2]/15" : "border-slate-100 bg-slate-50 hover:border-slate-200"}`}>
+          <button key={k.l} onClick={() => setFiltro("estado", k.e)} aria-pressed={f.estado === k.e}
+            className={`rounded-xl border px-3 py-2 text-left transition sm:px-4 sm:py-3 ${f.estado === k.e ? "border-[#4FAEB2] bg-[#4FAEB2]/5 ring-2 ring-[#4FAEB2]/15" : "border-slate-100 bg-slate-50 hover:border-slate-200"}`}>
             <p className="text-xs text-slate-400">{k.l}</p>
             <p className="text-lg font-bold tabular-nums text-slate-800">{k.v ?? "—"}</p>
           </button>
         ))}
       </div>
 
-      <div className="space-y-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[14rem] flex-1">
+      {/* Búsqueda siempre visible; período y filtros en línea (≥ 768) o en una hoja (celular) */}
+      <BarraFiltros
+        activos={filtrosActivos}
+        onLimpiar={limpiarFiltros}
+        busqueda={
+          <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={borrador} onChange={(e) => setBorrador(e.target.value)} placeholder="Buscar por número, proveedor, comprobante, empleado…" className={`${INPUT} w-full pl-9`} />
+            <input type="search" enterKeyHint="search" value={borrador} onChange={(e) => setBorrador(e.target.value)}
+              placeholder="Buscar por número, proveedor, comprobante, empleado…" aria-label="Buscar gastos" className={`${INPUT} w-full pl-9 max-sm:min-h-11`} />
           </div>
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">Desde
-            <input type="date" value={f.desde} onChange={(e) => setFiltro("desde", e.target.value)} className={INPUT} />
+        }>
+        <div className="flex flex-wrap items-center gap-2 max-md:grid max-md:grid-cols-2">
+          <label className="flex items-center gap-1.5 text-xs text-slate-500 max-md:flex-col max-md:items-stretch max-md:gap-1">Desde
+            <input type="date" value={f.desde} onChange={(e) => setFiltro("desde", e.target.value)} className={`${INPUT} min-w-0 max-md:w-full max-sm:min-h-11`} />
           </label>
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">Hasta
-            <input type="date" value={f.hasta} onChange={(e) => setFiltro("hasta", e.target.value)} className={INPUT} />
+          <label className="flex items-center gap-1.5 text-xs text-slate-500 max-md:flex-col max-md:items-stretch max-md:gap-1">Hasta
+            <input type="date" value={f.hasta} onChange={(e) => setFiltro("hasta", e.target.value)} className={`${INPUT} min-w-0 max-md:w-full max-sm:min-h-11`} />
           </label>
           {f.desde || f.hasta ? (
-            <button onClick={() => setF((x) => ({ ...x, desde: "", hasta: "" }))} className="text-xs font-semibold text-[#3F8E91] underline-offset-2 hover:underline">Todas las fechas</button>
+            <button onClick={() => setF((x) => ({ ...x, desde: "", hasta: "" }))} className="text-xs font-semibold text-[#3F8E91] underline-offset-2 hover:underline max-md:col-span-2 max-md:min-h-11 max-md:rounded-lg max-md:border max-md:border-slate-200 max-md:no-underline">Todas las fechas</button>
           ) : (
-            <button onClick={() => setF((x) => ({ ...x, desde: primeroDelMes(), hasta: finDelMes() }))} className="text-xs font-semibold text-[#3F8E91] underline-offset-2 hover:underline">Este mes</button>
+            <button onClick={() => setF((x) => ({ ...x, desde: primeroDelMes(), hasta: finDelMes() }))} className="text-xs font-semibold text-[#3F8E91] underline-offset-2 hover:underline max-md:col-span-2 max-md:min-h-11 max-md:rounded-lg max-md:border max-md:border-slate-200 max-md:no-underline">Este mes</button>
           )}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select value={f.sucursal} onChange={(v) => setFiltro("sucursal", v)} minWidth={170}
-            options={[["", "Todas las sucursales"], ...(cat?.sucursales ?? []).map((s): [string, string] => [s.id, s.nombre])]} />
-          <Select value={f.categoria} onChange={(v) => setFiltro("categoria", v)} minWidth={220} options={opcionesCategoria} />
-          <Select value={f.proveedor} onChange={(v) => setFiltro("proveedor", v)} minWidth={190} options={opcionesProveedor} />
-          <Select value={f.tipo_costo} onChange={(v) => setFiltro("tipo_costo", v)} minWidth={140} options={[["", "Fijo y variable"], ["fijo", "Solo fijos"], ["variable", "Solo variables"]]} />
-          <Select value={f.deducible} onChange={(v) => setFiltro("deducible", v)} minWidth={160} options={[["", "Deducible o no"], ["1", "IVA deducible"], ["0", "No deducible"]]} />
-          <Select value={f.origen} onChange={(v) => setFiltro("origen", v)} minWidth={170}
-            options={[["", "Todo origen"], ["recurrente", "De recurrentes"], ["personal", "De personal"], ["sin_comprobante", "Sin comprobante"]]} />
-          {hayFiltrosExtra ? (
-            <button onClick={() => setF((x) => ({ ...x, sucursal: "", categoria: "", proveedor: "", tipo_costo: "", deducible: "", origen: "" }))}
-              className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-800"><X className="h-3.5 w-3.5" /> Limpiar filtros</button>
-          ) : null}
-        </div>
-      </div>
+        <Select value={f.sucursal} onChange={(v) => setFiltro("sucursal", v)} minWidth={170} etiqueta="Sucursal"
+          options={[["", "Todas las sucursales"], ...(cat?.sucursales ?? []).map((s): [string, string] => [s.id, s.nombre])]} />
+        <Select value={f.categoria} onChange={(v) => setFiltro("categoria", v)} minWidth={220} etiqueta="Categoría" options={opcionesCategoria} />
+        <Select value={f.proveedor} onChange={(v) => setFiltro("proveedor", v)} minWidth={190} etiqueta="Proveedor" options={opcionesProveedor} />
+        <Select value={f.tipo_costo} onChange={(v) => setFiltro("tipo_costo", v)} minWidth={140} etiqueta="Fijo o variable" options={[["", "Fijo y variable"], ["fijo", "Solo fijos"], ["variable", "Solo variables"]]} />
+        <Select value={f.deducible} onChange={(v) => setFiltro("deducible", v)} minWidth={160} etiqueta="IVA" options={[["", "Deducible o no"], ["1", "IVA deducible"], ["0", "No deducible"]]} />
+        <Select value={f.origen} onChange={(v) => setFiltro("origen", v)} minWidth={170} etiqueta="Origen"
+          options={[["", "Todo origen"], ["recurrente", "De recurrentes"], ["personal", "De personal"], ["sin_comprobante", "Sin comprobante"]]} />
+      </BarraFiltros>
 
       {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700">{error}</div> : null}
 
-      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <table className="w-full min-w-[980px] text-sm">
-          <thead className="border-b border-slate-200 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-            <tr>
-              <th className="px-4 py-2.5 text-left">Número</th>
-              <th className="px-3 py-2.5 text-left">Proveedor / concepto</th>
-              <th className="px-3 py-2.5 text-left">Comprobante</th>
-              <th className="px-3 py-2.5 text-left">Sucursal</th>
-              <th className="px-3 py-2.5 text-left">Fecha</th>
-              <th className="px-3 py-2.5 text-right">Total</th>
-              <th className="px-3 py-2.5 text-center">Estado</th>
-              <th className="px-4 py-2.5 text-right">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cargando && !datos ? (
-              <tr><td colSpan={8} className="px-3 py-10 text-center text-slate-400">Cargando…</td></tr>
-            ) : filas.length === 0 ? (
-              <tr><td colSpan={8} className="px-3 py-10 text-center text-slate-400">No hay gastos que coincidan.</td></tr>
-            ) : filas.map((g) => (
-              <Fila key={g.id} g={g} cargando={cargando}
-                onVer={() => setDetalle(g.id)}
-                onEditar={() => setForm({ id: g.id })}
-                onEliminar={() => setAccion({ modo: "eliminar", gasto: { id: g.id, numero: g.numero } })}
-                onAnular={() => setAccion({ modo: "anular", gasto: { id: g.id, numero: g.numero } })} />
-            ))}
-          </tbody>
-          {filas.length > 0 ? (
-            <tfoot>
-              <tr className="border-t-2 border-slate-100 bg-slate-50/80">
-                <td colSpan={5} className="px-4 py-3">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-700">Total confirmado de la vista</p>
-                  <p className="text-[10px] text-slate-500">
-                    {total} {total === 1 ? "documento" : "documentos"} · IVA crédito fiscal {gs(datos?.total_iva)}
-                    {Number(datos?.total_borradores) > 0 ? ` · en borrador ${gs(datos?.total_borradores)}` : ""}
-                  </p>
-                </td>
-                <td className="whitespace-nowrap px-3 py-3 text-right text-sm font-bold tabular-nums text-slate-900">{gs(datos?.total_monto)}</td>
-                <td colSpan={2} />
-              </tr>
-            </tfoot>
-          ) : null}
-        </table>
+      <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <TablaTarjetas
+          filas={cargando && !datos ? [] : filas}
+          claveFila={(g) => g.id}
+          onFila={(g) => setDetalle(g.id)}
+          cargando={cargando && !!datos}
+          minAncho={980}
+          claseThead="border-b border-slate-200 bg-slate-50"
+          thBase="whitespace-nowrap px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
+          tdBase="px-3 py-2"
+          claseFila={(g) => `border-b border-slate-100 last:border-0 ${g.estado === "anulado" ? "opacity-60" : ""}`}
+          vacio={<p className="px-3 py-10 text-center text-sm text-slate-400">{cargando && !datos ? "Cargando…" : "No hay gastos que coincidan."}</p>}
+          columnas={columnas}
+        />
+        {filas.length > 0 ? (
+          <div className="flex items-start justify-between gap-3 border-t-2 border-slate-100 bg-slate-50/80 px-3.5 py-3 sm:px-4">
+            <div className="min-w-0">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-700">Total confirmado de la vista</p>
+              <p className="text-[11px] text-slate-500 sm:text-[10px]">
+                {total} {total === 1 ? "documento" : "documentos"} · IVA crédito fiscal {gs(datos?.total_iva)}
+                {Number(datos?.total_borradores) > 0 ? ` · en borrador ${gs(datos?.total_borradores)}` : ""}
+              </p>
+            </div>
+            <p className="shrink-0 whitespace-nowrap text-right text-base font-bold tabular-nums text-slate-900 sm:text-sm">{gs(datos?.total_monto)}</p>
+          </div>
+        ) : null}
         {total > POR_PAGINA ? (
-          <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
+          <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-3.5 py-3 text-xs text-slate-500 sm:px-5">
             <span>Página {pagina} de {totalPaginas}</span>
             <div className="flex gap-2">
-              <button disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">Anterior</button>
-              <button disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40">Siguiente</button>
+              <button disabled={pagina <= 1} onClick={() => setPagina((p) => p - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40 max-sm:min-h-11 max-sm:px-4">Anterior</button>
+              <button disabled={pagina >= totalPaginas} onClick={() => setPagina((p) => p + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 disabled:opacity-40 max-sm:min-h-11 max-sm:px-4">Siguiente</button>
             </div>
           </div>
         ) : null}
@@ -259,60 +246,124 @@ function GastosOperativos() {
   );
 }
 
-function Fila({ g, cargando, onVer, onEditar, onEliminar, onAnular }: {
-  g: FilaGasto; cargando: boolean; onVer: () => void; onEditar: () => void; onEliminar: () => void; onAnular: () => void;
-}) {
-  const est = ESTADO_GASTO[g.estado];
-  const condicion = g.tipo_pago === "credito"
-    ? g.cxp ? (Number(g.cxp.saldo) > 0 ? `Crédito · saldo ${monto(g.cxp.saldo, g.moneda)}` : "Crédito · pagado") : `Crédito${g.fecha_vencimiento ? ` · vence ${fechaCorta(g.fecha_vencimiento)}` : ""}`
-    : g.tipo_pago === "contado" ? `Contado · ${nombreMedioGasto(g.medio_pago)}` : null;
-  return (
-    <tr className={`border-b border-slate-100 last:border-0 hover:bg-slate-50/60 ${g.estado === "anulado" ? "opacity-60" : ""} ${cargando ? "opacity-70" : ""}`}>
-      <td className="whitespace-nowrap px-4 py-2 text-xs">
-        <button onClick={onVer} className="whitespace-nowrap font-mono font-semibold text-slate-700 hover:text-[#3F8E91]">{g.numero ?? "—"}</button>
-        {g.adjuntos > 0 ? <Paperclip className="ml-1 inline h-3 w-3 text-slate-400" aria-label={`${g.adjuntos} adjuntos`} /> : null}
-        {g.recurrente_id ? <CalendarClock className="ml-1 inline h-3 w-3 text-[#4FAEB2]" aria-label="De una plantilla recurrente" /> : null}
-      </td>
-      <td className="px-3 py-2">
-        <p className="text-slate-800">{g.proveedor_nombre ?? <span className="text-slate-500">{g.descripcion ?? "Sin proveedor"}</span>}</p>
-        {g.categorias || (g.proveedor_nombre && g.descripcion) ? (
-          <p className="max-w-[20rem] truncate text-[11px] text-slate-400">{[g.categorias, g.proveedor_nombre ? g.descripcion : null].filter(Boolean).join(" · ")}</p>
-        ) : null}
-      </td>
-      <td className="px-3 py-2 text-xs text-slate-500">
-        {g.con_comprobante ? (g.numero_comprobante ? <><span className="text-slate-400">{g.tipo_comprobante} </span><span className="whitespace-nowrap font-mono">{g.numero_comprobante}</span></> : g.tipo_comprobante ?? "—") : <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Sin comprobante</span>}
-        {condicion ? <span className="block text-[11px] text-slate-400">{condicion}</span> : null}
-      </td>
-      <td className="px-3 py-2 text-xs text-slate-500">{g.sucursal_nombre ?? "—"}</td>
-      <td className="whitespace-nowrap px-3 py-2 text-xs text-slate-500">
-        {fechaCorta(g.fecha)}
-        {g.estado === "borrador" && g.fecha_programada ? <span className="block text-[11px] text-amber-600">programado</span> : null}
-      </td>
-      <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
-        <span className="font-semibold text-slate-800">{monto(g.total, g.moneda)}</span>
-        {g.moneda === "USD" ? <span className="block text-[11px] text-slate-400">{gs(g.total_gs)}</span> : null}
-      </td>
-      <td className="px-3 py-2 text-center">
-        <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${est.c}`}>{est.t}</span>
-        {g.estado === "anulado" && g.anulado_motivo ? <span className="mt-0.5 block max-w-[10rem] truncate text-[10px] text-rose-500" title={g.anulado_motivo}>{g.anulado_motivo}</span> : null}
-      </td>
-      <td className="px-4 py-2">
-        <div className="flex items-center justify-end gap-1.5 text-xs">
+const condicionDe = (g: FilaGasto) => g.tipo_pago === "credito"
+  ? g.cxp ? (Number(g.cxp.saldo) > 0 ? `Crédito · saldo ${monto(g.cxp.saldo, g.moneda)}` : "Crédito · pagado") : `Crédito${g.fecha_vencimiento ? ` · vence ${fechaCorta(g.fecha_vencimiento)}` : ""}`
+  : g.tipo_pago === "contado" ? `Contado · ${nombreMedioGasto(g.medio_pago)}` : null;
+
+const numeroConIconos = (g: FilaGasto) => (
+  <>
+    <span className="whitespace-nowrap font-mono font-semibold">{g.numero ?? "—"}</span>
+    {g.adjuntos > 0 ? <Paperclip className="ml-1 inline h-3 w-3 text-slate-400" aria-label={`${g.adjuntos} adjuntos`} /> : null}
+    {g.recurrente_id ? <CalendarClock className="ml-1 inline h-3 w-3 text-[#4FAEB2]" aria-label="De una plantilla recurrente" /> : null}
+  </>
+);
+
+/**
+ * Columnas de la lista: tabla en ≥ 768 px y, en celular, tarjeta con proveedor/concepto
+ * (título), número + categorías (subtítulo), total (valor), estado (chip), fecha / comprobante
+ * / sucursal (datos) y las acciones al pie. Tocar la fila (o la tarjeta) abre el detalle.
+ */
+function columnasGastos(h: { onVer: (g: FilaGasto) => void; onEditar: (g: FilaGasto) => void; onEliminar: (g: FilaGasto) => void; onAnular: (g: FilaGasto) => void }): ColumnaTabla<FilaGasto>[] {
+  return [
+    {
+      key: "numero", titulo: "Número", claseTh: "pl-4", claseTd: "whitespace-nowrap pl-4 text-xs text-slate-700 group-hover:text-[#3F8E91]",
+      celda: numeroConIconos,
+      movil: "subtitulo",
+      celdaMovil: (g) => (
+        <>
+          {numeroConIconos(g)}
+          {g.categorias ? <span className="text-slate-400"> · {g.categorias}</span> : null}
+        </>
+      ),
+    },
+    {
+      key: "proveedor", titulo: "Proveedor / concepto", movil: "titulo",
+      celda: (g) => (
+        <>
+          <p className="text-slate-800">{g.proveedor_nombre ?? <span className="text-slate-500">{g.descripcion ?? "Sin proveedor"}</span>}</p>
+          {g.categorias || (g.proveedor_nombre && g.descripcion) ? (
+            <p className="max-w-[16rem] truncate text-[11px] text-slate-400 xl:max-w-[20rem]">{[g.categorias, g.proveedor_nombre ? g.descripcion : null].filter(Boolean).join(" · ")}</p>
+          ) : null}
+        </>
+      ),
+      celdaMovil: (g) => g.proveedor_nombre
+        ? <>{g.proveedor_nombre}{g.descripcion ? <span className="block text-[13px] font-normal text-slate-500">{g.descripcion}</span> : null}</>
+        : (g.descripcion ?? "Sin proveedor"),
+    },
+    {
+      key: "comprobante", titulo: "Comprobante", claseTd: "text-xs text-slate-500", movil: "dato",
+      celda: (g) => {
+        const condicion = condicionDe(g);
+        return (
+          <>
+            {g.con_comprobante ? (g.numero_comprobante ? <><span className="text-slate-400">{g.tipo_comprobante} </span><span className="whitespace-nowrap font-mono">{g.numero_comprobante}</span></> : g.tipo_comprobante ?? "—") : <span className="rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Sin comprobante</span>}
+            {condicion ? <span className="block text-[11px] text-slate-400">{condicion}</span> : null}
+          </>
+        );
+      },
+    },
+    // En tablet (768–1023) la sucursal se omite para que la tabla entre mejor (se ve en el detalle).
+    { key: "sucursal", titulo: "Sucursal", claseTh: "max-lg:hidden", claseTd: "text-xs text-slate-500 max-lg:hidden", movil: "dato", celda: (g) => g.sucursal_nombre ?? "—" },
+    {
+      key: "fecha", titulo: "Fecha", claseTd: "whitespace-nowrap text-xs text-slate-500", movil: "dato",
+      celda: (g) => (
+        <>
+          {fechaCorta(g.fecha)}
+          {g.estado === "borrador" && g.fecha_programada ? <span className="block text-[11px] text-amber-600">programado</span> : null}
+        </>
+      ),
+    },
+    {
+      key: "total", titulo: "Total", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums", movil: "valor",
+      celda: (g) => (
+        <>
+          <span className="font-semibold text-slate-800">{monto(g.total, g.moneda)}</span>
+          {g.moneda === "USD" ? <span className="block text-[11px] font-normal text-slate-400">{gs(g.total_gs)}</span> : null}
+        </>
+      ),
+    },
+    {
+      key: "estado", titulo: "Estado", claseTh: "text-center", claseTd: "text-center", movil: "chip",
+      celda: (g) => {
+        const est = ESTADO_GASTO[g.estado];
+        return (
+          <>
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${est.c}`}>{est.t}</span>
+            {g.estado === "anulado" && g.anulado_motivo ? <span className="mt-0.5 block max-w-[8rem] truncate text-[10px] text-rose-500" title={g.anulado_motivo}>{g.anulado_motivo}</span> : null}
+          </>
+        );
+      },
+      celdaMovil: (g) => {
+        const est = ESTADO_GASTO[g.estado];
+        return (
+          <span className="inline-flex max-w-full flex-wrap items-center gap-1.5">
+            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${est.c}`}>{est.t}</span>
+            {!g.con_comprobante ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">Sin comprobante</span> : null}
+            {g.estado === "anulado" && g.anulado_motivo ? <span className="min-w-0 truncate text-[11px] text-rose-500">{g.anulado_motivo}</span> : null}
+          </span>
+        );
+      },
+    },
+    {
+      key: "acciones", titulo: "Acciones", claseTh: "pr-4 text-right", claseTd: "pr-4", movil: "acciones",
+      celda: (g) => (
+        // No abre la fila: las acciones tienen su propio click.
+        <div className="flex items-center justify-end gap-1.5 text-xs max-md:text-[13px]" onClick={(e) => e.stopPropagation()}>
           {g.estado === "borrador" ? (
             <>
-              <button onClick={onEditar} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 font-semibold text-white hover:bg-emerald-700"><Pencil className="h-3 w-3" /> Abrir y confirmar</button>
-              <button onClick={onEliminar} aria-label="Eliminar borrador" className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50"><Trash2 className="h-3 w-3" /></button>
+              <button onClick={() => h.onEditar(g)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 font-semibold text-white hover:bg-emerald-700 max-md:px-3"><Pencil className="h-3 w-3" /> Abrir y confirmar</button>
+              <button onClick={() => h.onEliminar(g)} aria-label="Eliminar borrador" className="inline-flex items-center justify-center gap-1 rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50"><Trash2 className="h-3 w-3 max-md:h-4 max-md:w-4" /></button>
             </>
           ) : (
             <>
-              <button onClick={onVer} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-slate-600 hover:bg-slate-50"><Eye className="h-3 w-3" /> Ver</button>
+              <button onClick={() => h.onVer(g)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-slate-600 hover:bg-slate-50 max-md:px-3"><Eye className="h-3 w-3" /> Ver</button>
               {g.estado === "confirmado" ? (
-                <button onClick={onAnular} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50"><Ban className="h-3 w-3" /> Anular</button>
+                <button onClick={() => h.onAnular(g)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50 max-md:px-3"><Ban className="h-3 w-3" /> Anular</button>
               ) : null}
             </>
           )}
         </div>
-      </td>
-    </tr>
-  );
+      ),
+    },
+  ];
 }

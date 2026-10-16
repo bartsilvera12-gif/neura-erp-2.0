@@ -11,7 +11,7 @@ import Link from "next/link";
 import { Suspense, useMemo, useState } from "react";
 import { BarraTramos, BarrasH, Columnas, Dona, C_TRAMOS, SERIES } from "@/components/graficos/Graficos";
 import { corto, fechaCorta, gs, num } from "@/components/graficos/formato";
-import { Descargas, EncabezadoReporte, EstadoCarga, FiltrosReporte, Kpi, Nota, Segmentos, Tabla, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
+import { Descargas, EncabezadoReporte, EstadoCarga, FilaKpis, FiltrosReporte, Kpi, Nota, Segmentos, Tabla, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
 import { ORIGEN_CXC, TRAMOS, type CuentasCobrar, type Tramos } from "@/modules/reportes/tipos";
 
 const ATAJOS: Atajo[] = ["todo", "mes", "3m", "anio"];
@@ -42,7 +42,7 @@ function CuentasPorCobrar() {
 
       {!d || !t ? <EstadoCarga error={error} /> : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <FilaKpis n={5}>
             <Kpi acento label="Total a cobrar" valor={gs(t.total)} hint={`${num(t.clientes)} clientes · ${num(t.cuentas)} cuentas`} />
             <Kpi label="Vencido" valor={gs(t.vencido)} tono={Number(t.vencido) ? "malo" : "bueno"}
               hint={Number(t.total) ? `${Math.round((Number(t.vencido) / Number(t.total)) * 100)} % del total` : "nada vencido"}
@@ -51,7 +51,7 @@ function CuentasPorCobrar() {
             <Kpi label="En aprobación" valor={gs(t.en_aprobacion)} tono={Number(t.en_aprobacion) ? "alerta" : undefined}
               hint={`${d.en_aprobacion.length} transferencia${d.en_aprobacion.length === 1 ? "" : "s"} en Conciliación`} onClick={() => setVista("aprobacion")} />
             <Kpi label="Atraso máximo" valor={`${num(Math.max(0, ...d.rows.map((r) => r.dias_atraso)))} días`} hint={d.por_cliente.find((c) => c.max_atraso === Math.max(...d.rows.map((r) => r.dias_atraso)))?.nombre ?? "—"} />
-          </div>
+          </FilaKpis>
 
           <Tarjeta titulo="Antigüedad" sub="tocá un tramo para ver esos documentos">
             <BarraTramos activo={tramo} onClick={(k) => { setTramo((x) => (x === k ? null : (k as keyof Tramos))); setVista("documento"); }}
@@ -84,8 +84,8 @@ function CuentasPorCobrar() {
 
           <Tarjeta titulo={{ cliente: "Por cliente", documento: "Documentos", aprobacion: "En aprobación (Conciliación)" }[vista]}
             extra={<div className="flex flex-wrap items-center gap-2">
-              {vista === "documento" && tramo ? <button type="button" onClick={() => setTramo(null)} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{TRAMOS.find((x) => x.key === tramo)?.label} ✕</button> : null}
-              {vista === "documento" && origen ? <button type="button" onClick={() => setOrigen(null)} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600">{ORIGEN_CXC[origen]} ✕</button> : null}
+              {vista === "documento" && tramo ? <button type="button" onClick={() => setTramo(null)} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 max-sm:min-h-11 max-sm:px-3 max-sm:text-[13px]">{TRAMOS.find((x) => x.key === tramo)?.label} ✕</button> : null}
+              {vista === "documento" && origen ? <button type="button" onClick={() => setOrigen(null)} className="rounded-lg bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 max-sm:min-h-11 max-sm:px-3 max-sm:text-[13px]">{ORIGEN_CXC[origen]} ✕</button> : null}
               <Segmentos valor={vista} onChange={setVista} opciones={[["cliente", "Por cliente"], ["documento", "Por documento"], ["aprobacion", `En aprobación (${d.en_aprobacion.length})`]]} />
             </div>}>
             {vista === "cliente" ? (
@@ -94,7 +94,7 @@ function CuentasPorCobrar() {
                 der={[1, 2, 3, 4, 5, 6, 7, 8]}
                 filas={d.por_cliente.map((c) => ({
                   key: c.id,
-                  celdas: [<Link key="n" href={`/clientes/${c.id}`} className="font-medium hover:text-[var(--brand)] hover:underline">{c.nombre}</Link>, c.cuentas, <b key="s">{gs(c.saldo)}</b>,
+                  celdas: [<Link key="n" href={`/clientes/${c.id}`} className="font-medium hover:text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:flex max-sm:min-h-11 max-sm:items-center">{c.nombre}</Link>, c.cuentas, <b key="s">{gs(c.saldo)}</b>,
                     Number(c.vencido) ? <span key="v" className="font-semibold text-rose-600">{gs(c.vencido)}</span> : "—",
                     ...TRAMOS.slice(1).map((x) => (Number(c[x.key]) ? gs(c[x.key]) : "—")),
                     Number(c.en_aprobacion) ? <span key="a" className="text-amber-600">{gs(c.en_aprobacion)}</span> : "—",

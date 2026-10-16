@@ -11,7 +11,7 @@ import { Suspense, useMemo } from "react";
 import { ArrowRight } from "lucide-react";
 import { BarrasH, Columnas, Dona, Leyenda, SERIES } from "@/components/graficos/Graficos";
 import { corto, fechaCorta, gs, mesCorto, nombreMes, num, pct } from "@/components/graficos/formato";
-import { Descargas, EncabezadoReporte, EstadoCarga, FiltrosReporte, Kpi, Nota, Tabla, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
+import { Descargas, EncabezadoReporte, EstadoCarga, FilaKpis, FiltrosReporte, Kpi, Nota, Tabla, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
 import type { Perdidas } from "@/modules/reportes/tipos";
 
 const ATAJOS: Atajo[] = ["mes", "mes_anterior", "3m", "6m", "anio"];
@@ -51,17 +51,17 @@ function ReportePerdidas() {
 
       {!d || !t ? <EstadoCarga error={error} /> : (
         <>
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+          <FilaKpis n={5}>
             <Kpi acento label="Pérdidas al costo" valor={gs(t.valor)} hint={`${num(t.unidades, 2)} unidades · ${num(t.documentos)} documentos`} tono={Number(t.valor) ? "malo" : "bueno"} />
             <Kpi label="Sobre las ventas" valor={pct(Number(t.valor), Number(d.impacto.ventas_netas), 2)} hint={`de ${gs(d.impacto.ventas_netas)} vendidos`} />
             <Kpi label="Sobre el margen bruto" valor={pct(Number(t.valor), margen, 1)} hint={`margen ${gs(margen)}`} />
             <Kpi label="Sobre el inventario" valor={pct(Number(t.valor), Number(d.impacto.valor_inventario), 2)} hint={`stock al costo ${corto(Number(d.impacto.valor_inventario))}`} />
             <Kpi label="Por aprobar" valor={num(d.pendientes.cantidad)} tono={d.pendientes.cantidad ? "alerta" : undefined}
               hint={d.pendientes.cantidad ? `aprox. ${gs(d.pendientes.valor)} (todavía no restan)` : "nada pendiente"} href="/inventario/ajustes" />
-          </div>
+          </FilaKpis>
 
           <Link href={`/reportes/estado-cuenta?desde=${d.desde}&hasta=${d.hasta}${d.sucursal_id ? `&sucursal=${d.sucursal_id}` : ""}`}
-            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-sm shadow-sm transition hover:shadow-md">
+            className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm shadow-sm transition hover:shadow-md sm:px-5">
             <span className="text-slate-600">
               En el <b className="text-slate-800">estado de cuenta</b> estas pérdidas restan <b className="text-rose-600">{gs(t.valor)}</b> del resultado del período
               {Number(t.traslados) ? <> ({gs(t.pe)} en bajas PE- y {gs(t.traslados)} en faltantes de traslados)</> : null}; el inventario ya las descontó.
@@ -105,7 +105,7 @@ function ReportePerdidas() {
               filas={d.rows.map((x, i) => ({
                 key: `${x.documento_id}-${x.producto_id}-${i}`,
                 celdas: [fechaCorta(x.dia),
-                  <Link key="d" href={x.origen === "perdida" ? `/inventario/ajustes?ver=${x.documento_id}` : `/inventario/traslados?ver=${x.documento_id}`} className="font-mono text-xs text-[var(--brand)] hover:underline">{x.documento}</Link>,
+                  <Link key="d" href={x.origen === "perdida" ? `/inventario/ajustes?ver=${x.documento_id}` : `/inventario/traslados?ver=${x.documento_id}`} className="font-mono text-xs text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">{x.documento}</Link>,
                   <span key="m" className="inline-flex items-center gap-1.5" title={x.detalle ?? undefined}>
                     <span aria-hidden className="inline-block h-2 w-2 rounded-[2px]" style={{ backgroundColor: C_MOTIVO[x.motivo] ?? "#94a3b8" }} />{x.motivo_label}
                   </span>,

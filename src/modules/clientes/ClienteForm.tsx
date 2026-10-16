@@ -96,16 +96,16 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
       >
         <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-6 pb-5 pt-6">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span aria-hidden="true" className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
               <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4FAEB2]">{editando ? "Editar" : "Nuevo"}</p>
             </div>
-            <h2 id="cli-form-titulo" className="mt-1 truncate text-2xl font-semibold tracking-tight text-slate-900">
+            <h2 id="cli-form-titulo" className="mt-1 truncate text-xl font-semibold sm:text-2xl tracking-tight text-slate-900">
               {editando ? cliente!.nombre : "Crear cliente"}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">
               {editando ? "Actualizá los datos principales. El resto del perfil está en la pestaña Información." : "Registrá un cliente. Solo el nombre es obligatorio; el resto del perfil lo podés completar después."}
             </p>
           </div>
@@ -115,7 +115,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
           </button>
         </div>
 
-      <form id="cli-form" onSubmit={guardar} className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-slate-50/50 px-6 py-5">
+      <form id="cli-form" onSubmit={guardar} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-slate-50/50 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-5">
         <Bloque titulo="Datos">
           <Segmentado valor={f.tipo_cliente} onChange={(v) => set("tipo_cliente", v as "persona" | "empresa")} opciones={[["persona", "Persona"], ["empresa", "Empresa"]]} />
           <div className="grid gap-4 sm:grid-cols-2">
@@ -138,7 +138,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
           {categorias.length > 0 ? (
             <label className="block">
               <span className={ET}>Categoría {OPC}</span>
-              <Select value={f.categoria_id} onChange={(v) => set("categoria_id", v)} block
+              <Select value={f.categoria_id} onChange={(v) => set("categoria_id", v)} block etiqueta="Categoría"
                 options={[["", "— Ninguna —"], ...categorias.map((c) => [c.id, c.nombre] as [string, string])]} />
             </label>
           ) : null}
@@ -184,7 +184,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
                 </div>
                 <div className="mt-1.5 flex gap-1">
                   {["15", "30", "60"].map((d) => (
-                    <button key={d} type="button" onClick={() => set("plazo_dias", d)} className={`rounded-lg px-2 py-1 text-xs font-semibold transition ${f.plazo_dias === d ? "bg-[var(--brand-50)] text-[var(--brand)]" : "text-slate-500 hover:bg-slate-100"}`}>{d}</button>
+                    <button key={d} type="button" onClick={() => set("plazo_dias", d)} className={`min-h-11 min-w-11 rounded-lg px-2 py-1 text-xs sm:min-h-0 sm:min-w-0 font-semibold transition ${f.plazo_dias === d ? "bg-[var(--brand-50)] text-[var(--brand)]" : "text-slate-500 hover:bg-slate-100"}`}>{d}</button>
                   ))}
                 </div>
               </label>
@@ -200,7 +200,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
       </form>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-white px-6 py-4">
+        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-white px-4 py-3 sm:px-6 sm:py-4 max-sm:[&>button]:flex-1 max-sm:[&>button]:justify-center">
           <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2]">Cancelar</button>
           <button type="submit" form="cli-form" disabled={busy || !f.nombre.trim()} className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none" style={busy || !f.nombre.trim() ? undefined : { backgroundColor: BRAND }}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -214,7 +214,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
 
 function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex items-center gap-2">
         <span className="block h-5 w-1 rounded-full" style={{ backgroundColor: BRAND }} />
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">{titulo}</h3>
@@ -226,10 +226,11 @@ function Bloque({ titulo, children }: { titulo: string; children: React.ReactNod
 
 function Segmentado({ valor, onChange, opciones }: { valor: string; onChange: (v: string) => void; opciones: [string, string][] }) {
   return (
-    <div className="flex w-fit overflow-hidden rounded-xl border border-slate-200 shadow-sm">
+    // En celular ocupa todo el ancho y las opciones se reparten (los textos largos no se salen).
+    <div className="flex w-full overflow-hidden rounded-xl border border-slate-200 shadow-sm sm:w-fit">
       {opciones.map(([v, l]) => (
         <button key={v} type="button" onClick={() => onChange(v)}
-          className={`px-5 py-2.5 text-sm font-semibold transition-colors ${valor === v ? "text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+          className={`min-h-11 flex-1 px-3 py-2 text-sm font-semibold leading-tight transition-colors sm:flex-none sm:px-5 sm:py-2.5 ${valor === v ? "text-white shadow-sm" : "bg-white text-slate-600 hover:bg-slate-50"}`}
           style={valor === v ? { backgroundColor: BRAND } : undefined}>
           {l}
         </button>

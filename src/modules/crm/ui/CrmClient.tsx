@@ -20,6 +20,7 @@ import { AlarmClock, CalendarDays, Coins, LayoutGrid, List, Plus, Search, Settin
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { Select } from "@/components/Select";
+import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import {
   etapaAbierta, filtrosQuery, gsCorto,
@@ -373,77 +374,89 @@ export default function CrmClient() {
   ];
 
   return (
-    <div className="flex h-full flex-col gap-5">
-      {/* Encabezado */}
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--brand)] shadow-[0_0_0_3px_var(--brand-100)]" />
-            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--brand)]">Pipeline</p>
+    <div className="flex h-full min-w-0 flex-col gap-4 sm:gap-5">
+      {/* Encabezado (en celular: Kanban/Lista + "Nuevo prospecto" a la vista; "Configurar etapas" en ⋯) */}
+      <EncabezadoPagina
+        kicker="Pipeline"
+        titulo="CRM Funnel"
+        subtitulo={`Pipeline comercial · ${totalOportunidades.toLocaleString("es-PY")} oportunidades`}
+        acciones={
+          <div className="flex min-w-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100/80 p-0.5" role="group" aria-label="Vista">
+              {([["kanban", "Kanban", LayoutGrid], ["lista", "Lista", List]] as const).map(([v, t, I]) => (
+                <button key={v} type="button" onClick={() => cambiarVista(v)} aria-pressed={vista === v} aria-label={t}
+                  className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors max-sm:h-10 max-sm:w-10 max-sm:px-0 ${vista === v ? "bg-white text-[var(--brand-600)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                  <I className="h-3.5 w-3.5 max-sm:h-4 max-sm:w-4" /> <span className="max-sm:sr-only">{t}</span>
+                </button>
+              ))}
+            </div>
+            <div className="min-w-0 flex-1 sm:flex-none">
+              <AccionesPagina
+                acciones={[
+                  ...(esAdmin ? [{ etiqueta: "Configurar etapas", icono: <Settings2 />, onClick: () => setEtapasOpen(true) }] : []),
+                  { etiqueta: "Nuevo prospecto", icono: <Plus />, onClick: () => setNuevoOpen(true), primaria: true },
+                ]}
+              />
+            </div>
           </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">CRM Funnel</h1>
-          <p className="mt-1 text-sm text-slate-500">Pipeline comercial · {totalOportunidades.toLocaleString("es-PY")} oportunidades</p>
-        </div>
-        <div className="flex shrink-0 flex-wrap items-center gap-2">
-          {esAdmin ? (
-            <button type="button" onClick={() => setEtapasOpen(true)} title="Configurar etapas del pipeline"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600 shadow-sm transition-colors hover:border-[var(--brand)]/60 hover:text-[var(--brand)]">
-              <Settings2 className="h-3.5 w-3.5" /> Configurar etapas
-            </button>
-          ) : null}
-          <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100/80 p-0.5">
-            {([["kanban", "Kanban", LayoutGrid], ["lista", "Lista", List]] as const).map(([v, t, I]) => (
-              <button key={v} type="button" onClick={() => cambiarVista(v)} aria-pressed={vista === v}
-                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition-colors ${vista === v ? "bg-white text-[var(--brand-600)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                <I className="h-3.5 w-3.5" /> {t}
-              </button>
-            ))}
-          </div>
-          <button type="button" onClick={() => setNuevoOpen(true)}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-600)]">
-            <Plus className="h-4 w-4" /> Nuevo prospecto
-          </button>
-        </div>
-      </div>
+        }
+      />
 
-      {/* Buscador + filtros */}
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-64 flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="search"
-            value={busqueda}
-            onChange={(e) => setBusqueda(e.target.value)}
-            placeholder="Buscar por número, empresa, contacto o nro. de control…"
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm shadow-sm outline-none transition-colors focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20"
-          />
-          {busqueda ? (
-            <button type="button" onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md px-1.5 py-0.5 text-sm text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">✕</button>
-          ) : null}
-        </div>
-        {q ? (
-          <span className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium tabular-nums text-slate-600">
-            {totalOportunidades.toLocaleString("es-PY")} resultado{totalOportunidades === 1 ? "" : "s"}
-          </span>
-        ) : null}
+      {/* Buscador + filtros (en celular "Solo hoy" y responsable van en "Filtros") */}
+      <BarraFiltros
+        plano
+        activos={(hoy ? 1 : 0) + (responsable ? 1 : 0)}
+        onLimpiar={() => {
+          setHoy(false);
+          setResponsable("");
+        }}
+        busqueda={
+          <div className="relative min-w-0 md:min-w-64">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="search"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por número, empresa, contacto o nro. de control…"
+              enterKeyHint="search"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm shadow-sm outline-none transition-colors focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20 max-md:h-11"
+            />
+            {busqueda ? (
+              <button type="button" onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda"
+                className="absolute right-1.5 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-sm text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600">✕</button>
+            ) : null}
+          </div>
+        }
+        extra={
+          q ? (
+            <span className="shrink-0 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-xs font-medium tabular-nums text-slate-600 max-md:hidden">
+              {totalOportunidades.toLocaleString("es-PY")} resultado{totalOportunidades === 1 ? "" : "s"}
+            </span>
+          ) : null
+        }
+      >
         <button type="button" onClick={() => setHoy((v) => !v)} aria-pressed={hoy}
-          className={`shrink-0 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-colors ${hoy ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand-700)]" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}>
+          className={`shrink-0 rounded-xl border px-3 py-2.5 text-xs font-semibold transition-colors max-md:min-h-11 max-md:text-sm ${hoy ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand-700)]" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}>
           Solo hoy
         </button>
         {esAdmin ? (
-          <Select value={responsable ?? ""} onChange={setResponsable} minWidth={210} options={opcionesResp} />
+          <Select value={responsable ?? ""} onChange={setResponsable} minWidth={210} options={opcionesResp} etiqueta="Responsable" />
         ) : (
           <div className="flex items-center gap-0.5 rounded-xl border border-slate-200 bg-slate-100/80 p-0.5">
             {([["__mios", "Solo míos"], ["", "Todos"]] as const).map(([v, t]) => (
               <button key={v} type="button" onClick={() => setResponsable(v)} aria-pressed={responsable === v}
-                className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors ${responsable === v ? "bg-white text-[var(--brand-600)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+                className={`rounded-lg px-3 py-2 text-xs font-semibold transition-colors max-md:min-h-10 max-md:flex-1 max-md:text-sm ${responsable === v ? "bg-white text-[var(--brand-600)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
                 {t}
               </button>
             ))}
           </div>
         )}
-      </div>
+      </BarraFiltros>
+      {q ? (
+        <p className="-mt-3 text-xs tabular-nums text-slate-500 md:hidden">
+          {totalOportunidades.toLocaleString("es-PY")} resultado{totalOportunidades === 1 ? "" : "s"}
+        </p>
+      ) : null}
 
       {error ? (
         <div className="flex items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">

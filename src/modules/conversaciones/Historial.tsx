@@ -6,6 +6,7 @@
  * asignaciones, transferencias, reasignaciones por SLA, cierres). Cualquier chat se lee
  * en modo lectura. Enlace directo: /conversaciones/historial?contacto=<id>.
  */
+import { TablaScroll } from "@/components/TablaResponsive";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -145,9 +146,9 @@ export function Historial() {
     <div className="flex flex-col gap-4 pb-10">
       <Encabezado eyebrow="Omnicanal" titulo="Historial omnicanal" detalle="Auditoría por contacto: todas sus conversaciones en cualquier canal, con asignaciones, transferencias y cierres." />
 
-      <div className="flex min-h-[560px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" style={{ height: "max(560px, calc(100dvh - 15rem))" }}>
+      <div className="flex min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" style={{ height: "max(520px, calc(100dvh - 15rem))" }}>
         {/* Búsqueda */}
-        <aside className={`min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-slate-50/80 lg:flex lg:w-[320px] xl:w-[350px] ${selId ? "hidden" : "flex"}`}>
+        <aside className={`min-h-0 w-full shrink-0 flex-col border-slate-200 bg-slate-50/80 md:flex md:w-[280px] md:border-r lg:w-[320px] xl:w-[350px] ${selId ? "hidden" : "flex"}`}>
           <div className="shrink-0 border-b border-slate-200 p-3">
             <div className="relative">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400" aria-hidden />
@@ -159,11 +160,12 @@ export function Historial() {
                 placeholder="Buscar por nombre o número"
                 aria-label="Buscar contacto"
                 autoFocus
-                className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-24 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
+                enterKeyHint="search"
+                className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-24 text-xs text-slate-800 outline-none max-md:h-11 placeholder:text-slate-400 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
               />
               {buscando ? (
                 <span className="pointer-events-none absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 text-[11px] font-medium text-[#3F8E91]">
-                  <Girando /> Buscando…
+                  <Girando /> <span className="max-sm:sr-only">Buscando…</span>
                 </span>
               ) : null}
             </div>
@@ -184,7 +186,7 @@ export function Historial() {
                     key={c.id}
                     type="button"
                     onClick={() => elegir(c.id)}
-                    className={`flex w-full items-start gap-2.5 border-b border-slate-100 px-3 py-2.5 text-left transition-colors ${activo ? "border-l-[3px] border-l-[#4FAEB2] bg-white" : "hover:bg-white"}`}
+                    className={`flex min-h-16 w-full items-start gap-2.5 border-b border-slate-100 px-3 py-2.5 text-left transition-colors ${activo ? "border-l-[3px] border-l-[#4FAEB2] bg-white" : "hover:bg-white"}`}
                   >
                     <AvatarTono nombre={n} />
                     <span className="min-w-0 flex-1">
@@ -205,7 +207,7 @@ export function Historial() {
         </aside>
 
         {/* Detalle */}
-        <div className={`min-h-0 min-w-0 flex-1 flex-col overflow-hidden lg:flex ${selId ? "flex" : "hidden"}`}>
+        <div className={`min-h-0 min-w-0 flex-1 flex-col overflow-hidden md:flex ${selId ? "flex" : "hidden"}`}>
           {!selId ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-slate-400">
               <History className="h-10 w-10 text-slate-300" />
@@ -217,10 +219,10 @@ export function Historial() {
             <div className="m-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error ?? "No se pudo cargar el historial."}</div>
           ) : (
             <>
-              <div className="shrink-0 border-b border-slate-200 bg-white px-4 py-3">
+              <div className="shrink-0 border-b border-slate-200 bg-white px-2.5 py-2.5 sm:px-4 sm:py-3">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="flex min-w-0 items-center gap-2.5">
-                    <button type="button" onClick={() => setSelId(null)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs text-slate-600 lg:hidden">
+                    <button type="button" onClick={() => setSelId(null)} aria-label="Volver a la búsqueda" className="inline-flex h-11 shrink-0 items-center rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 md:hidden">
                       ← Volver
                     </button>
                     <AvatarTono nombre={nombre} />
@@ -232,12 +234,12 @@ export function Historial() {
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {contacto.cliente_id ? (
-                      <Link href={`/clientes/${contacto.cliente_id}`} className="inline-flex items-center gap-1 rounded-full border border-[#4FAEB2]/30 bg-[#4FAEB2]/10 px-2.5 py-1 text-[11px] font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/20">
+                      <Link href={`/clientes/${contacto.cliente_id}`} className="inline-flex items-center gap-1 rounded-full border border-[#4FAEB2]/30 bg-[#4FAEB2]/10 px-2.5 py-1 text-[11px] max-sm:min-h-10 max-sm:px-3.5 font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/20">
                         <UserRound className="h-3 w-3" aria-hidden /> Ver cliente →
                       </Link>
                     ) : null}
                     {contacto.prospecto_id ? (
-                      <Link href={`/crm?p=${contacto.prospecto_id}`} className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] font-semibold text-violet-700 hover:bg-violet-100">
+                      <Link href={`/crm?p=${contacto.prospecto_id}`} className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[11px] max-sm:min-h-10 max-sm:px-3.5 font-semibold text-violet-700 hover:bg-violet-100">
                         Ver prospecto CRM →
                       </Link>
                     ) : null}
@@ -249,7 +251,7 @@ export function Historial() {
                 </p>
               </div>
 
-              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain bg-slate-50/50 px-4 py-4">
+              <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain bg-slate-50/50 px-2.5 py-3 sm:px-4 sm:py-4">
                 <section>
                   <h3 className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Conversaciones ({hist!.conversaciones.length})</h3>
                   <div className="space-y-2">
@@ -267,15 +269,15 @@ export function Historial() {
                               {c.ultimo_mensaje_at ? ` · último mensaje ${larga(c.ultimo_mensaje_at)}` : ""}
                             </p>
                           </div>
-                          <div className="flex shrink-0 items-center gap-1.5">
+                          <div className="flex shrink-0 items-center gap-1.5 max-sm:w-full max-sm:[&>*]:flex-1 max-sm:[&>*]:justify-center">
                             <button
                               type="button"
                               onClick={() => setVisor(c)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-[#4FAEB2]/50 bg-[#4FAEB2]/8 px-2.5 py-1.5 text-xs font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/15"
+                              className="inline-flex items-center gap-1 rounded-lg border border-[#4FAEB2]/50 bg-[#4FAEB2]/8 px-2.5 py-1.5 text-xs font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/15 max-sm:min-h-11"
                             >
                               <Eye className="h-3.5 w-3.5" aria-hidden /> Leer chat
                             </button>
-                            <Link href={`/conversaciones?c=${c.id}`} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">
+                            <Link href={`/conversaciones?c=${c.id}`} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold max-sm:min-h-11 text-slate-700 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">
                               <MessagesSquare className="h-3.5 w-3.5" aria-hidden /> Bandeja
                             </Link>
                           </div>
@@ -285,7 +287,7 @@ export function Historial() {
                           <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2 text-xs">
                             <span className="font-semibold text-slate-700">Último cierre{c.cerrada_at ? ` (${larga(c.cerrada_at)})` : ""}:</span>{" "}
                             {c.cierre_estado ? <span className="rounded-full bg-[#4FAEB2]/15 px-2 py-0.5 font-semibold text-[#2F6E71]">{c.cierre_estado}</span> : null}
-                            {c.cierre_observacion ? <p className="mt-1 whitespace-pre-wrap text-slate-600">{c.cierre_observacion}</p> : null}
+                            {c.cierre_observacion ? <p className="mt-1 whitespace-pre-wrap text-slate-600 [overflow-wrap:anywhere]">{c.cierre_observacion}</p> : null}
                           </div>
                         ) : null}
                       </article>
@@ -298,7 +300,8 @@ export function Historial() {
                   {!flujo.length ? (
                     <p className="text-xs text-slate-500">Sin movimientos registrados.</p>
                   ) : (
-                    <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+                    <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+                      <TablaScroll primeraFija>
                       <table className="w-full min-w-[560px] text-xs">
                         <thead className="border-b border-slate-200 bg-slate-50">
                           <tr>
@@ -323,6 +326,7 @@ export function Historial() {
                           ))}
                         </tbody>
                       </table>
+                      </TablaScroll>
                     </div>
                   )}
                 </section>

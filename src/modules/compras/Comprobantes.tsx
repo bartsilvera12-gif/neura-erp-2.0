@@ -135,7 +135,7 @@ export function ComprobantesCompra({ compraId, esAdmin }: { compraId: string; es
               type="button"
               onClick={() => input.current?.click()}
               disabled={!!subiendo}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 max-sm:min-h-11 max-sm:px-3 max-sm:text-[13px]"
             >
               {subiendo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Paperclip className="h-3.5 w-3.5" />}
               {subiendo ? "Subiendo…" : "Adjuntar comprobante"}
@@ -161,22 +161,22 @@ export function ComprobantesCompra({ compraId, esAdmin }: { compraId: string; es
       ) : (
         <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
           {lista.map((c) => (
-            <li key={c.id} className="flex items-center gap-3 px-3 py-2.5">
+            <li key={c.id} className="flex items-center gap-3 px-3 py-2.5 max-sm:gap-1.5 max-sm:py-1.5">
               <IconoArchivo pdf={esPdf(c.mime, c.nombre)} />
-              <div className="min-w-0 flex-1">
+              <div className="min-w-0 flex-1 max-sm:ml-1.5">
                 <p className="truncate text-sm font-medium text-slate-800" title={c.nombre}>{c.nombre}</p>
                 <p className="text-[11px] text-slate-500">{tamano(c.size)} · {fechaHora(c.created_at)}</p>
               </div>
               <button
                 type="button"
                 onClick={() => void verComprobante(compraId, c.id).catch((e) => setError((e as Error).message))}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+                className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100 max-sm:min-h-11 max-sm:min-w-11"
               >
                 <Eye className="h-3.5 w-3.5" /> Ver
               </button>
               {esAdmin ? (
-                <button type="button" onClick={() => setQuitando(c)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50">
-                  <Trash2 className="h-3.5 w-3.5" /> Quitar
+                <button type="button" onClick={() => setQuitando(c)} aria-label={`Quitar ${c.nombre}`} className="inline-flex shrink-0 items-center justify-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-rose-600 hover:bg-rose-50 max-sm:min-h-11 max-sm:min-w-11">
+                  <Trash2 className="h-3.5 w-3.5" /> <span className="max-[380px]:sr-only">Quitar</span>
                 </button>
               ) : null}
             </li>
@@ -193,8 +193,8 @@ export function ComprobantesCompra({ compraId, esAdmin }: { compraId: string; es
         <div className="mt-2 rounded-xl border border-rose-200 bg-rose-50/60 p-3">
           <p className="text-sm text-slate-800">¿Quitar <strong className="font-semibold">{quitando.nombre}</strong>? El archivo se borra y no se puede recuperar.</p>
           <div className="mt-2 flex justify-end gap-2">
-            <button type="button" onClick={() => setQuitando(null)} disabled={busy} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
-            <button type="button" onClick={quitar} disabled={busy} className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50">
+            <button type="button" onClick={() => setQuitando(null)} disabled={busy} className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-50 max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">Cancelar</button>
+            <button type="button" onClick={quitar} disabled={busy} className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700 disabled:opacity-50 max-sm:min-h-11 max-sm:flex-[2] max-sm:text-sm">
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />} Quitar comprobante
             </button>
           </div>
@@ -203,7 +203,7 @@ export function ComprobantesCompra({ compraId, esAdmin }: { compraId: string; es
 
       {error ? (
         <div className="mt-2 flex items-start justify-between gap-2 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">
-          <span>{error}</span><button type="button" onClick={() => setError(null)} aria-label="Cerrar"><X className="h-3.5 w-3.5" /></button>
+          <span className="min-w-0 [overflow-wrap:anywhere]">{error}</span><button type="button" onClick={() => setError(null)} aria-label="Cerrar" className="inline-flex shrink-0 items-center justify-center max-sm:-m-2 max-sm:h-9 max-sm:w-9"><X className="h-3.5 w-3.5" /></button>
         </div>
       ) : null}
     </div>
@@ -229,13 +229,13 @@ export function AdjuntosPendientes({ files, onChange, disabled }: { files: File[
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-xs font-medium text-slate-600">Comprobante <span className="font-normal text-slate-400">(opcional)</span></span>
         <button
           type="button"
           onClick={() => input.current?.click()}
           disabled={disabled || files.length >= 10}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-50 disabled:opacity-50 max-sm:min-h-11 max-sm:px-3 max-sm:text-[13px]"
         >
           <Paperclip className="h-3.5 w-3.5" /> Adjuntar comprobante
         </button>
@@ -251,11 +251,11 @@ export function AdjuntosPendientes({ files, onChange, disabled }: { files: File[
       {files.length ? (
         <ul className="mt-2 space-y-1">
           {files.map((f, i) => (
-            <li key={`${f.name}-${i}`} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs">
+            <li key={`${f.name}-${i}`} className="flex items-center gap-2 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs max-sm:py-0 max-sm:pr-0">
               <IconoArchivo pdf={esPdf(f.type, f.name)} />
               <span className="min-w-0 flex-1 truncate text-slate-700" title={f.name}>{f.name}</span>
               <span className="shrink-0 text-slate-400">{tamano(f.size)}</span>
-              <button type="button" disabled={disabled} onClick={() => onChange(files.filter((_, j) => j !== i))} className="shrink-0 font-medium text-rose-600 hover:underline disabled:opacity-50">
+              <button type="button" disabled={disabled} onClick={() => onChange(files.filter((_, j) => j !== i))} className="shrink-0 font-medium text-rose-600 hover:underline disabled:opacity-50 max-sm:min-h-11 max-sm:px-3">
                 Quitar
               </button>
             </li>

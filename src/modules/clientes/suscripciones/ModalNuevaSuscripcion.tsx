@@ -15,7 +15,7 @@ import { hoyPY } from "@/lib/fecha/paraguay";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import MontoInput from "@/components/ui/MontoInput";
-import { TEAL } from "@/modules/clientes/ui";
+import { PIE_MODAL, TEAL } from "@/modules/clientes/ui";
 import type { Plan, SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos";
 import { IVA_LABEL, monto, nombreMes } from "@/modules/clientes/suscripciones/ui";
 
@@ -120,7 +120,7 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
         <div className="space-y-3 py-2">
           <p className="text-sm text-slate-600">Todavía no hay planes activos. Un plan es lo que cobrás todos los meses (cuota, abono, mantenimiento…).</p>
           {esAdmin ? (
-            <Link href="/clientes/suscripciones?tab=planes" className="inline-flex rounded-xl px-3.5 py-2 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>
+            <Link href="/clientes/suscripciones?tab=planes" className="inline-flex min-h-11 items-center rounded-xl px-3.5 py-2 sm:min-h-0 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>
               Crear un plan
             </Link>
           ) : (
@@ -131,7 +131,7 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
         <form onSubmit={guardar} className="space-y-4">
           <div>
             <span className={LABEL}>Plan</span>
-            <Select block value={planId} onChange={elegirPlan}
+            <Select block value={planId} onChange={elegirPlan} etiqueta="Plan"
               options={[["", "— Elegí un plan —"], ...planes.map((p) => [p.id, `${p.nombre} — ${monto(p.precio, p.moneda)}`] as [string, string])]} />
             {plan ? (
               <p className="mt-1 text-[11px] text-slate-500">
@@ -150,7 +150,7 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
             </label>
             <label>
               <span className={LABEL}>Fecha de inicio</span>
-              <input type="date" className={INPUT} value={inicio} onChange={(e) => setInicio(e.target.value)} required />
+              <input type="date" className={`${INPUT} min-w-0`} value={inicio} onChange={(e) => setInicio(e.target.value)} required />
             </label>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
@@ -175,8 +175,8 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
             <textarea rows={2} maxLength={500} className={INPUT} value={observacion} onChange={(e) => setObservacion(e.target.value)} placeholder="Ej: precio acordado por 6 meses" />
           </label>
 
-          <label className="flex cursor-pointer items-start gap-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
-            <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[var(--brand)]" checked={emitirYa} onChange={(e) => setEmitirYa(e.target.checked)} />
+          <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-3">
+            <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand)]" checked={emitirYa} onChange={(e) => setEmitirYa(e.target.checked)} />
             <span className="text-sm text-slate-700">
               Emitir también la cuota de <strong>{nombreMes(inicio) || "este mes"}</strong>
               <span className="block text-[11px] text-slate-500">
@@ -193,7 +193,7 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
           ) : null}
           {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
 
-          <div className="flex justify-end gap-2 border-t border-slate-100 pt-4">
+          <div className={PIE_MODAL}>
             <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">
               Cancelar
             </button>

@@ -9,6 +9,7 @@ import { Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { Modal } from "@/components/Modal";
 import type { EstadoSuscripcion } from "@/modules/clientes/suscripciones/tipos";
+import { PIE_MODAL } from "@/modules/clientes/ui";
 
 const TEXTO: Record<EstadoSuscripcion, { titulo: string; explicacion: string; boton: string; cls: string }> = {
   pausada: {
@@ -74,7 +75,7 @@ export function ModalEstado({ suscripcionId, plan, estado, onClose, onHecho }: {
           </label>
         ) : null}
         {error ? <p className="text-xs text-rose-600">{error}</p> : null}
-        <div className="flex justify-end gap-2 pt-1">
+        <div className={PIE_MODAL}>
           <button type="button" onClick={onClose} disabled={busy} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 disabled:opacity-50">
             Volver
           </button>

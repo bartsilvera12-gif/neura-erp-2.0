@@ -56,14 +56,14 @@ function IconoTile({ icono: Icono, tono }: { icono: LucideIcon; tono: Tono }) {
 function Seccion({ titulo, detalle, icono, tono, children }: { titulo: string; detalle?: string; icono: LucideIcon; tono: Tono; children: React.ReactNode }) {
   return (
     <section className={`rounded-2xl border border-slate-200/80 bg-white ${sombra}`}>
-      <header className="flex items-center gap-3 border-b border-slate-100 px-5 py-4">
+      <header className="flex items-center gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5 sm:py-4">
         <IconoTile icono={icono} tono={tono} />
         <div className="min-w-0">
           <h2 className="text-[15px] font-bold text-slate-800">{titulo}</h2>
           {detalle ? <p className="text-[12.5px] text-slate-500">{detalle}</p> : null}
         </div>
       </header>
-      <div className="space-y-5 p-5">{children}</div>
+      <div className="space-y-5 p-4 sm:p-5">{children}</div>
     </section>
   );
 }
@@ -264,9 +264,9 @@ export default function TipificacionPage() {
       {/* ── Encabezado ─────────────────────────────────────────────── */}
       <div>
         <nav className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400" aria-label="Migas">
-          <Link href={cliente ? `/clientes/gestion?cliente=${encodeURIComponent(cliente.id)}` : "/clientes/gestion"} className="hover:text-slate-600">Gestión de clientes</Link>
+          <Link href={cliente ? `/clientes/gestion?cliente=${encodeURIComponent(cliente.id)}` : "/clientes/gestion"} className="hover:text-slate-600 max-sm:inline-flex max-sm:min-h-10 max-sm:items-center">Gestión de clientes</Link>
           <span aria-hidden>›</span>
-          {cliente ? <Link href={`/clientes/${cliente.id}`} className="hover:text-slate-600">{cliente.nombre}</Link> : <span>…</span>}
+          {cliente ? <Link href={`/clientes/${cliente.id}`} className="hover:text-slate-600 max-sm:inline-flex max-sm:min-h-10 max-sm:items-center">{cliente.nombre}</Link> : <span>…</span>}
           <span aria-hidden>›</span>
           <span className="font-medium text-slate-600">Tipificación</span>
         </nav>
@@ -291,7 +291,7 @@ export default function TipificacionPage() {
             <CodigoChip codigo={codigoCliente(cliente)} fondo="bg-white" />
             {cliente.ruc || cliente.documento ? <span>RUC {cliente.ruc || cliente.documento}</span> : null}
             {cliente.telefono ? <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" aria-hidden />{cliente.telefono}</span> : null}
-            {cliente.email ? <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" aria-hidden />{cliente.email}</span> : null}
+            {cliente.email ? <span className="inline-flex min-w-0 items-center gap-1 [overflow-wrap:anywhere]"><Mail className="h-3 w-3 shrink-0" aria-hidden />{cliente.email}</span> : null}
             <span className={`rounded-full px-2 py-px text-[11px] font-bold ${cliente.activo && !cliente.baja_at ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>
               {cliente.baja_at ? "De baja" : cliente.activo ? "Activo" : "Inactivo"}
             </span>
@@ -301,8 +301,8 @@ export default function TipificacionPage() {
 
       {/* ── Ticket creado ─────────────────────────────────────────── */}
       {creado ? (
-        <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-teal-50 px-6 py-5 shadow-sm">
-          <button type="button" onClick={() => setCreado(null)} className="absolute right-3 top-3 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100">
+        <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 via-white to-teal-50 px-4 py-4 shadow-sm sm:px-6 sm:py-5">
+          <button type="button" onClick={() => setCreado(null)} className="absolute right-2 top-2 inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 max-sm:min-h-11 sm:right-3 sm:top-3">
             <X className="h-3.5 w-3.5" /> Cerrar
           </button>
           <div className="flex flex-wrap items-center justify-between gap-4 pr-16">
@@ -417,7 +417,7 @@ export default function TipificacionPage() {
           {esCapacitacion ? (
             <Seccion titulo="Agendar capacitación" detalle="Queda en la Agenda, vinculada al cliente" icono={GraduationCap} tono="indigo">
               <label className="flex w-fit cursor-pointer items-center gap-2.5 text-[13.5px] font-semibold text-slate-700">
-                <input type="checkbox" checked={agendar} onChange={(e) => setAgendar(e.target.checked)} className="h-4 w-4" style={{ accentColor: TEAL }} />
+                <input type="checkbox" checked={agendar} onChange={(e) => setAgendar(e.target.checked)} className="h-4 w-4 [@media(pointer:coarse)]:h-6 [@media(pointer:coarse)]:w-6" style={{ accentColor: TEAL }} />
                 Agendar la capacitación ahora
               </label>
               {agendar ? (
@@ -449,7 +449,7 @@ export default function TipificacionPage() {
                               role="radio"
                               aria-checked={activa}
                               onClick={() => setAgenda((a) => ({ ...a, duracion_min: m }))}
-                              className={`rounded-xl border px-3.5 py-2 text-[13px] font-semibold transition ${
+                              className={`rounded-xl border px-3.5 py-2 text-[13px] font-semibold transition max-sm:min-h-11 ${
                                 activa ? "border-indigo-300 bg-indigo-50 text-indigo-700 shadow-sm" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50"
                               }`}
                             >
@@ -490,7 +490,7 @@ export default function TipificacionPage() {
 
           {/* ── Historial de tipificaciones ──────────────────────── */}
           <section className={`overflow-hidden rounded-2xl border border-slate-200/80 bg-white ${sombra}`}>
-            <header className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+            <header className="flex items-center justify-between gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5 sm:py-4">
               <div className="flex items-center gap-3">
                 <IconoTile icono={History} tono="indigo" />
                 <h2 className="text-[15px] font-bold text-slate-800">Historial de tipificaciones</h2>
@@ -510,7 +510,7 @@ export default function TipificacionPage() {
                     <li
                       key={t.id}
                       id={`tip-${t.id}`}
-                      className={`grid gap-3 px-5 py-4 transition-colors md:grid-cols-[170px_minmax(0,1fr)] ${resaltada === t.id ? "bg-teal-50" : "hover:bg-slate-50/60"}`}
+                      className={`grid gap-3 px-4 py-4 transition-colors sm:px-5 md:grid-cols-[170px_minmax(0,1fr)] ${resaltada === t.id ? "bg-teal-50" : "hover:bg-slate-50/60"}`}
                     >
                       <div className="flex items-start gap-3 md:block">
                         <p className="text-[12px] tabular-nums text-slate-400">{fechaHoraPy(t.fecha)}</p>
@@ -525,7 +525,7 @@ export default function TipificacionPage() {
                           </span>
                           <span className={`rounded-full px-2.5 py-0.5 text-[12px] font-bold ${t.ticket ? `${TONOS.rosa.suave} ${TONOS.rosa.texto}` : `${TONOS.pizarra.suave} ${TONOS.pizarra.texto}`}`}>{t.resultado}</span>
                         </div>
-                        <p className="mt-1.5 whitespace-pre-line text-[13.5px] leading-relaxed text-slate-700">{t.observacion}</p>
+                        <p className="mt-1.5 whitespace-pre-line text-[13.5px] leading-relaxed text-slate-700 [overflow-wrap:anywhere]">{t.observacion}</p>
 
                         {t.cita ? (
                           <div className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-indigo-200 bg-indigo-50/60 px-4 py-3">
