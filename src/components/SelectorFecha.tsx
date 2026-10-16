@@ -12,7 +12,7 @@ const BRAND = clienteConfig.color;
 
 /**
  * Selector de fecha (y fecha + hora) propio, gemelo visual de `Select`: nunca el
- * <input type="date"> nativo. Calendario mensual en español (lunes primero), "Hoy" y
+ * input de fecha nativo del navegador. Calendario mensual en español (lunes primero), "Hoy" y
  * "Limpiar", días fuera de `min`/`max` deshabilitados, hoy marcado y el elegido con el
  * color de marca. El valor es el MISMO string que el input nativo:
  *   · `YYYY-MM-DD` (fecha) · `YYYY-MM-DDTHH:mm` (con `conHora`, minutos en pasos de `pasoMin`).
@@ -83,6 +83,8 @@ export function SelectorFecha({
   compacto = false,
   disabled = false,
   className = "",
+  claseBoton,
+  alerta = false,
   id,
 }: {
   /** `YYYY-MM-DD` o, con `conHora`, `YYYY-MM-DDTHH:mm`; "" = vacío */
@@ -106,6 +108,11 @@ export function SelectorFecha({
   compacto?: boolean;
   disabled?: boolean;
   className?: string;
+  /** reemplaza forma/tamaño/tipografía del disparador (p. ej. "h-10 rounded-xl px-3 text-slate-800")
+   *  para igualar la altura de los demás campos; borde, foco y estados se mantienen */
+  claseBoton?: string;
+  /** borde ámbar (campo que falta completar) */
+  alerta?: boolean;
   id?: string;
 }) {
   const esMovil = useEsMovil();
@@ -398,8 +405,8 @@ export function SelectorFecha({
         aria-haspopup="dialog"
         aria-expanded={open}
         aria-label={etiqueta ? `${etiqueta}${texto ? `: ${texto}` : ""}` : undefined}
-        className={`flex w-full items-center justify-between gap-2 border bg-white text-left text-sm outline-none max-sm:min-h-11 ${compacto ? "rounded-lg px-3 py-2 text-slate-800" : "rounded-xl py-2.5 pl-3.5 pr-3 font-medium text-slate-600"} transition hover:border-slate-300 focus:border-[var(--brand)] focus:shadow-[0_0_0_4px_var(--brand-100)] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200`}
-        style={{ borderColor: open ? BRAND : "#e2e8f0", boxShadow: open ? `0 0 0 4px var(--brand-100)` : undefined }}
+        className={`flex w-full items-center justify-between gap-2 border bg-white text-left text-sm outline-none max-sm:min-h-11 ${claseBoton ?? (compacto ? "rounded-lg px-3 py-2 text-slate-800" : "rounded-xl py-2.5 pl-3.5 pr-3 font-medium text-slate-600")} transition hover:border-slate-300 focus:border-[var(--brand)] focus:shadow-[0_0_0_4px_var(--brand-100)] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200`}
+        style={{ borderColor: open ? BRAND : alerta ? "#fcd34d" : "#e2e8f0", boxShadow: open ? `0 0 0 4px var(--brand-100)` : undefined }}
       >
         <span className={`truncate tabular-nums ${texto ? "" : "font-normal text-slate-400"}`}>{texto || ph}</span>
         <CalendarDays className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />

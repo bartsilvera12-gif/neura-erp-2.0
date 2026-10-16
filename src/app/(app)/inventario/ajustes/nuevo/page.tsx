@@ -23,6 +23,7 @@ import { invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/i
 import { invalidarLista } from "@/modules/inventario/lista-cache";
 import { MOTIVOS_AJUSTE, MOTIVOS_PERDIDA, cant, dia, gs } from "@/modules/inventario/documentos";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, ET, INPUT, TEAL } from "@/modules/inventario/ui";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 type Linea = {
   prod: ProductoInventario;
@@ -280,10 +281,10 @@ function NuevoAjuste() {
                         <span className={ET}>Lote que entra <span className="font-normal text-slate-400">(editable)</span></span>
                         <input enterKeyHint="next" autoCapitalize="characters" autoComplete="off" value={l.lote} onChange={(e) => cambiar(l.prod.id, { lote: e.target.value.slice(0, 40) })} className={`${INPUT} font-mono uppercase`} />
                       </label>
-                      <label className="block">
+                      <div className="block">
                         <span className={ET}>Vencimiento *</span>
-                        <input type="date" value={l.vencimiento} onChange={(e) => cambiar(l.prod.id, { vencimiento: e.target.value })} className={INPUT} />
-                      </label>
+                        <SelectorFecha block etiqueta="Vencimiento del lote" value={l.vencimiento} onChange={(v) => cambiar(l.prod.id, { vencimiento: v })} />
+                      </div>
                     </div>
                   ) : conLotes && (dif < 0 || tipo === "perdida") ? (
                     <div className="mt-2 flex flex-wrap items-center gap-2 max-sm:flex-col max-sm:items-stretch max-sm:gap-1">

@@ -15,6 +15,7 @@ import {
   type Etapa, type Origen, type Prospecto, type Tarjeta,
 } from "@/modules/crm/tipos";
 import { BTN_PRIMARIO, BTN_SECUNDARIO, INPUT, LABEL, PlanSelector, SectionTitle, usePlanes, useUsuarios } from "./comun";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 type Campos = {
   empresa: string; contacto: string; email: string; telefono: string; observaciones: string;
@@ -228,7 +229,7 @@ export function ProspectoForm({
               </div>
               <div>
                 <label className={LABEL}>Fecha próxima acción</label>
-                <input type="date" value={f.fecha_proxima_accion} onChange={(e) => set("fecha_proxima_accion", e.target.value)} className={INPUT} />
+                <SelectorFecha block etiqueta="Fecha próxima acción" value={f.fecha_proxima_accion} onChange={(v) => set("fecha_proxima_accion", v)} />
               </div>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">

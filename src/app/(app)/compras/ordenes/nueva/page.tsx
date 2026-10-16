@@ -23,6 +23,7 @@ import { cargarProveedores } from "@/modules/proveedores/cache";
 import type { OrdenCompra } from "@/modules/compras/ordenes";
 import { ProductoForm } from "@/modules/inventario/ProductoForm";
 import { BuscadorProductos, ET, Fila, gs, INPUT, Segmentado, Tarjeta, usd } from "@/modules/compras/partes";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const TEAL = clienteConfig.color;
 
@@ -206,10 +207,10 @@ function NuevaOrden() {
                 <span className={ET}>Proveedor *</span>
                 <SelectorProveedor value={proveedorId} onChange={(id) => elegirProveedor(id)} />
               </div>
-              <label className="block">
+              <div className="block">
                 <span className={ET}>Entrega esperada <span className="font-normal text-slate-400">(opcional)</span></span>
-                <input type="date" value={entrega} onChange={(e) => setEntrega(e.target.value)} className={INPUT} />
-              </label>
+                <SelectorFecha block etiqueta="Entrega esperada" value={entrega} onChange={setEntrega} />
+              </div>
               <div>
                 <span className={ET}>Condición</span>
                 <Segmentado valor={tipoPago} onChange={(v) => setTipoPago(v as "contado" | "credito")} opciones={[["contado", "Contado"], ["credito", "Crédito"]]} />

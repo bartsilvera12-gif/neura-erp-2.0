@@ -13,6 +13,7 @@ import { hoyPY } from "@/lib/fecha/paraguay";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { ESTADOS_TAREA, ESTADO_TAREA_LABEL, ESTADO_TAREA_TONO, fechaCorta, type EstadoTarea, type Tarea } from "@/modules/proyectos/tipos";
 import { INPUT, PANEL, TituloPanel, useUsuarios } from "./comun";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 export function TabTareas({ proyectoId, puedeEditar, onConteo }: {
   proyectoId: string;
@@ -110,7 +111,7 @@ export function TabTareas({ proyectoId, puedeEditar, onConteo }: {
         <form onSubmit={crear} className="grid gap-2 rounded-xl border border-[var(--brand)]/25 bg-gradient-to-br from-[var(--brand)]/[0.05] to-white p-3 sm:grid-cols-[1fr_200px_160px_auto]">
           <input value={titulo} onChange={(e) => setTitulo(e.target.value)} maxLength={300} placeholder="Nueva tarea…" className={INPUT} />
           <Select block value={asignado} onChange={setAsignado} options={opciones} />
-          <input type="date" value={limite} onChange={(e) => setLimite(e.target.value)} className={INPUT} aria-label="Fecha límite" />
+          <SelectorFecha block etiqueta="Fecha límite" placeholder="Fecha límite" value={limite} onChange={setLimite} />
           <button type="submit" disabled={!titulo.trim() || creando}
             className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-600)] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400">
             {creando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Agregar
@@ -163,8 +164,8 @@ export function TabTareas({ proyectoId, puedeEditar, onConteo }: {
                 {puedeEditar ? (
                   <>
                     <Select value={t.asignado_id ?? ""} onChange={(v) => void cambiar(t, { asignado_id: v || null })} options={opciones} minWidth={160} className="[&>button]:py-1.5 [&>button]:text-xs" />
-                    <input type="date" value={t.fecha_limite ?? ""} onChange={(e) => void cambiar(t, { fecha_limite: e.target.value || null })}
-                      className="rounded-xl border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:border-[var(--brand)]" aria-label="Fecha límite" />
+                    <SelectorFecha compacto etiqueta="Fecha límite" value={t.fecha_limite ?? ""} onChange={(v) => void cambiar(t, { fecha_limite: v || null })}
+                      claseBoton="rounded-xl px-2.5 py-1.5 text-xs text-slate-700" />
                     <button type="button" onClick={() => void borrar(t)} aria-label="Eliminar tarea" title="Eliminar"
                       className="rounded-md p-1.5 text-slate-400 transition-colors hover:bg-rose-50 hover:text-rose-600">
                       <Trash2 className="h-4 w-4" />

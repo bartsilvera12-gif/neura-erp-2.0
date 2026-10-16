@@ -17,6 +17,7 @@ import ZonaArchivos from "@/modules/soporte/detalle/ZonaArchivos";
 import { PRIORIDADES, PRIORIDAD_LABEL, localAIso, type Prioridad, type Tarjeta } from "@/modules/proyectos/tipos";
 import { BTN_PRIMARIO, BTN_SECUNDARIO, INPUT, LABEL, PANEL, TituloPanel, useUsuarios } from "./comun";
 import { subirArchivos } from "./api";
+import { SelectorFecha, SelectorFechaHora } from "@/components/SelectorFecha";
 
 export function ProyectoForm({ variant, clienteInicial, onCreado, onCancel }: {
   variant: "modal" | "page";
@@ -109,15 +110,15 @@ export function ProyectoForm({ variant, clienteInicial, onCreado, onCancel }: {
               <span className={LABEL}>Prioridad</span>
               <Select block value={prioridad} onChange={(v) => setPrioridad(v as Prioridad)} options={PRIORIDADES.map((p) => [p, PRIORIDAD_LABEL[p]] as [string, string])} />
             </div>
-            <label className="block">
+            <div className="block">
               <span className={LABEL}>Fecha de ingreso</span>
-              <input type="date" value={ingreso} onChange={(e) => setIngreso(e.target.value)} className={INPUT} />
-            </label>
-            <label className="block">
+              <SelectorFecha block etiqueta="Fecha de ingreso" value={ingreso} onChange={setIngreso} />
+            </div>
+            <div className="block">
               <span className={LABEL}>Fecha prometida</span>
-              <input type="datetime-local" value={prometida} onChange={(e) => setPrometida(e.target.value)} className={INPUT} />
+              <SelectorFechaHora block etiqueta="Fecha prometida" value={prometida} onChange={setPrometida} />
               <span className="mt-1 block text-[11px] text-slate-400">Si no la sabés todavía, queda &quot;A definir&quot; en la tarjeta.</span>
-            </label>
+            </div>
             <div>
               <span className={LABEL}>Monto vendido</span>
               <div className="flex gap-2">

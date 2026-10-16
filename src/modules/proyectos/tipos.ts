@@ -370,7 +370,7 @@ export function localAIso(v: string): string | null {
   return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
 }
 
-/** ISO → "YYYY-MM-DDTHH:mm" en hora PY (para <input type="datetime-local">). */
+/** ISO → "YYYY-MM-DDTHH:mm" en hora PY (formato de SelectorFechaHora / datetime-local). */
 export function isoALocal(iso: string | null | undefined): string {
   if (!iso) return "";
   const ms = Date.parse(iso);

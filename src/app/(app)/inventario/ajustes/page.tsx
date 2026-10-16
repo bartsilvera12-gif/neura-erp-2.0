@@ -23,6 +23,7 @@ import {
   type AjusteDetalle, type FilaAjuste,
 } from "@/modules/inventario/documentos";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, Dato, INPUT_FILTRO, ModalDocumento, Paginador, PedirMotivo, Pestanas, TEAL } from "@/modules/inventario/ui";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const POR_PAGINA = 25;
 type Pagina = {
@@ -174,14 +175,14 @@ function Ajustes() {
               <Select value={deposito} onChange={(v) => { setDeposito(v); setPagina(1); }} minWidth={200} etiqueta="Depósito" className="max-sm:!min-w-0"
                 options={[["", "Todos los depósitos"], ...opcionesDepositos(deps.datos, { soloActivos: false })]} />
             ) : null}
-            <label className="flex flex-col gap-1 md:block">
+            <div className="flex flex-col gap-1 md:block">
               <span className="text-xs font-medium text-slate-600 md:sr-only">Desde</span>
-              <input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} max={hasta || undefined} className={`${INPUT_FILTRO} max-md:h-11 max-md:w-full`} aria-label="Desde" />
-            </label>
-            <label className="flex flex-col gap-1 md:block">
+              <SelectorFecha compacto etiqueta="Desde" value={desde} onChange={(v) => { setDesde(v); setPagina(1); }} max={hasta || undefined} claseBoton="h-10 rounded-xl px-3 text-slate-800 max-md:h-11" className="max-md:w-full md:w-[150px]" />
+            </div>
+            <div className="flex flex-col gap-1 md:block">
               <span className="text-xs font-medium text-slate-600 md:sr-only">Hasta</span>
-              <input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} min={desde || undefined} className={`${INPUT_FILTRO} max-md:h-11 max-md:w-full`} aria-label="Hasta" />
-            </label>
+              <SelectorFecha compacto etiqueta="Hasta" value={hasta} onChange={(v) => { setHasta(v); setPagina(1); }} min={desde || undefined} claseBoton="h-10 rounded-xl px-3 text-slate-800 max-md:h-11" className="max-md:w-full md:w-[150px]" />
+            </div>
           </BarraFiltros>
         </div>
 

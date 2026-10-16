@@ -14,6 +14,7 @@ import { isoAFechaHoraLocal, puedeEstarACargo, slaDe, vencimientoSla } from "@/m
 import { apiSoporte } from "@/modules/soporte/api";
 import { useTicket } from "@/modules/soporte/detalle/TicketContexto";
 import { Aviso, Boton, Desplegable, IconoTile, SelectorBuscable, TARJETA, TONO_AREA, claseBoton, claseEtiqueta, claseInput, type Tono } from "@/modules/soporte/ui";
+import { SelectorFechaHora } from "@/components/SelectorFecha";
 
 function Campo({ etiqueta, requerido, children, ayuda }: { etiqueta: string; requerido?: boolean; children: React.ReactNode; ayuda?: React.ReactNode }) {
   return (
@@ -185,13 +186,14 @@ export default function TicketEditarPage() {
             etiqueta="Fecha objetivo"
             ayuda={v.clasificacion_codigo && sla != null && !fechaTocada ? `Calculada por la clasificación: ${sla} horas laborales desde que se creó. Podés cambiarla.` : undefined}
           >
-            <input
-              type="datetime-local"
-              className={`${claseInput} h-[42px]`}
+            <SelectorFechaHora
+              block
+              etiqueta="Fecha objetivo"
+              claseBoton="h-[42px] rounded-xl px-3 text-slate-900"
               value={v.fecha_objetivo}
-              onChange={(e) => {
+              onChange={(x) => {
                 setFechaTocada(true);
-                set("fecha_objetivo", e.target.value);
+                set("fecha_objetivo", x);
               }}
             />
           </Campo>

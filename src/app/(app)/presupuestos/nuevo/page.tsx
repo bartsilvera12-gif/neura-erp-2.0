@@ -29,6 +29,7 @@ import {
   calcularLinea, calcularTotales, CONFIG_DEFECTO, decimales, diaCorto, monto, numeroConRevision, redondear,
   type ConfigPresupuestos, type Moneda, type Presupuesto,
 } from "@/modules/presupuestos/tipos";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const TEAL = clienteConfig.color;
 const IVAS: [string, string][] = [["10%", "IVA 10%"], ["5%", "IVA 5%"], ["EXENTA", "Exenta"]];
@@ -382,8 +383,8 @@ function Formulario() {
 
           <Tarjeta numero={2} titulo="Condiciones de la propuesta">
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block"><span className={ET}>Fecha</span>
-                <input type="date" value={fecha} max={hoy} onChange={(e) => setFecha(e.target.value || hoy)} className={INPUT} /></label>
+              <div className="block"><span className={ET}>Fecha</span>
+                <SelectorFecha block etiqueta="Fecha del presupuesto" value={fecha} max={hoy} onChange={(v) => setFecha(v || hoy)} /></div>
               <div>
                 <span className={ET}>Validez</span>
                 <div className="flex items-center gap-2">
@@ -394,7 +395,7 @@ function Formulario() {
                       <span className="text-sm text-slate-500">días</span>
                     </div>
                   ) : (
-                    <input type="date" value={validoHasta} min={fecha} onChange={(e) => setValidoHasta(e.target.value)} className={`${INPUT} min-w-0 py-2`} />
+                    <SelectorFecha block etiqueta="Válido hasta" value={validoHasta} min={fecha} onChange={setValidoHasta} claseBoton="rounded-xl px-3 py-2 text-slate-800" className="min-w-0" />
                   )}
                 </div>
                 <p className="mt-1 text-[11px] text-slate-500">Vence el <b className="font-semibold text-slate-700">{diaCorto(hasta)}</b>{modoValidez === "fecha" && diasValidez >= 0 ? ` (${diasValidez} días)` : ""}. Por defecto: {cfg.validez_dias} días.</p>

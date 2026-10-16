@@ -33,6 +33,7 @@ import { apiSoporte } from "@/modules/soporte/api";
 import { Dona, GraficoBarras } from "@/modules/soporte/Graficos";
 import { Aviso, Desplegable, Encabezado, Esqueleto, IconoTile, PALETA_TIPOS, Pagina, TONOS, Tarjeta, TarjetaViva, Vacio, claseBoton, type Tono } from "@/modules/soporte/ui";
 import { TablaScroll } from "@/components/TablaResponsive";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 type Item = { id: string; numero: number | null; cliente: string; tipo: string };
 type Dashboard = {
@@ -422,14 +423,14 @@ export default function SoporteDashboardPage() {
           tono="turquesa"
           accion={
             <div className="flex flex-wrap items-center gap-2">
-              <label className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
+              <div className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
                 Desde
-                <input type="date" value={desdeHora} max={hastaHora} onChange={(e) => e.target.value && setDesdeHora(e.target.value)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs" />
-              </label>
-              <label className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
+                <SelectorFecha compacto etiqueta="Desde" value={desdeHora} max={hastaHora} onChange={(v) => v && setDesdeHora(v)} claseBoton="rounded-lg px-2 py-1 text-xs text-slate-700" />
+              </div>
+              <div className="flex items-center gap-1 text-[11px] font-medium text-slate-500">
                 Hasta
-                <input type="date" value={hastaHora} min={desdeHora} max={hoyPy()} onChange={(e) => e.target.value && setHastaHora(e.target.value)} className="rounded-lg border border-slate-200 px-2 py-1 text-xs" />
-              </label>
+                <SelectorFecha compacto etiqueta="Hasta" value={hastaHora} min={desdeHora} max={hoyPy()} onChange={(v) => v && setHastaHora(v)} claseBoton="rounded-lg px-2 py-1 text-xs text-slate-700" />
+              </div>
             </div>
           }
         >

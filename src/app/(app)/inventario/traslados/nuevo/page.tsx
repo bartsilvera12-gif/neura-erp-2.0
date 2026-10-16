@@ -25,6 +25,7 @@ import { depositosPlanos, invalidarDepositos, opcionesDepositos, useDepositos } 
 import { invalidarLista } from "@/modules/inventario/lista-cache";
 import { MOTIVOS_TRASLADO, cant, dia } from "@/modules/inventario/documentos";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, ET, INPUT, TEAL } from "@/modules/inventario/ui";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 type Linea = {
   prod: ProductoInventario;
@@ -296,14 +297,14 @@ function NuevoTraslado() {
             <span className={ET}>Motivo del traslado</span>
             <Select value={r.motivo_codigo} onChange={(v) => setRem("motivo_codigo", v)} block etiqueta="Motivo del traslado" options={MOTIVOS_TRASLADO.map(([k, v]): [string, string] => [String(k), v])} />
           </div>
-          <label className="block">
+          <div className="block">
             <span className={ET}>Fecha de inicio</span>
-            <input type="date" value={r.fecha_inicio} onChange={(e) => setRem("fecha_inicio", e.target.value)} className={INPUT} />
-          </label>
-          <label className="block">
+            <SelectorFecha block etiqueta="Fecha de inicio" value={r.fecha_inicio} onChange={(v) => setRem("fecha_inicio", v)} />
+          </div>
+          <div className="block">
             <span className={ET}>Llegada estimada <span className="font-normal text-slate-400">(opc.)</span></span>
-            <input type="date" value={r.fecha_fin_estimada} min={r.fecha_inicio} onChange={(e) => setRem("fecha_fin_estimada", e.target.value)} className={INPUT} />
-          </label>
+            <SelectorFecha block etiqueta="Llegada estimada" value={r.fecha_fin_estimada} min={r.fecha_inicio} onChange={(v) => setRem("fecha_fin_estimada", v)} />
+          </div>
           {r.motivo_codigo === "99" ? (
             <label className="block sm:col-span-2 md:col-span-4">
               <span className={ET}>¿Cuál es el motivo? *</span>

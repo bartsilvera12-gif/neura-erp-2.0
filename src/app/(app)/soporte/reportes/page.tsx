@@ -11,6 +11,7 @@ import { BarChart3, Building2, CalendarRange, CheckCircle2, CircleDot, RotateCcw
 import { duracionCorta, hoyPy, numeroTicket } from "@/modules/soporte/dominio";
 import { apiSoporte, obtenerCatalogos, obtenerClientes, type CatalogosConEquipo } from "@/modules/soporte/api";
 import { Aviso, Cargando, Desplegable, Encabezado, IconoTile, Pagina, SelectorBuscable, TONOS, TONO_AREA, Tarjeta, TarjetaViva, Vacio, claseEtiqueta, claseInput, type Tono } from "@/modules/soporte/ui";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 type Conteo = { clave: string; nombre: string; cantidad: number };
 type Reporte = {
@@ -113,11 +114,11 @@ export default function SoporteReportesPage() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <div>
             <span className={claseEtiqueta}>Desde</span>
-            <input type="date" value={desde} max={hasta} onChange={(e) => e.target.value && setDesde(e.target.value)} className={`${claseInput} h-[42px]`} />
+            <SelectorFecha block etiqueta="Desde" value={desde} max={hasta} onChange={(v) => v && setDesde(v)} claseBoton="h-[42px] rounded-xl px-3 text-slate-900" />
           </div>
           <div>
             <span className={claseEtiqueta}>Hasta</span>
-            <input type="date" value={hasta} min={desde} onChange={(e) => e.target.value && setHasta(e.target.value)} className={`${claseInput} h-[42px]`} />
+            <SelectorFecha block etiqueta="Hasta" value={hasta} min={desde} onChange={(v) => v && setHasta(v)} claseBoton="h-[42px] rounded-xl px-3 text-slate-900" />
           </div>
           <div>
             <span className={claseEtiqueta}>Cliente</span>

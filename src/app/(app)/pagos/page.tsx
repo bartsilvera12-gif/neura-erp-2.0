@@ -25,6 +25,7 @@ import { RegistrarTransferencia } from "@/modules/cobranzas/RegistrarTransferenc
 import { ROLES_REGISTRAR } from "@/modules/cobranzas/tipos";
 import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
 import { nombreMetodo } from "@/modules/clientes/cobros";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const POR_PAGINA = 50;
 const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20";
@@ -159,11 +160,11 @@ export default function PagosPage() {
       >
         <div className="md:min-w-[10rem]">
           <label className={LABEL}>Desde {tab === "pendientes" ? "(vencimiento)" : "(fecha de pago)"}</label>
-          <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} className={`${INPUT} max-md:min-h-11`} />
+          <SelectorFecha compacto block etiqueta="Desde" value={desde} onChange={setDesde} claseBoton="rounded-xl px-3.5 py-2.5 text-slate-900 shadow-sm" />
         </div>
         <div className="md:min-w-[10rem]">
           <label className={LABEL}>Hasta {tab === "pendientes" ? "(vencimiento)" : "(fecha de pago)"}</label>
-          <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} className={`${INPUT} max-md:min-h-11`} />
+          <SelectorFecha compacto block etiqueta="Hasta" value={hasta} onChange={setHasta} claseBoton="rounded-xl px-3.5 py-2.5 text-slate-900 shadow-sm" />
         </div>
         <div className="md:min-w-[12rem]">
           <label className={LABEL}>Tipo de servicio (categoría)</label>

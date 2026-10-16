@@ -22,6 +22,7 @@ import {
   esOperacionPlaceholder, fechaCorta, generarReferencia, gs, planDe,
   type Banco, type CuotaDetalle, type DetalleCobranza,
 } from "@/modules/cobranzas/tipos";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
 const LABEL = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500";
@@ -292,10 +293,10 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
           )}
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="block">
+            <div className="block">
               <span className={LABEL}>Fecha de la transferencia</span>
-              <input type="date" value={fecha} max={hoy} onChange={(e) => setFecha(e.target.value)} className={`${INPUT} max-sm:min-h-11`} />
-            </label>
+              <SelectorFecha block etiqueta="Fecha de la transferencia" value={fecha} max={hoy} onChange={setFecha} claseBoton="rounded-xl px-3 py-2 text-slate-800" />
+            </div>
             <div>
               <span className={LABEL}>Banco de origen</span>
               <Select value={bancoId} onChange={cambiarBanco} options={opcionesBanco} block etiqueta="Banco de origen" />

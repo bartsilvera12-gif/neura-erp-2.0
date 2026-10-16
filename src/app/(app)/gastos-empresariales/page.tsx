@@ -19,6 +19,7 @@ import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import { BarrasH, C_FIJO, C_MERCADERIA, C_OPERATIVOS, C_VARIABLE, ColumnasMes, Dona, Leyenda } from "@/components/graficos/Graficos";
 import { PresupuestoModal } from "@/modules/gastos/Presupuesto";
 import { corto, fechaCorta, gs, nombreMes, type Resumen } from "@/modules/gastos/tipos";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const INPUT = "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
 
@@ -107,12 +108,12 @@ function ResumenGastos() {
           ))}
         </ScrollHorizontal>
         <div className="grid grid-cols-2 gap-2 md:contents">
-          <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 md:flex-row md:items-center md:gap-1.5">Desde
-            <input type="date" value={rango.desde} max={rango.hasta} onChange={(e) => { if (e.target.value) { setPreset(""); setRango((r) => ({ ...r, desde: e.target.value })); } }} className={`${INPUT} min-w-0 max-md:w-full max-sm:min-h-11`} />
-          </label>
-          <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 md:flex-row md:items-center md:gap-1.5">Hasta
-            <input type="date" value={rango.hasta} min={rango.desde} onChange={(e) => { if (e.target.value) { setPreset(""); setRango((r) => ({ ...r, hasta: e.target.value })); } }} className={`${INPUT} min-w-0 max-md:w-full max-sm:min-h-11`} />
-          </label>
+          <div className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 md:flex-row md:items-center md:gap-1.5">Desde
+            <SelectorFecha compacto etiqueta="Desde" value={rango.desde} max={rango.hasta} onChange={(v) => { if (v) { setPreset(""); setRango((r) => ({ ...r, desde: v })); } }} claseBoton="rounded-xl px-3 py-2 text-slate-800" className="min-w-0 max-md:w-full md:w-[150px]" />
+          </div>
+          <div className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 md:flex-row md:items-center md:gap-1.5">Hasta
+            <SelectorFecha compacto etiqueta="Hasta" value={rango.hasta} min={rango.desde} onChange={(v) => { if (v) { setPreset(""); setRango((r) => ({ ...r, hasta: v })); } }} claseBoton="rounded-xl px-3 py-2 text-slate-800" className="min-w-0 max-md:w-full md:w-[150px]" />
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Select value={sucursal} onChange={setSucursal} minWidth={190} etiqueta="Sucursal" className="max-md:!min-w-0 max-md:flex-1"

@@ -19,6 +19,7 @@ import { TablaTarjetas } from "@/components/TablaResponsive";
 import { useMediaQuery } from "@/lib/ui/responsive";
 import { formatGs } from "@/modules/caja/lib";
 import { etiquetaCaja, hora, metodoLabel, METODOS_VENTA, useEstadoCajas, type EstadoCajas } from "@/modules/caja/turno";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const TEAL = clienteConfig.color;
 const fechaVenta = (iso: string) => new Date(iso).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
@@ -200,14 +201,14 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
             <Select value={iva} onChange={conPagina1(setIva)} options={[["", "Todos los IVA"], ["10%", "IVA 10%"], ["5%", "IVA 5%"], ["EXENTA", "Exenta"]]} minWidth={140} etiqueta="IVA" />
             <Select value={estado} onChange={conPagina1(setEstado)} options={[["", "Todos los estados"], ["completada", "Completada"], ["anulada", "Anulada"]]} minWidth={160} etiqueta="Estado" />
             <Select value={producto} onChange={conPagina1(setProducto)} options={productosOpts} minWidth={190} etiqueta="Producto" />
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="px-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Desde</span>
-              <input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
-            </label>
-            <label className="flex flex-col gap-1">
+              <SelectorFecha compacto etiqueta="Desde" value={desde} onChange={(v) => { setDesde(v); setPagina(1); }} className="w-[150px] max-sm:w-full" />
+            </div>
+            <div className="flex flex-col gap-1">
               <span className="px-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Hasta</span>
-              <input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
-            </label>
+              <SelectorFecha compacto etiqueta="Hasta" value={hasta} onChange={(v) => { setHasta(v); setPagina(1); }} className="w-[150px] max-sm:w-full" />
+            </div>
             {filtrosActivos ? (
               <button
                 type="button"

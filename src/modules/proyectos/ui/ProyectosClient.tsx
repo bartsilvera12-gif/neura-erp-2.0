@@ -45,6 +45,7 @@ import { ProyectoDetalle, type MovidoResp } from "./ProyectoDetalle";
 import { ProyectoForm } from "./ProyectoForm";
 import { EstadosModal } from "./EstadosModal";
 import { ModalProyecto, MotivoModal, useAvisos, useUsuarios } from "./comun";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const VISTA_KEY = "proyectos:vista";
 const POR_COLUMNA = 30;
@@ -563,10 +564,10 @@ export default function ProyectosClient() {
         </button>
         <div className="flex shrink-0 flex-wrap items-center gap-1.5" title="Acota solo las columnas de Entregado">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 max-md:w-full">Entregado</span>
-          <input type="date" value={desde} max={hasta || undefined} onChange={(e) => setDesde(e.target.value)} aria-label="Entregados desde"
-            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20 max-md:h-11 max-md:min-w-0 max-md:flex-1" />
-          <input type="date" value={hasta} min={desde || undefined} onChange={(e) => setHasta(e.target.value)} aria-label="Entregados hasta"
-            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20 max-md:h-11 max-md:min-w-0 max-md:flex-1" />
+          <SelectorFecha compacto etiqueta="Entregados desde" value={desde} max={hasta || undefined} onChange={setDesde}
+            claseBoton="rounded-xl px-3 py-2.5 text-slate-900 shadow-sm" className="w-[140px] max-md:w-auto max-md:min-w-0 max-md:flex-1" />
+          <SelectorFecha compacto etiqueta="Entregados hasta" value={hasta} min={desde || undefined} onChange={setHasta}
+            claseBoton="rounded-xl px-3 py-2.5 text-slate-900 shadow-sm" className="w-[140px] max-md:w-auto max-md:min-w-0 max-md:flex-1" />
         </div>
       </BarraFiltros>
 

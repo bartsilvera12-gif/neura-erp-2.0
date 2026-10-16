@@ -10,6 +10,7 @@ import { HORARIO_DEFECTO, fechaLocalAIso, rangoEnHorarioLaboral, textoHorario, t
 import { aPared, ahoraPared, estadoStyle, hhmm, pad, tipoLabel, ymd } from "../calendar-utils";
 import { ResponsablesSelect } from "./ResponsablesSelect";
 import { ClienteSelect, type ClienteOpcion } from "./ClienteSelect";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 export type AgendaOptions = {
   responsables: { id: string; nombre: string | null; rol: string | null }[];
@@ -366,7 +367,7 @@ export default function CitaFormModal({
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
                 <label className={labelCls}>Fecha *</label>
-                <input type="date" className={inputCls} value={fecha} onChange={(e) => setFecha(e.target.value)} />
+                <SelectorFecha block etiqueta="Fecha de la cita" value={fecha} onChange={setFecha} />
               </div>
               <div>
                 <label className={labelCls}>Inicio *</label>

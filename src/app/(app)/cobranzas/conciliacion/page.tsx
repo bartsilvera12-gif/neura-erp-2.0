@@ -26,6 +26,7 @@ import {
   type Banco, type CobroPendiente, type EstadoCobroPendiente, type ListaConciliacion,
 } from "@/modules/cobranzas/tipos";
 import type { ReporteConciliacion } from "@/lib/cobranzas/extracto";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const TABS: { key: EstadoCobroPendiente | ""; label: string }[] = [
   { key: "pendiente", label: "Pendiente" },
@@ -307,8 +308,6 @@ function Conciliacion() {
     },
   ];
 
-  const CAMPO_FECHA = `${CONTROL} max-md:min-h-11 max-md:w-full`;
-
   return (
     <div className="w-full min-w-0 space-y-4 pb-10 sm:space-y-5">
       <EncabezadoPagina
@@ -361,12 +360,12 @@ function Conciliacion() {
             </div>
           }
         >
-          <label className="flex flex-col gap-1 text-xs text-slate-500 md:flex-row md:items-center">
-            Desde <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} aria-label="Desde (fecha de transferencia)" className={CAMPO_FECHA} />
-          </label>
-          <label className="flex flex-col gap-1 text-xs text-slate-500 md:flex-row md:items-center">
-            Hasta <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} aria-label="Hasta (fecha de transferencia)" className={CAMPO_FECHA} />
-          </label>
+          <div className="flex flex-col gap-1 text-xs text-slate-500 md:flex-row md:items-center">
+            Desde <SelectorFecha compacto etiqueta="Desde (fecha de transferencia)" value={desde} onChange={setDesde} claseBoton="rounded-lg px-2.5 py-1.5 text-slate-600" className="max-md:w-full md:w-[145px]" />
+          </div>
+          <div className="flex flex-col gap-1 text-xs text-slate-500 md:flex-row md:items-center">
+            Hasta <SelectorFecha compacto etiqueta="Hasta (fecha de transferencia)" value={hasta} onChange={setHasta} claseBoton="rounded-lg px-2.5 py-1.5 text-slate-600" className="max-md:w-full md:w-[145px]" />
+          </div>
           {planes.length > 1 ? (
             <Select value={plan} onChange={setPlan} etiqueta="Plan" options={[["", "Todos los planes"], ...planes.map((p): [string, string] => [p, p])]} minWidth={160} />
           ) : null}

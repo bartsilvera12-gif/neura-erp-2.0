@@ -21,6 +21,7 @@ import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
 import { opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
 import { loteAutomatico } from "@/modules/inventario/vencimientos";
 import { hoyPY } from "@/lib/fecha/paraguay";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const BRAND = clienteConfig.color;
 const INPUT =
@@ -422,10 +423,10 @@ export function ProductoForm({
                       <span className={ET}>N° de lote <span className="font-normal text-slate-400">(editable)</span></span>
                       <input enterKeyHint="next" autoCapitalize="characters" autoComplete="off" value={stockIni.lote} onChange={(e) => setStockIni((p) => ({ ...p, lote: e.target.value.slice(0, 40) }))} className={`${INPUT} font-mono uppercase`} />
                     </label>
-                    <label className="block">
+                    <div className="block">
                       <span className={ET}>Vencimiento *</span>
-                      <input type="date" value={stockIni.vencimiento} onChange={(e) => setStockIni((p) => ({ ...p, vencimiento: e.target.value }))} className={INPUT} />
-                    </label>
+                      <SelectorFecha block etiqueta="Vencimiento del lote" value={stockIni.vencimiento} onChange={(v) => setStockIni((p) => ({ ...p, vencimiento: v }))} />
+                    </div>
                   </div>
                 ) : null}
                 <p className="mt-2 text-[11px] text-slate-500">

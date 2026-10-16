@@ -27,6 +27,7 @@ import {
   ESTADO_GASTO, URL_CATALOGOS, fechaCorta, gs, monto, nombreMedioGasto,
   type Catalogos, type FilaGasto, type ListaGastos,
 } from "@/modules/gastos/tipos";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const POR_PAGINA = 50;
 const INPUT = "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
@@ -169,12 +170,12 @@ function GastosOperativos() {
           </div>
         }>
         <div className="flex flex-wrap items-center gap-2 max-md:grid max-md:grid-cols-2">
-          <label className="flex items-center gap-1.5 text-xs text-slate-500 max-md:flex-col max-md:items-stretch max-md:gap-1">Desde
-            <input type="date" value={f.desde} onChange={(e) => setFiltro("desde", e.target.value)} className={`${INPUT} min-w-0 max-md:w-full max-sm:min-h-11`} />
-          </label>
-          <label className="flex items-center gap-1.5 text-xs text-slate-500 max-md:flex-col max-md:items-stretch max-md:gap-1">Hasta
-            <input type="date" value={f.hasta} onChange={(e) => setFiltro("hasta", e.target.value)} className={`${INPUT} min-w-0 max-md:w-full max-sm:min-h-11`} />
-          </label>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 max-md:flex-col max-md:items-stretch max-md:gap-1">Desde
+            <SelectorFecha compacto etiqueta="Desde" value={f.desde} onChange={(v) => setFiltro("desde", v)} claseBoton="rounded-xl px-3 py-2 text-slate-800" className="min-w-0 max-md:w-full md:w-[150px]" />
+          </div>
+          <div className="flex items-center gap-1.5 text-xs text-slate-500 max-md:flex-col max-md:items-stretch max-md:gap-1">Hasta
+            <SelectorFecha compacto etiqueta="Hasta" value={f.hasta} onChange={(v) => setFiltro("hasta", v)} claseBoton="rounded-xl px-3 py-2 text-slate-800" className="min-w-0 max-md:w-full md:w-[150px]" />
+          </div>
           {f.desde || f.hasta ? (
             <button onClick={() => setF((x) => ({ ...x, desde: "", hasta: "" }))} className="text-xs font-semibold text-[#3F8E91] underline-offset-2 hover:underline max-md:col-span-2 max-md:min-h-11 max-md:rounded-lg max-md:border max-md:border-slate-200 max-md:no-underline">Todas las fechas</button>
           ) : (

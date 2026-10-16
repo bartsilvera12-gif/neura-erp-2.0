@@ -17,6 +17,7 @@ import { DeltaTexto } from "@/components/graficos/Graficos";
 import { TablaScroll } from "@/components/TablaResponsive";
 import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import type { SucursalOpcion } from "@/modules/reportes/tipos";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 // ── Rango de fechas ─────────────────────────────────────────────────────────
 export type Atajo = "hoy" | "semana" | "mes" | "mes_anterior" | "3m" | "6m" | "12m" | "24m" | "anio" | "todo";
@@ -141,7 +142,6 @@ export function EncabezadoReporte({ kicker, titulo, subtitulo, volver = { href: 
   );
 }
 
-const INPUT_FECHA = "h-[36px] rounded-xl border border-slate-200 bg-white px-2.5 text-sm text-slate-700 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 
 export function FiltrosReporte({ filtros, atajos = ATAJOS_BASE, sucursales, cargando, children, sinFechas = false, etiquetaFechas }: {
   filtros: ReturnType<typeof useFiltrosReporte>;
@@ -170,12 +170,12 @@ export function FiltrosReporte({ filtros, atajos = ATAJOS_BASE, sucursales, carg
           </ScrollHorizontal>
           {etiquetaFechas ? <span className="text-xs font-medium text-slate-400">{etiquetaFechas}</span> : null}
           <div className="grid grid-cols-2 gap-2 sm:contents">
-            <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Desde
-              <input type="date" value={f.desde} max={f.hasta || undefined} onChange={(e) => setRango(e.target.value, f.hasta)} className={`${INPUT_FECHA} max-sm:h-11 max-sm:w-full max-sm:min-w-0`} />
-            </label>
-            <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Hasta
-              <input type="date" value={f.hasta} min={f.desde || undefined} max={hoyPY()} onChange={(e) => setRango(f.desde, e.target.value)} className={`${INPUT_FECHA} max-sm:h-11 max-sm:w-full max-sm:min-w-0`} />
-            </label>
+            <div className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Desde
+              <SelectorFecha compacto etiqueta="Desde" value={f.desde} max={f.hasta || undefined} onChange={(v) => setRango(v, f.hasta)} claseBoton="h-[36px] rounded-xl px-2.5 text-slate-700 max-sm:h-11" className="min-w-0 max-sm:w-full sm:w-[140px]" />
+            </div>
+            <div className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Hasta
+              <SelectorFecha compacto etiqueta="Hasta" value={f.hasta} min={f.desde || undefined} max={hoyPY()} onChange={(v) => setRango(f.desde, v)} claseBoton="h-[36px] rounded-xl px-2.5 text-slate-700 max-sm:h-11" className="min-w-0 max-sm:w-full sm:w-[140px]" />
+            </div>
           </div>
         </>
       ) : null}
@@ -216,12 +216,12 @@ export function RangoFechasLocal({ atajos, atajo, onAtajo, desde, hasta, onDesde
         ))}
       </ScrollHorizontal>
       <div className="grid grid-cols-2 gap-2 sm:contents">
-        <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Desde
-          <input type="date" value={desde} max={hasta || undefined} onChange={(e) => onDesde(e.target.value)} className={`${INPUT_FECHA} max-sm:h-11 max-sm:w-full max-sm:min-w-0`} />
-        </label>
-        <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Hasta
-          <input type="date" value={hasta} min={desde || undefined} onChange={(e) => onHasta(e.target.value)} className={`${INPUT_FECHA} max-sm:h-11 max-sm:w-full max-sm:min-w-0`} />
-        </label>
+        <div className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Desde
+          <SelectorFecha compacto etiqueta="Desde" value={desde} max={hasta || undefined} onChange={onDesde} claseBoton="h-[36px] rounded-xl px-2.5 text-slate-700 max-sm:h-11" className="min-w-0 max-sm:w-full sm:w-[140px]" />
+        </div>
+        <div className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Hasta
+          <SelectorFecha compacto etiqueta="Hasta" value={hasta} min={desde || undefined} onChange={onHasta} claseBoton="h-[36px] rounded-xl px-2.5 text-slate-700 max-sm:h-11" className="min-w-0 max-sm:w-full sm:w-[140px]" />
+        </div>
       </div>
     </div>
   );

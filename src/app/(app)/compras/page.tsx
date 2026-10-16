@@ -23,6 +23,7 @@ import { ComprobantesCompra } from "@/modules/compras/Comprobantes";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { ESTADO_CXP, dinero, nombreMetodoPago } from "@/modules/compras/pagos";
 import { RegistrarPagoProveedor, imprimirOrdenPago, useAvisoPago } from "@/modules/compras/RegistrarPagoProveedor";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const TEAL = clienteConfig.color;
 const POR_PAGINA = 25;
@@ -30,7 +31,6 @@ const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-P
 const fecha = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric" });
 const fechaDia = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("es-PY", { day: "2-digit", month: "short", year: "numeric" });
 const TH = "whitespace-nowrap px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[var(--brand)]";
-const INPUT_F = "h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] md:h-[38px] md:w-auto";
 
 export default function ComprasPage() {
   const [rows, setRows] = useState<Compra[]>([]);
@@ -176,14 +176,14 @@ export default function ComprasPage() {
               </div>
             }
           >
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-slate-600 md:hidden">Desde</span>
-              <input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} aria-label="Desde" className={INPUT_F} />
-            </label>
-            <label className="flex flex-col gap-1">
+              <SelectorFecha compacto etiqueta="Desde" value={desde} onChange={(v) => { setDesde(v); setPagina(1); }} claseBoton="h-11 rounded-xl px-3 text-slate-600 md:h-[38px]" className="w-full md:w-[150px]" />
+            </div>
+            <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-slate-600 md:hidden">Hasta</span>
-              <input type="date" value={hasta} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} aria-label="Hasta" className={INPUT_F} />
-            </label>
+              <SelectorFecha compacto etiqueta="Hasta" value={hasta} onChange={(v) => { setHasta(v); setPagina(1); }} claseBoton="h-11 rounded-xl px-3 text-slate-600 md:h-[38px]" className="w-full md:w-[150px]" />
+            </div>
             <Select value={proveedor} onChange={(v) => { setProveedor(v); setPagina(1); }} minWidth={180} etiqueta="Proveedor"
               options={[["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])]} />
             <Select value={tipoPago} onChange={(v) => { setTipoPago(v); setPagina(1); }} minWidth={140} etiqueta="Condición" options={[["", "Contado y crédito"], ["contado", "Contado"], ["credito", "Crédito"]]} />

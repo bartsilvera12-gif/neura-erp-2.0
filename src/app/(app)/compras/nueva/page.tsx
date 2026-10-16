@@ -36,6 +36,7 @@ import { ProductoForm } from "@/modules/inventario/ProductoForm";
 import { BuscadorProductos, ET, Fila, gs, INPUT, ivaDe, Segmentado, sumarDias, Tarjeta, usd } from "@/modules/compras/partes";
 import { loteAutomatico } from "@/modules/inventario/vencimientos";
 import { invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const TEAL = clienteConfig.color;
 type Linea = {
@@ -382,10 +383,10 @@ function NuevaCompra() {
                   <span className={ET}>Timbrado <span className="font-normal text-slate-400">(opcional)</span></span>
                   <input value={timbrado} onChange={(e) => setTimbrado(e.target.value.replace(/\D/g, "").slice(0, 12))} inputMode="numeric" enterKeyHint="next" placeholder="Ej: 12345678" className={`${INPUT} font-mono`} />
                 </label>
-                <label className="block">
+                <div className="block">
                   <span className={ET}>Fecha de la factura</span>
-                  <input type="date" value={fechaFactura} max={hoyPY()} onChange={(e) => setFechaFactura(e.target.value)} className={INPUT} />
-                </label>
+                  <SelectorFecha block etiqueta="Fecha de la factura" value={fechaFactura} max={hoyPY()} onChange={setFechaFactura} />
+                </div>
               </div>
               <div>
                 <span className={ET}>Condición</span>
@@ -597,10 +598,10 @@ function LineaCompra({ l, moneda, factor, excede, onCambiar, onQuitar }: {
             <span className={ET}>Lote <span className="font-normal text-slate-400">(editable)</span></span>
             <input value={l.lote} enterKeyHint="next" autoComplete="off" autoCapitalize="characters" onChange={(e) => onCambiar({ lote: e.target.value.slice(0, 40) })} placeholder={loteAutomatico(hoyPY())} className={`${INPUT} bg-white py-2 font-mono uppercase`} />
           </label>
-          <label className="flex min-w-0 flex-col justify-end">
+          <div className="flex min-w-0 flex-col justify-end">
             <span className={ET}>Vencimiento *</span>
-            <input type="date" value={l.vencimiento} onChange={(e) => onCambiar({ vencimiento: e.target.value })} className={`${INPUT} bg-white py-2 ${l.vencimiento ? "" : "border-amber-300"}`} />
-          </label>
+            <SelectorFecha block etiqueta="Vencimiento del lote" value={l.vencimiento} onChange={(v) => onCambiar({ vencimiento: v })} alerta={!l.vencimiento} claseBoton="rounded-xl px-3 py-2 text-slate-800" />
+          </div>
           <p className="self-end text-[11px] text-slate-500 min-[420px]:col-span-2 sm:col-span-1 sm:pb-2">
             {!l.vencimiento ? "Cargá el vencimiento de este lote."
               : l.vencimiento < hoyPY() ? <span className="font-semibold text-rose-600">Esa fecha ya pasó: el lote entra vencido.</span>

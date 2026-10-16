@@ -18,6 +18,7 @@ import MontoInput from "@/components/ui/MontoInput";
 import { PIE_MODAL, TEAL } from "@/modules/clientes/ui";
 import type { Plan, SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos";
 import { IVA_LABEL, monto, nombreMes } from "@/modules/clientes/suscripciones/ui";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 const LABEL = "mb-1 block text-xs font-medium text-slate-600";
@@ -148,10 +149,10 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
                 <span className="mt-1 block text-[11px] text-amber-700">Precio especial (el plan sale {monto(plan.precio, plan.moneda)})</span>
               ) : null}
             </label>
-            <label>
+            <div>
               <span className={LABEL}>Fecha de inicio</span>
-              <input type="date" className={`${INPUT} min-w-0`} value={inicio} onChange={(e) => setInicio(e.target.value)} required />
-            </label>
+              <SelectorFecha block etiqueta="Fecha de inicio" value={inicio} onChange={setInicio} className="min-w-0" />
+            </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <label>

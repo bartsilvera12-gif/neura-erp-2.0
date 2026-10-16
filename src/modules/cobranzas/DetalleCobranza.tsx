@@ -22,6 +22,7 @@ import {
   fechaCorta, gs, mesCorto, planDe, TRAMO_CLASS, TRAMO_LABEL,
   type CuotaDetalle, type DetalleCobranza, type PromesaPago, type TramoKey,
 } from "@/modules/cobranzas/tipos";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 export function TramoBadge({ tramo }: { tramo: TramoKey }) {
   return (
@@ -374,11 +375,11 @@ function ModalPromesa({ clienteId, onClose, onHecho }: { clienteId: string; onCl
           <button type="button" onClick={onClose} aria-label="Cerrar" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
-          <label className="block">
+          <div className="block">
             <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Fecha de promesa</span>
-            <input type="date" value={fecha} min={hoy} onChange={(e) => setFecha(e.target.value)}
-              className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20" />
-          </label>
+            <SelectorFecha block etiqueta="Fecha de promesa" value={fecha} min={hoy} onChange={setFecha}
+              claseBoton="rounded-xl px-3 py-2 text-slate-800 shadow-sm" className="mt-1" />
+          </div>
           {error ? <p className="mt-2 text-xs text-rose-600">{error}</p> : null}
           <p className="mt-2 text-[11px] text-slate-400">Se marca cumplida sola cuando el cliente paga.</p>
         </div>

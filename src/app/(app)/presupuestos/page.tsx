@@ -27,6 +27,7 @@ import { BadgeEstado, textoVigencia } from "@/modules/presupuestos/ui";
 import { ModalAjustes } from "@/modules/presupuestos/Modales";
 import { PresupuestoModal } from "@/modules/presupuestos/PresupuestoModal";
 import { diaCorto, monto, type ListaPresupuestos } from "@/modules/presupuestos/tipos";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const TEAL = clienteConfig.color;
 const POR_PAGINA = 25;
@@ -243,11 +244,11 @@ function Lista() {
           <Select value={vendedor} onChange={(v) => { setVendedor(v); setPagina(1); }} minWidth={170} etiqueta="Vendedor"
             options={[["", "Todos los vendedores"], ...vendedores.map((u): [string, string] => [u.id, u.nombre])]} />
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
-            <input type="date" value={desde} max={hasta || undefined} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} aria-label="Desde"
-              className="min-w-0 flex-1 rounded-xl border border-slate-200 px-2.5 py-2 text-sm text-slate-700 outline-none focus:border-[var(--brand)] max-md:min-h-11" />
+            <SelectorFecha compacto etiqueta="Desde" value={desde} max={hasta || undefined} onChange={(v) => { setDesde(v); setPagina(1); }}
+              claseBoton="rounded-xl px-2.5 py-2 text-slate-700" className="min-w-0 flex-1 md:w-[140px] md:flex-none" />
             <span>a</span>
-            <input type="date" value={hasta} min={desde || undefined} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} aria-label="Hasta"
-              className="min-w-0 flex-1 rounded-xl border border-slate-200 px-2.5 py-2 text-sm text-slate-700 outline-none focus:border-[var(--brand)] max-md:min-h-11" />
+            <SelectorFecha compacto etiqueta="Hasta" value={hasta} min={desde || undefined} onChange={(v) => { setHasta(v); setPagina(1); }}
+              claseBoton="rounded-xl px-2.5 py-2 text-slate-700" className="min-w-0 flex-1 md:w-[140px] md:flex-none" />
           </div>
         </BarraFiltros>
 

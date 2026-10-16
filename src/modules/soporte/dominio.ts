@@ -440,7 +440,7 @@ export function fechaObjetivoAIso(v: string): string | undefined {
   return Number.isFinite(ms) ? new Date(ms).toISOString() : undefined;
 }
 
-/** ISO → `YYYY-MM-DDTHH:mm` en hora de Paraguay, para <input type="datetime-local">. */
+/** ISO → `YYYY-MM-DDTHH:mm` en hora de Paraguay, formato de `SelectorFechaHora` (como datetime-local). */
 export function isoAFechaHoraLocal(iso: string | null | undefined): string {
   if (!iso) return "";
   const ms = Date.parse(iso);

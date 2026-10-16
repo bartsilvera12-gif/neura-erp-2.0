@@ -37,6 +37,7 @@ import {
   btnIcono, btnPrimario, btnSecundario, thClase,
 } from "@/modules/conversaciones/ui-supervision";
 import { Girando } from "@/modules/conversaciones/ui";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const VisorChat = dynamic(() => import("@/modules/conversaciones/VisorChat").then((m) => m.VisorChat), { ssr: false });
 
@@ -434,16 +435,17 @@ export function Monitoreo() {
         contador={agentes.length}
         acciones={
           <>
-            <label className="flex items-center gap-2 text-[11px] font-semibold text-slate-600" title="La columna Leads es por esta fecha; el resto es estado en vivo.">
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-600" title="La columna Leads es por esta fecha; el resto es estado en vivo.">
               Leads del día
-              <input
-                type="date"
+              <SelectorFecha
+                compacto
+                etiqueta="Leads del día"
                 value={fecha}
                 max={hoy}
-                onChange={(e) => e.target.value && setFecha(e.target.value)}
-                className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs tabular-nums outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 max-sm:h-11"
+                onChange={(v) => v && setFecha(v)}
+                claseBoton="rounded-lg px-2 py-1 text-xs font-normal text-slate-700"
               />
-            </label>
+            </div>
             {fecha !== hoy ? (
               <button type="button" className={btnSecundario} onClick={() => setFecha(hoy)}>
                 Hoy

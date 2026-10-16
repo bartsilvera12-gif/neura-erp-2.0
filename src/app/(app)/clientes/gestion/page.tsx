@@ -37,6 +37,7 @@ import { ModalCambioVencimiento, ModalElegirSuscripcion, ModalHistorial, ModalSe
 import {
   FILTROS_VACIOS, type ClienteBuscado, type DocumentoCliente, type Documentos, type EstadoDocumento, type FiltrosDocumentos,
 } from "@/modules/clientes/gestion/tipos";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const F_INPUT = "min-h-11 w-full min-w-0 rounded-lg md:min-h-0 border border-slate-200 bg-white px-2.5 py-1.5 text-sm shadow-sm outline-none transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]";
 const F_LABEL = "mb-0.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400";
@@ -283,22 +284,22 @@ function GestionClientes() {
                 <div className="space-y-3 border-t border-slate-200/70 bg-white px-3 py-3 sm:px-4">
                   <SectionLabel>Filtros sobre el listado de facturas</SectionLabel>
                   <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                    <label className="block">
+                    <div className="block">
                       <span className={F_LABEL}>Fecha emisión desde</span>
-                      <input type="date" value={filtros.emision_desde} onChange={(e) => setFiltro("emision_desde", e.target.value)} className={F_INPUT} />
-                    </label>
-                    <label className="block">
+                      <SelectorFecha compacto block etiqueta="Fecha emisión desde" value={filtros.emision_desde} onChange={(v) => setFiltro("emision_desde", v)} claseBoton="rounded-lg px-2.5 py-1.5 text-slate-800 shadow-sm" />
+                    </div>
+                    <div className="block">
                       <span className={F_LABEL}>Fecha emisión hasta</span>
-                      <input type="date" value={filtros.emision_hasta} onChange={(e) => setFiltro("emision_hasta", e.target.value)} className={F_INPUT} />
-                    </label>
-                    <label className="block">
+                      <SelectorFecha compacto block etiqueta="Fecha emisión hasta" value={filtros.emision_hasta} onChange={(v) => setFiltro("emision_hasta", v)} claseBoton="rounded-lg px-2.5 py-1.5 text-slate-800 shadow-sm" />
+                    </div>
+                    <div className="block">
                       <span className={F_LABEL}>Vencimiento desde</span>
-                      <input type="date" value={filtros.venc_desde} onChange={(e) => setFiltro("venc_desde", e.target.value)} className={F_INPUT} />
-                    </label>
-                    <label className="block">
+                      <SelectorFecha compacto block etiqueta="Vencimiento desde" value={filtros.venc_desde} onChange={(v) => setFiltro("venc_desde", v)} claseBoton="rounded-lg px-2.5 py-1.5 text-slate-800 shadow-sm" />
+                    </div>
+                    <div className="block">
                       <span className={F_LABEL}>Vencimiento hasta</span>
-                      <input type="date" value={filtros.venc_hasta} onChange={(e) => setFiltro("venc_hasta", e.target.value)} className={F_INPUT} />
-                    </label>
+                      <SelectorFecha compacto block etiqueta="Vencimiento hasta" value={filtros.venc_hasta} onChange={(v) => setFiltro("venc_hasta", v)} claseBoton="rounded-lg px-2.5 py-1.5 text-slate-800 shadow-sm" />
+                    </div>
                   </div>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3">
                     <label className="flex min-h-11 cursor-pointer items-center gap-2 sm:min-h-0">

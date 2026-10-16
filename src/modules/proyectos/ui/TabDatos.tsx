@@ -17,6 +17,7 @@ import {
   type Detalle, type Prioridad,
 } from "@/modules/proyectos/tipos";
 import { INPUT, LABEL, PANEL, TituloPanel, useUsuarios } from "./comun";
+import { SelectorFecha, SelectorFechaHora } from "@/components/SelectorFecha";
 
 type Form = {
   titulo: string;
@@ -195,14 +196,14 @@ export function TabDatos({ d, onGuardado }: { d: Detalle; onGuardado: (d: Detall
               <span className={LABEL}>Prioridad</span>
               <Select block value={f.prioridad} onChange={(v) => set("prioridad", v as Prioridad)} options={PRIORIDADES.map((p) => [p, PRIORIDAD_LABEL[p]] as [string, string])} disabled={!editable} />
             </div>
-            <label className="block">
+            <div className="block">
               <span className={LABEL}>Fecha de ingreso</span>
-              <input type="date" value={f.fecha_ingreso} onChange={(e) => set("fecha_ingreso", e.target.value)} className={INPUT} />
-            </label>
-            <label className="block">
+              <SelectorFecha block etiqueta="Fecha de ingreso" value={f.fecha_ingreso} onChange={(v) => set("fecha_ingreso", v)} />
+            </div>
+            <div className="block">
               <span className={LABEL}>Fecha prometida</span>
-              <input type="datetime-local" value={f.fecha_prometida} onChange={(e) => set("fecha_prometida", e.target.value)} className={INPUT} />
-            </label>
+              <SelectorFechaHora block etiqueta="Fecha prometida" value={f.fecha_prometida} onChange={(v) => set("fecha_prometida", v)} />
+            </div>
             <div>
               <span className={LABEL}>Monto vendido</span>
               <div className="flex gap-2">

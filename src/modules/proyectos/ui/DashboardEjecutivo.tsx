@@ -27,6 +27,7 @@ import {
   Barra, Card, CardTitle, CeldaProyecto, Cargando, ErrorCaja, EstadoPill, Girando, Kpi, SemaforoBadge,
   TABLA_TD, TABLA_TH, fmtHoras, persona,
 } from "./tableros";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 type Aviso = (a: { texto: string; tipo?: "error" }) => void;
 
@@ -140,11 +141,11 @@ export function DashboardEjecutivo({ config, version, onAbrir, avisar }: {
         <Select value={preset} onChange={elegirPreset} minWidth={170} options={PRESETS} />
         <div className="flex items-center gap-1.5 max-sm:grid max-sm:w-full max-sm:grid-cols-[auto_minmax(0,1fr)]">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Desde</span>
-          <input type="date" value={desde} max={hasta || undefined} onChange={(e) => { setPreset("personalizado"); setDesde(e.target.value); }} aria-label="Desde"
-            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm max-sm:h-11 max-sm:w-full max-sm:min-w-0 text-slate-900 outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20" />
+          <SelectorFecha compacto etiqueta="Desde" value={desde} max={hasta || undefined} onChange={(v) => { setPreset("personalizado"); setDesde(v); }}
+            claseBoton="rounded-xl px-3 py-2 text-slate-900" className="w-[140px] max-sm:w-full max-sm:min-w-0" />
           <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Hasta</span>
-          <input type="date" value={hasta} min={desde || undefined} onChange={(e) => { setPreset("personalizado"); setHasta(e.target.value); }} aria-label="Hasta"
-            className="w-[140px] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm max-sm:h-11 max-sm:w-full max-sm:min-w-0 text-slate-900 outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20" />
+          <SelectorFecha compacto etiqueta="Hasta" value={hasta} min={desde || undefined} onChange={(v) => { setPreset("personalizado"); setHasta(v); }}
+            claseBoton="rounded-xl px-3 py-2 text-slate-900" className="w-[140px] max-sm:w-full max-sm:min-w-0" />
         </div>
         <Girando activo={cargando && !!data} />
         <span className="hidden text-[11px] text-slate-400 lg:inline">La cartera es la de hoy; ingresos, entregas y tiempos por estado son del período.</span>

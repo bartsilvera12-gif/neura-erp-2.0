@@ -34,6 +34,7 @@ import {
   requiereTimbrado, usaCuentaBancaria,
   type Catalogos, type DetalleGasto, type IvaTipo, type MedioPagoGasto, type Moneda, type TipoPago,
 } from "@/modules/gastos/tipos";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 max-sm:py-2.5 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 disabled:bg-slate-50 disabled:text-slate-400";
 const LABEL = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500";
@@ -409,7 +410,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                 </div>
                 <div className="sm:col-span-2">
                   <label className={LABEL}>{form.con_comprobante ? "Fecha del comprobante *" : "Fecha *"}</label>
-                  <input type="date" className={INPUT} max={hoyPY()} value={form.fecha_comprobante} onChange={(e) => set("fecha_comprobante", e.target.value)} />
+                  <SelectorFecha block etiqueta={form.con_comprobante ? "Fecha del comprobante" : "Fecha"} max={hoyPY()} value={form.fecha_comprobante} onChange={(v) => set("fecha_comprobante", v)} claseBoton="rounded-xl px-3 py-2 text-slate-800" />
                 </div>
                 {autocompletado ? (
                   <p className="flex items-start gap-1.5 rounded-lg bg-[#4FAEB2]/10 px-3 py-1.5 text-xs text-[#2f6f72] sm:col-span-6">
@@ -527,8 +528,8 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                     </div>
                     <div className="sm:col-span-2">
                       <label className={LABEL}>Vencimiento</label>
-                      <input type="date" className={INPUT} min={form.fecha_comprobante || undefined} value={form.fecha_vencimiento || vencSugerido}
-                        onChange={(e) => set("fecha_vencimiento", e.target.value)} />
+                      <SelectorFecha block etiqueta="Vencimiento" min={form.fecha_comprobante || undefined} value={form.fecha_vencimiento || vencSugerido}
+                        onChange={(v) => set("fecha_vencimiento", v)} claseBoton="rounded-xl px-3 py-2 text-slate-800" />
                     </div>
                     <p className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-800 sm:col-span-6">
                       Al confirmar queda como deuda con el proveedor y se paga desde <b>Pagos a proveedores</b>.

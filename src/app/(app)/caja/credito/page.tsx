@@ -17,6 +17,7 @@ import { Cabecera, INPUT_FILTRO, Paginador, Pestanas, TEAL } from "@/modules/inv
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
 import { formatGs } from "@/modules/caja/lib";
 import { etiquetaCaja, useEstadoCajas } from "@/modules/caja/turno";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 type Fila = {
   venta_id: string;
@@ -126,9 +127,9 @@ export default function VentasCreditoPage() {
         ) : null}
         {periodo === "rango" ? (
           <div className="flex items-center gap-2 max-sm:w-full">
-            <input type="date" value={desde} max={hasta || undefined} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} aria-label="Desde" className={`${INPUT_FILTRO} min-w-0 max-sm:h-11 max-sm:flex-1`} />
+            <SelectorFecha compacto etiqueta="Desde" value={desde} max={hasta || undefined} onChange={(v) => { setDesde(v); setPagina(1); }} claseBoton="h-10 rounded-xl px-3 text-slate-800" className="w-[150px] min-w-0 max-sm:w-auto max-sm:flex-1" />
             <span className="text-xs text-slate-400">a</span>
-            <input type="date" value={hasta} min={desde || undefined} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} aria-label="Hasta" className={`${INPUT_FILTRO} min-w-0 max-sm:h-11 max-sm:flex-1`} />
+            <SelectorFecha compacto etiqueta="Hasta" value={hasta} min={desde || undefined} onChange={(v) => { setHasta(v); setPagina(1); }} claseBoton="h-10 rounded-xl px-3 text-slate-800" className="w-[150px] min-w-0 max-sm:w-auto max-sm:flex-1" />
           </div>
         ) : null}
       </div>

@@ -24,6 +24,7 @@ import { Paginador, Pestanas } from "@/modules/inventario/ui";
 import { precargarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { GRUPOS_ORIGEN, ORIGEN_LABEL, hrefDocumento, type Movimiento, type TipoMovimiento } from "@/modules/inventario/kardex";
 import { hayVariosDepositos, opcionesAlcance, partesAlcance, useDepositos } from "@/modules/inventario/depositos";
+import { SelectorFecha } from "@/components/SelectorFecha";
 
 const TEAL = clienteConfig.color;
 const TZ = "America/Asuncion";
@@ -364,14 +365,14 @@ function Movimientos() {
           >
             {varios ? <Select value={alcance} onChange={setAlcance} options={opcAlcance} minWidth={220} etiqueta="Depósito o sucursal" /> : null}
             <Select value={tipo} onChange={setTipo} options={[["", "Entradas y salidas"], ["ENTRADA", "Solo entradas"], ["SALIDA", "Solo salidas"]]} minWidth={170} etiqueta="Tipo de movimiento" />
-            <label className="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-stretch max-md:gap-1">
+            <div className="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-stretch max-md:gap-1">
               <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500"><Calendar className="h-4 w-4 text-slate-400" /> Desde</span>
-              <input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} max={hasta || undefined} className={`${input} min-w-0 md:w-[150px]`} aria-label="Desde" />
-            </label>
-            <label className="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-stretch max-md:gap-1">
+              <SelectorFecha compacto etiqueta="Desde" value={desde} onChange={setDesde} max={hasta || undefined} claseBoton="h-11 rounded-xl px-3 text-slate-800 md:h-10" className="min-w-0 md:w-[150px]" />
+            </div>
+            <div className="flex min-w-0 items-center gap-2 max-md:flex-col max-md:items-stretch max-md:gap-1">
               <span className="text-xs font-medium text-slate-500">Hasta</span>
-              <input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} min={desde || undefined} className={`${input} min-w-0 md:w-[150px]`} aria-label="Hasta" />
-            </label>
+              <SelectorFecha compacto etiqueta="Hasta" value={hasta} onChange={setHasta} min={desde || undefined} claseBoton="h-11 rounded-xl px-3 text-slate-800 md:h-10" className="min-w-0 md:w-[150px]" />
+            </div>
           </BarraFiltros>
         </div>
 
