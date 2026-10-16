@@ -9,6 +9,7 @@
  */
 import { TablaScroll } from "@/components/TablaResponsive";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
+import { Select } from "@/components/Select";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Inbox, Plus, Trash2, X } from "lucide-react";
@@ -381,15 +382,17 @@ function EditorCola({
               </p>
             </div>
             <div className="flex flex-wrap items-end gap-2">
-              <label className="block min-w-[min(14rem,100%)] flex-1">
+              <div className="block min-w-[min(14rem,100%)] flex-1">
                 <span className={etiqueta}>Agregar usuario</span>
-                <select value={agregar} onChange={(e) => setAgregar(e.target.value)} className={campo}>
-                  <option value="">Elegir…</option>
-                  {disponibles.map((u) => (
-                    <option key={u.id} value={u.id}>{u.nombre} ({u.rol})</option>
-                  ))}
-                </select>
-              </label>
+                <Select
+                  compacto
+                  block
+                  etiqueta="Agregar usuario"
+                  value={agregar}
+                  onChange={setAgregar}
+                  options={[["", "Elegir…"], ...disponibles.map((u): [string, string] => [u.id, `${u.nombre} (${u.rol})`])]}
+                />
+              </div>
               <button
                 type="button"
                 disabled={!agregar}

@@ -20,6 +20,7 @@ import { createPortal } from "react-dom";
 import { CheckCircle2, FlaskConical, MessagesSquare, MoreHorizontal, Zap } from "lucide-react";
 import { BarraFiltros } from "@/components/EncabezadoPagina";
 import { MenuAcciones } from "@/components/MenuAcciones";
+import { Select } from "@/components/Select";
 import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import { useMediaQuery, useViewportVisible } from "@/lib/ui/responsive";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
@@ -36,10 +37,8 @@ const ModalRespuestas = dynamic(() => import("@/modules/conversaciones/ModalResp
 const ModalSimular = dynamic(() => import("@/modules/conversaciones/ModalSimular").then((m) => m.ModalSimular), { ssr: false });
 
 const CLAVE_VISTA = "zentra:conversaciones:vista";
-const flecha =
-  "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%234FAEB2' stroke-width='2.5'><path stroke-linecap='round' stroke-linejoin='round' d='M6 9l6 6 6-6'/></svg>\")";
-const claseSelect =
-  "h-11 md:h-auto appearance-none rounded-lg border border-slate-200 bg-white bg-[length:13px_13px] bg-[right_0.55rem_center] bg-no-repeat px-2.5 py-2 pr-7 text-xs font-medium text-slate-700 shadow-sm outline-none transition-colors hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 min-w-[8.5rem] max-w-[min(16rem,60vw)] shrink-0";
+/** Filtros de la barra: en ≥ 768 px van en línea (sin achicarse); en celular, en la hoja de filtros a todo el ancho. */
+const claseSelect = "shrink-0 md:max-w-[16rem] max-md:w-full max-md:!min-w-0";
 
 /** Debajo de este ancho el chat se abre a pantalla completa sobre la lista. */
 const MQ_CHAT_ENCIMA = "(max-width: 767.98px)";
@@ -269,20 +268,26 @@ export function Bandeja() {
           {hayFiltros ? (
             <>
               {opciones && opciones.canales.length > 1 ? (
-                <select className={claseSelect} style={{ backgroundImage: flecha }} value={canal} onChange={(e) => setCanal(e.target.value)} aria-label="Filtrar por canal">
-                  <option value="">Todos los canales</option>
-                  {opciones.canales.map((c) => (
-                    <option key={c.id} value={c.id}>{c.nombre}</option>
-                  ))}
-                </select>
+                <Select
+                  compacto
+                  minWidth={160}
+                  className={claseSelect}
+                  etiqueta="Filtrar por canal"
+                  value={canal}
+                  onChange={setCanal}
+                  options={[["", "Todos los canales"], ...opciones.canales.map((c): [string, string] => [c.id, c.nombre])]}
+                />
               ) : null}
               {opciones && (vista === "todas" || vista === "cerradas") ? (
-                <select className={claseSelect} style={{ backgroundImage: flecha }} value={asesor} onChange={(e) => setAsesor(e.target.value)} aria-label="Filtrar por asesor">
-                  <option value="">Todos los asesores</option>
-                  {opciones.equipo.map((u) => (
-                    <option key={u.id} value={u.id}>{u.nombre}</option>
-                  ))}
-                </select>
+                <Select
+                  compacto
+                  minWidth={170}
+                  className={claseSelect}
+                  etiqueta="Filtrar por asesor"
+                  value={asesor}
+                  onChange={setAsesor}
+                  options={[["", "Todos los asesores"], ...opciones.equipo.map((u): [string, string] => [u.id, u.nombre])]}
+                />
               ) : null}
             </>
           ) : null}

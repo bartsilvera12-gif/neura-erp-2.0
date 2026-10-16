@@ -10,6 +10,7 @@ import { CheckCircle2, Headset } from "lucide-react";
 import { crearTicket, pedirCatalogoCierre, type CatalogoCierre } from "@/modules/conversaciones/api";
 import type { FilaBandeja } from "@/modules/conversaciones/dominio";
 import { numeroTicket } from "@/modules/tipificacion/dominio";
+import { Select } from "@/components/Select";
 import { AvisoError, Ventana, botonPrimario, botonSecundario, claseCampo, claseEtiqueta } from "@/modules/conversaciones/ui";
 
 const esTicket = (c: string | null) => c === "ticket_error" || c === "ticket_cambio";
@@ -84,18 +85,26 @@ export function ModalTicket({ conv, contacto, onCerrar, onAbrirFicha }: { conv: 
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className={claseEtiqueta}>Estado</label>
-              <select className={claseCampo} value={familia} onChange={(e) => (setFamilia(e.target.value), setSub(""), setClas(""))}>
-                {familias.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}
-              </select>
+              <Select
+                block
+                etiqueta="Estado"
+                value={familia}
+                onChange={(v) => (setFamilia(v), setSub(""), setClas(""))}
+                options={familias.map((f): [string, string] => [f.id, f.nombre])}
+              />
             </div>
             <div>
               <label className={claseEtiqueta}>Subestado</label>
-              <select className={claseCampo} value={sub} onChange={(e) => (setSub(e.target.value), setClas(""))}>
-                <option value="">Elegir…</option>
-                {fam?.subestados.map((s) => (
-                  <option key={s.id} value={s.id}>{s.nombre} · {s.comportamiento === "ticket_error" ? "Error" : "Cambio"}</option>
-                ))}
-              </select>
+              <Select
+                block
+                etiqueta="Subestado"
+                value={sub}
+                onChange={(v) => (setSub(v), setClas(""))}
+                options={[
+                  ["", "Elegir…"],
+                  ...(fam?.subestados ?? []).map((s): [string, string] => [s.id, `${s.nombre} · ${s.comportamiento === "ticket_error" ? "Error" : "Cambio"}`]),
+                ]}
+              />
             </div>
           </div>
           {clasificaciones.length ? (

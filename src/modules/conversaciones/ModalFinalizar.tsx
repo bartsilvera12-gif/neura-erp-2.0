@@ -10,6 +10,7 @@ import { CheckCircle2, Headset } from "lucide-react";
 import { finalizar, pedirCatalogoCierre, type CatalogoCierre } from "@/modules/conversaciones/api";
 import type { FilaBandeja } from "@/modules/conversaciones/dominio";
 import { numeroTicket } from "@/modules/tipificacion/dominio";
+import { Select } from "@/components/Select";
 import { AvisoError, Ventana, botonPrimario, botonSecundario, claseCampo, claseEtiqueta } from "@/modules/conversaciones/ui";
 
 export function ModalFinalizar({ conv, onCerrar, onListo }: { conv: FilaBandeja; onCerrar: () => void; onListo: (f: FilaBandeja | null, aviso: string) => void }) {
@@ -73,24 +74,30 @@ export function ModalFinalizar({ conv, onCerrar, onListo }: { conv: FilaBandeja;
         <div className="space-y-3">
           <div>
             <label className={claseEtiqueta}>Estado</label>
-            <select className={claseCampo} value={familia} onChange={(e) => (setFamilia(e.target.value), setSub(""), setClas(""))}>
-              {cat.familias.map((f) => (
-                <option key={f.id} value={f.id}>{f.nombre}</option>
-              ))}
-            </select>
+            <Select
+              block
+              etiqueta="Estado"
+              value={familia}
+              onChange={(v) => (setFamilia(v), setSub(""), setClas(""))}
+              options={cat.familias.map((f): [string, string] => [f.id, f.nombre])}
+            />
           </div>
           {fam && fam.subestados.length ? (
             <div>
               <label className={claseEtiqueta}>Subestado</label>
-              <select className={claseCampo} value={sub} onChange={(e) => (setSub(e.target.value), setClas(""))}>
-                <option value="">Elegir…</option>
-                {fam.subestados.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.nombre}
-                    {s.comportamiento === "ticket_error" || s.comportamiento === "ticket_cambio" ? " · crea ticket" : ""}
-                  </option>
-                ))}
-              </select>
+              <Select
+                block
+                etiqueta="Subestado"
+                value={sub}
+                onChange={(v) => (setSub(v), setClas(""))}
+                options={[
+                  ["", "Elegir…"],
+                  ...fam.subestados.map((s): [string, string] => [
+                    s.id,
+                    s.nombre + (s.comportamiento === "ticket_error" || s.comportamiento === "ticket_cambio" ? " · crea ticket" : ""),
+                  ]),
+                ]}
+              />
             </div>
           ) : fam ? (
             <p className="text-xs text-amber-700">Este estado no tiene sub-estados activos.</p>
@@ -103,15 +110,13 @@ export function ModalFinalizar({ conv, onCerrar, onListo }: { conv: FilaBandeja;
               {bloqueoTicket ? (
                 <p className="text-xs text-red-700">{bloqueoTicket}</p>
               ) : clasificaciones.length ? (
-                <select className={claseCampo} value={clas} onChange={(e) => setClas(e.target.value)}>
-                  <option value="">Clasificación…</option>
-                  {clasificaciones.map((c) => (
-                    <option key={c.codigo} value={c.codigo}>
-                      {c.nombre}
-                      {c.sla_horas ? ` · SLA ${c.sla_horas} h` : ""}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  block
+                  etiqueta="Clasificación"
+                  value={clas}
+                  onChange={setClas}
+                  options={[["", "Clasificación…"], ...clasificaciones.map((c): [string, string] => [c.codigo, c.nombre + (c.sla_horas ? ` · SLA ${c.sla_horas} h` : "")])]}
+                />
               ) : null}
             </div>
           ) : null}

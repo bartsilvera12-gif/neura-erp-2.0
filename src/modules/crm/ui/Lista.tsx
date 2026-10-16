@@ -66,10 +66,15 @@ function columnasLista(etapas: Etapa[], onMover: (t: Tarjeta, etapa: string) => 
         return (
           <div className="flex min-w-[9rem] items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
             <span className={`h-2 w-2 shrink-0 rounded-full ${tono.dot}`} />
-            <select value={p.etapa} onChange={(e) => onMover(p, e.target.value)} aria-label="Cambiar etapa del prospecto"
-              className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20 max-md:h-11 max-md:max-w-[10rem]">
-              {etapas.map((e) => <option key={e.codigo} value={e.codigo}>{e.nombre}</option>)}
-            </select>
+            <Select
+              compacto
+              minWidth={150}
+              className="w-full max-md:max-w-[10rem]"
+              etiqueta="Cambiar etapa del prospecto"
+              value={p.etapa}
+              onChange={(v) => onMover(p, v)}
+              options={etapas.map((e): [string, string] => [e.codigo, e.nombre])}
+            />
           </div>
         );
       },

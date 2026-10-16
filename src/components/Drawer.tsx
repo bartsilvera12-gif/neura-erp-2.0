@@ -35,8 +35,11 @@ export function Drawer({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== "Escape") return;
-      // Si hay un modal (CapaModal) abierto encima, Escape es de él.
-      if (document.querySelector("[data-capa-modal]")) return;
+      // Capas apiladas (modales y paneles marcan data-capa-modal): Escape cierra solo la de
+      // arriba. Si hay un modal abierto ENCIMA del panel, es de él; si el panel se abrió desde
+      // un modal (ej. "Seguimiento" en el detalle del presupuesto), es del panel.
+      const capas = document.querySelectorAll("[data-capa-modal]");
+      if (capas.length && capas[capas.length - 1] !== capa.current) return;
       onClose();
     };
     window.addEventListener("keydown", onKey);
@@ -57,6 +60,7 @@ export function Drawer({
   return createPortal(
     <div
       ref={capa}
+      data-capa-modal=""
       className="fixed inset-0 z-[110] flex justify-end bg-slate-900/40 backdrop-blur-[2px]"
       style={{ animation: "modal-backdrop 0.15s ease-out" }}
       onClick={onClose}

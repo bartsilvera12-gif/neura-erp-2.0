@@ -16,6 +16,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus, Settings2 } from "lucide-react";
 import { BarraFiltros } from "@/components/EncabezadoPagina";
 import { HojaInferior } from "@/components/HojaInferior";
+import { Select } from "@/components/Select";
 import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import { useEsMovil } from "@/lib/ui/responsive";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -237,8 +238,6 @@ export default function AgendaClient() {
     { label: "Cancel./No asist.", value: resumen?.canceladas_no_asistio ?? 0, dot: estadoStyle("cancelada").dot },
   ];
 
-  const selectCls =
-    "rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-700 outline-none transition-colors focus:border-teal-500 focus:ring-1 focus:ring-teal-400 max-md:h-11";
   const esTimeGrid = view === "dia" || view === "semana";
 
   return (
@@ -375,22 +374,24 @@ export default function AgendaClient() {
         }
         extra={loading ? <span className="shrink-0 text-xs text-slate-400 max-md:sr-only">Cargando…</span> : null}
       >
-        <select value={estado} onChange={(e) => setEstado(e.target.value)} className={selectCls} aria-label="Estado">
-          <option value="">Todos los estados</option>
-          {AGENDA_ESTADOS.map((s) => (
-            <option key={s} value={s}>
-              {estadoStyle(s).label}
-            </option>
-          ))}
-        </select>
-        <select value={responsableId} onChange={(e) => setResponsableId(e.target.value)} className={selectCls} aria-label="Responsable">
-          <option value="">Todos los responsables</option>
-          {options.responsables.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.nombre ?? r.id}
-            </option>
-          ))}
-        </select>
+        <Select
+          compacto
+          minWidth={170}
+          className="max-md:w-full"
+          etiqueta="Estado"
+          value={estado}
+          onChange={setEstado}
+          options={[["", "Todos los estados"], ...AGENDA_ESTADOS.map((s): [string, string] => [s, estadoStyle(s).label])]}
+        />
+        <Select
+          compacto
+          minWidth={200}
+          className="max-md:w-full"
+          etiqueta="Responsable"
+          value={responsableId}
+          onChange={setResponsableId}
+          options={[["", "Todos los responsables"], ...options.responsables.map((r): [string, string] => [r.id, r.nombre ?? r.id])]}
+        />
       </BarraFiltros>
 
       {error && <div className="mb-3 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div>}

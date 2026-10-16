@@ -6,12 +6,15 @@
  * Búsqueda inteligente (número, cliente, RUC, teléfono, productos), filtros por estado,
  * cliente, vendedor y rango de fechas. Vuelve a la pantalla y pinta al instante lo último
  * que se vio (stale-while-revalidate).
+ * Tocar una fila abre el detalle en un modal sobre la lista (como la ficha en Clientes);
+ * ?ver=<id> en la URL lo reabre (link compartible). Ctrl/Cmd + clic o clic medio en el número
+ * abre la página del presupuesto en otra pestaña.
  */
 import Link from "next/link";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { FileSignature, Plus, Search, Settings2 } from "lucide-react";
-import { apiFetchCache, apiFetchSWR, guardadoAlInstante, precargar } from "@/lib/api/cache-cliente";
+import { apiFetchCache, apiFetchSWR, guardadoAlInstante, invalidar, precargar } from "@/lib/api/cache-cliente";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { clienteConfig } from "@/cliente.config";
@@ -22,10 +25,21 @@ import { TablaTarjetas } from "@/components/TablaResponsive";
 import { BuscadorCliente } from "@/modules/clientes/gestion/BuscadorCliente";
 import { BadgeEstado, textoVigencia } from "@/modules/presupuestos/ui";
 import { ModalAjustes } from "@/modules/presupuestos/Modales";
+import { PresupuestoModal } from "@/modules/presupuestos/PresupuestoModal";
 import { diaCorto, monto, type ListaPresupuestos } from "@/modules/presupuestos/tipos";
 
 const TEAL = clienteConfig.color;
 const POR_PAGINA = 25;
+const ES_ID = /^[0-9a-f-]{36}$/i;
+
+/** URL actual con ?ver=<id> puesto (o sacado), sin tocar los demás parámetros (ej. ?cliente=). */
+function urlConVer(id: string | null) {
+  const u = new URLSearchParams(window.location.search);
+  if (id) u.set("ver", id);
+  else u.delete("ver");
+  const qs = u.toString();
+  return `/presupuestos${qs ? `?${qs}` : ""}`;
+}
 
 const FILTROS: { id: string; texto: string; clave: keyof ListaPresupuestos["conteos"] }[] = [
   { id: "abiertos", texto: "Abiertos", clave: "abiertos" },
@@ -63,6 +77,32 @@ function Lista() {
   const [vendedores, setVendedores] = useState<{ id: string; nombre: string }[]>([]);
   const [ajustes, setAjustes] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [ver, setVer] = useState<string | null>(null);
+  const [recarga, setRecarga] = useState(0);
+  const cambioEnDetalle = useRef(false);
+
+  // El detalle se abre en un modal sobre la lista; ?ver=<id> lo reabre (al cargar la página).
+  useEffect(() => {
+    const id = new URLSearchParams(window.location.search).get("ver");
+    if (id && ES_ID.test(id)) setVer(id);
+  }, []);
+  const abrir = useCallback((id: string) => {
+    cambioEnDetalle.current = false;
+    setVer(id);
+    window.history.replaceState(null, "", urlConVer(id));
+  }, []);
+  // Cerrar sin cambios no toca la lista. Si cambió algo (estado, duplicar, convertir…), se
+  // descarta lo guardado y se recarga la página actual.
+  const cerrar = useCallback(() => {
+    setVer(null);
+    window.history.replaceState(null, "", urlConVer(null));
+    if (cambioEnDetalle.current) {
+      cambioEnDetalle.current = false;
+      invalidar("/api/presupuestos");
+      setRecarga((k) => k + 1);
+    }
+  }, []);
+  const huboCambio = useCallback(() => { cambioEnDetalle.current = true; }, []);
 
   // ?cliente=<id>&nombre=… (desde la ficha del cliente) → filtra por ese cliente.
   const clienteUrl = sp.get("cliente");
@@ -94,16 +134,20 @@ function Lista() {
   const [cargando, setCargando] = useState(!data);
   const [error, setError] = useState<string | null>(null);
   const ultimo = useRef<ListaPresupuestos | null>(data);
+  const recargaVista = useRef(recarga);
 
   useEffect(() => {
     const ctrl = new AbortController();
+    // Después de un cambio en el detalle no sirve lo guardado: se pide fresco.
+    const fresco = recargaVista.current !== recarga;
+    recargaVista.current = recarga;
     setCargando(true);
     setError(null);
-    apiFetchSWR<ListaPresupuestos>(url, (d) => { ultimo.current = d; setData(d); }, { signal: ctrl.signal })
+    apiFetchSWR<ListaPresupuestos>(url, (d) => { ultimo.current = d; setData(d); }, { signal: ctrl.signal, fresco })
       .catch((e) => { if (!ctrl.signal.aborted) setError((e as Error).message); })
       .finally(() => { if (!ctrl.signal.aborted) setCargando(false); });
     return () => ctrl.abort();
-  }, [url]);
+  }, [url, recarga]);
 
   useEffect(() => {
     if (!aviso) return;
@@ -215,7 +259,7 @@ function Lista() {
           <TablaTarjetas
             filas={d?.rows ?? []}
             claveFila={(r) => r.id}
-            onFila={(r) => router.push(`/presupuestos/${r.id}`)}
+            onFila={(r) => abrir(r.id)}
             onIntencion={(r) => void precargar(`/api/presupuestos/${r.id}`)}
             cargando={cargando}
             minAncho={880}
@@ -229,7 +273,10 @@ function Lista() {
                 key: "num", titulo: "Número", claseTd: "whitespace-nowrap", movil: "subtitulo",
                 celda: (r) => (
                   <>
-                    <Link href={`/presupuestos/${r.id}`} onClick={(e) => e.stopPropagation()} className="font-mono text-xs font-semibold text-slate-800 hover:text-[var(--brand)]">{r.numero}</Link>
+                    <Link href={`/presupuestos/${r.id}`}
+                      // Clic normal: lo maneja la fila (abre el modal). Ctrl/Cmd/Shift + clic: otra pestaña.
+                      onClick={(e) => { if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) { e.stopPropagation(); return; } e.preventDefault(); }}
+                      className="font-mono text-xs font-semibold text-slate-800 hover:text-[var(--brand)]">{r.numero}</Link>
                     {r.revision > 1 ? <span className="ml-1.5 rounded bg-slate-100 px-1 py-0.5 text-[10px] font-semibold text-slate-500">rev {r.revision}</span> : null}
                   </>
                 ),
@@ -293,6 +340,7 @@ function Lista() {
         ) : null}
       </section>
 
+      {ver ? <PresupuestoModal id={ver} onCerrar={cerrar} onCambio={huboCambio} /> : null}
       {ajustes ? <ModalAjustes onClose={() => setAjustes(false)} onGuardado={() => { setAjustes(false); setAviso("Ajustes guardados."); }} /> : null}
     </div>
   );

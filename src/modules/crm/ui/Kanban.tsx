@@ -18,6 +18,7 @@ import { memo, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { ArrowRightLeft, Check, ChevronDown, Clock, Copy, Loader2, Pencil, Phone, X } from "lucide-react";
 import { MenuAcciones } from "@/components/MenuAcciones";
+import { Select } from "@/components/Select";
 import {
   ORIGEN_LABEL, diaMes, fechaSimple, gsCompleto, gsCorto, telefonoLindo, tonoEtapa,
   type Columna as ColumnaT, type Etapa, type Tarjeta,
@@ -204,15 +205,15 @@ export const ProspectoCard = memo(function ProspectoCard({
           </MenuAcciones>
         ) : (
         <>
-        <label className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-500">Mover a etapa</label>
-        <select
+        <span className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-500">Mover a etapa</span>
+        <Select
+          compacto
+          block
+          etiqueta="Mover a etapa"
           value={t.etapa}
-          onChange={(e) => acciones.onMover(t, e.target.value)}
-          aria-label="Cambiar etapa del prospecto"
-          className="w-full cursor-pointer rounded-lg border border-slate-200 bg-white px-2 py-1 text-[11px] font-medium text-slate-700 outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/20"
-        >
-          {etapas.map((e) => <option key={e.codigo} value={e.codigo}>{e.nombre}</option>)}
-        </select>
+          onChange={(v) => acciones.onMover(t, v)}
+          options={etapas.map((e): [string, string] => [e.codigo, e.nombre])}
+        />
         </>
         )}
       </div>

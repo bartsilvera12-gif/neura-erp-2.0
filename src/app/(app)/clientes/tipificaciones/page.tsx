@@ -12,6 +12,7 @@ import { Settings2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { TEAL } from "@/modules/clientes/ui";
+import { Select } from "@/components/Select";
 import type { EstadoCat } from "@/modules/tipificacion/dominio";
 
 type Nivel = "familia" | "estado";
@@ -24,7 +25,8 @@ const ACCIONES: { value: string; label: string }[] = [
   { value: "ticket_cambio", label: "Crea ticket de Cambio (Soporte)" },
   { value: "capacitacion", label: "Agenda capacitación" },
 ];
-const accionLabel = (v?: string | null) => ACCIONES.find((c) => c.value === (v ?? ""))?.label ?? "Sin acción";
+const OPC_ACCIONES: [string, string][] = ACCIONES.map((c) => [c.value, c.label]);
+const accionLabel =(v?: string | null) => ACCIONES.find((c) => c.value === (v ?? ""))?.label ?? "Sin acción";
 
 const F_INPUT = "w-full min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand)]/15 max-sm:min-h-11";
 const F_LABEL = "mb-1 block text-xs font-semibold text-slate-600";
@@ -202,14 +204,16 @@ export default function ConfiguracionTipificacionesPage() {
                           <span className="inline-flex items-center gap-1.5">
                             <span className="text-[10px] font-medium text-slate-400">Acción:</span>
                             {canEdit ? (
-                              <select
-                                className="rounded-md border border-slate-200 bg-white px-1.5 py-1 text-[11px] text-slate-700 focus:border-[var(--brand)] focus:outline-none max-sm:h-11 max-sm:max-w-[13rem]"
+                              <Select
+                                compacto
+                                minWidth={210}
+                                className="max-sm:max-w-[13rem]"
+                                etiqueta="Acción del sub-estado"
                                 value={s.comportamiento ?? ""}
-                                onChange={(ev) => patch("estado", s.id, { comportamiento: ev.target.value })}
+                                onChange={(v) => patch("estado", s.id, { comportamiento: v })}
                                 disabled={busy}
-                              >
-                                {ACCIONES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                              </select>
+                                options={OPC_ACCIONES}
+                              />
                             ) : (
                               <span className="text-[11px] text-slate-500">{accionLabel(s.comportamiento)}</span>
                             )}
@@ -227,14 +231,15 @@ export default function ConfiguracionTipificacionesPage() {
                         onKeyDown={(ev) => { if (ev.key === "Enter") agregarSub(est.id); }}
                         placeholder="Nuevo sub-estado… (ej: Cliente solicita nueva contraseña)"
                       />
-                      <select
-                        className="h-9 rounded-md border border-slate-200 bg-white px-2 text-[11px] text-slate-700 focus:border-[var(--brand)] focus:outline-none max-sm:h-11 max-sm:flex-1"
+                      <Select
+                        compacto
+                        minWidth={230}
+                        className="max-sm:flex-1"
+                        etiqueta="Acción que dispara este sub-estado"
                         value={nuevoSubAccion[est.id] ?? ""}
-                        onChange={(ev) => setNuevoSubAccion((m) => ({ ...m, [est.id]: ev.target.value }))}
-                        title="Acción que dispara este sub-estado"
-                      >
-                        {ACCIONES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-                      </select>
+                        onChange={(v) => setNuevoSubAccion((m) => ({ ...m, [est.id]: v }))}
+                        options={OPC_ACCIONES}
+                      />
                       <button type="button" className={BTN_GHOST} onClick={() => agregarSub(est.id)} disabled={busy || !(nuevoSub[est.id] ?? "").trim()}>
                         + Sub-estado
                       </button>

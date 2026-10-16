@@ -1,5 +1,6 @@
 "use client";
 
+import { Select } from "@/components/Select";
 import { pad } from "../calendar-utils";
 import type { AgendaPrefs } from "../agenda-prefs";
 
@@ -13,35 +14,34 @@ export default function RangoHorarioConfig({ prefs, onChange }: { prefs: AgendaP
   const startOpts = Array.from({ length: 24 }, (_, i) => i); // 0..23
   const endOpts = Array.from({ length: 24 }, (_, i) => i + 1); // 1..24
 
-  const selCls =
-    "w-full rounded-lg border border-slate-300 bg-white px-2 py-1.5 text-sm text-slate-800 outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-400";
-
   return (
     <div className="w-64 space-y-3">
       <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Rango horario visible</div>
       <p className="text-xs text-slate-500">Aplica a las vistas Día y Semana.</p>
 
       <div className="grid grid-cols-2 gap-2">
-        <label className="block">
+        <div>
           <span className="mb-1 block text-xs font-medium text-slate-600">Desde</span>
-          <select className={selCls} value={prefs.startHour} onChange={(e) => onChange({ ...prefs, startHour: parseInt(e.target.value, 10) })}>
-            {startOpts.map((h) => (
-              <option key={h} value={h} disabled={h >= prefs.endHour}>
-                {pad(h)}:00
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
+          <Select
+            compacto
+            block
+            etiqueta="Desde"
+            value={String(prefs.startHour)}
+            onChange={(v) => onChange({ ...prefs, startHour: parseInt(v, 10) })}
+            options={startOpts.filter((h) => h < prefs.endHour).map((h): [string, string] => [String(h), `${pad(h)}:00`])}
+          />
+        </div>
+        <div>
           <span className="mb-1 block text-xs font-medium text-slate-600">Hasta</span>
-          <select className={selCls} value={prefs.endHour} onChange={(e) => onChange({ ...prefs, endHour: parseInt(e.target.value, 10) })}>
-            {endOpts.map((h) => (
-              <option key={h} value={h} disabled={h <= prefs.startHour}>
-                {pad(h)}:00
-              </option>
-            ))}
-          </select>
-        </label>
+          <Select
+            compacto
+            block
+            etiqueta="Hasta"
+            value={String(prefs.endHour)}
+            onChange={(v) => onChange({ ...prefs, endHour: parseInt(v, 10) })}
+            options={endOpts.filter((h) => h > prefs.startHour).map((h): [string, string] => [String(h), `${pad(h)}:00`])}
+          />
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-1.5 pt-1">
