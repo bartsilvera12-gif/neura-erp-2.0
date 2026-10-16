@@ -1,19 +1,22 @@
 /**
  * PDF del presupuesto desde el link público. GET /p/<token>/pdf
  * Mismo documento que el interno (solo campos públicos), vía la función anónima por token.
+ * Vencido = no hay PDF (el link ya no muestra precios).
  */
+import type { NextRequest } from "next/server";
 import { respuestaPdf } from "@/lib/pdf/documento";
+import { urlBase } from "@/lib/usuarios/cuentas";
 import { nombreArchivoPresupuesto, pdfPresupuesto } from "@/modules/presupuestos/pdf";
 import { presupuestoPorToken } from "@/modules/presupuestos/publico";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
+export async function GET(req: NextRequest) {
   const segs = new URL(req.url).pathname.split("/").filter(Boolean);
   const token = segs[segs.indexOf("p") + 1] ?? "";
   const p = await presupuestoPorToken(token);
   if (!p || p.expirado) return new Response("Presupuesto no disponible", { status: 404, headers: { "cache-control": "no-store" } });
-  const doc = await pdfPresupuesto(p);
+  const doc = await pdfPresupuesto(p, { link: `${urlBase(req)}/p/${token}` });
   return respuestaPdf(doc, nombreArchivoPresupuesto(p.numero, p.revision));
 }

@@ -308,7 +308,23 @@ language sql stable security definer set search_path = :"schema", public as $fn$
                          'descripcion', i.descripcion, 'detalle', i.detalle, 'sku', i.sku, 'unidad', i.unidad,
                          'cantidad', i.cantidad, 'precio_unitario', i.precio_unitario, 'descuento_pct', i.descuento_pct,
                          'tipo_iva', i.tipo_iva, 'total', i.total) order by i.orden)
-                         from presupuestos_items i where i.presupuesto_id = p.id), '[]'::jsonb))
+                         from presupuestos_items i where i.presupuesto_id = p.id), '[]'::jsonb),
+    -- Membrete del PDF: empresa + sucursal del vendedor (o de quien lo cargó, o la
+    -- principal) y el contacto del vendedor. Solo datos de contacto públicos.
+    'emisor', (select jsonb_build_object(
+                  'empresa', e.nombre, 'sucursal', s.nombre, 'direccion', s.direccion, 'ciudad', s.ciudad,
+                  'telefono', s.telefono, 'vendedor_telefono', v.telefono, 'vendedor_email', v.email,
+                  'respuesta_online', coalesce(cfg.respuesta_online, true))
+                 from empresas e
+                 left join usuarios v on v.id = p.vendedor_id and v.empresa_id = p.empresa_id
+                 left join usuarios c on c.id = p.created_by and c.empresa_id = p.empresa_id
+                 left join lateral (
+                   select s1.* from sucursales s1
+                    where s1.empresa_id = p.empresa_id and s1.activa
+                    order by (s1.id = v.sucursal_id) desc, (s1.id = c.sucursal_id) desc, s1.es_principal desc, s1.created_at
+                    limit 1) s on true
+                 left join presupuestos_config cfg on cfg.empresa_id = p.empresa_id
+                where e.id = p.empresa_id))
     from presupuestos p where p.id = p_id
 $fn$;
 

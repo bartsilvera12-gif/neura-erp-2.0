@@ -31,7 +31,8 @@ export const fechaHoraPY = (iso: string) =>
 export const pdfTxt = (s: string) => s.replace(/−/g, "-").replace(/→/g, "->").replace(/ | /g, " ");
 
 let logoCache: { data: string; w: number; h: number } | null | undefined;
-async function logoDoc() {
+/** Logo de la empresa para documentos (public/brand/logo-doc.png), con su tamaño en px. */
+export async function logoDoc() {
   if (logoCache !== undefined) return logoCache;
   try {
     const buf = await readFile(path.join(process.cwd(), "public", "brand", "logo-doc.png"));
