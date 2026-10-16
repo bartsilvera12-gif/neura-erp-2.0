@@ -17,6 +17,7 @@ import { FileText, Lock, Mic, Paperclip, Plus, SendHorizontal, Smile, Square, Tr
 import { HojaInferior } from "@/components/HojaInferior";
 import { MenuAcciones, type ItemMenu } from "@/components/MenuAcciones";
 import { useEsMovil, useEsTactil } from "@/lib/ui/responsive";
+import { buscar } from "@/lib/busqueda";
 import {
   MAX_ADJUNTO_BYTES, previewMensaje, rellenarPlantilla, tamanoLegible, variablesDePlantilla, ventanaAbierta,
   type FilaBandeja, type Mensaje, type Plantilla, type RespuestaRapida,
@@ -92,9 +93,10 @@ export function Composer(p: ComposerProps) {
   const [qrBusca, setQrBusca] = useState("");
   const [qrIdx, setQrIdx] = useState(0);
   const barra = !modoNota && /^\/[^\s\n]*$/.test(texto);
-  const filtroQr = barra ? texto.slice(1).toLowerCase() : qrBusca.toLowerCase();
+  const filtroQr = barra ? texto.slice(1) : qrBusca;
+  // búsqueda inteligente: el atajo exacto primero, después por relevancia en atajo y texto
   const respuestasFiltradas = useMemo(
-    () => p.respuestas.filter((r) => !filtroQr || r.atajo.toLowerCase().includes(filtroQr) || r.texto.toLowerCase().includes(filtroQr)).slice(0, 30),
+    () => buscar(p.respuestas, filtroQr, (r) => ({ principal: r.atajo, otros: [r.texto], codigos: [r.atajo] })).slice(0, 30),
     [p.respuestas, filtroQr],
   );
   const qrVisible = (barra && respuestasFiltradas.length > 0) || panel === "respuestas";

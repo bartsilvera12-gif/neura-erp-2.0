@@ -19,7 +19,7 @@
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, ERR } from "@/lib/api/responses";
-import { condicionGrupo, variantesBusqueda } from "@/lib/api/busqueda-servidor";
+import { aplicarBusqueda, hayBusqueda, paginarConPrimeros, prepararBusqueda, primerosDe, restringirIds, type Primeros } from "@/lib/api/busqueda-servidor";
 
 const COLS =
   "id, numero_control, fecha, total, tipo_venta, estado, metodo_pago, sucursal_id, punto_venta_id, " +
@@ -64,39 +64,40 @@ export const GET = withTenant(async (ctx, req) => {
   const contar = sp.get("contar") !== "0";
   // caja=abierta → la caja abierta, si hay (si no, todas): así la pantalla no tiene que
   // esperar a saber cuál es la caja antes de pedir las ventas.
-  const [grupos, cajaId] = await Promise.all([
-    variantesBusqueda(ctx.db, qCruda),
+  const [busqueda, cajaId] = await Promise.all([
+    prepararBusqueda(ctx.db, "ventas", qCruda),
     sp.get("caja") === "abierta"
       ? ctx.db
           .rpc<string | null>("caja_abierta_para", {})
           .then((r) => (r.error ? null : (r.data ?? null)))
       : Promise.resolve(UUID_RE.test(sp.get("caja") ?? "") ? sp.get("caja") : null),
   ]);
-  // Totales escritos tal cual ("12.000" o "12000") se comparan exactos.
-  const numeros = qCruda.split(/\s+/).map((t) => t.replace(/\./g, "")).filter((n) => /^\d{1,15}$/.test(n));
-
   // Embebidos con alias para filtrar SIN recortar la lista de ítems que se muestra.
   let cols = COLS;
   if (IVAS.includes(iva)) cols += ", fi:ventas_items!inner(id)";
   if (producto) cols += ", fp:ventas_items!inner(id)";
   if (filtroMetodo) cols += ", fm:ventas_pagos_detalle!inner(id)";
 
-  let query = ctx.db.select("ventas", cols, contar ? { count: "exact" } : undefined);
-  if (cajaId) query = query.eq("caja_id", cajaId);
-  if (TIPOS.includes(tipo)) query = query.eq("tipo_venta", tipo);
-  if (sucursal) query = query.eq("sucursal_id", sucursal);
-  if (punto) query = query.eq("punto_venta_id", punto);
-  if (filtroMetodo) query = query.in("fm.metodo_pago", filtroMetodo);
-  else if (metodo === "mixto") query = query.eq("metodo_pago", "mixto");
-  if (ESTADOS.includes(estado)) query = query.eq("estado", estado);
-  if (IVAS.includes(iva)) query = query.eq("fi.tipo_iva", iva);
-  if (producto) query = query.eq("fp.producto_nombre", producto);
-  if (RE_FECHA.test(desde)) query = query.gte("fecha", `${desde}T00:00:00-03:00`);
-  if (RE_FECHA.test(hasta)) query = query.lte("fecha", `${hasta}T23:59:59.999-03:00`);
-  for (const g of grupos) {
-    const n = numeros.find((x) => g.includes(x));
-    query = query.or(condicionGrupo(g, "busqueda", n ? [`total.eq.${n}`] : []));
-  }
+  // Búsqueda precisa: "vta 17" / "VTA-000017" / "17" → solo esa venta; "26000" / "26.000" →
+  // las de ese total primero y después el resto que coincide por texto.
+  const armar = (r: Primeros) => {
+    let query = ctx.db.select("ventas", cols, contar ? { count: "exact" } : undefined);
+    if (cajaId) query = query.eq("caja_id", cajaId);
+    if (TIPOS.includes(tipo)) query = query.eq("tipo_venta", tipo);
+    if (sucursal) query = query.eq("sucursal_id", sucursal);
+    if (punto) query = query.eq("punto_venta_id", punto);
+    if (filtroMetodo) query = query.in("fm.metodo_pago", filtroMetodo);
+    else if (metodo === "mixto") query = query.eq("metodo_pago", "mixto");
+    if (ESTADOS.includes(estado)) query = query.eq("estado", estado);
+    if (IVAS.includes(iva)) query = query.eq("fi.tipo_iva", iva);
+    if (producto) query = query.eq("fp.producto_nombre", producto);
+    if (RE_FECHA.test(desde)) query = query.gte("fecha", `${desde}T00:00:00-03:00`);
+    if (RE_FECHA.test(hasta)) query = query.lte("fecha", `${hasta}T23:59:59.999-03:00`);
+    query = restringirIds(aplicarBusqueda(query, busqueda), r);
+    return query
+      .order("fecha", { ascending: false })
+      .order("id", { ascending: false }); // orden estable entre páginas
+  };
 
   const desdeFila = (pagina - 1) * porPagina;
   // El total general (sin filtros) solo hace falta contarlo aparte si HAY filtros: sin
@@ -104,16 +105,13 @@ export const GET = withTenant(async (ctx, req) => {
   const hayFiltros =
     TIPOS.includes(tipo) || ESTADOS.includes(estado) || IVAS.includes(iva) || !!producto ||
     !!sucursal || !!punto || !!filtroMetodo || metodo === "mixto" ||
-    RE_FECHA.test(desde) || RE_FECHA.test(hasta) || grupos.length > 0;
+    RE_FECHA.test(desde) || RE_FECHA.test(hasta) || hayBusqueda(busqueda);
   // (el builder no sale a la base hasta que se lo espera)
   let general = ctx.db.select("ventas", "id", { count: "exact", head: true });
   if (cajaId) general = general.eq("caja_id", cajaId);
 
   const [res, gen] = await Promise.all([
-    query
-      .order("fecha", { ascending: false })
-      .order("id", { ascending: false }) // orden estable entre páginas
-      .range(desdeFila, desdeFila + porPagina - 1),
+    paginarConPrimeros(armar, primerosDe(busqueda), desdeFila, porPagina),
     contar && hayFiltros ? general : null,
   ]);
   // Página fuera de rango (p. ej. tras filtrar) → PostgREST da 416: se devuelve vacía.

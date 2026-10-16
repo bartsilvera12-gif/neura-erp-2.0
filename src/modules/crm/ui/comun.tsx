@@ -9,6 +9,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Search, X } from "lucide-react";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
+import { buscar } from "@/lib/busqueda";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 
 export const INPUT =
@@ -152,10 +153,8 @@ export function usePlanes() {
 /** Multi-selección de planes con buscador (como el PlanSelector del sistema actual). */
 export function PlanSelector({ planes, seleccion, onToggle }: { planes: Plan[]; seleccion: string[]; onToggle: (id: string) => void }) {
   const [q, setQ] = useState("");
-  const visibles = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    return t ? planes.filter((p) => p.nombre.toLowerCase().includes(t)) : planes;
-  }, [planes, q]);
+  // búsqueda inteligente (sin tildes, en cualquier orden, errores de tipeo), más parecido primero
+  const visibles = useMemo(() => buscar(planes, q, (p) => ({ principal: p.nombre })), [planes, q]);
   return (
     <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
       <div className="relative border-b border-slate-100">

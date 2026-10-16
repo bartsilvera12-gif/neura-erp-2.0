@@ -401,7 +401,7 @@ function CajaPageContenido() {
     () =>
       (clienteQuery.trim() === ""
         ? clientes
-        : clientesBuscados ?? buscar(clientes, clienteQuery, (c) => ({ principal: c.razon_social || c.nombre, otros: [c.nombre, c.telefono], codigos: [c.documento, c.ruc] }))
+        : clientesBuscados ?? buscar(clientes, clienteQuery, (c) => ({ principal: c.razon_social || c.nombre, otros: [c.nombre], codigos: [c.documento, c.ruc, c.telefono] }))
       ).slice(0, 50),
     [clientes, clienteQuery, clientesBuscados],
   );

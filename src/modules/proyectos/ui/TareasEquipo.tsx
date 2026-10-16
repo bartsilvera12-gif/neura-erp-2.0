@@ -15,6 +15,7 @@ import { Select } from "@/components/Select";
 import { BarraFiltros } from "@/components/EncabezadoPagina";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
+import { filtrar } from "@/lib/busqueda";
 import { msLaborables } from "@/modules/soporte/dominio";
 import {
   PRIORIDADES, PRIORIDAD_LABEL, SEMAFORO_PUNTO, estiloPrioridad, fechaCorta, nombreCorto, pideMotivo, semaforoDe,
@@ -223,12 +224,18 @@ export function TareasEquipo({ yo, esAdmin, version, onAbrir, avisar }: {
 
   const grupos = useMemo<Grupo[]>(() => {
     if (!data) return [];
-    const q = busqueda.trim().toLowerCase();
+    const q = busqueda.trim();
+    // búsqueda inteligente: sin tildes, en cualquier orden, errores de tipeo; "pry 12" /
+    // "PRY-00012" / "12" = ese proyecto solo (se resuelve sobre todos a la vez)
+    const encontrados = q
+      ? new Set(filtrar([...data.tecnicos.flatMap((t) => t.proyectos), ...data.sin_tecnico], q,
+          (m) => ({ principal: m.titulo, otros: [m.cliente_nombre, m.tecnico_nombre], documentos: [m.numero] })))
+      : null;
     const pasa = (m: Metrica) =>
       (!fEstado || m.estado_id === fEstado) &&
       (!fPrioridad || m.prioridad === fPrioridad) &&
       (!soloAlertas || esAlerta(m)) &&
-      (!q || `${m.titulo} ${m.numero} ${m.cliente_nombre ?? ""} ${m.tecnico_nombre ?? ""}`.toLowerCase().includes(q));
+      (!encontrados || encontrados.has(m));
     const filtrando = !!(q || fEstado || fPrioridad || soloAlertas);
     const lista: Grupo[] = data.tecnicos.map((t) => ({ ...t, key: t.id, proyectos: t.proyectos.filter(pasa) }));
     const sin = data.sin_tecnico.filter(pasa);

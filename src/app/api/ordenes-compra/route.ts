@@ -6,7 +6,7 @@
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, created, fail, ERR } from "@/lib/api/responses";
-import { condicionGrupo, variantesBusqueda } from "@/lib/api/busqueda-servidor";
+import { aplicarBusqueda, paginarConPrimeros, prepararBusqueda, primerosDe, restringirIds, type Primeros } from "@/lib/api/busqueda-servidor";
 import { COLS_OC, cuerpoOrden } from "@/modules/compras/ordenes";
 
 export const GET = withTenant(async (ctx, req) => {
@@ -15,16 +15,20 @@ export const GET = withTenant(async (ctx, req) => {
   const pagina = Math.max(1, Number(sp.get("pagina")) || 1);
   const estado = sp.get("estado") ?? "";
   const proveedor = sp.get("proveedor") ?? "";
-  const grupos = await variantesBusqueda(ctx.db, sp.get("q"));
+  // "oc 1" / "OC-000001" / "1" → solo esa orden; un total → esas primero; el resto por texto.
+  const busqueda = await prepararBusqueda(ctx.db, "ordenes_compra", sp.get("q"));
 
-  let query = ctx.db.select("ordenes_compra", `${COLS_OC}, ordenes_compra_items(cantidad, cantidad_recibida)`, { count: "exact" });
-  if (estado === "abiertas") query = query.in("estado", ["pendiente", "recibida_parcial"]);
-  else if (["pendiente", "recibida_parcial", "recibida_total", "cancelada"].includes(estado)) query = query.eq("estado", estado);
-  if (/^[0-9a-f-]{36}$/i.test(proveedor)) query = query.eq("proveedor_id", proveedor);
-  for (const g of grupos) query = query.or(condicionGrupo(g));
+  const armar = (r: Primeros) => {
+    let query = ctx.db.select("ordenes_compra", `${COLS_OC}, ordenes_compra_items(cantidad, cantidad_recibida)`, { count: "exact" });
+    if (estado === "abiertas") query = query.in("estado", ["pendiente", "recibida_parcial"]);
+    else if (["pendiente", "recibida_parcial", "recibida_total", "cancelada"].includes(estado)) query = query.eq("estado", estado);
+    if (/^[0-9a-f-]{36}$/i.test(proveedor)) query = query.eq("proveedor_id", proveedor);
+    query = restringirIds(aplicarBusqueda(query, busqueda), r);
+    return query.order("fecha", { ascending: false }).order("id", { ascending: false });
+  };
 
   const desde = (pagina - 1) * porPagina;
-  const res = await query.order("fecha", { ascending: false }).order("id", { ascending: false }).range(desde, desde + porPagina - 1);
+  const res = await paginarConPrimeros(armar, primerosDe(busqueda), desde, porPagina);
   if (res.error && (res.error as { code?: string }).code !== "PGRST103") return ERR.server();
   type Fila = Record<string, unknown> & { ordenes_compra_items?: { cantidad: number; cantidad_recibida: number }[] };
   const rows = ((res.data ?? []) as unknown as Fila[]).map(({ ordenes_compra_items: it = [], ...o }) => ({

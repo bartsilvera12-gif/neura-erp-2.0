@@ -10,6 +10,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Building2, Search } from "lucide-react";
 import { fecha, fechaHora, numeroTicket } from "@/modules/soporte/dominio";
 import { apiSoporte } from "@/modules/soporte/api";
+import { filtrar } from "@/lib/busqueda";
 import { Aviso, Avatar, Cargando, Encabezado, Pagina, Tarjeta, Vacio, claseInput } from "@/modules/soporte/ui";
 
 type FilaCliente = {
@@ -23,7 +24,6 @@ type FilaCliente = {
   ultima_actividad: string | null;
 };
 
-const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
 
 function Chip({ n, clase }: { n: number; clase: string }) {
   return <span className={`inline-flex min-w-7 justify-center rounded-full px-2 py-0.5 text-[12px] font-bold tabular-nums ${n ? clase : "bg-slate-50 text-slate-300"}`}>{n}</span>;
@@ -41,10 +41,11 @@ export default function SoporteClientesPage() {
       .catch((e: Error) => setError(e.message));
   }, []);
 
-  const visibles = useMemo(() => {
-    const t = norm(q.trim());
-    return (filas ?? []).filter((f) => !t || norm(f.cliente_nombre).includes(t));
-  }, [filas, q]);
+  // búsqueda inteligente (sin tildes, en cualquier orden, errores de tipeo); respeta el orden
+  const visibles = useMemo(
+    () => filtrar(filas ?? [], q, (f) => ({ principal: f.cliente_nombre })),
+    [filas, q],
+  );
 
   const ir = (id: string) => router.push(`/soporte/tickets?cliente_id=${id}`);
 

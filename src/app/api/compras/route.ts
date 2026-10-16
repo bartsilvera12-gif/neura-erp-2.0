@@ -13,7 +13,7 @@
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, created, fail, ERR } from "@/lib/api/responses";
-import { condicionGrupo, variantesBusqueda } from "@/lib/api/busqueda-servidor";
+import { aplicarBusqueda, paginarConPrimeros, prepararBusqueda, primerosDe, restringirIds, type Primeros } from "@/lib/api/busqueda-servidor";
 import { COLS_COMPRA } from "@/modules/compras/tipos";
 
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
@@ -27,19 +27,25 @@ export const GET = withTenant(async (ctx, req) => {
   const proveedor = sp.get("proveedor") ?? "";
   const tipoPago = sp.get("tipo_pago") ?? "";
   const estado = sp.get("estado") ?? "";
-  const grupos = await variantesBusqueda(ctx.db, sp.get("q"));
+  // Búsqueda precisa: "comp 8" / "COMP-000008" / "8" o el N° de factura → solo esa compra;
+  // un total ("650.200") → esas primero; el resto por texto (número, proveedor, RUC, factura,
+  // productos).
+  const busqueda = await prepararBusqueda(ctx.db, "compras", sp.get("q"));
 
   // + cuántos productos y, si es a crédito, cómo está su deuda (saldo / estado).
-  let query = ctx.db.select("compras", `${COLS_COMPRA}, compras_items(count), cxp:cuentas_por_pagar(saldo, estado, moneda)`, { count: "exact" });
-  if (RE_FECHA.test(desde)) query = query.gte("fecha", `${desde}T00:00:00-03:00`);
-  if (RE_FECHA.test(hasta)) query = query.lte("fecha", `${hasta}T23:59:59.999-03:00`);
-  if (/^[0-9a-f-]{36}$/i.test(proveedor)) query = query.eq("proveedor_id", proveedor);
-  if (tipoPago === "contado" || tipoPago === "credito") query = query.eq("tipo_pago", tipoPago);
-  if (estado === "registrada" || estado === "anulada") query = query.eq("estado", estado);
-  for (const g of grupos) query = query.or(condicionGrupo(g));
+  const armar = (r: Primeros) => {
+    let query = ctx.db.select("compras", `${COLS_COMPRA}, compras_items(count), cxp:cuentas_por_pagar(saldo, estado, moneda)`, { count: "exact" });
+    if (RE_FECHA.test(desde)) query = query.gte("fecha", `${desde}T00:00:00-03:00`);
+    if (RE_FECHA.test(hasta)) query = query.lte("fecha", `${hasta}T23:59:59.999-03:00`);
+    if (/^[0-9a-f-]{36}$/i.test(proveedor)) query = query.eq("proveedor_id", proveedor);
+    if (tipoPago === "contado" || tipoPago === "credito") query = query.eq("tipo_pago", tipoPago);
+    if (estado === "registrada" || estado === "anulada") query = query.eq("estado", estado);
+    query = restringirIds(aplicarBusqueda(query, busqueda), r);
+    return query.order("fecha", { ascending: false }).order("id", { ascending: false });
+  };
 
   const desdeFila = (pagina - 1) * porPagina;
-  const res = await query.order("fecha", { ascending: false }).order("id", { ascending: false }).range(desdeFila, desdeFila + porPagina - 1);
+  const res = await paginarConPrimeros(armar, primerosDe(busqueda), desdeFila, porPagina);
   if (res.error && (res.error as { code?: string }).code !== "PGRST103") return ERR.server();
   type Fila = Record<string, unknown> & { compras_items?: { count: number }[]; cxp?: { saldo: number; estado: string; moneda: string }[] | null };
   const rows = ((res.data ?? []) as unknown as Fila[]).map(({ compras_items, cxp, ...c }) => ({

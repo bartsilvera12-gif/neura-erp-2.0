@@ -10,6 +10,7 @@
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, created, fail } from "@/lib/api/responses";
+import { aplicarBusqueda, paginarConPrimeros, prepararBusqueda, primerosDe, restringirIds, type Primeros } from "@/lib/api/busqueda-servidor";
 
 const UUID = /^[0-9a-f-]{36}$/i;
 const COLS =
@@ -22,18 +23,20 @@ export const GET = withTenant(
     const porPagina = Math.min(100, Math.max(10, Number(sp.get("por_pagina")) || 25));
     const pagina = Math.max(1, Number(sp.get("pagina")) || 1);
     const proveedor = sp.get("proveedor");
-    const q = sp.get("q")?.trim().slice(0, 100).replace(/[%,()*]/g, " ").trim();
-    let query = ctx.db
-      .select("pagos_proveedores", COLS, { count: "exact" })
-      .eq("moneda", sp.get("moneda") === "USD" ? "USD" : "GS");
-    if (proveedor && UUID.test(proveedor)) query = query.eq("proveedor_id", proveedor);
-    if (sp.get("anulados") !== "1") query = query.is("anulado_at", null);
-    if (q) query = query.or(`numero.ilike.%${q}%,proveedor_nombre.ilike.%${q}%`);
-    const { data, error, count } = await query
-      .order("fecha", { ascending: false })
-      .order("numero", { ascending: false })
-      .range((pagina - 1) * porPagina, pagina * porPagina - 1);
-    if (error) return fail(error.message.replace(/^.*?ERROR:\s*/, ""), 422);
+    // Búsqueda precisa (columna `busqueda`, receta 58): "op 2" / "OP-000002" / "2" → solo esa
+    // orden; un total → esas primero; el resto por número, proveedor, RUC, observación.
+    const busqueda = await prepararBusqueda(ctx.db, "pagos_proveedores", sp.get("q"));
+    const armar = (r: Primeros) => {
+      let query = ctx.db
+        .select("pagos_proveedores", COLS, { count: "exact" })
+        .eq("moneda", sp.get("moneda") === "USD" ? "USD" : "GS");
+      if (proveedor && UUID.test(proveedor)) query = query.eq("proveedor_id", proveedor);
+      if (sp.get("anulados") !== "1") query = query.is("anulado_at", null);
+      query = restringirIds(aplicarBusqueda(query, busqueda), r);
+      return query.order("fecha", { ascending: false }).order("numero", { ascending: false });
+    };
+    const { data, error, count } = await paginarConPrimeros(armar, primerosDe(busqueda), (pagina - 1) * porPagina, porPagina);
+    if (error && error.code !== "PGRST103") return fail((error.message ?? "").replace(/^.*?ERROR:\s*/, ""), 422);
     return ok({ rows: data ?? [], total: count ?? 0 });
   },
   { roles: ["ADMIN"] },

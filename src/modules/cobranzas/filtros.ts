@@ -6,6 +6,7 @@
  *   · la búsqueda mira cliente, plan y categoría
  *   · tramo y "promesa hoy" filtran solo la tabla (las cifras de arriba no)
  */
+import { filtrar } from "@/lib/busqueda";
 import { planDe, TRAMO_PESO, type ClienteCobranza, type ServicioCobranza, type TramoKey } from "@/modules/cobranzas/tipos";
 
 export const TODOS = "__all__";
@@ -23,7 +24,6 @@ export type FilaSeguimiento = {
   proximo_vencimiento: string | null;
 };
 
-const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 
 function peorTramo(servs: { tramo: TramoKey }[]): TramoKey {
   let w: TramoKey = "por_vencer";
@@ -47,19 +47,20 @@ function armarFila(c: ClienteCobranza, servs: ServicioCobranza[], planFiltro: st
 
 /** Filas por plan + categoría + búsqueda (base de las cifras y los contadores de los chips). */
 export function filasBase(clientes: ClienteCobranza[], f: { q: string; plan: string; categoria: string }): FilaSeguimiento[] {
-  const q = norm(f.q.trim());
   const out: FilaSeguimiento[] = [];
   for (const c of clientes) {
     if (f.categoria === SIN_CATEGORIA ? c.categoria != null : f.categoria !== TODOS && c.categoria !== f.categoria) continue;
     const servs = f.plan === TODOS ? c.servicios : c.servicios.filter((s) => planDe(s) === f.plan);
     if (servs.length === 0) continue;
-    if (q) {
-      const hay = norm(c.cliente_label).includes(q) || norm(c.categoria ?? "").includes(q) || servs.some((s) => norm(planDe(s)).includes(q));
-      if (!hay) continue;
-    }
     out.push(armarFila(c, servs, f.plan));
   }
-  return out;
+  // Búsqueda inteligente (lib/busqueda): sin tildes, palabras en cualquier orden, errores de
+  // tipeo, teléfono en cualquier forma; en cliente, categoría y plan(es). Respeta el orden.
+  return filtrar(out, f.q, (r) => ({
+    principal: r.c.cliente_label,
+    otros: [r.c.categoria, ...r.servicios.map(planDe)],
+    codigos: [r.c.telefono],
+  }));
 }
 
 export function filtrarTabla(filas: FilaSeguimiento[], tramo: TramoKey | "todos", soloPromesaHoy: boolean, hoy: string): FilaSeguimiento[] {

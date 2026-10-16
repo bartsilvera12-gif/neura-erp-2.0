@@ -11,6 +11,7 @@ import { ChevronRight, Search } from "lucide-react";
 import { BarrasH, Leyenda, C_MERCADERIA, C_OPERATIVOS } from "@/components/graficos/Graficos";
 import { fechaCorta, gs, num, pct } from "@/components/graficos/formato";
 import { TablaTarjetas } from "@/components/TablaResponsive";
+import { buscar } from "@/lib/busqueda";
 import { Descargas, EncabezadoReporte, EstadoCarga, FilaKpis, FiltrosReporte, Kpi, SANGRIA_TARJETAS, Tarjeta, TD_REPORTE, TH_REPORTE, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
 import type { Proveedores } from "@/modules/reportes/tipos";
 
@@ -29,10 +30,10 @@ function ReporteProveedores() {
 
   const total = Number(d?.totales.compras ?? 0);
   const filas = useMemo(() => {
-    const t = q.trim().toLowerCase();
-    return (d?.rows ?? []).filter((p) =>
-      (!soloConCompras || Number(p.compras_cant) > 0 || Number(p.gastos) > 0 || Number(p.deuda_gs) > 0) &&
-      (!t || `${p.nombre} ${p.nombre_comercial ?? ""} ${p.ruc ?? ""}`.toLowerCase().includes(t)));
+    const base = (d?.rows ?? []).filter((p) =>
+      !soloConCompras || Number(p.compras_cant) > 0 || Number(p.gastos) > 0 || Number(p.deuda_gs) > 0);
+    // búsqueda inteligente: sin tildes, en cualquier orden, RUC con o sin DV, errores de tipeo
+    return buscar(base, q, (p) => ({ principal: p.nombre_comercial || p.nombre, otros: [p.nombre], codigos: [p.ruc] }));
   }, [d, q, soloConCompras]);
   const top = (d?.rows ?? []).filter((p) => Number(p.compras) > 0);
   const ir = (id: string) => router.push(`/reportes/proveedores/${id}?${filtros.query}`);

@@ -11,6 +11,7 @@ import { Check, ChevronDown, Loader2, Search, type LucideIcon } from "lucide-rea
 import { Select } from "@/components/Select";
 import { HojaInferior } from "@/components/HojaInferior";
 import { useEsMovil } from "@/lib/ui/responsive";
+import { buscar } from "@/lib/busqueda";
 
 export const ACENTO = "#4FAEB2";
 export const ACENTO_OSC = "#2F6E71";
@@ -332,8 +333,6 @@ export function EnlaceMiga({ href, children }: { href: string; children: ReactNo
 
 export type OpcionSelector = { value: string; label: string; detalle?: string; tono?: Tono };
 
-const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/\p{M}/gu, "");
-
 /** Selector con buscador (clientes, responsables), con iniciales de color y área. */
 export function SelectorBuscable({
   opciones,
@@ -364,11 +363,8 @@ export function SelectorBuscable({
   const elegida = opciones.find((o) => o.value === value) ?? null;
   // Celular: la lista va en una hoja inferior (no la corta ningún contenedor con scroll).
   const esMovil = useEsMovil();
-  const visibles = useMemo(() => {
-    const t = norm(q.trim());
-    const l = t ? opciones.filter((o) => norm(`${o.label} ${o.detalle ?? ""}`).includes(t)) : opciones;
-    return l.slice(0, 200);
-  }, [opciones, q]);
+  // búsqueda inteligente (sin tildes, en cualquier orden, errores de tipeo), más parecido primero
+  const visibles = useMemo(() => buscar(opciones, q, (o) => ({ principal: o.label, otros: [o.detalle] })).slice(0, 200), [opciones, q]);
 
   useEffect(() => {
     if (!abierto || esMovil) return;

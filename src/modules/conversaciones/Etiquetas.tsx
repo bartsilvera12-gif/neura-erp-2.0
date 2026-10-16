@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Tag, X } from "lucide-react";
 import { accionConversacion } from "@/modules/conversaciones/api";
+import { buscar } from "@/lib/busqueda";
 import type { FilaBandeja } from "@/modules/conversaciones/dominio";
 
 export function EtiquetasPopover({
@@ -59,7 +60,8 @@ export function EtiquetasPopover({
     void guardar([...conv.etiquetas, v]);
   };
 
-  const opciones = sugeridas.filter((s) => !conv.etiquetas.includes(s) && (!nueva.trim() || s.includes(nueva.trim().toLowerCase()))).slice(0, 8);
+  // búsqueda inteligente (sin tildes, errores de tipeo), la más parecida primero
+  const opciones = buscar(sugeridas.filter((s) => !conv.etiquetas.includes(s)), nueva, (s) => ({ principal: s })).slice(0, 8);
 
   return (
     <div ref={ref} className={enLinea ? "" : "absolute right-0 top-full z-40 mt-1 w-72 rounded-xl border border-slate-200 bg-white p-3 shadow-xl"}>

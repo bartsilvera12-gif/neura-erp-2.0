@@ -14,6 +14,7 @@
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok } from "@/lib/api/responses";
+import { condicionGrupo, variantesBusqueda } from "@/lib/api/busqueda-servidor";
 import { PESTANAS_TICKETS, TICKET_CAMPOS, type TicketFila } from "@/modules/soporte/dominio";
 import { accesoSoporte, enriquecerTickets, esUuid, falla, leerCatalogos, leerConfig, sinAccesoSoporte } from "@/modules/soporte/server";
 
@@ -31,14 +32,23 @@ export const GET = withTenant(async (ctx, req) => {
     const pagina = Math.max(1, Number(p.get("pagina") ?? "1") || 1);
     const porPagina = Math.min(POR_PAGINA_MAX, Math.max(5, Number(p.get("por_pagina") ?? "20") || 20));
 
+    // Búsqueda precisa: "#12", "12", "ticket 12" → ese ticket (si existe); si no, cada
+    // palabra (o su variante por error de tipeo) en asunto, descripción, próxima acción o
+    // cliente (nombre, razón social, RUC/CI), sin tildes ni orden (columna `busqueda`, 58).
+    const texto = (p.get("q") ?? "").trim().slice(0, 200);
+    const mNumero = /^(?:#|n[°º]?|nro\.?|ticket|t)?\s*0*(\d{1,9})$/i.exec(texto);
+    let numeroExacto: number | null = null;
+    if (mNumero) {
+      const n = Number(mNumero[1]);
+      const { data: hay } = await ctx.db.select("soporte_tickets", "id").eq("numero", n).limit(1);
+      // "#12" / "ticket 12" son siempre por número; "12" solo, si existe ese ticket
+      if ((hay ?? []).length || /^(#|n|nro|ticket|t)/i.test(texto)) numeroExacto = n;
+    }
+    const grupos = texto && numeroExacto == null ? await variantesBusqueda(ctx.db, texto) : [];
     const aplicarSinMios = (q: Q): Q => {
       let b = q;
-      const texto = (p.get("q") ?? "").trim();
-      if (texto) {
-        const numero = texto.replace(/^#/, "");
-        if (/^\d+$/.test(numero)) b = b.eq("numero", Number(numero));
-        else b = b.ilike("asunto", `%${texto.replace(/[%_,()]/g, "")}%`);
-      }
+      if (numeroExacto != null) b = b.eq("numero", numeroExacto);
+      else for (const g of grupos) b = b.or(condicionGrupo(g));
       if (p.get("cargados") === "1") b = b.eq("created_by", ctx.usuarioId);
       for (const [param, columna] of [
         ["cliente_id", "cliente_id"],

@@ -4,8 +4,12 @@
  *   · ignora tildes y mayúsculas ("cafe" → "Café")
  *   · palabras en cualquier orden y partes de palabra ("coca 2" → "Coca-Cola 2L")
  *   · tolera errores de tipeo ("yerva" → "Yerba", "galeta" → "Galleta")
- *   · ignora separadores en códigos ("coccol2l" → "COC-COL-2L", RUC con o sin puntos)
- *   · relevancia: código exacto > nombre igual > empieza con > contiene > parecido
+ *   · ignora separadores en códigos ("coccol2l" → "COC-COL-2L", RUC con o sin puntos/DV)
+ *   · teléfonos en cualquier forma ("0981 555 123" = "0981555123" = "+595981555123")
+ *   · documentos ("pre 2", "PRE-2", "2" → PRE-000002; con exacto, solo los exactos) y
+ *     montos ("512170" = "512.170")
+ *   · relevancia: código/documento/monto exacto > nombre igual > empieza con > contiene >
+ *     parecido (lo que solo se parece va siempre debajo de lo que coincide tal cual)
  *
  * Rendimiento: normalizar es lo caro. Cada elemento se normaliza UNA vez (cache por objeto
  * en buscar/filtrar, o un índice armado con `indexar` para listas grandes como el catálogo
@@ -103,8 +107,14 @@ export type CamposBusqueda = {
   principal?: string | null;
   /** Otros campos donde buscar (SKU, categoría, RUC, teléfono…). */
   otros?: (string | number | null | undefined)[];
-  /** Códigos que, si se escriben exactos (con o sin separadores), van primero. */
+  /** Códigos que, si se escriben exactos (con o sin separadores), van primero.
+   *  Un RUC con DV ("80012345-6") también cuenta exacto escrito sin el DV ("80012345"). */
   codigos?: (string | null | undefined)[];
+  /** Números de documento (VTA-000123, PRE-000002, #15…): "pre 2", "PRE-2" o "2" encuentran
+   *  PRE-000002 exacto y, si lo hay, la lista muestra solo los exactos (sin basura). */
+  documentos?: (string | number | null | undefined)[];
+  /** Montos (total, saldo…): "512170" o "512.170" los encuentran exactos y van primero. */
+  montos?: (number | string | null | undefined)[];
 };
 
 // ── Pre-cálculo ──────────────────────────────────────────────────────────────
@@ -117,16 +127,75 @@ type Preparado = {
   palabras: string[];
   /** Códigos compactados (para "código exacto va primero"). */
   codigos: string[];
+  /** Documentos: letras del prefijo + número sin ceros a la izquierda. */
+  documentos: { letras: string; numero: string }[];
+  montos: number[];
 };
+
+/**
+ * Formas de un teléfono de Paraguay que se buscan igual: "0981 555 123", "0981555123",
+ * "+595981555123" y "981555123" son el mismo número. Vacío si no parece un teléfono.
+ */
+function variantesTelefono(digitos: string): string[] {
+  if (digitos.length < 7 || digitos.length > 15) return [];
+  if (digitos.startsWith("595")) return [`0${digitos.slice(3)}`, digitos.slice(3)];
+  if (digitos.startsWith("0")) return [`595${digitos.slice(1)}`, digitos.slice(1)];
+  return [];
+}
+
+/** Documento "PRE-000002" → { letras: "pre", numero: "2" }; null si no tiene esa forma. */
+function partesDocumento(t: string): { letras: string; numero: string } | null {
+  const m = /^#?\s*([a-z]{0,12})[^a-z0-9]*0*(\d{1,15})$/.exec(normalizar(t).trim());
+  return m ? { letras: m[1], numero: m[2] } : null;
+}
+
+/** "512170", "512.170", "Gs. 512.170" o "12,50" → número; null si no es un monto. */
+function montoDe(q: string): number | null {
+  const t = normalizar(q).trim().replace(/^(gs\.?|₲|\$|usd)\s*/, "");
+  if (!/^(\d{1,3}(\.\d{3})+|\d{1,15})(,\d{1,2})?$/.test(t)) return null;
+  const n = Number(t.replace(/\./g, "").replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+}
+
+/** Palabras genéricas de "número" que pueden ir antes del número ("n° 15", "nro 15"). */
+const PALABRAS_NUMERO = new Set(["", "n", "nro", "num", "numero"]);
 
 function preparar(c: CamposBusqueda): Preparado {
   const principal = normalizar(c.principal);
-  const partes = [c.principal, ...(c.otros ?? []), ...(c.codigos ?? [])].map((x) => (x == null ? "" : String(x)));
-  const texto = partes.map((p) => `${normalizar(p)} ${compactar(p)}`).join(" ");
+  const partes = [c.principal, ...(c.otros ?? []), ...(c.codigos ?? []), ...(c.documentos ?? [])].map((x) => (x == null ? "" : String(x)));
+  const trozos: string[] = [];
+  for (const p of partes) {
+    const n = normalizar(p);
+    const comp = compactar(p);
+    trozos.push(n, comp);
+    // teléfonos: también en sus otras formas (con 0 / con 595 / sin prefijo)
+    if (/^\d+$/.test(comp)) trozos.push(...variantesTelefono(comp));
+  }
+  const texto = trozos.join(" ");
   const palabras = [...new Set(texto.split(/[^a-z0-9]+/).filter(Boolean))];
   const codigos: string[] = [];
-  for (const cod of c.codigos ?? []) if (cod) codigos.push(compactar(cod));
-  return { principal, texto, palabras, codigos };
+  for (const cod of c.codigos ?? []) {
+    if (!cod) continue;
+    const comp = compactar(cod);
+    codigos.push(comp);
+    // RUC / CI con dígito verificador: exacto también sin el DV
+    const sinDv = /^\s*([\d.]+)\s*-\s*\d\s*$/.exec(cod);
+    if (sinDv) codigos.push(compactar(sinDv[1]));
+    // teléfono: exacto en cualquiera de sus formas
+    if (/^\d+$/.test(comp)) codigos.push(...variantesTelefono(comp));
+  }
+  const documentos: Preparado["documentos"] = [];
+  for (const d of c.documentos ?? []) {
+    if (d == null || d === "") continue;
+    const p = partesDocumento(String(d));
+    if (p) documentos.push(p);
+  }
+  const montos: number[] = [];
+  for (const m of c.montos ?? []) {
+    const n = m == null || m === "" ? NaN : Number(m);
+    if (Number.isFinite(n)) montos.push(n);
+  }
+  return { principal, texto, palabras, codigos, documentos, montos };
 }
 
 type Token = {
@@ -141,8 +210,29 @@ type Token = {
   inicio: RegExp;
 };
 
-/** Lo escrito, compilado una vez: palabras (con sus regex), frase y código. */
-type Consulta = { tokens: Token[]; qn: string; qc: string };
+/** Lo escrito, compilado una vez: palabras (con sus regex), frase, código, documento y monto. */
+type Consulta = {
+  tokens: Token[];
+  qn: string;
+  qc: string;
+  /** "pre 2" / "PRE-000002" / "#15" / "2": letras del prefijo y número sin ceros. */
+  doc: { letras: string; numero: string } | null;
+  monto: number | null;
+};
+
+// Puntajes de las coincidencias exactas (siempre por encima de cualquier parecido).
+const P_CODIGO = 1000;
+const P_DOCUMENTO = 950;
+const P_MONTO = 900;
+
+/** ¿El documento del elemento es el número escrito? El prefijo, si se escribió, tiene que
+ *  ser el del documento: "pre 2", "p 2" o "presupuesto 2" traen PRE-000002, pero "aj 1" no
+ *  trae PE-000001 y "rosa 2" no trae nada por número. "n°"/"nro" no se exigen. */
+function documentoIgual(q: { letras: string; numero: string }, d: { letras: string; numero: string }): boolean {
+  if (q.numero !== d.numero) return false;
+  if (PALABRAS_NUMERO.has(q.letras)) return true;
+  return !!d.letras && (d.letras.startsWith(q.letras) || q.letras.startsWith(d.letras));
+}
 
 function compilar(q: string): Consulta {
   const tokens = tokensBusqueda(q).map((t): Token => {
@@ -158,7 +248,7 @@ function compilar(q: string): Consulta {
       inicio: new RegExp(`(^|[^a-z0-9])${t}`),
     };
   });
-  return { tokens, qn: normalizar(q).trim(), qc: compactar(q) };
+  return { tokens, qn: normalizar(q).trim(), qc: compactar(q), doc: partesDocumento(q), monto: montoDe(q) };
 }
 
 /**
@@ -190,18 +280,44 @@ function parecida(tok: Token, p: string): number {
 /** Puntaje de un elemento preparado contra una consulta compilada (0 = no coincide). */
 function puntaje(cq: Consulta, e: Preparado): number {
   if (!cq.tokens.length) return 1;
-  if (cq.qc && e.codigos.includes(cq.qc)) return 1000;
+  if (cq.qc && e.codigos.includes(cq.qc)) return P_CODIGO;
+  const { doc } = cq;
+  if (doc && e.documentos.some((d) => documentoIgual(doc, d))) return P_DOCUMENTO;
+  if (cq.monto != null && e.montos.includes(cq.monto)) return P_MONTO;
 
   let suma = 0;
+  let todasReales = true;
   for (const tok of cq.tokens) {
     const m = coincidePalabra(tok, e);
     if (!m) return 0; // todas las palabras tienen que aparecer (o parecerse)
     // palabra entera en el nombre > comienzo de una palabra > contenida > parecida
-    suma += m === 1 ? (tok.entera.test(e.principal) ? 40 : tok.inicio.test(e.principal) ? 30 : 20) : 10;
+    if (m === 1) suma += tok.entera.test(e.principal) ? 40 : tok.inicio.test(e.principal) ? 30 : 20;
+    else {
+      suma += 10;
+      todasReales = false;
+    }
   }
   const { qn } = cq;
   const frase = e.principal === qn ? 400 : e.principal.startsWith(qn) ? 300 : e.principal.includes(qn) ? 200 : 0;
-  return frase + suma;
+  // lo que coincide tal cual va siempre antes que lo que solo se parece (error de tipeo)
+  return frase + suma + (todasReales ? 100 : 0);
+}
+
+/** ¿Lo escrito es un número de la serie de este elemento? ("pre 9" y PRE-000001: sí). */
+function deLaSerie(cq: Consulta, e: Preparado): boolean {
+  const l = cq.doc?.letras;
+  if (!l || PALABRAS_NUMERO.has(l)) return false;
+  return e.documentos.some((d) => !!d.letras && (d.letras.startsWith(l) || l.startsWith(d.letras)));
+}
+
+/**
+ * Con un número de documento exacto ("pre 2", "#15") la lista muestra solo los exactos; con
+ * un número de la serie que no existe ("pre 9") no muestra nada (en vez de todo lo que tenga
+ * "pre" y un 9 en algún lado).
+ */
+function soloExactos<T extends { p: number }>(cq: Consulta, r: T[], serie: boolean): T[] {
+  if (!cq.doc || (!serie && !r.some((x) => x.p === P_DOCUMENTO))) return r;
+  return r.filter((x) => x.p >= P_DOCUMENTO);
 }
 
 // Cache por objeto para buscar/filtrar: el mismo elemento no se re-normaliza en cada tecla.
@@ -212,7 +328,8 @@ const cache = new WeakMap<object, { clave: string; e: Preparado }>();
 
 function claveDe(c: CamposBusqueda): string {
   const s = (x: unknown) => (x == null ? "" : String(x));
-  return [s(c.principal), (c.otros ?? []).map(s).join(SEP), (c.codigos ?? []).map(s).join(SEP)].join(`${SEP}${SEP}`);
+  return [s(c.principal), (c.otros ?? []).map(s).join(SEP), (c.codigos ?? []).map(s).join(SEP),
+    (c.documentos ?? []).map(s).join(SEP), (c.montos ?? []).map(s).join(SEP)].join(`${SEP}${SEP}`);
 }
 
 function preparado<T>(it: T, campos: (it: T) => CamposBusqueda): Preparado {
@@ -227,11 +344,15 @@ function preparado<T>(it: T, campos: (it: T) => CamposBusqueda): Preparado {
 }
 
 function ordenar<T>(items: T[], cq: Consulta, prep: (it: T, i: number) => Preparado, limite?: number): T[] {
-  const r: { it: T; i: number; p: number }[] = [];
+  let r: { it: T; i: number; p: number }[] = [];
+  let serie = false;
   for (let i = 0; i < items.length; i++) {
-    const p = puntaje(cq, prep(items[i], i));
+    const e = prep(items[i], i);
+    const p = puntaje(cq, e);
     if (p > 0) r.push({ it: items[i], i, p });
+    if (!serie && cq.doc && e.documentos.length) serie = deLaSerie(cq, e);
   }
+  r = soloExactos(cq, r, serie);
   r.sort((a, b) => b.p - a.p || a.i - b.i);
   const out = r.map((x) => x.it);
   return limite != null ? out.slice(0, limite) : out;
@@ -251,11 +372,25 @@ export function buscar<T>(items: T[], q: string, campos: (it: T) => CamposBusque
   return ordenar(items, cq, (it) => preparado(it, campos));
 }
 
-/** Solo filtra, sin cambiar el orden (para tablas con su propio orden elegido). */
+/**
+ * Filtra sin cambiar el orden (para tablas con su propio orden elegido), salvo las
+ * coincidencias exactas (código, documento, monto), que suben arriba de todo.
+ */
 export function filtrar<T>(items: T[], q: string, campos: (it: T) => CamposBusqueda): T[] {
   const cq = compilar(q);
   if (!cq.tokens.length) return items;
-  return items.filter((it) => puntaje(cq, preparado(it, campos)) > 0);
+  let r: { it: T; i: number; p: number }[] = [];
+  let serie = false;
+  for (let i = 0; i < items.length; i++) {
+    const e = preparado(items[i], campos);
+    const p = puntaje(cq, e);
+    if (p > 0) r.push({ it: items[i], i, p });
+    if (!serie && cq.doc && e.documentos.length) serie = deLaSerie(cq, e);
+  }
+  r = soloExactos(cq, r, serie);
+  const exacta = (p: number) => (p >= P_MONTO ? 1 : 0);
+  r.sort((a, b) => exacta(b.p) - exacta(a.p) || a.i - b.i);
+  return r.map((x) => x.it);
 }
 
 /** ¿Coincide? (para resaltar o mostrar/ocultar algo puntual). */

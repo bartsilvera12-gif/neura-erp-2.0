@@ -4,7 +4,7 @@
  *   GET  /api/agenda?desde&hasta&estado&responsable_id&cliente_id&q
  *        → citas enriquecidas (cliente, responsables con el principal primero, creado_por,
  *          puede_editar) ordenadas por inicio. `responsable_id` = principal O entre los
- *          responsables; `q` busca en título y nombre del contacto.
+ *          responsables; `q` = búsqueda inteligente (título, contacto, cliente, teléfono, responsables, lugar, notas).
  *   POST /api/agenda { titulo, responsable_id, responsable_ids?, tipo?, estado?, inicio_at,
  *        fin_at, cliente_id?, contacto_nombre?, contacto_telefono?, ubicacion?,
  *        observaciones?, metadata? }
@@ -14,6 +14,7 @@
 import { withTenant } from "@/lib/api/with-tenant";
 import { created, fail, ok, ERR } from "@/lib/api/responses";
 import { isAgendaEstado, type AgendaCitaRow } from "@/modules/agenda/dominio";
+import { filtrar } from "@/lib/busqueda";
 import {
   UUID_RE, avisarResponsables, buscarConflictoHorario, citaIdsDeUsuario, clienteExiste, enrichAgendaRows,
   guardarResponsables, mensajeConflicto, usuariosValidos,
@@ -36,8 +37,7 @@ export const GET = withTenant(async (ctx, req) => {
   const estado = sp.get("estado");
   const responsableId = sp.get("responsable_id");
   const clienteId = sp.get("cliente_id");
-  // Sin los caracteres que arman la sintaxis de `or` de PostgREST.
-  const q = (sp.get("q") ?? "").replace(/[,()*%\\]/g, " ").trim().slice(0, 100);
+  const q = (sp.get("q") ?? "").trim().slice(0, 100);
 
   try {
     let qq = ctx.db.select("agenda_citas", "*");
@@ -50,12 +50,21 @@ export const GET = withTenant(async (ctx, req) => {
       qq = ids.length ? qq.or(`responsable_id.eq.${responsableId},id.in.(${ids.join(",")})`) : qq.eq("responsable_id", responsableId);
     }
     if (clienteId && UUID_RE.test(clienteId)) qq = qq.eq("cliente_id", clienteId);
-    if (q) qq = qq.or(`titulo.ilike.%${q}%,contacto_nombre.ilike.%${q}%`);
 
     const { data, error } = await qq.order("inicio_at", { ascending: true }).limit(2000);
     if (error) return fail(error.message);
-    const rows = (data ?? []) as unknown as AgendaCitaRow[];
-    return ok(await enrichAgendaRows(ctx.db, rows, ctx));
+    const rows = await enrichAgendaRows(ctx.db, (data ?? []) as unknown as AgendaCitaRow[], ctx);
+    // Búsqueda inteligente (lib/busqueda): sin tildes, palabras en cualquier orden, errores de
+    // tipeo, teléfono en cualquier forma; en título, contacto, cliente, responsables, lugar y
+    // notas. Se filtra acá (el rango de fechas ya acota a lo que se ve) y se respeta el orden
+    // por hora de inicio.
+    if (!q) return ok(rows);
+    return ok(filtrar(rows, q, (c) => ({
+      principal: c.titulo,
+      otros: [c.contacto_nombre, c.cliente?.nombre, c.ubicacion, c.observaciones, c.tipo, c.estado,
+        ...(c.responsables ?? []).map((u) => u.nombre)],
+      codigos: [c.contacto_telefono, c.cliente?.telefono],
+    })));
   } catch (e) {
     console.error("[agenda] GET", (e as Error).message);
     return ERR.server();
