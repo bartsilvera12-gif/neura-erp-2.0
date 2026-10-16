@@ -107,7 +107,7 @@ export function AperturaModal({ estado, puntoInicial, onClose, onAbierta }: {
         <div className="flex flex-wrap gap-1.5">
           {[0, 100000, 200000, 300000, 500000].map((v) => (
             <button key={v} type="button" onClick={() => setMonto(v)}
-              className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${monto === v ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand)]" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
+              className={`rounded-full border px-3 py-1 text-xs font-semibold transition max-sm:min-h-11 max-sm:px-4 max-sm:text-sm ${monto === v ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand)]" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
               {v === 0 ? "Sin cambio" : formatGs(v)}
             </button>
           ))}

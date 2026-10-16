@@ -11,6 +11,7 @@ import { descargarArchivo } from "@/lib/api/client-blob";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Dato, ModalDocumento, Pestanas, PedirMotivo } from "@/modules/inventario/ui";
 import { anularMovimiento, fechaHora, getResumenTurno, hora, metodoLabel, type MovimientoTurno, type ResumenTurno } from "@/modules/caja/turno";
 import { ResumenTurnoPanel } from "@/modules/caja/CierreModal";
+import { TablaScroll, TablaTarjetas } from "@/components/TablaResponsive";
 import { formatGs } from "@/modules/caja/lib";
 
 const ORIGEN: Record<string, string> = {
@@ -47,10 +48,10 @@ export function TurnoModal({ turnoId, onClose, onCerrar, onCambio }: {
         ancho="max-w-4xl" onClose={onClose}
         footer={
           <>
-            {error ? <p className="mr-auto text-xs text-rose-600">{error}</p> : null}
-            <button type="button" onClick={pdf} disabled={!r} className={BOTON_SECUNDARIO}><Download className="h-4 w-4" /> {abierta ? "Arqueo parcial" : "PDF del cierre"}</button>
+            {error ? <p className="mr-auto text-xs text-rose-600 max-sm:w-full">{error}</p> : null}
+            <button type="button" onClick={pdf} disabled={!r} className={`${BOTON_SECUNDARIO} max-sm:flex-1`}><Download className="h-4 w-4" /> {abierta ? "Arqueo parcial" : "PDF del cierre"}</button>
             {abierta && onCerrar ? (
-              <button type="button" onClick={onCerrar} className={`${BOTON_PRIMARIO} bg-rose-600`}><Lock className="h-4 w-4" /> Cerrar caja</button>
+              <button type="button" onClick={onCerrar} className={`${BOTON_PRIMARIO} bg-rose-600 max-sm:flex-1`}><Lock className="h-4 w-4" /> Cerrar caja</button>
             ) : null}
           </>
         }>
@@ -81,6 +82,7 @@ export function TurnoModal({ turnoId, onClose, onCerrar, onCambio }: {
               <div className="grid gap-5 lg:grid-cols-[1.1fr_1fr]">
                 <div className="space-y-4">
                   <section className="overflow-hidden rounded-2xl border border-slate-200">
+                    <TablaScroll primeraFija minAncho={abierta ? undefined : 420}>
                     <table className="w-full text-sm">
                       <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
                         <tr>
@@ -105,6 +107,7 @@ export function TurnoModal({ turnoId, onClose, onCerrar, onCambio }: {
                         ))}
                       </tbody>
                     </table>
+                    </TablaScroll>
                   </section>
                   {r.caja.motivo_diferencia ? <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs text-amber-900"><b>Motivo de la diferencia:</b> {r.caja.motivo_diferencia}</p> : null}
                   {r.caja.observacion_cierre ? <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-700"><b>Observación:</b> {r.caja.observacion_cierre}</p> : null}
@@ -112,60 +115,70 @@ export function TurnoModal({ turnoId, onClose, onCerrar, onCambio }: {
                 <ResumenTurnoPanel r={r} />
               </div>
             ) : tab === "movimientos" ? (
+              // Celular: cada movimiento es una tarjeta (tipo + concepto, monto a la derecha).
               <div className="overflow-hidden rounded-2xl border border-slate-200">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    <tr><th className="px-3 py-2 text-left">Hora</th><th className="px-3 py-2 text-left">Movimiento</th><th className="px-3 py-2 text-left">Detalle</th><th className="px-3 py-2 text-left">Forma</th><th className="px-3 py-2 text-right">Monto</th><th className="w-10" /></tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {r.movimientos.length === 0 ? (
-                      <tr><td colSpan={6} className="py-10 text-center text-slate-400">Sin movimientos todavía.</td></tr>
-                    ) : r.movimientos.map((m) => (
-                      <tr key={m.id} className={m.anulado ? "text-slate-400" : ""}>
-                        <td className="whitespace-nowrap px-3 py-2 tabular-nums text-slate-500">{hora(m.created_at)}</td>
-                        <td className="px-3 py-2"><span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${m.signo < 0 ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{tipoMov(m)}</span></td>
-                        <td className="px-3 py-2">
+                <TablaTarjetas
+                  filas={r.movimientos}
+                  claveFila={(m) => m.id}
+                  claseFila={(m) => (m.anulado ? "text-slate-400" : "")}
+                  claseThead="bg-slate-50"
+                  thBase="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+                  tdBase="px-3 py-2"
+                  vacio={<p className="py-10 text-center text-sm text-slate-400">Sin movimientos todavía.</p>}
+                  columnas={[
+                    { key: "hora", titulo: "Hora", claseTd: "whitespace-nowrap tabular-nums text-slate-500", celda: (m) => hora(m.created_at), movil: "dato" },
+                    { key: "tipo", titulo: "Movimiento", movil: "chip", celda: (m) => <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${m.signo < 0 ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{tipoMov(m)}</span> },
+                    {
+                      key: "detalle", titulo: "Detalle", movil: "titulo",
+                      celda: (m) => (
+                        <>
                           <span className={m.anulado ? "line-through" : "text-slate-700"}>{m.concepto}</span>
-                          <span className="block text-[11px] text-slate-400">
+                          <span className="block text-[11px] font-normal text-slate-400">
                             {[m.referencia ? `Ref. ${m.referencia}` : null, m.banco, m.usuario_nombre, m.anulado ? `Anulado: ${m.anulado_motivo ?? ""}` : null].filter(Boolean).join(" · ")}
                           </span>
-                        </td>
-                        <td className="px-3 py-2 text-xs">{m.metodo_label}</td>
-                        <td className={`whitespace-nowrap px-3 py-2 text-right font-semibold tabular-nums ${m.anulado ? "line-through" : m.signo < 0 ? "text-rose-600" : "text-emerald-700"}`}>
-                          {m.signo < 0 ? "−" : "+"} {formatGs(m.monto)}
-                        </td>
-                        <td className="px-2 py-2 text-right">
-                          {abierta && m.origen === "manual" && !m.anulado && (m.tipo === "retiro" || m.tipo === "ingreso") ? (
-                            <button type="button" onClick={() => setAnulando(m)} title="Anular" className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Undo2 className="h-4 w-4" /></button>
-                          ) : null}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </>
+                      ),
+                    },
+                    { key: "forma", titulo: "Forma", claseTd: "text-xs", celda: (m) => m.metodo_label, movil: "dato" },
+                    {
+                      key: "monto", titulo: "Monto", claseTh: "!text-right", movil: "valor",
+                      claseTd: "whitespace-nowrap text-right font-semibold tabular-nums",
+                      celda: (m) => <span className={m.anulado ? "line-through" : m.signo < 0 ? "text-rose-600" : "text-emerald-700"}>{m.signo < 0 ? "−" : "+"} {formatGs(m.monto)}</span>,
+                    },
+                    {
+                      key: "acc", titulo: "", claseTh: "w-10", claseTd: "px-2 text-right", movil: "acciones",
+                      celda: (m) => abierta && m.origen === "manual" && !m.anulado && (m.tipo === "retiro" || m.tipo === "ingreso") ? (
+                        <button type="button" onClick={() => setAnulando(m)} title="Anular" aria-label="Anular movimiento" className="inline-flex items-center justify-center gap-1 rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Undo2 className="h-4 w-4" /><span className="text-xs font-semibold md:hidden">Anular</span></button>
+                      ) : null,
+                    },
+                  ]}
+                />
               </div>
             ) : (
               <div className="overflow-hidden rounded-2xl border border-slate-200">
-                <table className="w-full text-sm">
-                  <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                    <tr><th className="px-3 py-2 text-left">Venta</th><th className="px-3 py-2 text-left">Cliente</th><th className="px-3 py-2 text-left">Condición / pago</th><th className="px-3 py-2 text-right">Total</th></tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {r.ventas_lista.length === 0 ? (
-                      <tr><td colSpan={4} className="py-10 text-center text-slate-400">Sin ventas en este turno.</td></tr>
-                    ) : r.ventas_lista.map((v) => (
-                      <tr key={v.id} className={v.estado === "anulada" ? "text-slate-400" : ""}>
-                        <td className="px-3 py-2"><span className="font-mono text-xs">{v.numero_control}</span><span className="block text-[11px] text-slate-400">{hora(v.fecha)}</span></td>
-                        <td className="px-3 py-2 text-slate-700">{v.cliente_nombre ?? "Consumidor final"}</td>
-                        <td className="px-3 py-2 text-xs">
+                <TablaTarjetas
+                  filas={r.ventas_lista}
+                  claveFila={(v) => v.id}
+                  claseFila={(v) => (v.estado === "anulada" ? "text-slate-400" : "")}
+                  claseThead="bg-slate-50"
+                  thBase="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+                  tdBase="px-3 py-2"
+                  vacio={<p className="py-10 text-center text-sm text-slate-400">Sin ventas en este turno.</p>}
+                  columnas={[
+                    { key: "venta", titulo: "Venta", movil: "subtitulo", celda: (v) => <><span className="font-mono text-xs">{v.numero_control}</span><span className="block text-[11px] text-slate-400 max-md:ml-1.5 max-md:inline">{hora(v.fecha)}</span></> },
+                    { key: "cliente", titulo: "Cliente", movil: "titulo", claseTd: "text-slate-700", celda: (v) => v.cliente_nombre ?? "Consumidor final" },
+                    {
+                      key: "cond", titulo: "Condición / pago", movil: "dato", etiquetaMovil: "Pago", claseTd: "text-xs",
+                      celda: (v) => (
+                        <>
                           {v.estado === "anulada" ? <span className="font-semibold text-rose-600">Anulada · </span> : null}
                           {v.tipo_venta === "CREDITO" ? <span className="font-semibold text-orange-600">Crédito</span> : v.pagos.map((p) => `${p.label} ${formatGs(p.monto)}`).join(" + ") || metodoLabel(v.metodo_pago)}
-                        </td>
-                        <td className={`px-3 py-2 text-right font-semibold tabular-nums ${v.estado === "anulada" ? "line-through" : "text-slate-800"}`}>{formatGs(v.total)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                        </>
+                      ),
+                    },
+                    { key: "total", titulo: "Total", claseTh: "!text-right", movil: "valor", claseTd: "text-right font-semibold tabular-nums", celda: (v) => <span className={v.estado === "anulada" ? "line-through" : "text-slate-800"}>{formatGs(v.total)}</span> },
+                  ]}
+                />
               </div>
             )}
           </div>

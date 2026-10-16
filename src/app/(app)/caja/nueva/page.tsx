@@ -13,13 +13,15 @@
 import Link from "next/link";
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, FileSignature, Package, Search, Trash2, X } from "lucide-react";
+import { CheckCircle2, ChevronRight, FileSignature, Package, Search, Trash2, UserRound, X } from "lucide-react";
 import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { browserClient } from "@/lib/supabase/browser";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
 import { QtyInput } from "@/components/ui/QtyInput";
+import { HojaInferior } from "@/components/HojaInferior";
+import { useEsEscritorio } from "@/lib/ui/responsive";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
 import { CajaBarra } from "@/modules/caja/CajaBarra";
 import { AperturaModal } from "@/modules/caja/AperturaModal";
@@ -87,6 +89,12 @@ async function imprimirTicket(ventaId: string) {
     setTimeout(() => URL.revokeObjectURL(url), 15000);
   } catch { /* el ticket es best-effort; la venta ya quedó registrada */ }
 }
+
+/**
+ * Con mouse / lector de códigos (puntero fino) el buscador se re-enfoca solo después de cada
+ * acción. En celular / tablet táctil NO: enfocar abre el teclado en pantalla y tapa el carrito.
+ */
+const conPunteroFino = () => typeof window !== "undefined" && window.matchMedia("(pointer: fine)").matches;
 
 function nuevaIdempotencyKey(): string {
   try {
@@ -252,7 +260,21 @@ function CajaPageContenido() {
       .catch((e) => setPresu({ error: `No se pudo cargar el presupuesto: ${(e as Error).message}` }));
   }, [presupuestoPre]);
 
-  useEffect(() => { inputRef.current?.focus(); }, []);
+  useEffect(() => { if (conPunteroFino()) inputRef.current?.focus(); }, []);
+  /** Vuelve al buscador (lector / teclado); en pantallas táctiles solo si se pide (`forzar`). */
+  const enfocarBuscador = useCallback((forzar = false) => {
+    if (forzar || conPunteroFino()) setTimeout(() => inputRef.current?.focus(), 0);
+    else inputRef.current?.blur();
+  }, []);
+
+  // ── Responsive ──────────────────────────────────────────────────────────────
+  // ≥ 1024 px: los dos paneles de siempre. Debajo (celular / tablet): una columna con el
+  // buscador fijo arriba, el carrito en tarjetas y un pie fijo con el total y "Cobrar";
+  // cliente, condición y documento van en una hoja inferior.
+  const esEscritorio = useEsEscritorio();
+  const [hojaOpciones, setHojaOpciones] = useState(false);
+  // Mientras se escribe en el celular el pie fijo se esconde (no tapa la lista con el teclado abierto).
+  const [escribiendo, setEscribiendo] = useState(false);
 
   // Búsqueda de clientes en la base (debounce 250 ms).
   const [clientesBuscados, setClientesBuscados] = useState<Cliente[] | null>(null);
@@ -402,7 +424,7 @@ function CajaPageContenido() {
   }
 
   // ── Acciones carrito ───────────────────────────────────────────────────────
-  const addToCart = useCallback((p: Producto) => {
+  const addToCart = useCallback((p: Producto, reenfocar?: boolean) => {
     setCart((prev) => {
       const idx = prev.findIndex((l) => l.producto.id === p.id);
       if (idx !== -1) {
@@ -426,8 +448,8 @@ function CajaPageContenido() {
     setUltimo(p);
     setQ("");
     setHitsHighlight(-1);
-    setTimeout(() => inputRef.current?.focus(), 0);
-  }, []);
+    enfocarBuscador(reenfocar);
+  }, [enfocarBuscador]);
 
   const updateCant = useCallback((id: string, n: number) => {
     if (!Number.isFinite(n) || n <= 0) return;
@@ -457,7 +479,7 @@ function CajaPageContenido() {
       const alDia = qDiferida === q;
       const lista = alDia ? hits : q.trim() ? buscarEnIndice(indice, q, 8) : [];
       const pick = alDia && hitsHighlight >= 0 ? lista[hitsHighlight] : lista[0];
-      if (pick) addToCart(pick);
+      if (pick) addToCart(pick, true); // lector / teclado: sigue en el buscador
     }
   }
 
@@ -471,10 +493,12 @@ function CajaPageContenido() {
     }
     if (clienteObligatorio && !clienteId) {
       setCobroError(tipoDocumento === "factura" ? "Para emitir factura elegí un cliente." : "La venta a crédito requiere un cliente.");
+      if (!esEscritorio) setHojaOpciones(true); // celular / tablet: el cliente está en la hoja
       return;
     }
     if (tipoVenta === "CREDITO" && plazoDiasNum < 1) {
       setCobroError("Ingresá un plazo de crédito de al menos 1 día.");
+      if (!esEscritorio) setHojaOpciones(true);
       return;
     }
     setCobroOpen(true);
@@ -537,7 +561,7 @@ function CajaPageContenido() {
       setClienteQuery("");
       setTipoVenta("CONTADO");
       setPlazoDias("");
-      setTimeout(() => inputRef.current?.focus(), 0);
+      enfocarBuscador();
     } catch (e) {
       const msg = (e as Error).message;
       setCobroError(msg);
@@ -551,7 +575,7 @@ function CajaPageContenido() {
 
   // Espejo del estado para los atajos de teclado (siempre el último valor).
   kbRef.current = {
-    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente, cart, q, inputRef,
+    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente || hojaOpciones, cart, q, inputRef,
     updateCant, removeFromCart, setCobroOpen, setQ, setClienteOpen,
   };
 
@@ -563,20 +587,95 @@ function CajaPageContenido() {
   }, [ventaOk]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  // Cliente, condición y documento: en escritorio una fila arriba; en celular / tablet, en una hoja.
+  const datosVenta = (
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-3">
+      {/* Cliente */}
+      <div ref={clienteContainerRef} className="relative">
+        <label className="mb-1.5 block text-sm font-medium text-slate-700">
+          Cliente {clienteObligatorio ? <span className="text-rose-600">*</span> : <span className="font-normal text-slate-400">(opcional para ticket)</span>}
+        </label>
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={clienteSel ? clienteSel.nombre : clienteQuery}
+            onChange={(e) => { setClienteId(""); setClienteQuery(e.target.value); setClienteOpen(true); }}
+            onFocus={() => setClienteOpen(true)}
+            placeholder="Buscar por nombre o RUC…"
+            autoComplete="off"
+            enterKeyHint="search"
+            className={`min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 lg:min-h-0 ${clienteSel ? "font-medium" : ""}`}
+            style={{ ["--tw-ring-color" as string]: TEAL }}
+          />
+          {clienteSel && (
+            <button type="button" onClick={() => { setClienteId(""); setClienteQuery(""); }} className="min-h-11 shrink-0 rounded-lg border border-slate-200 px-3 text-xs text-slate-500 hover:bg-slate-50 lg:min-h-0">
+              Quitar
+            </button>
+          )}
+        </div>
+        {clienteOpen && !clienteSel && (
+          <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto overscroll-contain rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
+            <button type="button" onClick={() => { setClienteOpen(false); setHojaOpciones(false); setModalNuevoCliente(true); }} className="flex min-h-11 w-full items-center gap-1.5 border-b border-slate-100 px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50 lg:min-h-0" style={{ color: TEAL, backgroundColor: `${TEAL}0f` }}>
+              <span className="text-base leading-none">＋</span> Cargar nuevo cliente
+              {clienteQuery.trim() && <span className="ml-1 truncate text-slate-500">«{clienteQuery.trim()}»</span>}
+            </button>
+            {clientesFiltrados.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-slate-400">Sin clientes que coincidan.</p>
+            ) : clientesFiltrados.map((c) => (
+              <button key={c.id} type="button" onClick={() => { if (!clientes.some((x) => x.id === c.id)) setClientes((prev) => [c, ...prev]); setClienteId(c.id); setClienteQuery(""); setClienteOpen(false); }} className="block min-h-11 w-full px-3 py-2 text-left text-sm hover:bg-slate-50 lg:min-h-0">
+                <span className="font-medium text-slate-800">{c.nombre}</span>
+                {c.ruc && <span className="ml-2 text-xs text-slate-400">RUC {c.ruc}</span>}
+                {c.documento && !c.ruc && <span className="ml-2 text-xs text-slate-400">{c.documento}</span>}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Condición */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-slate-700">Condición</label>
+        <Segmented value={tipoVenta} onChange={(v) => { setTipoVenta(v); if (v === "CONTADO") setPlazoDias(""); }} options={[{ value: "CONTADO", label: "Contado" }, { value: "CREDITO", label: "Crédito", disabled: !!me && !puedeCredito, title: "Tu perfil no permite vender a crédito" }]} />
+        {tipoVenta === "CREDITO" && (
+          <div className="mt-2">
+            <input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" min={1} value={plazoDias} onChange={(e) => setPlazoDias(e.target.value)} placeholder="Plazo (días)"
+              className={`min-h-11 w-full rounded-lg border px-3 py-2 text-sm outline-none lg:min-h-0 ${plazoDiasNum < 1 ? "border-rose-300 bg-rose-50" : "border-slate-200"}`} />
+          </div>
+        )}
+      </div>
+
+      {/* Documento */}
+      <div>
+        <label className="mb-1.5 block text-sm font-medium text-slate-700">Documento</label>
+        <Segmented value={tipoDocumento} onChange={setTipoDocumento} options={[{ value: "factura", label: "Factura" }, { value: "ticket", label: "Solo ticket" }]} />
+        <p className="mt-1 text-[11px] text-slate-500">
+          {tipoDocumento === "factura" ? "Factura electrónica (SIFEN) — por ahora inactivo: se imprime el ticket." : "Registra la venta e imprime un ticket. No toca SIFEN."}
+        </p>
+      </div>
+    </div>
+  );
+  const faltaCliente = clienteObligatorio && !clienteId;
+  const bloqueado = cart.length === 0 || haySinStock;
+
   return (
-    <div className="flex h-[calc(100vh-7rem)] min-h-0 flex-col gap-3">
+    <div
+      className="flex flex-col gap-3 max-lg:pb-24 lg:h-[calc(100vh-7rem)] lg:min-h-0"
+      // Celular: con un campo enfocado (teclado abierto) se esconde el pie fijo de "Cobrar".
+      onFocusCapture={(e) => { if ((e.target as HTMLElement).tagName === "INPUT") setEscribiendo(true); }}
+      onBlurCapture={(e) => { if ((e.target as HTMLElement).tagName === "INPUT") setEscribiendo(false); }}
+    >
       {/* Header compacto: todo en una línea para no gastar alto vertical. */}
-      <div className="flex shrink-0 items-center justify-between gap-4">
-        <div className="flex items-baseline gap-2">
+      <div className="flex shrink-0 items-center justify-between gap-3 sm:gap-4">
+        <div className="flex min-w-0 items-baseline gap-2">
           <h1 className="text-lg font-semibold tracking-tight text-slate-900">Caja</h1>
           <span className="hidden text-xs text-slate-400 sm:inline">· Escaneá y cobrá directo</span>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          <Link href="/caja/turnos" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
-            Apertura y cierre
+          <Link href="/caja/turnos" className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 lg:min-h-0">
+            <span className="sm:hidden">Turnos</span><span className="hidden sm:inline">Apertura y cierre</span>
           </Link>
-          <Link href="/caja" className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50">
-            Órdenes de venta →
+          <Link href="/caja" className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 lg:min-h-0">
+            <span className="sm:hidden">Órdenes</span><span className="hidden sm:inline">Órdenes de venta</span> →
           </Link>
         </div>
       </div>
@@ -588,15 +687,18 @@ function CajaPageContenido() {
           onVer={() => setModalCaja("ver")} onCerrar={() => setModalCaja("cerrar")} />
       </div>
 
+      {/* Venta registrada: en escritorio una franja; en celular / tablet un aviso flotante
+          sobre el pie fijo (se ve aunque se haya bajado por el carrito). */}
       {ventaOk && (
-        <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 shadow-sm">
-          <CheckCircle2 className="h-5 w-5" />
-          <span>Venta <strong>{ventaOk.numero}</strong> registrada. Ticket enviado a imprimir.</span>
+        <div role="status" className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 shadow-sm max-lg:fixed max-lg:inset-x-3 max-lg:bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] max-lg:z-40 max-lg:py-3 max-lg:pr-1.5 max-lg:shadow-xl sm:max-lg:mx-auto sm:max-lg:max-w-xl"
+          style={{ animation: "fade-in 0.2s ease-out" }}>
+          <CheckCircle2 className="h-5 w-5 shrink-0" />
+          <span className="min-w-0 flex-1 lg:flex-none">Venta <strong>{ventaOk.numero}</strong> registrada. Ticket enviado a imprimir.</span>
           {ventaOk.vuelto > 0 ? (
-            <span className="rounded-lg bg-white px-3 py-1 text-base font-extrabold tabular-nums text-emerald-700 ring-1 ring-emerald-200">Vuelto {formatGs(ventaOk.vuelto)}</span>
+            <span className="rounded-lg bg-white px-3 py-1 text-base font-extrabold tabular-nums text-emerald-700 ring-1 ring-emerald-200 max-lg:order-last max-lg:w-full max-lg:text-center max-lg:text-xl">Vuelto {formatGs(ventaOk.vuelto)}</span>
           ) : null}
-          {ventaPresu ? <span className="font-normal">{ventaPresu}</span> : null}
-          <button type="button" onClick={() => setVentaOk(null)} aria-label="Cerrar aviso" className="ml-auto text-emerald-500 hover:text-emerald-800"><X className="h-4 w-4" /></button>
+          {ventaPresu ? <span className="font-normal max-lg:order-last">{ventaPresu}</span> : null}
+          <button type="button" onClick={() => setVentaOk(null)} aria-label="Cerrar aviso" className="ml-auto inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-emerald-500 hover:text-emerald-800 lg:h-auto lg:w-auto"><X className="h-4 w-4" /></button>
         </div>
       )}
 
@@ -605,7 +707,7 @@ function CajaPageContenido() {
         "error" in presu ? (
           <div className="flex shrink-0 items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm text-rose-800">
             <span>{presu.error}</span>
-            <button type="button" onClick={desvincularPresupuesto} aria-label="Cerrar" className="text-rose-400 hover:text-rose-700"><X className="h-4 w-4" /></button>
+            <button type="button" onClick={desvincularPresupuesto} aria-label="Cerrar" className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-rose-400 hover:text-rose-700 lg:h-auto lg:w-auto"><X className="h-4 w-4" /></button>
           </div>
         ) : (
           <div className="shrink-0 space-y-1 rounded-xl border px-4 py-2.5 text-sm" style={{ borderColor: `${TEAL}55`, backgroundColor: `${TEAL}10` }}>
@@ -616,7 +718,7 @@ function CajaPageContenido() {
                   ? <span>Venta del presupuesto <Link href={`/presupuestos/${presu.id}`} className="font-mono font-semibold hover:underline">{presu.etiqueta}</Link>: al cobrar queda como <b>convertido</b>.</span>
                   : <span>Sacaste todas las líneas del presupuesto <b className="font-mono">{presu.etiqueta}</b>: esta venta no se va a ligar a él.</span>}
               </p>
-              <button type="button" onClick={desvincularPresupuesto} className="rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-white/70 hover:text-slate-800">Desvincular</button>
+              <button type="button" onClick={desvincularPresupuesto} className="min-h-11 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-white/70 hover:text-slate-800 lg:min-h-0">Desvincular</button>
             </div>
             {presu.prospecto ? <p className="text-xs text-amber-800">Es para un prospecto: {presu.prospecto}. Elegí o cargá el cliente si vas a facturar o vender a crédito.</p> : null}
             {presu.a.enDolares ? <p className="text-xs text-slate-600">Estaba en dólares: los precios se pasaron a guaraníes con la cotización del presupuesto.</p> : null}
@@ -636,107 +738,58 @@ function CajaPageContenido() {
       ) : null}
 
       {!caja ? (
-        <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">
+        <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500 shadow-sm max-lg:min-h-[40vh]">
           {estadoCajas ? (estadoCajas.abiertas.length > 1 ? "Elegí arriba la caja en la que vas a vender." : "Abrí la caja para empezar a cobrar.") : "Cargando la caja…"}
         </div>
       ) : (
       <>
-      {/* Datos de la venta — compacto, una fila. */}
-      <div className="shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <div className="grid grid-cols-1 gap-3 lg:grid-cols-3">
-          {/* Cliente */}
-          <div ref={clienteContainerRef} className="relative">
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">
-              Cliente {clienteObligatorio ? <span className="text-rose-600">*</span> : <span className="font-normal text-slate-400">(opcional para ticket)</span>}
-            </label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={clienteSel ? clienteSel.nombre : clienteQuery}
-                onChange={(e) => { setClienteId(""); setClienteQuery(e.target.value); setClienteOpen(true); }}
-                onFocus={() => setClienteOpen(true)}
-                placeholder="Buscar por nombre o RUC…"
-                className={`w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 ${clienteSel ? "font-medium" : ""}`}
-                style={{ ["--tw-ring-color" as string]: TEAL }}
-              />
-              {clienteSel && (
-                <button type="button" onClick={() => { setClienteId(""); setClienteQuery(""); }} className="shrink-0 rounded-lg border border-slate-200 px-3 text-xs text-slate-500 hover:bg-slate-50">
-                  Quitar
-                </button>
-              )}
-            </div>
-            {clienteOpen && !clienteSel && (
-              <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
-                <button type="button" onClick={() => { setClienteOpen(false); setModalNuevoCliente(true); }} className="flex w-full items-center gap-1.5 border-b border-slate-100 px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50" style={{ color: TEAL, backgroundColor: `${TEAL}0f` }}>
-                  <span className="text-base leading-none">＋</span> Cargar nuevo cliente
-                  {clienteQuery.trim() && <span className="ml-1 truncate text-slate-500">«{clienteQuery.trim()}»</span>}
-                </button>
-                {clientesFiltrados.length === 0 ? (
-                  <p className="px-3 py-2 text-xs text-slate-400">Sin clientes que coincidan.</p>
-                ) : clientesFiltrados.map((c) => (
-                  <button key={c.id} type="button" onClick={() => { if (!clientes.some((x) => x.id === c.id)) setClientes((prev) => [c, ...prev]); setClienteId(c.id); setClienteQuery(""); setClienteOpen(false); }} className="block w-full px-3 py-2 text-left text-sm hover:bg-slate-50">
-                    <span className="font-medium text-slate-800">{c.nombre}</span>
-                    {c.ruc && <span className="ml-2 text-xs text-slate-400">RUC {c.ruc}</span>}
-                    {c.documento && !c.ruc && <span className="ml-2 text-xs text-slate-400">{c.documento}</span>}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+      {/* Datos de la venta — compacto, una fila (escritorio). En celular / tablet van en una hoja. */}
+      {esEscritorio ? (
+        <div className="shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">{datosVenta}</div>
+      ) : null}
 
-          {/* Condición */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Condición</label>
-            <Segmented value={tipoVenta} onChange={(v) => { setTipoVenta(v); if (v === "CONTADO") setPlazoDias(""); }} options={[{ value: "CONTADO", label: "Contado" }, { value: "CREDITO", label: "Crédito", disabled: !!me && !puedeCredito, title: "Tu perfil no permite vender a crédito" }]} />
-            {tipoVenta === "CREDITO" && (
-              <div className="mt-2">
-                <input type="number" min={1} value={plazoDias} onChange={(e) => setPlazoDias(e.target.value)} placeholder="Plazo (días)"
-                  className={`w-full rounded-lg border px-3 py-2 text-sm outline-none ${plazoDiasNum < 1 ? "border-rose-300 bg-rose-50" : "border-slate-200"}`} />
-              </div>
-            )}
-          </div>
-
-          {/* Documento */}
-          <div>
-            <label className="mb-1.5 block text-sm font-medium text-slate-700">Documento</label>
-            <Segmented value={tipoDocumento} onChange={setTipoDocumento} options={[{ value: "factura", label: "Factura" }, { value: "ticket", label: "Solo ticket" }]} />
-            <p className="mt-1 text-[11px] text-slate-500">
-              {tipoDocumento === "factura" ? "Factura electrónica (SIFEN) — por ahora inactivo: se imprime el ticket." : "Registra la venta e imprime un ticket. No toca SIFEN."}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* Split POS */}
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_440px]">
+      {/* Split POS (escritorio); una columna en celular / tablet */}
+      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_440px]">
         {/* IZQUIERDA: buscador + carrito */}
         <div className="flex min-h-0 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="border-b border-slate-100 p-4">
+          {/* Celular / tablet: el buscador queda fijo arriba al bajar por el carrito. */}
+          <div className="border-b border-slate-100 p-3 max-lg:sticky max-lg:-top-4 max-lg:z-20 sm:max-lg:-top-5 max-lg:rounded-t-2xl max-lg:bg-white sm:p-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
               <input
                 ref={inputRef}
-                type="text"
+                type="search"
                 value={q}
                 onChange={(e) => { setQ(e.target.value); setHitsHighlight(-1); }}
                 onKeyDown={onKeyDownBuscar}
-                placeholder="Escaneá el código o buscá por nombre/SKU…"
-                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-base outline-none focus:bg-white focus:ring-2"
+                placeholder={esEscritorio ? "Escaneá el código o buscá por nombre/SKU…" : "Escaneá o buscá producto…"}
+                className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-base outline-none focus:bg-white focus:ring-2 [&::-webkit-search-cancel-button]:hidden"
                 style={{ ["--tw-ring-color" as string]: `${TEAL}55` }}
                 autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                enterKeyHint="search"
+                aria-label="Buscar o escanear producto"
               />
+              {q ? (
+                <button type="button" onClick={() => { setQ(""); setHitsHighlight(-1); enfocarBuscador(true); }} aria-label="Limpiar búsqueda"
+                  className="absolute right-1 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:text-slate-700">
+                  <X className="h-4 w-4" />
+                </button>
+              ) : null}
             </div>
             {hits.length > 0 && (
-              <ul className="mt-2 max-h-56 divide-y divide-slate-100 overflow-auto rounded-xl border border-slate-200 bg-white shadow-inner">
+              <ul className="mt-2 max-h-56 divide-y divide-slate-100 overflow-auto overscroll-contain rounded-xl border border-slate-200 bg-white shadow-inner max-lg:max-h-[min(20rem,45dvh)]">
                 {hits.map((p, i) => (
                   <li key={p.id} onClick={() => addToCart(p)} onMouseEnter={() => setHitsHighlight(i)}
-                    className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm" style={i === hitsHighlight ? { backgroundColor: `${TEAL}26` } : undefined}>
+                    className="flex cursor-pointer items-center gap-3 px-3 py-2 text-sm active:bg-slate-50" style={i === hitsHighlight ? { backgroundColor: `${TEAL}26` } : undefined}>
                     <ProdThumb url={p.imagen_url} nombre={p.nombre} className="h-10 w-10" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-medium text-slate-900">{p.nombre}</p>
-                      <p className="font-mono text-[11px] text-slate-500">{p.sku}</p>
+                      <p className="truncate font-mono text-[11px] text-slate-500">{p.sku}</p>
                     </div>
-                    <div className="text-right">
+                    <div className="shrink-0 text-right">
                       <p className={`text-[11px] font-medium ${p.controla_stock && p.stock_actual <= 0 ? "text-rose-600" : "text-emerald-700"}`}>
                         {p.controla_stock ? (p.stock_actual <= 0 ? "Sin stock" : `${p.stock_actual} u`) : "—"}
                       </p>
@@ -752,8 +805,8 @@ function CajaPageContenido() {
               </div>
             )}
 
-            {/* Guía de atajos: operar la caja sin mouse. */}
-            <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400">
+            {/* Guía de atajos: operar la caja sin mouse (solo escritorio). */}
+            <div className="mt-2.5 hidden flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-400 lg:flex">
               <span className="font-semibold uppercase tracking-wider text-slate-400">Teclado</span>
               <Atajo k="Enter" t="agregar" />
               <Atajo k="Espacio" t="cobrar" />
@@ -763,8 +816,29 @@ function CajaPageContenido() {
             </div>
           </div>
 
+          {/* Celular / tablet: cliente, condición y documento → hoja inferior. */}
+          {!esEscritorio ? (
+            <button type="button" onClick={() => setHojaOpciones(true)}
+              className={`flex min-h-14 items-center gap-3 border-b px-3 py-2 text-left transition active:bg-slate-50 sm:px-4 ${faltaCliente && cobroError ? "border-rose-200 bg-rose-50/70" : "border-slate-100"}`}>
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full" style={{ backgroundColor: `${TEAL}14`, color: TEAL }}>
+                <UserRound className="h-4 w-4" />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className={`block truncate text-sm font-semibold ${faltaCliente ? "text-rose-700" : "text-slate-900"}`}>
+                  {clienteSel ? clienteSel.nombre : faltaCliente ? "Elegí el cliente *" : "Sin cliente (consumidor final)"}
+                </span>
+                <span className="block truncate text-xs text-slate-500">
+                  {tipoVenta === "CREDITO" ? `Crédito${plazoDiasNum > 0 ? ` · ${plazoDiasNum} día${plazoDiasNum === 1 ? "" : "s"}` : " · sin plazo"}` : "Contado"} · {tipoDocumento === "factura" ? "Factura" : "Solo ticket"}
+                </span>
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold" style={{ color: TEAL }}>
+                Cambiar <ChevronRight className="h-4 w-4" />
+              </span>
+            </button>
+          ) : null}
+
           {/* Ítems cargados */}
-          <div className="flex items-baseline justify-between border-t border-slate-100 bg-slate-50/60 px-4 py-2">
+          <div className="flex items-baseline justify-between border-t border-slate-100 bg-slate-50/60 px-3 py-2 sm:px-4">
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
               Ítems cargados: <span className="text-base font-bold tabular-nums" style={{ color: TEAL }}>{cart.length}</span>
             </p>
@@ -772,7 +846,7 @@ function CajaPageContenido() {
           </div>
 
           {/* Carrito */}
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 overflow-auto p-2.5 sm:p-4">
             {haySinStock && (
               <div className="mb-3 rounded-xl border border-rose-300 bg-rose-50 p-3">
                 <p className="text-sm font-semibold text-rose-800">❌ No podés cobrar — hay productos sin stock suficiente</p>
@@ -797,13 +871,16 @@ function CajaPageContenido() {
               </div>
             )}
             {cart.length === 0 ? (
-              <div className="flex h-full flex-col items-center justify-center gap-2 text-sm text-slate-400">
+              <div className="flex h-full flex-col items-center justify-center gap-2 py-10 text-sm text-slate-400 lg:py-0">
                 <Package className="h-8 w-8 text-slate-300" />
                 <p>Todavía no cargaste productos.</p>
                 <p className="text-xs">Escaneá o buscá arriba.</p>
               </div>
             ) : (
-              <ul className="space-y-2">
+              // La tarjeta de cada línea se acomoda al ANCHO DEL CARRITO (container query): angosto
+              // (celular, tablet, escritorio de 1024) → cantidad grande táctil y el IVA en su fila;
+              // ancho (≥ 512 px) → todo en una fila, como siempre.
+              <ul className="@container space-y-2">
                 {cart.map((l) => {
                   const sinStockLinea = idsSinStock.has(l.producto.id);
                   const tier = tierDe(l);
@@ -812,12 +889,12 @@ function CajaPageContenido() {
                   const brutoLinea = l.cantidad * pAct;
                   const netoLinea = totalLinea(l);
                   return (
-                    <li key={l.cart_line_id} className={`rounded-xl border p-3 ${sinStockLinea ? "border-rose-300 bg-rose-50/60" : "border-slate-200 bg-slate-50/40"}`}>
-                      <div className="flex items-start gap-3">
-                        <ProdThumb url={l.producto.imagen_url} nombre={l.producto.nombre} className="h-12 w-12" />
+                    <li key={l.cart_line_id} className={`rounded-xl border p-2.5 @lg:p-3 ${sinStockLinea ? "border-rose-300 bg-rose-50/60" : "border-slate-200 bg-slate-50/40"}`}>
+                      <div className="flex items-start gap-2.5 @lg:gap-3">
+                        <ProdThumb url={l.producto.imagen_url} nombre={l.producto.nombre} className="h-10 w-10 @lg:h-12 @lg:w-12" />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <p className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900">{l.producto.nombre}</p>
+                            <p className="min-w-0 flex-1 text-sm font-medium leading-snug text-slate-900 [overflow-wrap:anywhere] @lg:truncate">{l.producto.nombre}</p>
                             {sinStockLinea && <span className="rounded-full border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-800">❌ Sin stock</span>}
                             {!sinStockLinea && idsVencidos.has(l.producto.id) && <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">⚠ Vencido</span>}
                             {tier !== "minorista" && (
@@ -827,24 +904,21 @@ function CajaPageContenido() {
                             )}
                           </div>
                           <div className="flex flex-wrap items-center gap-1 font-mono text-[11px] text-slate-500">
-                            <span>{l.producto.sku}</span>
+                            <span className="min-w-0 truncate">{l.producto.sku}</span>
                             <span>·</span>
                             <span className="font-semibold text-slate-700">{formatGs(pAct)}</span>
                             <span>c/u</span>
                           </div>
-                          <div className="mt-2 flex items-center gap-2">
-                            {/* Stepper unificado: un solo borde, divisores internos y hover turquesa. */}
-                            <div className="inline-flex items-center overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
-                              <button type="button" onClick={() => updateCant(l.cart_line_id, l.cantidad - 1)} className="flex h-8 w-9 items-center justify-center text-lg font-medium leading-none text-slate-400 transition-colors hover:bg-[var(--brand-50)] hover:text-[var(--brand)] active:bg-[var(--brand-100)]" aria-label="Quitar una unidad">−</button>
-                              <QtyInput value={l.cantidad} onChange={(n) => updateCant(l.cart_line_id, n)} decimals={0} className="h-8 w-10 border-x border-slate-200 bg-white text-center text-sm font-semibold tabular-nums text-slate-900 outline-none focus:bg-slate-50" />
-                              <button type="button" onClick={() => updateCant(l.cart_line_id, l.cantidad + 1)} className="flex h-8 w-9 items-center justify-center text-lg font-medium leading-none text-slate-400 transition-colors hover:bg-[var(--brand-50)] hover:text-[var(--brand)] active:bg-[var(--brand-100)]" aria-label="Agregar una unidad">+</button>
-                            </div>
+                          {/* Fila de cantidad / IVA / total (ancho). En angosto, ver abajo. */}
+                          <div className="mt-2 hidden items-center gap-2 @lg:flex">
+                            {/* Tablet (táctil): botones de 44 px también en la fila ancha. */}
+                            <Stepper l={l} updateCant={updateCant} grande={!esEscritorio} />
                             <div className="ml-auto inline-flex overflow-hidden rounded-md border border-slate-300 shadow-sm" role="group" aria-label="IVA de la línea">
                               {IVAS_SEG.map((iva, idx) => {
                                 const sel = l.tipo_iva === iva;
                                 return (
                                   <button key={iva} type="button" onClick={() => setIvaLinea(l.cart_line_id, iva)}
-                                    className={`px-2.5 py-1 text-[11px] font-bold transition-colors ${idx > 0 ? "border-l border-slate-300" : ""} ${sel ? "text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
+                                    className={`px-2.5 py-1 text-[11px] font-bold transition-colors max-lg:h-10 max-lg:min-w-11 max-lg:text-xs ${idx > 0 ? "border-l border-slate-300" : ""} ${sel ? "text-white" : "bg-white text-slate-500 hover:bg-slate-50"}`}
                                     style={sel ? { backgroundColor: TEAL } : undefined}>
                                     {ivaCorto(iva)}
                                   </button>
@@ -861,7 +935,33 @@ function CajaPageContenido() {
                             </div>
                           </div>
                         </div>
-                        <button type="button" onClick={() => removeFromCart(l.cart_line_id)} className="text-slate-400 hover:text-rose-500" aria-label="Quitar"><Trash2 className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => removeFromCart(l.cart_line_id)} className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 active:bg-rose-50 lg:@lg:m-0 lg:@lg:h-auto lg:@lg:w-auto" aria-label="Quitar"><Trash2 className="h-4 w-4" /></button>
+                      </div>
+                      {/* Angosto: cantidad (± de 44 px) y total; debajo el IVA y el descuento. */}
+                      <div className="mt-2 flex items-center justify-between gap-2 @lg:hidden">
+                        <Stepper l={l} updateCant={updateCant} grande />
+                        <div className="min-w-0 text-right">
+                          {desc > 0 && <div className="text-[11px] text-slate-400 line-through tabular-nums">{formatGs(brutoLinea)}</div>}
+                          <div className="text-base font-bold tabular-nums text-slate-900">{formatGs(netoLinea)}</div>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex items-center gap-2 @lg:hidden">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">IVA</span>
+                        <div className="inline-flex overflow-hidden rounded-lg border border-slate-300 bg-white" role="group" aria-label="IVA de la línea">
+                          {IVAS_SEG.map((iva, idx) => {
+                            const sel = l.tipo_iva === iva;
+                            return (
+                              <button key={iva} type="button" onClick={() => setIvaLinea(l.cart_line_id, iva)} aria-pressed={sel}
+                                className={`h-10 min-w-11 px-2 text-xs font-bold transition-colors ${idx > 0 ? "border-l border-slate-300" : ""} ${sel ? "text-white" : "bg-white text-slate-500 active:bg-slate-50"}`}
+                                style={sel ? { backgroundColor: TEAL } : undefined}>
+                                {ivaCorto(iva)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {desc > 0 && (
+                          <span className="ml-auto rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700" title="Descuento del producto (Inventario)">−{desc}%</span>
+                        )}
                       </div>
                     </li>
                   );
@@ -871,9 +971,9 @@ function CajaPageContenido() {
           </div>
         </div>
 
-        {/* DERECHA: último producto + totales */}
-        <div className="flex flex-col rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <div className="relative hidden min-h-[170px] flex-1 overflow-hidden rounded-t-2xl sm:block" style={{ backgroundColor: ultimo && cart.length > 0 ? "#ffffff" : "#0b1f20" }}>
+        {/* DERECHA: último producto + totales (escritorio). En celular / tablet: pie fijo. */}
+        <div className="hidden flex-col rounded-2xl border border-slate-200 bg-white shadow-sm lg:flex">
+          <div className="relative min-h-[170px] flex-1 overflow-hidden rounded-t-2xl" style={{ backgroundColor: ultimo && cart.length > 0 ? "#ffffff" : "#0b1f20" }}>
             {ultimo && cart.length > 0 ? (
               <>
                 {/* La imagen del último producto ocupa TODO el recuadro. */}
@@ -905,21 +1005,55 @@ function CajaPageContenido() {
             <div className="flex items-baseline justify-between text-sm text-slate-500">
               <span>IVA incluido</span><span className="tabular-nums text-slate-600">{formatGs(totalIva)}</span>
             </div>
-            <div className="flex items-baseline justify-between border-t border-dashed border-slate-200 pt-2.5">
+            <div className="flex items-baseline justify-between gap-3 border-t border-dashed border-slate-200 pt-2.5">
               <span className="text-sm font-medium text-slate-600">Total a cobrar</span>
               <span className="text-2xl font-bold tabular-nums text-slate-900">{formatGs(total)}</span>
             </div>
-            <button type="button" onClick={abrirCobro} disabled={cart.length === 0 || haySinStock}
+            <button type="button" onClick={abrirCobro} disabled={bloqueado}
               className="w-full rounded-xl px-5 py-3 text-base font-semibold text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
-              style={cart.length === 0 || haySinStock ? undefined : { backgroundColor: TEAL }}>
+              style={bloqueado ? undefined : { backgroundColor: TEAL }}>
               {haySinStock ? "Falta stock" : "Aceptar y cobrar"}
             </button>
             {cobroError && !cobroOpen && <p className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{cobroError}</p>}
           </div>
         </div>
       </div>
+
+      {/* Celular / tablet: pie fijo con el total y "Cobrar" (pulgar), sobre el safe-area. */}
+      {!esEscritorio ? (
+        <div className={`fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 shadow-[0_-10px_30px_-12px_rgba(15,23,42,0.28)] backdrop-blur pb-safe ${escribiendo ? "max-sm:hidden" : ""}`}>
+          {cobroError && !cobroOpen ? (
+            <p className="mx-auto max-w-3xl border-b border-rose-100 bg-rose-50 px-4 py-2 text-xs font-medium text-rose-700">{cobroError}</p>
+          ) : null}
+          <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2.5 sm:px-4">
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[11px] text-slate-500">
+                {cantTotal} unidad{cantTotal === 1 ? "" : "es"} · IVA incl. {formatGs(totalIva)}
+              </p>
+              <p className="truncate text-2xl font-bold leading-tight tabular-nums text-slate-900">{formatGs(total)}</p>
+            </div>
+            <button type="button" onClick={abrirCobro} disabled={bloqueado}
+              className="h-14 min-w-[42%] shrink-0 rounded-2xl px-6 text-base font-bold text-white shadow-sm transition active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+              style={bloqueado ? undefined : { backgroundColor: TEAL }}>
+              {haySinStock ? "Falta stock" : "Cobrar"}
+            </button>
+          </div>
+        </div>
+      ) : null}
       </>
       )}
+
+      {/* Celular / tablet: cliente, condición y documento */}
+      {hojaOpciones && !esEscritorio ? (
+        <HojaInferior titulo="Cliente y opciones de la venta" onClose={() => { setHojaOpciones(false); setClienteOpen(false); }} z="z-[60]"
+          pie={
+            <button type="button" onClick={() => { setHojaOpciones(false); setClienteOpen(false); if (cobroError) setCobroError(null); }}
+              className="min-h-11 flex-1 rounded-xl px-4 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Listo</button>
+          }>
+          {/* Alto mínimo: la lista de clientes (que se abre debajo del campo) entra sin saltos. */}
+          <div className="min-h-[50dvh]">{datosVenta}</div>
+        </HojaInferior>
+      ) : null}
 
       {/* Cobro: formas de pago (mixto, vuelto) o crédito */}
       {cobroOpen && (
@@ -931,7 +1065,7 @@ function CajaPageContenido() {
       {/* Ventanas de la caja (abrir, retiro / ingreso, turno, cierre) */}
       {modalCaja === "abrir" && estadoCajas ? (
         <AperturaModal estado={estadoCajas} onClose={() => setModalCaja(null)}
-          onAbierta={(id) => { setModalCaja(null); elegirCaja(id); refrescarCajas(); setTimeout(() => inputRef.current?.focus(), 0); }} />
+          onAbierta={(id) => { setModalCaja(null); elegirCaja(id); refrescarCajas(); enfocarBuscador(); }} />
       ) : null}
       {modalCaja === "mov" && caja ? (
         <MovimientoModal cajaId={caja.id} etiqueta={`${etiquetaCaja(caja)} · Turno N° ${caja.numero_caja}`}
@@ -973,12 +1107,28 @@ function Segmented<T extends string>({ value, options, onChange }: { value: T; o
         const sel = value === opt.value;
         return (
           <button key={opt.value} type="button" onClick={() => onChange(opt.value)} disabled={opt.disabled && !sel} title={opt.disabled ? opt.title : undefined}
-            className={`flex-1 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:text-slate-300 ${sel ? "text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+            className={`min-h-11 flex-1 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:text-slate-300 lg:min-h-0 ${sel ? "text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
             style={sel ? { backgroundColor: TEAL } : undefined}>
             {opt.label}
           </button>
         );
       })}
+    </div>
+  );
+}
+
+/** − cantidad + de la línea. `grande`: botones de 44 px para el dedo (carrito angosto). */
+function Stepper({ l, updateCant, grande = false }: { l: CartLine; updateCant: (id: string, n: number) => void; grande?: boolean }) {
+  const btn = grande
+    ? "flex h-11 w-11 items-center justify-center text-xl font-medium leading-none text-slate-500 transition-colors active:bg-[var(--brand-100)] disabled:opacity-30"
+    : "flex h-8 w-9 items-center justify-center text-lg font-medium leading-none text-slate-400 transition-colors hover:bg-[var(--brand-50)] hover:text-[var(--brand)] active:bg-[var(--brand-100)]";
+  return (
+    // Stepper unificado: un solo borde, divisores internos y hover turquesa.
+    <div className={`inline-flex shrink-0 items-center overflow-hidden border border-slate-200 bg-white shadow-sm ${grande ? "rounded-xl" : "rounded-lg"}`}>
+      <button type="button" onClick={() => updateCant(l.cart_line_id, l.cantidad - 1)} disabled={grande && l.cantidad <= 1} className={btn} aria-label="Quitar una unidad">−</button>
+      <QtyInput value={l.cantidad} onChange={(n) => updateCant(l.cart_line_id, n)} decimals={0}
+        className={`border-x border-slate-200 bg-white text-center font-semibold tabular-nums text-slate-900 outline-none focus:bg-slate-50 ${grande ? "h-11 w-12 text-base" : "h-8 w-10 text-sm"}`} />
+      <button type="button" onClick={() => updateCant(l.cart_line_id, l.cantidad + 1)} className={btn} aria-label="Agregar una unidad">+</button>
     </div>
   );
 }

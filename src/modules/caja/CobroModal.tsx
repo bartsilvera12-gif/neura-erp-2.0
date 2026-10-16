@@ -174,6 +174,9 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, co
         const tag = el?.tagName;
         if (tag === "BUTTON" || tag === "TEXTAREA" || el?.getAttribute("role") === "option" || el?.closest("[role=listbox]")) return;
         e.preventDefault();
+        // Pantalla táctil: el "OK / Listo" del teclado en pantalla solo lo cierra (no cobra sin
+        // tocar el botón). Con teclado / lector (puntero fino) Enter cobra, como siempre.
+        if (tag === "INPUT" && !window.matchMedia("(pointer: fine)").matches) { el?.blur(); return; }
         s.confirmar();
       }
     }
@@ -182,7 +185,9 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, co
   }, []);
 
   useEffect(() => {
-    if (tipoVenta === "CONTADO") setTimeout(() => recibidoRef.current?.focus(), 30);
+    // Con teclado / lector: directo a "lo que entrega". En táctil no (el teclado en pantalla
+    // taparía los billetes rápidos y el botón de cobrar).
+    if (tipoVenta === "CONTADO" && window.matchMedia("(pointer: fine)").matches) setTimeout(() => recibidoRef.current?.focus(), 30);
   }, [tipoVenta]);
 
   const lineaActiva = efectivas.find((l) => l.id === activa) ?? efectivas[0];
@@ -192,19 +197,19 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, co
       <div role="dialog" aria-modal className={`flex w-full max-w-2xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
         {/* Total */}
-        <div className="flex shrink-0 items-end justify-between gap-4 px-6 pb-4 pt-5" style={{ background: `linear-gradient(to right, ${TEAL}14, transparent)` }}>
-          <div>
+        <div className="flex shrink-0 items-end justify-between gap-4 px-4 pb-3 pt-3 sm:px-6 sm:pb-4 sm:pt-5" style={{ background: `linear-gradient(to right, ${TEAL}14, transparent)` }}>
+          <div className="min-w-0">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEAL }}>{tipoVenta === "CREDITO" ? "Venta a crédito" : "Cobrar"}</p>
-            <p className="mt-0.5 text-xs text-slate-500">{cantItems} ítem{cantItems === 1 ? "" : "s"}{cliente ? ` · ${cliente.nombre}` : ""}</p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">{cantItems} ítem{cantItems === 1 ? "" : "s"}{cliente ? ` · ${cliente.nombre}` : ""}</p>
           </div>
-          <p className="text-3xl font-extrabold tabular-nums tracking-tight text-slate-900">{formatGs(total)}</p>
+          <p className="shrink-0 text-[28px] font-extrabold leading-none tabular-nums tracking-tight text-slate-900 sm:text-3xl">{formatGs(total)}</p>
         </div>
 
-        <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-6 py-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-5 sm:px-6">
           {tipoVenta === "CREDITO" ? (
             <div className="space-y-3">
-              <div className="grid grid-cols-3 gap-3">
-                <Dato label="Cliente" valor={cliente?.nombre ?? "—"} />
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
+                <div className="col-span-2 sm:col-span-1"><Dato label="Cliente" valor={cliente?.nombre ?? "—"} /></div>
                 <Dato label="Plazo" valor={`${plazoDias} día${plazoDias === 1 ? "" : "s"}`} />
                 <Dato label="Vence" valor={vence} />
               </div>
@@ -233,11 +238,11 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, co
                     const sel = lineaActiva?.metodo === m.value;
                     return (
                       <button key={m.value} type="button" onClick={() => setMetodo(lineaActiva.id, m.value)} title={`${m.label} (Alt+${m.tecla})`}
-                        className="relative flex flex-col items-center gap-1 rounded-xl border px-2 py-2.5 text-[11px] font-semibold transition"
+                        className="relative flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-2 py-2.5 text-xs font-semibold transition sm:min-h-0 sm:text-[11px]"
                         style={sel ? { borderColor: TEAL, backgroundColor: `${TEAL}12`, color: TEAL } : { borderColor: "#e2e8f0", color: "#475569" }}>
                         <Icono className="h-4 w-4" />
                         <span className="leading-tight">{m.corto}</span>
-                        <kbd className="absolute right-1 top-1 text-[9px] font-medium text-slate-300">{m.tecla}</kbd>
+                        <kbd className="absolute right-1 top-1 hidden text-[9px] font-medium text-slate-300 lg:block">{m.tecla}</kbd>
                       </button>
                     );
                   })}
@@ -254,27 +259,27 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, co
                     <li key={l.id} onMouseDown={() => setActiva(l.id)}
                       className={`rounded-xl border p-3 transition ${esActiva && efectivas.length > 1 ? "ring-2" : ""}`}
                       style={{ borderColor: esActiva && efectivas.length > 1 ? TEAL : "#e2e8f0", ["--tw-ring-color" as string]: `${TEAL}30` }}>
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-2 sm:gap-3">
                         <Icono className="h-4 w-4 shrink-0 text-slate-400" />
-                        <span className="min-w-0 flex-1 text-sm font-semibold text-slate-800">
+                        <span className="min-w-0 flex-1 text-sm font-semibold leading-tight text-slate-800">
                           {def.label}
                           {i === 0 && !l.manual && efectivas.length > 1 ? <span className="ml-2 text-[10px] font-medium text-slate-400">(el resto)</span> : null}
                         </span>
                         <MontoInput value={l.monto} onChange={(n) => setMonto(l.id, n)} decimals={false} onFocus={() => setActiva(l.id)}
                           ref={(el: HTMLInputElement | null) => { montoRefs.current[l.id] = el; }}
-                          className="w-36 rounded-lg border border-slate-200 px-3 py-1.5 text-right text-base font-bold tabular-nums outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]" />
+                          className="h-11 w-[8.5rem] shrink-0 rounded-lg border border-slate-200 px-3 py-1.5 text-right text-base font-bold tabular-nums outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)] sm:h-auto sm:w-36" />
                         {i > 0 ? (
-                          <button type="button" onClick={() => quitar(l.id)} aria-label="Quitar forma de pago" className="rounded-lg p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-500"><Trash2 className="h-4 w-4" /></button>
-                        ) : <span className="w-7" />}
+                          <button type="button" onClick={() => quitar(l.id)} aria-label="Quitar forma de pago" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-500 sm:h-auto sm:w-auto sm:p-1.5"><Trash2 className="h-4 w-4" /></button>
+                        ) : <span className="hidden w-7 sm:block" />}
                       </div>
                       {l.metodo !== "efectivo" ? (
-                        <div className="mt-2 flex gap-2 pl-7">
+                        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:pl-7">
                           <input value={l.referencia} onFocus={() => setActiva(l.id)} onChange={(e) => setLineas((ls) => ls.map((x) => (x.id === l.id ? { ...x, referencia: e.target.value } : x)))}
                             maxLength={120} placeholder={`${def.referencia ?? "Referencia"} (opcional)`}
-                            className="min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-[var(--brand)]" />
+                            className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-[var(--brand)] sm:min-h-0" />
                           {def.banco ? (
                             <input value={l.banco} onFocus={() => setActiva(l.id)} onChange={(e) => setLineas((ls) => ls.map((x) => (x.id === l.id ? { ...x, banco: e.target.value } : x)))}
-                              maxLength={80} placeholder="Banco (opcional)" className="w-40 rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-[var(--brand)]" />
+                              maxLength={80} placeholder="Banco (opcional)" className="min-h-11 w-full rounded-lg border border-slate-200 px-3 py-1.5 text-xs outline-none focus:border-[var(--brand)] sm:min-h-0 sm:w-40" />
                           ) : null}
                         </div>
                       ) : null}
@@ -282,8 +287,8 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, co
                   );
                 })}
               </ul>
-              <button type="button" onClick={() => agregar()} className="inline-flex items-center gap-1 text-xs font-semibold hover:underline" style={{ color: TEAL }}>
-                <Plus className="h-3.5 w-3.5" /> Agregar otra forma de pago (mixto) <kbd className="ml-1 rounded border border-slate-200 px-1 font-mono text-[10px] text-slate-400">Alt+M</kbd>
+              <button type="button" onClick={() => agregar()} className="inline-flex items-center justify-center gap-1 text-xs font-semibold hover:underline max-sm:min-h-11 max-sm:w-full max-sm:rounded-xl max-sm:border max-sm:border-dashed max-sm:border-slate-300 max-sm:text-sm" style={{ color: TEAL }}>
+                <Plus className="h-3.5 w-3.5" /> Agregar otra forma de pago (mixto) <kbd className="ml-1 hidden rounded border border-slate-200 px-1 font-mono text-[10px] text-slate-400 lg:inline">Alt+M</kbd>
               </button>
 
               {restante !== 0 ? (
@@ -294,22 +299,23 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, co
 
               {/* Efectivo recibido → vuelto */}
               {efectivo > 0 ? (
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                  <div className="flex flex-wrap items-end gap-4">
-                    <label className="min-w-[200px] flex-1">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3 sm:p-4">
+                  <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
+                    <label className="min-w-[200px] flex-1 max-sm:w-full max-sm:min-w-0 max-sm:flex-none">
                       <span className="mb-1 flex items-center gap-1.5 text-xs font-medium text-slate-600"><Wallet className="h-3.5 w-3.5" /> Efectivo que entrega <span className="text-slate-400">(para el vuelto)</span></span>
                       <MontoInput value={recibido ?? ""} onChange={(n) => { setRecibido(n > 0 ? Math.round(n) : null); setAviso(null); }} decimals={false}
                         ref={recibidoRef} placeholder={`${efectivo.toLocaleString("es-PY")} (justo)`}
                         className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-right text-xl font-bold tabular-nums outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]" />
                     </label>
-                    <div className="min-w-[150px] text-right">
+                    <div className="min-w-[150px] text-right max-sm:flex max-sm:w-full max-sm:min-w-0 max-sm:items-baseline max-sm:justify-between max-sm:gap-2">
                       <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Vuelto</p>
                       <p className={`text-3xl font-extrabold tabular-nums ${vuelto != null && vuelto < 0 ? "text-rose-600" : "text-emerald-600"}`}>
                         {vuelto == null ? formatGs(0) : vuelto < 0 ? `Faltan ${formatGs(-vuelto)}` : formatGs(vuelto)}
                       </p>
                     </div>
                   </div>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
+                  {/* Billetes rápidos (en celular, grilla de botones grandes) */}
+                  <div className="mt-2 grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-1.5">
                     <Chip on={recibido === efectivo} onClick={() => setRecibido(efectivo)}>Justo</Chip>
                     {sugerencias(efectivo).map((v) => <Chip key={v} on={recibido === v} onClick={() => setRecibido(v)}>{formatGs(v)}</Chip>)}
                   </div>
@@ -321,15 +327,15 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, co
           {aviso || error ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">{aviso ?? error}</p> : null}
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-6 py-3.5">
-          <p className="hidden text-[11px] text-slate-400 sm:block">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/60 px-4 py-3 sm:px-6 sm:py-3.5">
+          <p className="hidden text-[11px] text-slate-400 lg:block">
             <kbd className="rounded border border-slate-200 bg-white px-1 font-mono">Enter</kbd> confirmar · <kbd className="rounded border border-slate-200 bg-white px-1 font-mono">Esc</kbd> volver
             {tipoVenta === "CONTADO" ? <> · <kbd className="rounded border border-slate-200 bg-white px-1 font-mono">Alt+1…6</kbd> forma de pago</> : null}
           </p>
-          <div className="flex gap-2">
-            <button type="button" onClick={onClose} disabled={cobrando} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50">Volver</button>
+          <div className="flex gap-2 max-lg:w-full lg:ml-auto">
+            <button type="button" onClick={onClose} disabled={cobrando} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 max-lg:flex-1">Volver</button>
             <button type="button" onClick={confirmar} disabled={cobrando || !!problema}
-              className="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40" style={{ backgroundColor: TEAL }}>
+              className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 max-lg:min-h-12 max-lg:flex-[2] max-lg:text-base" style={{ backgroundColor: TEAL }}>
               {cobrando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {cobrando ? "Registrando…" : tipoVenta === "CREDITO" ? "Confirmar crédito e imprimir" : "Cobrar e imprimir"}
             </button>
@@ -352,7 +358,7 @@ function Dato({ label, valor }: { label: string; valor: string }) {
 function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button type="button" onClick={onClick}
-      className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${on ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand)]" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}>
+      className={`rounded-full border px-3 py-1 text-xs font-semibold tabular-nums transition max-sm:min-h-11 max-sm:rounded-xl max-sm:px-1 max-sm:text-sm ${on ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand)]" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"}`}>
       {children}
     </button>
   );

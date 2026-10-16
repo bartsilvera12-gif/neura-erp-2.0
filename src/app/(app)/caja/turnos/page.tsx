@@ -16,6 +16,8 @@ import { ArrowLeftRight, Building2, Clock, Download, Eye, Loader2, Lock, Setting
 import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, TEAL } from "@/modules/inventario/ui";
+import { AccionesPagina } from "@/components/EncabezadoPagina";
+import { TablaTarjetas } from "@/components/TablaResponsive";
 import { fechaHora, hora, invalidarCajas, useEstadoCajas, type CajaPunto, type EstadoCajas } from "@/modules/caja/turno";
 import { formatGs } from "@/modules/caja/lib";
 import { AperturaModal } from "@/modules/caja/AperturaModal";
@@ -81,19 +83,18 @@ function TurnosContenido() {
     <div className="space-y-6 pb-10">
       <Cabecera kicker="Finanzas · Caja" titulo="Apertura y cierre"
         subtitulo={datos ? (datos.es_admin ? "Las cajas de todas las sucursales: abrí, mové efectivo y cerrá con arqueo" : `Las cajas de ${sucursales[0]?.nombre ?? "tu sucursal"}`) : "Cargando cajas…"}>
-        {datos?.es_admin ? (
-          <button type="button" onClick={() => setConfig(true)} className={BOTON_SECUNDARIO}><Settings2 className="h-4 w-4" /> Configurar cajas</button>
-        ) : null}
-        <Link href="/caja/nueva" className={BOTON_SECUNDARIO}><ShoppingCart className="h-4 w-4" /> Ir a vender</Link>
-        <button type="button" onClick={() => setAbrir({ punto: null })} disabled={!datos} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
-          <Unlock className="h-4 w-4" /> Abrir caja
-        </button>
+        {/* Celular: "Abrir caja" e "Ir a vender" a la vista; configurar en "⋯". */}
+        <div className="w-full sm:w-auto"><AccionesPagina acciones={[
+          { etiqueta: "Abrir caja", icono: <Unlock />, onClick: () => setAbrir({ punto: null }), primaria: true, deshabilitada: !datos },
+          { etiqueta: "Ir a vender", icono: <ShoppingCart />, href: "/caja/nueva", primaria: true },
+          ...(datos?.es_admin ? [{ etiqueta: "Configurar cajas", icono: <Settings2 />, onClick: () => setConfig(true) }] : []),
+        ]} /></div>
       </Cabecera>
 
       {aviso ? <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-medium text-emerald-800">{aviso}</p> : null}
 
       {/* Resumen del día */}
-      <section className="grid grid-cols-2 divide-x divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:grid-cols-3 sm:divide-y-0 lg:grid-cols-5">
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm sm:grid-cols-3 lg:grid-cols-5 [&>*]:bg-white">
         <Cifra label="Cajas abiertas" valor={String(abiertas)} icono={Wallet} />
         <Cifra label="Vendido hoy" valor={dia ? formatGs(dia.totales.total_vendido) : "…"} icono={ShoppingCart} destacado />
         <Cifra label="Contado" valor={dia ? formatGs(dia.totales.ventas_contado) : "…"} icono={Wallet} />
@@ -140,42 +141,42 @@ function TurnosContenido() {
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Últimos cierres</h2>
             <Link href="/reportes/cajas" className="text-xs font-semibold text-[var(--brand)] hover:underline">Todos los cierres →</Link>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-                <tr>
-                  <th className="px-4 py-2.5 text-left">Turno</th>
-                  <th className="px-4 py-2.5 text-left">Caja</th>
-                  <th className="px-4 py-2.5 text-left">Apertura → cierre</th>
-                  <th className="px-4 py-2.5 text-left">Cerró</th>
-                  <th className="px-4 py-2.5 text-right">Vendido</th>
-                  <th className="px-4 py-2.5 text-right">Diferencia</th>
-                  <th className="w-24" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {datos.recientes.map((t) => {
+          {/* Celular: cada cierre es una tarjeta (caja + diferencia; ver / PDF al pie). */}
+          <TablaTarjetas
+            filas={datos.recientes}
+            claveFila={(t) => t.id}
+            onFila={(t) => setVer(t.id)}
+            claseThead="bg-slate-50"
+            thBase="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+            tdBase="px-4 py-2.5"
+            columnas={[
+              { key: "turno", titulo: "Turno", claseTd: "font-mono text-xs text-slate-500", movil: "subtitulo", celda: (t) => `N° ${t.numero_caja}` },
+              { key: "caja", titulo: "Caja", claseTd: "text-slate-800", movil: "titulo", celda: (t) => <>{t.punto_nombre} <span className="font-normal text-slate-400">· {t.sucursal_nombre}</span></> },
+              { key: "fechas", titulo: "Apertura → cierre", claseTd: "text-xs tabular-nums text-slate-500", movil: "dato", etiquetaMovil: "Apertura → cierre", celda: (t) => <>{fechaHora(t.fecha_apertura)} → {t.fecha_cierre ? hora(t.fecha_cierre) : "—"}</> },
+              { key: "cerro", titulo: "Cerró", claseTd: "text-xs text-slate-600", movil: "dato", celda: (t) => t.cerrada_por_nombre ?? "—" },
+              { key: "vendido", titulo: "Vendido", claseTh: "!text-right", claseTd: "text-right font-semibold tabular-nums text-slate-800", movil: "valor", celda: (t) => formatGs(t.total_vendido) },
+              {
+                key: "dif", titulo: "Diferencia", claseTh: "!text-right", claseTd: "text-right text-xs font-semibold tabular-nums", movil: "chip",
+                celda: (t) => {
                   const dif = (t.diferencia ?? 0) + (t.diferencia_otros ?? 0);
                   return (
-                    <tr key={t.id} className="hover:bg-slate-50/60">
-                      <td className="px-4 py-2.5 font-mono text-xs text-slate-500">N° {t.numero_caja}</td>
-                      <td className="px-4 py-2.5 text-slate-800">{t.punto_nombre} <span className="text-slate-400">· {t.sucursal_nombre}</span></td>
-                      <td className="px-4 py-2.5 text-xs tabular-nums text-slate-500">{fechaHora(t.fecha_apertura)} → {t.fecha_cierre ? hora(t.fecha_cierre) : "—"}</td>
-                      <td className="px-4 py-2.5 text-xs text-slate-600">{t.cerrada_por_nombre ?? "—"}</td>
-                      <td className="px-4 py-2.5 text-right font-semibold tabular-nums text-slate-800">{formatGs(t.total_vendido)}</td>
-                      <td className={`px-4 py-2.5 text-right text-xs font-semibold tabular-nums ${t.diferencia == null ? "text-slate-400" : dif === 0 ? "text-emerald-600" : dif < 0 ? "text-rose-600" : "text-amber-600"}`}>
-                        {t.diferencia == null ? "—" : dif === 0 ? "Cuadró" : `${dif > 0 ? "+" : "−"} ${formatGs(Math.abs(dif))}`}
-                      </td>
-                      <td className="px-3 py-2 text-right">
-                        <button type="button" onClick={() => setVer(t.id)} title="Ver turno" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Eye className="h-4 w-4" /></button>
-                        <button type="button" onClick={() => descargarArchivo(`/api/caja/turnos/${t.id}/pdf`, `cierre-caja-${t.numero_caja}.pdf`).catch(() => {})} title="PDF del cierre" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Download className="h-4 w-4" /></button>
-                      </td>
-                    </tr>
+                    <span className={`max-md:rounded-full max-md:px-2 max-md:py-0.5 max-md:text-[11px] max-md:font-semibold ${t.diferencia == null ? "text-slate-400 max-md:bg-slate-100" : dif === 0 ? "text-emerald-600 max-md:bg-emerald-50" : dif < 0 ? "text-rose-600 max-md:bg-rose-50" : "text-amber-600 max-md:bg-amber-50"}`}>
+                      {t.diferencia == null ? "—" : dif === 0 ? "Cuadró" : `${dif > 0 ? "+" : "−"} ${formatGs(Math.abs(dif))}`}
+                    </span>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
+                },
+              },
+              {
+                key: "acc", titulo: "", claseTh: "w-24", claseTd: "px-3 py-2 text-right whitespace-nowrap", movil: "acciones",
+                celda: (t) => (
+                  <>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); setVer(t.id); }} title="Ver turno" aria-label="Ver turno" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Eye className="h-4 w-4" /></button>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); descargarArchivo(`/api/caja/turnos/${t.id}/pdf`, `cierre-caja-${t.numero_caja}.pdf`).catch(() => {}); }} title="PDF del cierre" aria-label="PDF del cierre" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Download className="h-4 w-4" /></button>
+                  </>
+                ),
+              },
+            ]}
+          />
         </section>
       ) : null}
 
@@ -217,7 +218,7 @@ function TarjetaCaja({ c, estado, onAbrir, onVer, onMov, onCerrar }: {
           {u?.fecha_cierre ? <>Último cierre {fechaHora(u.fecha_cierre)}{u.cerrada_por_nombre ? ` · ${u.cerrada_por_nombre}` : ""} · <span className={dif === 0 ? "text-emerald-600" : "text-rose-600"}>{dif === 0 ? "cuadró" : `diferencia ${formatGs(dif)}`}</span></> : "Todavía no tuvo turnos."}
         </p>
         {c.activo ? (
-          <button type="button" onClick={onAbrir} className={`${BOTON_PRIMARIO} mt-4 w-full`} style={{ backgroundColor: TEAL }}><Unlock className="h-4 w-4" /> Abrir caja</button>
+          <button type="button" onClick={onAbrir} className={`${BOTON_PRIMARIO} mt-4 w-full max-sm:min-h-11`} style={{ backgroundColor: TEAL }}><Unlock className="h-4 w-4" /> Abrir caja</button>
         ) : null}
       </div>
     );
@@ -227,14 +228,14 @@ function TarjetaCaja({ c, estado, onAbrir, onVer, onMov, onCerrar }: {
       <div className="bg-gradient-to-r from-emerald-50/80 to-white px-4 py-3">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="flex items-center gap-2 text-base font-semibold text-slate-900">
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-base font-semibold text-slate-900">
               <span className="relative flex h-2.5 w-2.5 shrink-0"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" /></span>
               {c.nombre}
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Abierta</span>
             </p>
-            <p className="mt-0.5 truncate text-xs text-slate-500">Turno N° {t.numero_caja} · {t.abierta_por_nombre ?? "—"}{mia ? " (vos)" : ""} · desde {hora(t.fecha_apertura)}</p>
+            <p className="mt-0.5 text-xs text-slate-500 sm:truncate">Turno N° {t.numero_caja} · {t.abierta_por_nombre ?? "—"}{mia ? " (vos)" : ""} · desde {hora(t.fecha_apertura)}</p>
           </div>
-          <button type="button" onClick={onVer} title="Ver turno" className="rounded-lg p-1.5 text-slate-400 hover:bg-white hover:text-slate-700"><Eye className="h-4 w-4" /></button>
+          <button type="button" onClick={onVer} title="Ver turno" aria-label="Ver turno" className="-mr-1.5 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-slate-700 sm:m-0 sm:h-auto sm:w-auto sm:p-1.5"><Eye className="h-4 w-4" /></button>
         </div>
       </div>
       <div className="grid grid-cols-3 divide-x divide-slate-100 border-y border-slate-100 text-center">
@@ -243,8 +244,8 @@ function TarjetaCaja({ c, estado, onAbrir, onVer, onMov, onCerrar }: {
         <Mini label="Efectivo esperado" valor={formatGs(t.efectivo_esperado)} destacado />
       </div>
       <div className="flex gap-2 p-3">
-        <button type="button" onClick={onMov} className={`${BOTON_SECUNDARIO} flex-1`}><ArrowLeftRight className="h-4 w-4" /> Retiro / ingreso</button>
-        <button type="button" onClick={onCerrar} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-600 shadow-sm transition hover:bg-rose-50">
+        <button type="button" onClick={onMov} className={`${BOTON_SECUNDARIO} flex-1 max-sm:min-h-11`}><ArrowLeftRight className="h-4 w-4" /> Retiro / ingreso</button>
+        <button type="button" onClick={onCerrar} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm max-sm:min-h-11 font-semibold text-rose-600 shadow-sm transition hover:bg-rose-50">
           <Lock className="h-4 w-4" /> Cerrar
         </button>
       </div>
@@ -256,8 +257,8 @@ function TarjetaCaja({ c, estado, onAbrir, onVer, onMov, onCerrar }: {
 function Mini({ label, valor, destacado }: { label: string; valor: string; destacado?: boolean }) {
   return (
     <div className="px-2 py-2.5" style={destacado ? { backgroundColor: `${TEAL}10` } : undefined}>
-      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">{label}</p>
-      <p className="mt-0.5 truncate text-sm font-bold tabular-nums" style={{ color: destacado ? TEAL : "#0f172a" }}>{valor}</p>
+      <p className="text-[10px] font-semibold uppercase leading-tight tracking-wide text-slate-400">{label}</p>
+      <p className="mt-0.5 text-[13px] font-bold tabular-nums [overflow-wrap:anywhere] sm:truncate sm:text-sm" style={{ color: destacado ? TEAL : "#0f172a" }}>{valor}</p>
     </div>
   );
 }
@@ -266,7 +267,7 @@ function Cifra({ label, valor, icono: Icono, destacado }: { label: string; valor
   return (
     <div className="min-w-0 px-4 py-3.5" style={destacado ? { backgroundColor: `${TEAL}12` } : undefined}>
       <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500"><Icono className="h-3 w-3" /> {label}</p>
-      <p className="mt-1 truncate text-lg font-bold tabular-nums" style={{ color: destacado ? TEAL : "#0f172a" }}>{valor}</p>
+      <p className="mt-1 truncate text-base font-bold tabular-nums sm:text-lg" style={{ color: destacado ? TEAL : "#0f172a" }}>{valor}</p>
     </div>
   );
 }

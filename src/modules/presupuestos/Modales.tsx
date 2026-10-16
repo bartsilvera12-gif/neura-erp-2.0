@@ -1,15 +1,14 @@
 "use client";
 
-/** Modales de Presupuestos: enviar por WhatsApp, rechazar y ajustes. Todos sobre CapaModal. */
+/** Modales de Presupuestos: rechazar y ajustes. Todos sobre CapaModal. (El presupuesto se manda como PDF: no hay link ni WhatsApp.) */
 import { useEffect, useMemo, useState } from "react";
-import { Loader2, MessageCircle, Settings2, ThumbsDown } from "lucide-react";
+import { Loader2, Settings2, ThumbsDown } from "lucide-react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { clienteConfig } from "@/cliente.config";
 import { CLASE_ETIQUETA, CLASE_INPUT } from "@/modules/presupuestos/ui";
-import { linkPublico, mensajePresupuesto, telefonoWhatsApp, urlWhatsApp } from "@/modules/presupuestos/whatsapp";
-import type { ConfigPresupuestos, Presupuesto } from "@/modules/presupuestos/tipos";
+import type { ConfigPresupuestos } from "@/modules/presupuestos/tipos";
 
 const TEAL = clienteConfig.color;
 
@@ -40,65 +39,6 @@ function Panel({ titulo, subtitulo, icono, children, pie, onClose, ancho = "max-
 }
 
 const BTN_SEC = "rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-50";
-
-/**
- * Arma el mensaje y abre WhatsApp con el texto listo. NO lo manda: la persona elige el chat
- * (o lo abre directo si hay teléfono) y aprieta enviar. Queda registrado como "enviado".
- */
-export function ModalWhatsApp({ p, onClose, onEnviado }: {
-  p: Pick<Presupuesto, "id" | "numero" | "revision" | "cliente_nombre" | "cliente_telefono" | "total" | "moneda" | "valido_hasta" | "token" | "vendedor_nombre">;
-  onClose: () => void;
-  onEnviado: (mensaje: string) => void;
-}) {
-  const [telefono, setTelefono] = useState(p.cliente_telefono ?? "");
-  const [texto, setTexto] = useState(() => mensajePresupuesto({
-    numero: p.numero, revision: p.revision, cliente: p.cliente_nombre, total: p.total, moneda: p.moneda,
-    valido_hasta: p.valido_hasta, link: linkPublico(p.token), empresa: clienteConfig.nombre, vendedor: p.vendedor_nombre,
-  }));
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const wa = telefonoWhatsApp(telefono);
-
-  async function abrir() {
-    setBusy(true);
-    setError(null);
-    // Primero la pestaña (si no, el bloqueador de ventanas la frena), después el registro.
-    window.open(urlWhatsApp(wa, texto), "_blank", "noopener");
-    try {
-      await apiFetch(`/api/presupuestos/${p.id}/accion`, { method: "POST", body: JSON.stringify({ accion: "enviar", canal: "whatsapp" }) });
-      onEnviado("Se abrió WhatsApp con el mensaje listo. El presupuesto quedó como enviado.");
-    } catch (e) {
-      setError((e as Error).message);
-      setBusy(false);
-    }
-  }
-
-  return (
-    <Panel titulo="Enviar por WhatsApp" subtitulo="Se abre WhatsApp con el mensaje armado: lo revisás y lo mandás vos."
-      icono={<MessageCircle className="h-5 w-5" />} onClose={busy ? undefined : onClose}
-      pie={<>
-        <button type="button" onClick={onClose} disabled={busy} className={BTN_SEC}>Cancelar</button>
-        <button type="button" onClick={() => void abrir()} disabled={busy || !texto.trim()}
-          className="inline-flex items-center gap-2 rounded-xl bg-[#25D366] px-5 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95 disabled:opacity-40">
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />} Abrir WhatsApp
-        </button>
-      </>}>
-      <label className="block">
-        <span className={CLASE_ETIQUETA}>Teléfono del cliente</span>
-        <input value={telefono} onChange={(e) => setTelefono(e.target.value)} inputMode="tel" placeholder="0981 123 456" className={CLASE_INPUT} />
-        <span className="mt-1 block text-[11px] text-slate-500">
-          {wa ? <>Se abre el chat con <b className="font-semibold text-slate-700">+{wa}</b>.</> : "Sin teléfono: WhatsApp te deja elegir el contacto."}
-        </span>
-      </label>
-      <label className="block">
-        <span className={CLASE_ETIQUETA}>Mensaje</span>
-        <textarea value={texto} onChange={(e) => setTexto(e.target.value)} rows={10} className={`${CLASE_INPUT} font-[inherit] leading-relaxed`} />
-        <span className="mt-1 block text-[11px] text-slate-500">El link abre el presupuesto (con su PDF) y vence el mismo día que la validez.</span>
-      </label>
-      {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p> : null}
-    </Panel>
-  );
-}
 
 export function ModalRechazo({ numero, onClose, onConfirmar }: {
   numero: string;
@@ -147,12 +87,13 @@ export function ModalRechazo({ numero, onClose, onConfirmar }: {
   );
 }
 
-/** Ajustes del módulo (solo administrador): validez por defecto, condiciones y respuesta online. */
+/** Ajustes del módulo (solo administrador): validez por defecto y condiciones. (La respuesta online se quitó de la pantalla:
+ * se reenvía el valor guardado tal cual, sin cambiarlo.) */
 export function ModalAjustes({ onClose, onGuardado }: { onClose: () => void; onGuardado: () => void }) {
   const [cfg, setCfg] = useState<ConfigPresupuestos | null>(null);
   const [dias, setDias] = useState("15");
   const [condiciones, setCondiciones] = useState("");
-  const [online, setOnline] = useState(true);
+  const [online, setOnline] = useState(true); // sin control en pantalla: se conserva lo guardado
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -194,7 +135,7 @@ export function ModalAjustes({ onClose, onGuardado }: { onClose: () => void; onG
           <label className="block">
             <span className={CLASE_ETIQUETA}>Validez por defecto</span>
             <div className="flex items-center gap-2">
-              <input inputMode="numeric" value={dias} onChange={(e) => setDias(e.target.value.replace(/\D/g, "").slice(0, 3))} className={`${CLASE_INPUT} w-24 text-right tabular-nums`} />
+              <input inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" value={dias} onChange={(e) => setDias(e.target.value.replace(/\D/g, "").slice(0, 3))} className={`${CLASE_INPUT} w-24 text-right tabular-nums`} />
               <span className="text-sm text-slate-500">días</span>
             </div>
             {!valido ? <span className="mt-1 block text-[11px] text-rose-600">Entre 1 y 365 días.</span> : null}
@@ -203,13 +144,6 @@ export function ModalAjustes({ onClose, onGuardado }: { onClose: () => void; onG
             <span className={CLASE_ETIQUETA}>Condiciones comerciales por defecto <span className="font-normal text-slate-400">(las ve el cliente)</span></span>
             <textarea value={condiciones} onChange={(e) => setCondiciones(e.target.value)} rows={5} maxLength={4000}
               placeholder={"Ej: Entrega a coordinar dentro de las 48 h.\nForma de pago: transferencia o efectivo."} className={CLASE_INPUT} />
-          </label>
-          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3">
-            <input type="checkbox" checked={online} onChange={(e) => setOnline(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[var(--brand)]" />
-            <span>
-              <span className="block text-sm font-medium text-slate-800">El cliente puede aceptar o rechazar desde el link</span>
-              <span className="block text-xs text-slate-500">Si lo apagás, el link solo muestra el presupuesto y el PDF.</span>
-            </span>
           </label>
         </>
       ) : null}

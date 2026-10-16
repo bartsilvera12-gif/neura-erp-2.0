@@ -108,10 +108,11 @@ export function CierreModal({ turnoId, onClose, onCerrada }: { turnoId: string; 
     <ModalDocumento titulo={titulo} subtitulo={subtitulo} ancho="max-w-5xl" onClose={busy ? undefined : onClose}
       footer={
         <>
-          {error ? <p className="mr-auto max-w-md text-xs font-medium text-rose-600">{error}</p> : falta && r ? <p className="mr-auto text-xs text-slate-500">Falta {falta}.</p> : null}
-          <button type="button" onClick={pdf} disabled={!r} className={BOTON_SECUNDARIO} title="Arqueo parcial en PDF (sin cerrar)"><FileText className="h-4 w-4" /> Arqueo parcial</button>
-          <button type="button" onClick={onClose} disabled={busy} className={BOTON_SECUNDARIO}>Cancelar</button>
-          <button type="button" onClick={cerrar} disabled={!r || !!falta || busy} className={`${BOTON_PRIMARIO} bg-rose-600`}>
+          {error ? <p className="mr-auto max-w-md text-xs font-medium text-rose-600 max-sm:w-full">{error}</p> : falta && r ? <p className="mr-auto text-xs text-slate-500 max-sm:w-full">Falta {falta}.</p> : null}
+          {/* Celular: el PDF queda como ícono; "Cerrar caja" ocupa el resto. */}
+          <button type="button" onClick={pdf} disabled={!r} className={`${BOTON_SECUNDARIO} max-sm:w-11 max-sm:px-0`} title="Arqueo parcial en PDF (sin cerrar)" aria-label="Arqueo parcial en PDF"><FileText className="h-4 w-4" /> <span className="max-sm:hidden">Arqueo parcial</span></button>
+          <button type="button" onClick={onClose} disabled={busy} className={`${BOTON_SECUNDARIO} max-sm:flex-1`}>Cancelar</button>
+          <button type="button" onClick={cerrar} disabled={!r || !!falta || busy} className={`${BOTON_PRIMARIO} bg-rose-600 max-sm:flex-[1.4]`}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />} Cerrar caja
           </button>
         </>
@@ -130,24 +131,24 @@ export function CierreModal({ turnoId, onClose, onCerrada }: { turnoId: string; 
                 </div>
                 <p className="text-2xl font-extrabold tabular-nums text-sky-950">{formatGs(esperado)}</p>
               </div>
-              <button type="button" onClick={() => setVerDetalle((v) => !v)} className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-sky-800 hover:underline">
+              <button type="button" onClick={() => setVerDetalle((v) => !v)} className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-sky-800 hover:underline max-sm:min-h-10 max-sm:text-xs">
                 <ChevronDown className={`h-3.5 w-3.5 transition-transform ${verDetalle ? "rotate-180" : ""}`} /> {verDetalle ? "Ocultar" : "Ver"} de dónde sale
               </button>
               {verDetalle ? <DetalleEfectivo r={r} /> : null}
 
-              <div className="mt-3 flex items-center justify-between">
+              <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-sm font-semibold text-slate-800">¿Cuánto efectivo contaste?</span>
                 <div className="flex rounded-lg bg-white/80 p-0.5 text-[11px] font-semibold ring-1 ring-sky-200">
-                  <button type="button" onClick={() => setPorBillete(false)} className={`rounded-md px-2.5 py-1 ${!porBillete ? "bg-sky-600 text-white" : "text-sky-800"}`}>Total</button>
-                  <button type="button" onClick={() => setPorBillete(true)} className={`rounded-md px-2.5 py-1 ${porBillete ? "bg-sky-600 text-white" : "text-sky-800"}`}>Por billete</button>
+                  <button type="button" onClick={() => setPorBillete(false)} className={`rounded-md px-2.5 py-1 max-sm:min-h-10 max-sm:px-3.5 max-sm:text-xs ${!porBillete ? "bg-sky-600 text-white" : "text-sky-800"}`}>Total</button>
+                  <button type="button" onClick={() => setPorBillete(true)} className={`rounded-md px-2.5 py-1 max-sm:min-h-10 max-sm:px-3.5 max-sm:text-xs ${porBillete ? "bg-sky-600 text-white" : "text-sky-800"}`}>Por billete</button>
                 </div>
               </div>
               {porBillete ? (
-                <div className="mt-2 grid grid-cols-2 gap-1.5 sm:grid-cols-5">
+                <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-5 sm:gap-1.5">
                   {DENOMINACIONES.map((d) => (
                     <label key={d} className="rounded-lg bg-white px-2 py-1.5 ring-1 ring-sky-100">
                       <span className="block text-[10px] font-semibold text-slate-500">{d.toLocaleString("es-PY")}</span>
-                      <input inputMode="numeric" value={billetes[d] ? String(billetes[d]) : ""} placeholder="0"
+                      <input inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" value={billetes[d] ? String(billetes[d]) : ""} placeholder="0"
                         onChange={(e) => setBilletes((b) => ({ ...b, [d]: Math.min(99999, parseInt(e.target.value.replace(/\D/g, "")) || 0) }))}
                         className="w-full bg-transparent text-sm font-bold tabular-nums text-slate-900 outline-none" />
                     </label>
@@ -170,13 +171,14 @@ export function CierreModal({ turnoId, onClose, onCerrada }: { turnoId: string; 
                     const dec = declarado[m.metodo] ?? m.esperado;
                     const dif = dec - m.esperado;
                     return (
-                      <li key={m.metodo} className="flex items-center gap-3 py-2">
-                        <div className="min-w-0 flex-1">
+                      // Celular: el nombre arriba a todo el ancho; monto y estado debajo.
+                      <li key={m.metodo} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 py-2.5 sm:flex-nowrap sm:py-2">
+                        <div className="min-w-0 flex-1 max-sm:basis-full">
                           <p className="text-sm font-medium text-slate-800">{m.label}</p>
                           <p className="text-[11px] text-slate-500">Esperado {formatGs(m.esperado)}{m.egresos ? ` (salidas ${formatGs(m.egresos)})` : ""}</p>
                         </div>
                         <MontoInput value={dec} onChange={(n) => setDeclarado((d) => ({ ...d, [m.metodo]: Math.max(0, Math.round(n)) }))} decimals={false}
-                          className={`w-36 rounded-lg border px-3 py-1.5 text-right text-sm font-semibold tabular-nums outline-none focus:ring-2 ${dif === 0 ? "border-slate-200" : "border-amber-300 bg-amber-50"}`} />
+                          className={`w-36 rounded-lg border px-3 py-1.5 text-right text-sm font-semibold tabular-nums outline-none focus:ring-2 max-sm:h-11 max-sm:min-w-0 max-sm:flex-1 ${dif === 0 ? "border-slate-200" : "border-amber-300 bg-amber-50"}`} />
                         <span className={`w-28 text-right text-xs font-semibold tabular-nums ${dif === 0 ? "text-emerald-600" : "text-rose-600"}`}>{dif === 0 ? "✓ Confirmado" : gsSigno(dif)}</span>
                       </li>
                     );

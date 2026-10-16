@@ -7,15 +7,21 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Search, SlidersHorizontal, Wallet, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Clock, Plus, Search, SlidersHorizontal, Wallet, X } from "lucide-react";
+import { AccionesPagina, EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
+import { HojaInferior } from "@/components/HojaInferior";
+import { TablaTarjetas } from "@/components/TablaResponsive";
+import { useMediaQuery } from "@/lib/ui/responsive";
 import { formatGs } from "@/modules/caja/lib";
 import { etiquetaCaja, hora, metodoLabel, METODOS_VENTA, useEstadoCajas, type EstadoCajas } from "@/modules/caja/turno";
 
 const TEAL = clienteConfig.color;
+const fechaVenta = (iso: string) => new Date(iso).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
 type VentaItem = { producto_nombre: string; sku?: string | null; cantidad: number; tipo_iva: string };
 type Venta = {
@@ -35,16 +41,14 @@ type Venta = {
 export default function CajaDashboard() {
   const { datos } = useEstadoCajas();
   return (
-    <div className="space-y-6 pb-10">
-      {/* Encabezado estilo dashboard */}
-      <div>
-        <div className="flex items-center gap-2">
-          <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Finanzas · Caja</p>
-        </div>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Órdenes de venta</h1>
-        <p className="mt-1 text-sm text-slate-500">Todas las ventas de las cajas, con su forma de pago</p>
-      </div>
+    <div className="space-y-4 pb-10 sm:space-y-6">
+      {/* Encabezado: en celular "Nueva venta" a la vista y el resto en "⋯". */}
+      <EncabezadoPagina kicker="Finanzas · Caja" titulo="Órdenes de venta" subtitulo="Todas las ventas de las cajas, con su forma de pago"
+        acciones={<AccionesPagina acciones={[
+          { etiqueta: "Nueva venta", icono: <Plus />, href: "/caja/nueva", primaria: true },
+          { etiqueta: "Apertura y cierre", icono: <Wallet />, href: "/caja/turnos" },
+          { etiqueta: "Ventas a crédito", icono: <Clock />, href: "/caja/credito" },
+        ]} />} />
 
       <CajasAbiertas estado={datos} />
 
@@ -58,13 +62,14 @@ function CajasAbiertas({ estado }: { estado: EstadoCajas | null }) {
   if (!estado) return null;
   const abiertas = estado.sucursales.flatMap((s) => s.cajas.filter((c) => c.turno).map((c) => ({ c, s })));
   return (
-    <section className="flex flex-wrap items-stretch gap-3">
+    // Celular / tablet: tira con scroll horizontal (nunca empuja el ancho de la página).
+    <ScrollHorizontal claseFila="items-stretch gap-3" className="-mx-3 px-3 py-0.5 sm:mx-0 sm:px-0">
       {abiertas.length === 0 ? (
-        <Link href="/caja/turnos" className="flex items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
+        <Link href="/caja/turnos" className="flex min-h-11 shrink-0 items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
           <Wallet className="h-4 w-4" /> No hay cajas abiertas · Abrir caja
         </Link>
       ) : abiertas.map(({ c, s }) => (
-        <Link key={c.id} href="/caja/turnos" className="min-w-[220px] rounded-2xl border border-emerald-100 bg-white px-4 py-3 shadow-sm transition hover:border-emerald-200 hover:shadow">
+        <Link key={c.id} href="/caja/turnos" className="w-[240px] shrink-0 rounded-2xl border border-emerald-100 bg-white px-4 py-3 shadow-sm transition hover:border-emerald-200 hover:shadow">
           <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
             <span className="h-2 w-2 rounded-full bg-emerald-500" /> {etiquetaCaja({ punto_nombre: c.nombre, sucursal_nombre: s.nombre })}
           </p>
@@ -75,12 +80,7 @@ function CajasAbiertas({ estado }: { estado: EstadoCajas | null }) {
           </p>
         </Link>
       ))}
-      <div className="ml-auto flex items-center gap-2">
-        <Link href="/caja/turnos" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Apertura y cierre</Link>
-        <Link href="/caja/credito" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition-colors hover:bg-slate-50">Ventas a crédito</Link>
-        <Link href="/caja/nueva" className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:brightness-95" style={{ backgroundColor: TEAL }}>+ Nueva venta</Link>
-      </div>
-    </section>
+    </ScrollHorizontal>
   );
 }
 
@@ -103,6 +103,7 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
+  const angosta = useMediaQuery("(max-width: 767.98px)");
   const [viendo, setViendo] = useState<string | null>(null);
   const [productosOpts, setProductosOpts] = useState<[string, string][]>([["", "Todos los productos"]]);
   // Paginado EN EL SERVIDOR: solo viaja la página visible (antes se bajaba todo el historial).
@@ -186,57 +187,19 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
   const inicio = (paginaActual - 1) * porPagina;
   const visibles = ventas;
 
-  return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <span className="block h-5 w-1 rounded-full" style={{ backgroundColor: TEAL }} />
-          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Ventas</h2>
-        </div>
-      </div>
+  const filtros = (
+    <>
 
-      <div className="mb-5 border-b border-slate-100 pb-5">
-        <div className="flex flex-wrap items-center gap-2.5">
-          <div className="relative w-full min-w-56 flex-1 sm:max-w-md">
-            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
-            <input
-              value={busqueda}
-              onChange={(e) => setBusqueda(e.target.value)}
-              placeholder="Buscar número, producto, SKU, monto…"
-              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={() => setFiltrosAbiertos((v) => !v)}
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors"
-            style={filtrosActivos || filtrosAbiertos ? { borderColor: TEAL, color: TEAL, backgroundColor: "var(--brand-50)" } : { borderColor: "#e2e8f0", color: "#475569" }}
-          >
-            <SlidersHorizontal className="h-4 w-4" />
-            Filtros
-            {filtrosActivos ? (
-              <span className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold text-white" style={{ backgroundColor: TEAL }}>{filtrosActivos}</span>
-            ) : null}
-          </button>
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Filas</span>
-            <Select value={String(porPagina)} onChange={conPagina1((v: string) => setPorPagina(Number(v)))} options={[["25", "25"], ["50", "50"], ["100", "100"]]} minWidth={84} />
-          </div>
-          <span className={`ml-auto text-sm text-slate-400 transition-opacity ${buscando ? "opacity-50" : ""}`}>{total.toLocaleString("es-PY")} de {totalGeneral.toLocaleString("es-PY")} ventas</span>
-        </div>
-
-        {filtrosAbiertos ? (
-          <div className="mt-3 flex flex-wrap items-end gap-2.5 rounded-xl bg-slate-50 p-3" style={{ animation: "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)" }}>
             {sucursalesOpts.length > 2 ? (
-              <Select value={sucursal} onChange={conPagina1((v: string) => { setSucursal(v); setPunto(""); })} options={sucursalesOpts} minWidth={180} />
+              <Select value={sucursal} onChange={conPagina1((v: string) => { setSucursal(v); setPunto(""); })} options={sucursalesOpts} minWidth={180} etiqueta="Sucursal" />
             ) : null}
-            <Select value={punto} onChange={conPagina1(setPunto)} options={cajasOpts} minWidth={190} />
-            <Select value={tipo} onChange={conPagina1(setTipo)} options={[["", "Contado y crédito"], ["CONTADO", "Contado"], ["CREDITO", "Crédito"]]} minWidth={150} />
-            <Select value={metodo} onChange={conPagina1(setMetodo)} minWidth={180}
+            <Select value={punto} onChange={conPagina1(setPunto)} options={cajasOpts} minWidth={190} etiqueta="Caja" />
+            <Select value={tipo} onChange={conPagina1(setTipo)} options={[["", "Contado y crédito"], ["CONTADO", "Contado"], ["CREDITO", "Crédito"]]} minWidth={150} etiqueta="Condición" />
+            <Select value={metodo} onChange={conPagina1(setMetodo)} minWidth={180} etiqueta="Forma de pago"
               options={[["", "Todas las formas de pago"], ...METODOS_VENTA.map((m): [string, string] => [m.value, m.label]), ["mixto", "Pago mixto"]]} />
-            <Select value={iva} onChange={conPagina1(setIva)} options={[["", "Todos los IVA"], ["10%", "IVA 10%"], ["5%", "IVA 5%"], ["EXENTA", "Exenta"]]} minWidth={140} />
-            <Select value={estado} onChange={conPagina1(setEstado)} options={[["", "Todos los estados"], ["completada", "Completada"], ["anulada", "Anulada"]]} minWidth={160} />
-            <Select value={producto} onChange={conPagina1(setProducto)} options={productosOpts} minWidth={190} />
+            <Select value={iva} onChange={conPagina1(setIva)} options={[["", "Todos los IVA"], ["10%", "IVA 10%"], ["5%", "IVA 5%"], ["EXENTA", "Exenta"]]} minWidth={140} etiqueta="IVA" />
+            <Select value={estado} onChange={conPagina1(setEstado)} options={[["", "Todos los estados"], ["completada", "Completada"], ["anulada", "Anulada"]]} minWidth={160} etiqueta="Estado" />
+            <Select value={producto} onChange={conPagina1(setProducto)} options={productosOpts} minWidth={190} etiqueta="Producto" />
             <label className="flex flex-col gap-1">
               <span className="px-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Desde</span>
               <input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-600 outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
@@ -254,77 +217,117 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
                 <X className="h-3.5 w-3.5" /> Limpiar
               </button>
             ) : null}
+    </>
+  );
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-6">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-3 sm:mb-5">
+        <div className="flex items-center gap-2">
+          <span className="block h-5 w-1 rounded-full" style={{ backgroundColor: TEAL }} />
+          <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Ventas</h2>
+        </div>
+      </div>
+
+      <div className="mb-3 border-b border-slate-100 pb-3 sm:mb-5 sm:pb-5">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <div className="relative min-w-0 flex-1 sm:w-full sm:min-w-56 sm:max-w-md">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400" />
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar número, producto, SKU, monto…"
+              type="search" enterKeyHint="search" aria-label="Buscar ventas"
+              className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-11 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]"
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setFiltrosAbiertos((v) => !v)}
+            className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-medium transition-colors sm:min-h-0 sm:px-4"
+            style={filtrosActivos || filtrosAbiertos ? { borderColor: TEAL, color: TEAL, backgroundColor: "var(--brand-50)" } : { borderColor: "#e2e8f0", color: "#475569" }}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            <span className="max-[380px]:sr-only">Filtros</span>
+            {filtrosActivos ? (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full px-1 text-[11px] font-bold text-white" style={{ backgroundColor: TEAL }}>{filtrosActivos}</span>
+            ) : null}
+          </button>
+          <div className="hidden shrink-0 items-center gap-2 sm:flex">
+            <span className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Filas</span>
+            <Select value={String(porPagina)} onChange={conPagina1((v: string) => setPorPagina(Number(v)))} options={[["25", "25"], ["50", "50"], ["100", "100"]]} minWidth={84} />
+          </div>
+          <span className={`text-sm text-slate-400 transition-opacity max-sm:w-full max-sm:text-xs sm:ml-auto ${buscando ? "opacity-50" : ""}`}>{total.toLocaleString("es-PY")} de {totalGeneral.toLocaleString("es-PY")} ventas</span>
+        </div>
+
+        {filtrosAbiertos && !angosta ? (
+          <div className="mt-3 flex flex-wrap items-end gap-2.5 rounded-xl bg-slate-50 p-3" style={{ animation: "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)" }}>
+            {filtros}
           </div>
         ) : null}
       </div>
 
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead>
-            <tr className="bg-slate-50 text-xs font-semibold text-slate-500">
-              <th className="rounded-l-lg px-4 py-3">Número</th>
-              <th className="px-4 py-3">Productos</th>
-              <th className="px-4 py-3 text-center">Ítems</th>
-              <th className="px-4 py-3 text-right">Cant. total</th>
-              <th className="px-4 py-3">IVA</th>
-              <th className="px-4 py-3 text-right">Total</th>
-              <th className="px-4 py-3">Condición / pago</th>
-              <th className="px-4 py-3">Caja</th>
-              <th className="rounded-r-lg px-4 py-3">Fecha</th>
-            </tr>
-          </thead>
-          <tbody>
-            {visibles.length === 0 ? (
-              <tr><td colSpan={9} className="py-12 text-center text-slate-400">{buscando ? "Buscando…" : totalGeneral === 0 ? "No hay ventas registradas" : "Ninguna venta coincide con los filtros"}</td></tr>
-            ) : (
-              visibles.map((v) => {
-                const items = v.ventas_items ?? [];
-                const cantTotal = items.reduce((s, i) => s + Number(i.cantidad), 0);
-                const ivas = [...new Set(items.map((i) => i.tipo_iva))];
-                const primero = items[0];
-                const anulada = v.estado === "anulada";
-                return (
-                  <tr
-                    key={v.id}
-                    onClick={() => setViendo(v.id)}
-                    title="Ver el detalle de la venta"
-                    className={`cursor-pointer border-b border-slate-100 last:border-0 transition-colors hover:bg-slate-50 ${anulada ? "opacity-50" : ""}`}
-                  >
-                    <td className="px-4 py-4 font-mono text-xs text-slate-500">{v.numero_control}</td>
-                    <td className="px-4 py-4">
-                      <span className="block truncate text-slate-800">{primero?.producto_nombre ?? "—"}</span>
-                      <span className="text-xs text-slate-400">
-                        {primero?.sku ?? ""}{items.length > 1 ? `${primero?.sku ? " · " : ""}+${items.length - 1} más` : ""}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">{items.length}</span>
-                    </td>
-                    <td className="px-4 py-4 text-right tabular-nums text-slate-700">{cantTotal}</td>
-                    <td className="px-4 py-4"><span className="rounded-full bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">{ivas.length === 1 ? `IVA ${ivas[0]}` : "Varios"}</span></td>
-                    <td className="px-4 py-4 text-right font-semibold tabular-nums text-slate-800">{formatGs(v.total)}</td>
-                    <td className="px-4 py-4">
-                      <span className="rounded-full px-2 py-1 text-xs font-semibold" style={v.tipo_venta === "CREDITO" ? { backgroundColor: "#fff7ed", color: "#ea580c" } : { backgroundColor: "#f1f5f9", color: "#475569" }}>
-                        {v.tipo_venta === "CREDITO" ? "Crédito" : "Contado"}
-                      </span>
-                      {v.tipo_venta !== "CREDITO" ? (
-                        <span className="mt-1 block max-w-[180px] truncate text-[11px] text-slate-500" title={(v.pagos ?? []).map((p) => `${metodoLabel(p.metodo_pago)} ${formatGs(p.monto)}`).join(" + ")}>
-                          {(v.pagos ?? []).length ? [...new Set((v.pagos ?? []).map((p) => metodoLabel(p.metodo_pago)))].join(" + ") : metodoLabel(v.metodo_pago)}
-                        </span>
-                      ) : null}
-                    </td>
-                    <td className="px-4 py-4 text-xs text-slate-600">
-                      {v.punto?.nombre ?? "—"}
-                      {v.sucursal?.nombre ? <span className="block text-[11px] text-slate-400">{v.sucursal.nombre}</span> : null}
-                    </td>
-                    <td className="px-4 py-4 text-xs tabular-nums text-slate-500">{new Date(v.fecha).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</td>
-                  </tr>
-                );
-              })
-            )}
-          </tbody>
-        </table>
-      </div>
+      {/* Celular: cada venta es una tarjeta (producto, número y fecha, total; condición y caja). */}
+      <TablaTarjetas
+        filas={visibles}
+        claveFila={(v) => v.id}
+        onFila={(v) => setViendo(v.id)}
+        claseFila={(v) => (v.estado === "anulada" ? "opacity-50" : "")}
+        claseTabla="w-full text-left text-sm"
+        claseThead="bg-slate-50"
+        thBase="whitespace-nowrap px-4 py-3 text-xs font-semibold text-slate-500"
+        tdBase="px-4 py-4"
+        vacio={<p className="py-12 text-center text-sm text-slate-400">{buscando ? "Buscando…" : totalGeneral === 0 ? "No hay ventas registradas" : "Ninguna venta coincide con los filtros"}</p>}
+        columnas={[
+          { key: "num", titulo: "Número", claseTd: "font-mono text-xs text-slate-500", movil: "subtitulo",
+            celda: (v) => v.numero_control,
+            celdaMovil: (v) => <span className="font-mono text-xs">{v.numero_control} · {fechaVenta(v.fecha)}</span> },
+          { key: "prod", titulo: "Productos", movil: "titulo",
+            celda: (v) => {
+              const items = v.ventas_items ?? [];
+              const primero = items[0];
+              return (
+                <>
+                  <span className="block truncate font-normal text-slate-800 max-md:whitespace-normal max-md:font-semibold">{primero?.producto_nombre ?? "—"}</span>
+                  <span className="text-xs font-normal text-slate-400">{primero?.sku ?? ""}{items.length > 1 ? `${primero?.sku ? " · " : ""}+${items.length - 1} más` : ""}</span>
+                </>
+              );
+            },
+            celdaMovil: (v) => {
+              const items = v.ventas_items ?? [];
+              return (
+                <>
+                  <span className="block">{items[0]?.producto_nombre ?? "—"}{items.length > 1 ? <span className="font-normal text-slate-400"> +{items.length - 1} más</span> : null}</span>
+                  <span className="block text-xs font-normal text-slate-400">{items.length} ítem{items.length === 1 ? "" : "s"} · {items.reduce((a, i) => a + Number(i.cantidad), 0)} u</span>
+                </>
+              );
+            } },
+          { key: "items", titulo: "Ítems", claseTh: "text-center", claseTd: "text-center", movil: "oculto",
+            celda: (v) => <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">{(v.ventas_items ?? []).length}</span>,
+            celdaMovil: (v) => { const it = v.ventas_items ?? []; return `${it.length} · ${it.reduce((a, i) => a + Number(i.cantidad), 0)} u`; } },
+          { key: "cant", titulo: "Cant. total", claseTh: "text-right", claseTd: "text-right tabular-nums text-slate-700", movil: "oculto",
+            celda: (v) => (v.ventas_items ?? []).reduce((a, i) => a + Number(i.cantidad), 0) },
+          { key: "iva", titulo: "IVA", movil: "detalle",
+            celda: (v) => { const ivas = [...new Set((v.ventas_items ?? []).map((i) => i.tipo_iva))]; return <span className="rounded-full bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">{ivas.length === 1 ? `IVA ${ivas[0]}` : "Varios"}</span>; } },
+          { key: "total", titulo: "Total", claseTh: "text-right", claseTd: "text-right font-semibold tabular-nums text-slate-800", movil: "valor", celda: (v) => formatGs(v.total) },
+          { key: "cond", titulo: "Condición / pago", movil: "chip",
+            celda: (v) => (
+              <span className="inline-flex flex-col items-start">
+                <span className="rounded-full px-2 py-1 text-xs font-semibold" style={v.tipo_venta === "CREDITO" ? { backgroundColor: "#fff7ed", color: "#ea580c" } : { backgroundColor: "#f1f5f9", color: "#475569" }}>
+                  {v.tipo_venta === "CREDITO" ? "Crédito" : "Contado"}{v.estado === "anulada" ? " · anulada" : ""}
+                </span>
+                {v.tipo_venta !== "CREDITO" ? (
+                  <span className="mt-1 block max-w-[180px] truncate text-[11px] text-slate-500 max-md:max-w-full" title={(v.pagos ?? []).map((pg) => `${metodoLabel(pg.metodo_pago)} ${formatGs(pg.monto)}`).join(" + ")}>
+                    {(v.pagos ?? []).length ? [...new Set((v.pagos ?? []).map((pg) => metodoLabel(pg.metodo_pago)))].join(" + ") : metodoLabel(v.metodo_pago)}
+                  </span>
+                ) : null}
+              </span>
+            ) },
+          { key: "caja", titulo: "Caja", claseTd: "text-xs text-slate-600", movil: "dato",
+            celda: (v) => <>{v.punto?.nombre ?? "—"}{v.sucursal?.nombre ? <span className="block text-[11px] text-slate-400">{v.sucursal.nombre}</span> : null}</> },
+          { key: "fecha", titulo: "Fecha", claseTd: "text-xs tabular-nums text-slate-500", movil: "oculto", celda: (v) => fechaVenta(v.fecha) },
+        ]}
+      />
 
       {/* Paginado */}
       {total > 0 ? (
@@ -340,7 +343,7 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
                 onClick={() => setPagina((p) => Math.max(1, p - 1))}
                 disabled={paginaActual <= 1}
                 aria-label="Página anterior"
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -352,13 +355,21 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
                 onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
                 disabled={paginaActual >= totalPaginas}
                 aria-label="Página siguiente"
-                className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40 sm:h-9 sm:w-9"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
           </div>
         </div>
+      ) : null}
+
+      {/* Celular: los filtros en una hoja inferior, uno debajo del otro. */}
+      {filtrosAbiertos && angosta ? (
+        <HojaInferior titulo="Filtros" onClose={() => setFiltrosAbiertos(false)}
+          pie={<button type="button" onClick={() => setFiltrosAbiertos(false)} className="min-h-11 flex-1 rounded-xl px-4 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>Ver {total.toLocaleString("es-PY")} ventas</button>}>
+          <div className="flex flex-col gap-3 [&>*]:!w-full [&>*]:!min-w-0 [&_input]:w-full">{filtros}</div>
+        </HojaInferior>
       ) : null}
 
       {viendo ? (

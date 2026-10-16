@@ -11,6 +11,8 @@ import { AlertTriangle, CalendarClock, CircleDollarSign, Loader2, Search, Wallet
 import { apiFetch } from "@/lib/api/client-fetch";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { Select } from "@/components/Select";
+import { BarraFiltros } from "@/components/EncabezadoPagina";
+import { TablaTarjetas } from "@/components/TablaResponsive";
 import { Cabecera, INPUT_FILTRO, Paginador, Pestanas, TEAL } from "@/modules/inventario/ui";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
 import { formatGs } from "@/modules/caja/lib";
@@ -106,10 +108,10 @@ export default function VentasCreditoPage() {
   const cambiar = <T,>(set: (v: T) => void) => (v: T) => { set(v); setPagina(1); };
 
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-4 pb-10 sm:space-y-6">
       <Cabecera kicker="Finanzas · Caja" titulo="Ventas a crédito" subtitulo="Lo que se vendió a crédito en las cajas: cliente, vencimiento, cobrado y saldo" />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Pestanas valor={periodo} onChange={cambiar(setPeriodo)} opciones={[
           { id: "hoy", label: "Hoy" },
           { id: "turno", label: "Turno abierto" },
@@ -118,21 +120,21 @@ export default function VentasCreditoPage() {
         ]} />
         {periodo === "turno" ? (
           abiertas.length ? (
-            <Select value={turno} onChange={cambiar(setTurno)} minWidth={260}
+            <Select value={turno} onChange={cambiar(setTurno)} minWidth={260} etiqueta="Turno abierto" className="max-sm:w-full max-sm:!min-w-0"
               options={abiertas.map((c): [string, string] => [c.id, `${etiquetaCaja(c)} · turno N° ${c.numero_caja}`])} />
           ) : <span className="text-xs text-slate-500">No hay cajas abiertas.</span>
         ) : null}
         {periodo === "rango" ? (
-          <div className="flex items-center gap-2">
-            <input type="date" value={desde} max={hasta || undefined} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} className={INPUT_FILTRO} />
+          <div className="flex items-center gap-2 max-sm:w-full">
+            <input type="date" value={desde} max={hasta || undefined} onChange={(e) => { setDesde(e.target.value); setPagina(1); }} aria-label="Desde" className={`${INPUT_FILTRO} min-w-0 max-sm:h-11 max-sm:flex-1`} />
             <span className="text-xs text-slate-400">a</span>
-            <input type="date" value={hasta} min={desde || undefined} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} className={INPUT_FILTRO} />
+            <input type="date" value={hasta} min={desde || undefined} onChange={(e) => { setHasta(e.target.value); setPagina(1); }} aria-label="Hasta" className={`${INPUT_FILTRO} min-w-0 max-sm:h-11 max-sm:flex-1`} />
           </div>
         ) : null}
       </div>
 
       {/* Totales */}
-      <section className="grid grid-cols-2 divide-x divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:grid-cols-4 sm:divide-y-0">
+      <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm sm:grid-cols-4 [&>*]:bg-white">
         <Cifra label={`Vendido a crédito${t ? ` · ${t.cantidad}` : ""}`} valor={t ? formatGs(t.total) : "…"} icono={Wallet} destacado />
         <Cifra label="Cobrado" valor={t ? formatGs(t.cobrado) : "…"} icono={CircleDollarSign} />
         <Cifra label="Saldo pendiente" valor={t ? formatGs(t.saldo) : "…"} icono={CalendarClock} />
@@ -140,70 +142,57 @@ export default function VentasCreditoPage() {
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-2.5 border-b border-slate-100 p-4">
-          <div className="relative min-w-56 flex-1 sm:max-w-sm">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Cliente, RUC o número de venta…" className={`${INPUT_FILTRO} w-full pl-9`} />
-          </div>
-          {periodo !== "turno" ? (
-            <>
-              {sucursalesOpts.length > 2 ? <Select value={sucursal} onChange={cambiar((v: string) => { setSucursal(v); setPunto(""); })} options={sucursalesOpts} minWidth={180} /> : null}
-              <Select value={punto} onChange={cambiar(setPunto)} options={cajasOpts} minWidth={190} />
-            </>
-          ) : null}
-          <Select value={estado} onChange={cambiar(setEstado)} options={ESTADOS} minWidth={170} />
-          <span className={`ml-auto text-sm text-slate-400 ${cargando ? "opacity-50" : ""}`}>{(datos?.total ?? 0).toLocaleString("es-PY")} venta{datos?.total === 1 ? "" : "s"}</span>
-        </div>
+        {/* Búsqueda siempre visible; sucursal / caja / estado en línea (≥ 768) o en una hoja (celular). */}
+        <BarraFiltros plano className="border-b border-slate-100 p-3 sm:p-4"
+          activos={(sucursal ? 1 : 0) + (punto ? 1 : 0) + (estado ? 1 : 0)}
+          onLimpiar={() => { setSucursal(""); setPunto(""); setEstado(""); setPagina(1); }}
+          busqueda={
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Cliente, RUC o número de venta…" type="search" enterKeyHint="search" aria-label="Buscar ventas a crédito" className={`${INPUT_FILTRO} w-full pl-9 max-md:h-11`} />
+            </div>
+          }
+          extra={<span className={`hidden whitespace-nowrap text-sm text-slate-400 md:inline ${cargando ? "opacity-50" : ""}`}>{(datos?.total ?? 0).toLocaleString("es-PY")} venta{datos?.total === 1 ? "" : "s"}</span>}>
+          {periodo !== "turno" && sucursalesOpts.length > 2 ? <Select value={sucursal} onChange={cambiar((v: string) => { setSucursal(v); setPunto(""); })} options={sucursalesOpts} minWidth={180} etiqueta="Sucursal" /> : null}
+          {periodo !== "turno" ? <Select value={punto} onChange={cambiar(setPunto)} options={cajasOpts} minWidth={190} etiqueta="Caja" /> : null}
+          <Select value={estado} onChange={cambiar(setEstado)} options={ESTADOS} minWidth={170} etiqueta="Estado" />
+        </BarraFiltros>
+        <p className={`px-4 pt-2 text-xs text-slate-400 md:hidden ${cargando ? "opacity-50" : ""}`}>{(datos?.total ?? 0).toLocaleString("es-PY")} venta{datos?.total === 1 ? "" : "s"}</p>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-4 py-2.5 text-left">Venta</th>
-                <th className="px-4 py-2.5 text-left">Cliente</th>
-                <th className="px-4 py-2.5 text-left">Caja</th>
-                <th className="px-4 py-2.5 text-left">Vence</th>
-                <th className="px-4 py-2.5 text-right">Total</th>
-                <th className="px-4 py-2.5 text-right">Cobrado</th>
-                <th className="px-4 py-2.5 text-right">Saldo</th>
-                <th className="px-4 py-2.5 text-left">Estado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {error ? (
-                <tr><td colSpan={8} className="py-10 text-center text-rose-600">{error}</td></tr>
-              ) : !datos ? (
-                <tr><td colSpan={8} className="py-12 text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-slate-400" /></td></tr>
-              ) : datos.rows.length === 0 ? (
-                <tr><td colSpan={8} className="py-12 text-center text-slate-400">{periodo === "turno" && !turno ? "Elegí un turno abierto." : "No hay ventas a crédito con estos filtros."}</td></tr>
-              ) : datos.rows.map((f) => (
-                <tr key={f.venta_id} onClick={() => setViendo(f.venta_id)} className={`cursor-pointer transition hover:bg-slate-50 ${f.estado === "anulada" ? "opacity-50" : ""}`}>
-                  <td className="px-4 py-3">
-                    <span className="font-mono text-xs text-slate-600">{f.numero_control}</span>
-                    <span className="block text-[11px] text-slate-400">{new Date(f.fecha).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="text-slate-800">{f.cliente_nombre ?? "—"}</span>
-                    {f.cliente_ruc ? <span className="block text-[11px] text-slate-400">{f.cliente_ruc}</span> : null}
-                  </td>
-                  <td className="px-4 py-3 text-xs text-slate-600">
-                    {f.punto_nombre ?? "—"}{f.numero_caja ? <span className="text-slate-400"> · N° {f.numero_caja}</span> : null}
-                    <span className="block text-[11px] text-slate-400">{[f.sucursal_nombre, f.cajero_nombre ?? f.usuario_nombre].filter(Boolean).join(" · ")}</span>
-                  </td>
-                  <td className="px-4 py-3 text-xs">
-                    <span className="tabular-nums text-slate-700">{fechaCorta(f.vencimiento)}</span>
-                    {f.plazo_dias ? <span className="text-slate-400"> · {f.plazo_dias} d</span> : null}
-                    {f.vencida ? <span className="block text-[11px] font-semibold text-rose-600">vencida hace {f.dias_vencida} día{f.dias_vencida === 1 ? "" : "s"}</span> : null}
-                  </td>
-                  <td className="px-4 py-3 text-right font-semibold tabular-nums text-slate-800">{formatGs(f.total)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-slate-600">{formatGs(f.cobrado)}</td>
-                  <td className={`px-4 py-3 text-right font-semibold tabular-nums ${f.saldo > 0 ? (f.vencida ? "text-rose-600" : "text-slate-900") : "text-emerald-600"}`}>{f.estado === "anulada" ? "—" : formatGs(f.saldo)}</td>
-                  <td className="px-4 py-3"><EstadoChip estado={f.estado} vencida={!!f.vencida} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        {error ? (
+          <p className="py-10 text-center text-sm text-rose-600">{error}</p>
+        ) : !datos ? (
+          <div className="py-12"><Loader2 className="mx-auto h-5 w-5 animate-spin text-slate-400" /></div>
+        ) : (
+          // Celular: cada venta es una tarjeta (cliente, saldo, vence y estado).
+          <TablaTarjetas
+            filas={datos.rows}
+            claveFila={(f) => f.venta_id}
+            onFila={(f) => setViendo(f.venta_id)}
+            claseFila={(f) => (f.estado === "anulada" ? "opacity-50" : "")}
+            cargando={cargando}
+            claseThead="bg-slate-50"
+            thBase="whitespace-nowrap px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-slate-500"
+            tdBase="px-4 py-3"
+            vacio={<p className="py-12 text-center text-sm text-slate-400">{periodo === "turno" && !turno ? "Elegí un turno abierto." : "No hay ventas a crédito con estos filtros."}</p>}
+            columnas={[
+              { key: "venta", titulo: "Venta", movil: "subtitulo",
+                celda: (f) => <><span className="font-mono text-xs text-slate-600">{f.numero_control}</span><span className="block text-[11px] text-slate-400 max-md:ml-1.5 max-md:inline">{new Date(f.fecha).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></> },
+              { key: "cliente", titulo: "Cliente", movil: "titulo",
+                celda: (f) => <><span className="text-slate-800">{f.cliente_nombre ?? "—"}</span>{f.cliente_ruc ? <span className="block text-[11px] font-normal text-slate-400">{f.cliente_ruc}</span> : null}</> },
+              { key: "caja", titulo: "Caja", claseTd: "text-xs text-slate-600", movil: "detalle",
+                celda: (f) => <>{f.punto_nombre ?? "—"}{f.numero_caja ? <span className="text-slate-400"> · N° {f.numero_caja}</span> : null}<span className="block text-[11px] text-slate-400">{[f.sucursal_nombre, f.cajero_nombre ?? f.usuario_nombre].filter(Boolean).join(" · ")}</span></> },
+              { key: "vence", titulo: "Vence", claseTd: "text-xs", movil: "dato",
+                celda: (f) => <><span className="tabular-nums text-slate-700">{fechaCorta(f.vencimiento)}</span>{f.plazo_dias ? <span className="text-slate-400"> · {f.plazo_dias} d</span> : null}{f.vencida ? <span className="block text-[11px] font-semibold text-rose-600">vencida hace {f.dias_vencida} día{f.dias_vencida === 1 ? "" : "s"}</span> : null}</> },
+              { key: "total", titulo: "Total", claseTh: "!text-right", claseTd: "text-right font-semibold tabular-nums text-slate-800", movil: "dato", celda: (f) => formatGs(f.total) },
+              { key: "cobrado", titulo: "Cobrado", claseTh: "!text-right", claseTd: "text-right tabular-nums text-slate-600", movil: "detalle", celda: (f) => formatGs(f.cobrado) },
+              { key: "saldo", titulo: "Saldo", claseTh: "!text-right", movil: "valor",
+                claseTd: "text-right font-semibold tabular-nums",
+                celda: (f) => <span className={f.saldo > 0 ? (f.vencida ? "text-rose-600" : "text-slate-900") : "text-emerald-600"}>{f.estado === "anulada" ? "—" : formatGs(f.saldo)}</span> },
+              { key: "estado", titulo: "Estado", movil: "chip", celda: (f) => <EstadoChip estado={f.estado} vencida={!!f.vencida} /> },
+            ]}
+          />
+        )}
         <Paginador pagina={pagina} porPagina={POR_PAGINA} total={datos?.total ?? 0} cargando={cargando} onCambiar={setPagina} />
       </section>
 
@@ -226,7 +215,7 @@ function Cifra({ label, valor, icono: Icono, destacado, alerta }: { label: strin
   return (
     <div className="min-w-0 px-4 py-3.5" style={destacado ? { backgroundColor: `${TEAL}12` } : undefined}>
       <p className={`flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] ${alerta ? "text-rose-600" : "text-slate-500"}`}><Icono className="h-3 w-3" /> {label}</p>
-      <p className="mt-1 truncate text-lg font-bold tabular-nums" style={{ color: alerta ? "#e11d48" : destacado ? TEAL : "#0f172a" }}>{valor}</p>
+      <p className="mt-1 truncate text-base font-bold tabular-nums sm:text-lg" style={{ color: alerta ? "#e11d48" : destacado ? TEAL : "#0f172a" }}>{valor}</p>
     </div>
   );
 }

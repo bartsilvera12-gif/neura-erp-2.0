@@ -84,7 +84,7 @@ export function MovimientoModal({ cajaId, etiqueta, efectivoDisponible, tipoInic
           <div className="flex flex-wrap gap-1.5">
             {motivos.map((m) => (
               <button key={m.value} type="button" onClick={() => setMotivo(m.value)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition ${motivo === m.value ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand)]" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
+                className={`rounded-full border px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-11 max-sm:px-4 max-sm:text-sm ${motivo === m.value ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand)]" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>
                 {m.label}
               </button>
             ))}
@@ -104,7 +104,7 @@ export function MovimientoModal({ cajaId, etiqueta, efectivoDisponible, tipoInic
           {tipo === "retiro" && efectivoDisponible != null ? (
             <span className={`mt-1 flex items-center justify-between text-[11px] ${excede ? "font-semibold text-rose-600" : "text-slate-500"}`}>
               <span>{excede ? "No hay tanto efectivo en la caja" : "Debería haber en la caja"}</span>
-              <button type="button" onClick={() => setMonto(Math.max(0, efectivoDisponible))} className="font-semibold tabular-nums hover:underline">{formatGs(efectivoDisponible)}</button>
+              <button type="button" onClick={() => setMonto(Math.max(0, efectivoDisponible))} className="font-semibold tabular-nums hover:underline max-sm:min-h-10 max-sm:px-1">{formatGs(efectivoDisponible)}</button>
             </span>
           ) : null}
         </label>

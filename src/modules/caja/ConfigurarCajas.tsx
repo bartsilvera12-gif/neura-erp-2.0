@@ -61,7 +61,7 @@ export function ConfigurarCajasModal({ estado, onClose, onCambio }: { estado: Es
           <section key={s.id} className="overflow-hidden rounded-2xl border border-slate-200">
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-4 py-2.5">
               <p className="text-sm font-semibold text-slate-800">{s.nombre}</p>
-              <button type="button" onClick={() => nueva(s)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--brand-50)]">
+              <button type="button" onClick={() => nueva(s)} className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs max-sm:min-h-11 font-semibold text-[var(--brand)] hover:bg-[var(--brand-50)]">
                 <Plus className="h-3.5 w-3.5" /> Nueva caja
               </button>
             </div>
@@ -77,7 +77,7 @@ export function ConfigurarCajasModal({ estado, onClose, onCambio }: { estado: Es
                     </p>
                     <p className="flex items-center gap-1 text-[11px] text-slate-500"><Warehouse className="h-3 w-3" /> Sale de {c.deposito_nombre}</p>
                   </div>
-                  <button type="button" onClick={() => editar(s, c)} title="Editar caja" className="rounded-lg p-2 text-slate-400 hover:bg-[var(--brand-50)] hover:text-[var(--brand)]"><Pencil className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => editar(s, c)} title="Editar caja" aria-label={`Editar ${c.nombre}`} className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg p-2 text-slate-400 sm:h-auto sm:w-auto hover:bg-[var(--brand-50)] hover:text-[var(--brand)]"><Pencil className="h-4 w-4" /></button>
                 </li>
               ))}
             </ul>

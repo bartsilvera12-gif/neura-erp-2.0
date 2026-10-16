@@ -319,19 +319,21 @@ function Formulario() {
   const dec = decimales(moneda);
   const enviado = editando?.estado_guardado === "enviado";
 
+  const etiquetaGuardar = busy ? "Guardando…" : editando ? (enviado ? `Guardar revisión ${editando.revision + 1}` : "Guardar cambios") : "Crear presupuesto";
+
   return (
-    <div className="space-y-6 pb-10">
+    <div className="space-y-5 pb-10 max-lg:pb-28 sm:space-y-6">
       <header className="flex items-start gap-3">
-        <Link href={editando ? `/presupuestos/${editando.id}` : "/presupuestos"} aria-label="Volver" className="mt-1 flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50">
+        <Link href={editando ? `/presupuestos/${editando.id}` : "/presupuestos"} aria-label="Volver" className="mt-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 sm:h-9 sm:w-9">
           <ArrowLeft className="h-4 w-4" />
         </Link>
-        <div>
+        <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Comercial · Presupuestos</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
             {editando ? `Editar ${numeroConRevision(editando.numero, editando.revision)}` : "Nuevo presupuesto"}
           </h1>
-          <p className="mt-1 text-sm text-slate-500">
-            {enviado ? `Ya se mandó: al guardar queda como revisión ${editando!.revision + 1} y el cliente ve la versión nueva en el mismo link.` : "Armalo, guardalo y después lo mandás por WhatsApp, link o PDF."}
+          <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">
+            {enviado ? `Ya se mandó: al guardar queda como revisión ${editando!.revision + 1} (descargá el PDF nuevo y mandáselo al cliente).` : "Armalo, guardalo y después descargá el PDF para mandarlo."}
           </p>
         </div>
       </header>
@@ -339,7 +341,7 @@ function Formulario() {
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="space-y-6">
           <Tarjeta numero={1} titulo="Para quién" extra={
-            <div className="w-56"><Segmentado valor={modo} onChange={(v) => setModo(v as "cliente" | "prospecto")} opciones={[["cliente", "Cliente"], ["prospecto", "Prospecto"]]} /></div>
+            <div className="w-full sm:w-56"><Segmentado valor={modo} onChange={(v) => setModo(v as "cliente" | "prospecto")} opciones={[["cliente", "Cliente"], ["prospecto", "Prospecto"]]} /></div>
           }>
             {modo === "cliente" ? (
               <div className="space-y-3">
@@ -355,7 +357,7 @@ function Formulario() {
                 </div>
                 {cliente ? (
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <label className="block"><span className={ET}>Teléfono (para WhatsApp)</span>
+                    <label className="block"><span className={ET}>Teléfono</span>
                       <input value={telefono} onChange={(e) => setTelefono(e.target.value)} inputMode="tel" placeholder="0981 123 456" className={INPUT} /></label>
                     <label className="block"><span className={ET}>Email</span>
                       <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={INPUT} /></label>
@@ -368,7 +370,7 @@ function Formulario() {
                   <input value={pNombre} onChange={(e) => setPNombre(e.target.value)} maxLength={200} placeholder="Ej: Constructora Las Lomas" className={INPUT} /></label>
                 <label className="block"><span className={ET}>RUC / CI</span>
                   <input value={pRuc} onChange={(e) => setPRuc(e.target.value)} maxLength={40} className={INPUT} /></label>
-                <label className="block"><span className={ET}>Teléfono (para WhatsApp)</span>
+                <label className="block"><span className={ET}>Teléfono</span>
                   <input value={telefono} onChange={(e) => setTelefono(e.target.value)} inputMode="tel" placeholder="0981 123 456" className={INPUT} /></label>
                 <label className="block"><span className={ET}>Email</span>
                   <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" className={INPUT} /></label>
@@ -385,14 +387,14 @@ function Formulario() {
               <div>
                 <span className={ET}>Validez</span>
                 <div className="flex items-center gap-2">
-                  <div className="w-40 shrink-0"><Segmentado valor={modoValidez} onChange={(v) => { setModoValidez(v as "dias" | "fecha"); if (v === "fecha") setValidoHasta(hasta); else setValidezDias(String(Math.max(0, diasValidez))); }} opciones={[["dias", "Días"], ["fecha", "Fecha"]]} /></div>
+                  <div className="w-36 shrink-0 sm:w-40"><Segmentado valor={modoValidez} onChange={(v) => { setModoValidez(v as "dias" | "fecha"); if (v === "fecha") setValidoHasta(hasta); else setValidezDias(String(Math.max(0, diasValidez))); }} opciones={[["dias", "Días"], ["fecha", "Fecha"]]} /></div>
                   {modoValidez === "dias" ? (
                     <div className="flex items-center gap-1.5">
                       <input inputMode="numeric" value={validezDias} onChange={(e) => setValidezDias(e.target.value.replace(/\D/g, "").slice(0, 3))} className={`${INPUT} w-20 py-2 text-right tabular-nums`} />
                       <span className="text-sm text-slate-500">días</span>
                     </div>
                   ) : (
-                    <input type="date" value={validoHasta} min={fecha} onChange={(e) => setValidoHasta(e.target.value)} className={`${INPUT} py-2`} />
+                    <input type="date" value={validoHasta} min={fecha} onChange={(e) => setValidoHasta(e.target.value)} className={`${INPUT} min-w-0 py-2`} />
                   )}
                 </div>
                 <p className="mt-1 text-[11px] text-slate-500">Vence el <b className="font-semibold text-slate-700">{diaCorto(hasta)}</b>{modoValidez === "fecha" && diasValidez >= 0 ? ` (${diasValidez} días)` : ""}. Por defecto: {cfg.validez_dias} días.</p>
@@ -420,7 +422,7 @@ function Formulario() {
               </div>
               <div className="sm:col-span-2 sm:max-w-sm">
                 <span className={ET}>Vendedor</span>
-                <Select value={vendedorId} onChange={setVendedorId} block compacto
+                <Select value={vendedorId} onChange={setVendedorId} block compacto etiqueta="Vendedor"
                   options={vendedores.length ? vendedores.map((u): [string, string] => [u.id, u.nombre]) : [["", "Yo"]]} />
               </div>
             </div>
@@ -449,12 +451,14 @@ function Formulario() {
                   const sinStock = l.controla_stock && l.stock != null && num(l.cantidad) > l.stock;
                   return (
                     <li key={l.key} className="rounded-xl border border-slate-200 p-3">
+                      {/* Celular: descripción arriba (con quitar), cantidad / precio / desc. / IVA en
+                          2 columnas y abajo ordenar + total. Desde sm: todo en una fila, como siempre. */}
                       <div className="flex flex-wrap items-start gap-3">
-                        <div className="flex flex-col pt-1">
+                        <div className="hidden flex-col pt-1 sm:flex">
                           <button type="button" onClick={() => mover(l.key, -1)} disabled={idx === 0} aria-label="Subir" className="rounded p-0.5 text-slate-300 hover:text-slate-600 disabled:opacity-30"><ChevronUp className="h-3.5 w-3.5" /></button>
                           <button type="button" onClick={() => mover(l.key, 1)} disabled={idx === lineas.length - 1} aria-label="Bajar" className="rounded p-0.5 text-slate-300 hover:text-slate-600 disabled:opacity-30"><ChevronDown className="h-3.5 w-3.5" /></button>
                         </div>
-                        <div className="min-w-[200px] flex-1">
+                        <div className="min-w-0 flex-1 max-sm:basis-full sm:min-w-[200px]">
                           <div className="flex items-center gap-2">
                             {l.producto_id ? (
                               <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-500">{l.sku}</span>
@@ -463,37 +467,47 @@ function Formulario() {
                             )}
                             <input value={l.descripcion} onChange={(e) => editar(l.key, { descripcion: e.target.value })} maxLength={300}
                               {...(!l.producto_id && !l.descripcion ? { "data-libre-nueva": "" } : {})}
-                              placeholder={l.producto_id ? "" : "Ej: Instalación y puesta en marcha"}
-                              className="min-w-0 flex-1 rounded-lg border border-transparent px-1.5 py-1 text-sm font-semibold text-slate-900 outline-none hover:border-slate-200 focus:border-[var(--brand)]" />
+                              placeholder={l.producto_id ? "" : "Ej: Instalación y puesta en marcha"} aria-label="Descripción"
+                              className="min-w-0 flex-1 rounded-lg border border-transparent px-1.5 py-1 text-sm font-semibold text-slate-900 outline-none hover:border-slate-200 focus:border-[var(--brand)] max-sm:min-h-11 max-sm:border-slate-200" />
+                            <button type="button" onClick={() => setLineas((ls) => ls.filter((x) => x.key !== l.key))} aria-label={`Quitar ${l.descripcion || "línea"}`}
+                              className="-mr-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 sm:hidden"><Trash2 className="h-4 w-4" /></button>
                           </div>
                           {l.verDetalle ? (
                             <textarea value={l.detalle} onChange={(e) => editar(l.key, { detalle: e.target.value })} rows={2} maxLength={1000} placeholder="Detalle que verá el cliente (opcional)"
                               className="mt-1.5 w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 outline-none focus:border-[var(--brand)]" />
                           ) : (
-                            <button type="button" onClick={() => editar(l.key, { verDetalle: true })} className="mt-0.5 px-1.5 text-[11px] font-medium text-slate-400 hover:text-[var(--brand)]">+ detalle</button>
+                            <button type="button" onClick={() => editar(l.key, { verDetalle: true })} className="mt-0.5 px-1.5 text-[11px] font-medium text-slate-400 hover:text-[var(--brand)] max-sm:min-h-10 max-sm:text-xs">+ detalle</button>
                           )}
                           {sinStock ? <p className="mt-1 px-1.5 text-[11px] font-medium text-amber-700">Hoy hay {l.stock?.toLocaleString("es-PY")} en stock.</p> : null}
                         </div>
-                        <label className="w-20"><span className={ET}>Cant.</span>
-                          <input inputMode="decimal" value={l.cantidad} onChange={(e) => editar(l.key, { cantidad: e.target.value.replace(/[^\d.,]/g, "") })} className={`${INPUT} px-2 py-2 text-right tabular-nums`} /></label>
-                        <label className="w-32"><span className={ET}>Precio {moneda === "USD" ? "US$" : "Gs."}</span>
-                          <MontoInput value={l.precio} onChange={(v) => editar(l.key, { precio: v })} decimals={moneda === "USD"} placeholder="0" className={`${INPUT} px-2 py-2 text-right tabular-nums`} /></label>
-                        <label className="w-[4.5rem]"><span className={ET}>Desc. %</span>
-                          <input inputMode="decimal" value={l.descuento} onChange={(e) => editar(l.key, { descuento: e.target.value.replace(/[^\d.,]/g, "").slice(0, 6) })} placeholder="0" className={`${INPUT} px-2 py-2 text-right tabular-nums`} /></label>
-                        <div className="w-28">
-                          <span className={ET}>IVA</span>
-                          {l.producto_id ? (
-                            <p className="rounded-xl border border-transparent px-1 py-2 text-sm text-slate-600" title="El IVA del producto">{l.tipo_iva === "EXENTA" ? "Exenta" : l.tipo_iva}</p>
-                          ) : (
-                            <Select value={l.tipo_iva} onChange={(v) => editar(l.key, { tipo_iva: v as TipoIva })} options={IVAS} block compacto />
-                          )}
+                        <div className="grid grid-cols-2 gap-2 max-sm:w-full sm:contents">
+                          <label className="sm:w-20"><span className={ET}>Cant.</span>
+                            <input inputMode="decimal" enterKeyHint="next" value={l.cantidad} onChange={(e) => editar(l.key, { cantidad: e.target.value.replace(/[^\d.,]/g, "") })} className={`${INPUT} px-2 py-2 text-right tabular-nums`} /></label>
+                          <label className="sm:w-32"><span className={ET}>Precio {moneda === "USD" ? "US$" : "Gs."}</span>
+                            <MontoInput value={l.precio} onChange={(v) => editar(l.key, { precio: v })} decimals={moneda === "USD"} placeholder="0" className={`${INPUT} px-2 py-2 text-right tabular-nums`} /></label>
+                          <label className="sm:w-[4.5rem]"><span className={ET}>Desc. %</span>
+                            <input inputMode="decimal" enterKeyHint="done" value={l.descuento} onChange={(e) => editar(l.key, { descuento: e.target.value.replace(/[^\d.,]/g, "").slice(0, 6) })} placeholder="0" className={`${INPUT} px-2 py-2 text-right tabular-nums`} /></label>
+                          <div className="sm:w-28">
+                            <span className={ET}>IVA</span>
+                            {l.producto_id ? (
+                              <p className="rounded-xl border border-transparent px-1 py-2 text-sm text-slate-600" title="El IVA del producto">{l.tipo_iva === "EXENTA" ? "Exenta" : l.tipo_iva}</p>
+                            ) : (
+                              <Select value={l.tipo_iva} onChange={(v) => editar(l.key, { tipo_iva: v as TipoIva })} options={IVAS} block compacto etiqueta="IVA de la línea" />
+                            )}
+                          </div>
                         </div>
-                        <div className="w-28 pt-5 text-right">
-                          {num(l.descuento) > 0 ? <p className="text-[10px] tabular-nums text-slate-400 line-through">{monto(c.bruto, moneda)}</p> : null}
-                          <p className="text-sm font-bold tabular-nums text-slate-900">{monto(c.total, moneda)}</p>
+                        <div className="flex items-center justify-between gap-2 max-sm:w-full max-sm:border-t max-sm:border-slate-100 max-sm:pt-2 sm:block sm:w-28 sm:pt-5 sm:text-right">
+                          <div className="flex gap-1 sm:hidden">
+                            <button type="button" onClick={() => mover(l.key, -1)} disabled={idx === 0} aria-label="Subir" className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-30"><ChevronUp className="h-4 w-4" /></button>
+                            <button type="button" onClick={() => mover(l.key, 1)} disabled={idx === lineas.length - 1} aria-label="Bajar" className="inline-flex h-11 w-11 items-center justify-center rounded-lg border border-slate-200 text-slate-500 disabled:opacity-30"><ChevronDown className="h-4 w-4" /></button>
+                          </div>
+                          <div className="text-right">
+                            {num(l.descuento) > 0 ? <p className="text-[10px] tabular-nums text-slate-400 line-through">{monto(c.bruto, moneda)}</p> : null}
+                            <p className="text-base font-bold tabular-nums text-slate-900 sm:text-sm">{monto(c.total, moneda)}</p>
+                          </div>
                         </div>
                         <button type="button" onClick={() => setLineas((ls) => ls.filter((x) => x.key !== l.key))} aria-label={`Quitar ${l.descripcion || "línea"}`}
-                          className="mt-5 rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
+                          className="mt-5 hidden rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 sm:block"><Trash2 className="h-4 w-4" /></button>
                       </div>
                     </li>
                   );
@@ -503,7 +517,7 @@ function Formulario() {
           </Tarjeta>
 
           <Tarjeta numero={4} titulo="Condiciones y notas">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2">
               <label className="block"><span className={ET}>Condiciones comerciales <span className="font-normal text-slate-400">(las ve el cliente)</span></span>
                 <textarea value={condiciones} onChange={(e) => setCondiciones(e.target.value)} rows={5} maxLength={4000} placeholder="Entrega, forma de pago, garantía…" className={INPUT} /></label>
               <label className="block"><span className={ET}>Notas internas <span className="font-normal text-slate-400">(no salen del ERP)</span></span>
@@ -513,7 +527,7 @@ function Formulario() {
         </div>
 
         <aside className="lg:sticky lg:top-4 lg:self-start">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">Resumen</p>
             <dl className="mt-3 space-y-1.5 text-sm">
               <Fila l="Subtotal" v={monto(tot.subtotal_bruto, moneda)} />
@@ -522,7 +536,7 @@ function Formulario() {
                 <dt>Descuento general</dt>
                 <dd className="flex items-center gap-1">
                   <input inputMode="decimal" value={descGlobal} onChange={(e) => setDescGlobal(e.target.value.replace(/[^\d.,]/g, "").slice(0, 6))} placeholder="0"
-                    className="w-14 rounded-lg border border-slate-200 px-2 py-1 text-right text-sm tabular-nums outline-none focus:border-[var(--brand)]" />
+                    aria-label="Descuento general (%)" className="w-14 rounded-lg border border-slate-200 px-2 py-1 text-right text-sm tabular-nums outline-none focus:border-[var(--brand)] max-lg:h-11 max-lg:w-20" />
                   <span className="text-xs">%</span>
                 </dd>
               </div>
@@ -542,10 +556,11 @@ function Formulario() {
 
             {faltan.length ? <p className="mt-4 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">Falta: {faltan.join(", ")}.</p> : null}
             {error ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p> : null}
+            {/* Celular / tablet: el botón va en el pie fijo (abajo). */}
             <button type="button" onClick={() => void guardar()} disabled={!!faltan.length || busy}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: TEAL }}>
+              className="mt-4 hidden w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-40 lg:inline-flex" style={{ backgroundColor: TEAL }}>
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-              {busy ? "Guardando…" : editando ? (enviado ? `Guardar revisión ${editando.revision + 1}` : "Guardar cambios") : "Crear presupuesto"}
+              {etiquetaGuardar}
             </button>
             <p className="mt-2 text-center text-[11px] text-slate-400">{editando ? "Queda registrado en el historial." : "Se guarda como borrador. Después lo mandás."}</p>
           </div>
@@ -555,6 +570,21 @@ function Formulario() {
             </button>
           ) : null}
         </aside>
+      </div>
+
+      {/* Celular / tablet: total y guardar en un pie fijo (safe-area) */}
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white/95 shadow-[0_-10px_30px_-12px_rgba(15,23,42,0.28)] backdrop-blur pb-safe lg:hidden">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2.5 sm:px-4">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-[11px] text-slate-500">{faltan.length ? `Falta: ${faltan[0]}${faltan.length > 1 ? ` y ${faltan.length - 1} más` : ""}` : `Total · ${lineas.length} línea${lineas.length === 1 ? "" : "s"}`}</p>
+            <p className="truncate text-xl font-bold leading-tight tabular-nums text-slate-900">{monto(tot.total, moneda)}</p>
+          </div>
+          <button type="button" onClick={() => void guardar()} disabled={!!faltan.length || busy}
+            className="inline-flex h-12 max-w-[60%] shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-40" style={{ backgroundColor: TEAL }}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            <span className="truncate">{etiquetaGuardar}</span>
+          </button>
+        </div>
       </div>
     </div>
   );
