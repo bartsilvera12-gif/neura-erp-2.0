@@ -491,8 +491,9 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
             </div>
 
             {/* Vista previa */}
-            <aside className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 xl:sticky xl:top-10 xl:self-start">
-              {previa ? <VistaPrevia b={previa} /> : null}
+            {/* En pantalla ancha la columna entera tiene su propio scroll (y queda fija al bajar). */}
+            <aside className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 xl:sticky xl:top-10 xl:self-start xl:max-h-[calc(100dvh-15rem)] xl:overflow-y-auto xl:overscroll-contain">
+              {previa ? <VistaPrevia b={previa} sinTope /> : null}
             </aside>
           </div>
 

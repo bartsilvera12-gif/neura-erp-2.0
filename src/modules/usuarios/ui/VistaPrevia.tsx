@@ -34,7 +34,12 @@ export function menuDelPerfil(b: PerfilBorrador, catalogo: Pantalla[] = pantalla
     .map(([familia, mods]) => ({ familia, modulos: [...mods.values()] }));
 }
 
-export function VistaPrevia({ b, compacta = false }: { b: PerfilBorrador; compacta?: boolean }) {
+export function VistaPrevia({ b, compacta = false, sinTope = false }: {
+  b: PerfilBorrador;
+  compacta?: boolean;
+  /** La columna que la contiene ya scrollea entera: sin alto máximo propio. */
+  sinTope?: boolean;
+}) {
   const menu = menuDelPerfil(b);
   const total = menu.reduce((n, f) => n + f.modulos.reduce((m, x) => m + x.pantallas.length, 0), 0);
   const permisos = GRUPOS_PERMISOS.flatMap((g) => g.permisos).filter((p) => permisoAplica(p, b.nivel_base));
@@ -51,7 +56,7 @@ export function VistaPrevia({ b, compacta = false }: { b: PerfilBorrador; compac
         {total === 0 ? (
           <p className="py-2 text-center text-xs text-slate-400">Solo el Inicio. Marcá pantallas para armar su menú.</p>
         ) : (
-          <div className={`space-y-2.5 ${compacta ? "max-h-56" : "max-h-[340px]"} overflow-y-auto pr-1`}>
+          <div className={`space-y-2.5 ${sinTope ? "" : compacta ? "max-h-56 overflow-y-auto pr-1" : "max-h-[340px] overflow-y-auto pr-1"}`}>
             {menu.map((f) => (
               <div key={f.familia}>
                 <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">{f.familia}</p>
