@@ -214,10 +214,10 @@ export function ModalServicios({ clienteId, clienteNombre, suscripciones, onClos
 
   return (
     <Modal titulo={`Servicios asociados · ${clienteNombre}`} onClose={onClose} size="lg">
-      {ordenadas.length === 0 && !otras ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center">
-          <p className="text-sm font-semibold text-slate-700">Este cliente no tiene servicios</p>
-          <p className="mt-1 text-xs text-slate-500">Agregale una suscripción desde su ficha (Nueva suscripción).</p>
+      {ordenadas.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center">
+          <p className="text-sm font-semibold text-slate-700">Este cliente no tiene servicios contratados</p>
+          <p className="mt-1 text-xs text-slate-500">Los servicios son sus suscripciones (planes mensuales). Se agregan desde su ficha con "Nueva suscripción".</p>
           <Link href={`/clientes/${encodeURIComponent(clienteId)}`} className="mt-3 inline-flex min-h-11 items-center gap-1 rounded-xl px-4 text-sm font-semibold text-white sm:min-h-0 sm:py-2" style={{ backgroundColor: TEAL }}>
             Ir a la ficha <ChevronRight className="h-4 w-4" />
           </Link>
@@ -261,15 +261,16 @@ export function ModalServicios({ clienteId, clienteNombre, suscripciones, onClos
               </li>
             );
           })}
-          {otras ? (
-            <li className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
-              <p className="text-sm font-semibold text-slate-900">Otras deudas</p>
-              <p className="mt-0.5 text-xs text-slate-500">Ventas a crédito y facturas al contado fuera de una suscripción.</p>
-              <p className="mt-2 text-xs font-semibold text-rose-600">Debe {monto(otras.total_adeudado, "GS")}{otras.cuotas_vencidas > 0 ? ` · ${otras.cuotas_vencidas} vencida${otras.cuotas_vencidas === 1 ? "" : "s"}` : ""}</p>
-            </li>
-          ) : null}
         </ul>
       )}
+      {/* La deuda que no es de un servicio (ventas a crédito, facturas al contado) se
+          menciona aparte, como nota: no es un servicio. */}
+      {otras ? (
+        <p className="mt-3 rounded-xl bg-slate-50 px-3 py-2.5 text-xs text-slate-600">
+          Aparte de sus servicios, tiene <b className="font-semibold text-rose-600">{monto(otras.total_adeudado, "GS")}</b> pendientes de ventas a crédito o facturas
+          {otras.cuotas_vencidas > 0 ? ` (${otras.cuotas_vencidas} vencida${otras.cuotas_vencidas === 1 ? "" : "s"})` : ""}. Las ves en la lista de Facturas.
+        </p>
+      ) : null}
     </Modal>
   );
 }
