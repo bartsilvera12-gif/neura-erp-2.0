@@ -26,7 +26,9 @@ export function numeroEnLetras(valor: number): string {
   n %= 1_000_000;
   const miles = Math.floor(n / 1000);
   const resto = n % 1000;
-  if (millones) partes.push(millones === 1 ? "un millón" : `${hasta999(millones).replace(/veintiuno$/, "veintiún").replace(/uno$/, "un")} millones`);
+  // ≥ 1.000 millones: "mil millones", "dos mil quinientos millones"…
+  const txtMillones = millones >= 1000 ? numeroEnLetras(millones) : hasta999(millones);
+  if (millones) partes.push(millones === 1 ? "un millón" : `${txtMillones.replace(/veintiuno$/, "veintiún").replace(/uno$/, "un")} millones`);
   if (miles) partes.push(miles === 1 ? "mil" : `${hasta999(miles).replace(/veintiuno$/, "veintiún").replace(/uno$/, "un")} mil`);
   if (resto) partes.push(hasta999(resto));
   return partes.join(" ");

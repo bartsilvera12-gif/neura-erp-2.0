@@ -2,15 +2,17 @@
  * PDF del presupuesto (solo servidor). Lo usan la ruta interna (/api/presupuestos/[id]/pdf)
  * y la pública (/p/[token]/pdf): las dos le pasan el MISMO documento (presupuesto_json),
  * que trae solo campos públicos + el membrete (`emisor`: empresa, sucursal y contacto del
- * vendedor). Es lo que recibe el cliente final (se crea, se descarga y se manda el PDF):
- * diseño comercial, A4 vertical, márgenes generosos, color de marca con moderación.
- * Nunca muestra el estado interno (enviado, aceptado…); solo la versión interna marca
- * discretamente un presupuesto vencido.
+ * vendedor). Diseño de FACTURA A4 paraguaya (estilo KuDE / preimpresa: recuadros y líneas
+ * finas, valor de venta repartido en Exentas · 5% · 10%, total en letras y liquidación
+ * del IVA), pero como presupuesto: sin timbrado, CDC, QR ni leyendas fiscales. Se crea, se
+ * descarga y se manda como archivo: no lleva links ni firmas. Nunca muestra el estado
+ * interno; solo la versión interna marca discretamente un presupuesto vencido.
  */
-import autoTable, { type CellHookData } from "jspdf-autotable";
+import autoTable, { type CellHookData, type RowInput } from "jspdf-autotable";
 import type { jsPDF } from "jspdf";
 import { clienteConfig } from "@/cliente.config";
 import { COLOR, logoDoc, nuevoDocumento, pdfTxt, type RGB } from "@/lib/pdf/documento";
+import { numeroEnLetras } from "@/lib/pdf/letras";
 import { cantidad, condicionTexto, diaCorto, monto, pct, type PresupuestoDoc } from "@/modules/presupuestos/tipos";
 
 /** Membrete que arma presupuesto_json (puede faltar en documentos viejos). */
@@ -26,6 +28,7 @@ export type EmisorPresupuesto = {
   ruc?: string | null;
   email?: string | null;
   web?: string | null;
+  actividad?: string | null;
 };
 export type OpcionesPdfPresupuesto = {
   /** Versión interna (descarga desde el ERP): marca discreta si está vencido. */
@@ -36,318 +39,365 @@ export type OpcionesPdfPresupuesto = {
 
 // ── Geometría y paleta ─────────────────────────────────────────────────────────
 const PW = 210, PH = 297;
-const MX = 18; // margen lateral
+const MX = 13; // margen lateral
 const ANCHO = PW - MX * 2;
-const TOP_SIG = 26; // arriba en páginas 2+ (debajo del encabezado corrido)
-const PIE = 24; // reservado abajo para el pie
+const TOP_SIG = 24; // arriba en páginas 2+ (debajo del encabezado corrido)
+const PIE = 22; // reservado abajo para el pie
 
 const mezcla = (c: RGB, con: RGB, t: number): RGB => [0, 1, 2].map((i) => Math.round(c[i] * (1 - t) + con[i] * t)) as RGB;
 const BLANCO: RGB = [255, 255, 255];
 const MARCA = COLOR.teal;
-const MARCA_OSC = mezcla(MARCA, [0, 0, 0], 0.25);
+const MARCA_OSC = mezcla(MARCA, [0, 0, 0], 0.3);
 const TINTE = mezcla(MARCA, BLANCO, 0.9);
 const TINTE_SUAVE = mezcla(MARCA, BLANCO, 0.955);
 const TINTA: RGB = [31, 41, 55];
 const TEXTO: RGB = [75, 85, 99];
 const APAGADO: RGB = [107, 114, 128];
-const TENUE: RGB = [156, 163, 175];
-const LINEA: RGB = [229, 231, 235];
+const BORDE: RGB = [196, 202, 210];
+const LINEA: RGB = [222, 226, 231];
 const AMBAR: RGB = [180, 83, 9];
 
-/** Alto de renglón en mm para un cuerpo en pt (interlineado 1.25). */
-const alto = (pt: number) => pt * 0.3528 * 1.25;
+/** Alto de renglón en mm para un cuerpo en pt (interlineado 1.22). */
+const alto = (pt: number) => pt * 0.3528 * 1.22;
 /** Desde el tope de un renglón hasta su línea base. */
 const base = (pt: number) => pt * 0.3528 * 0.86;
 
-type Renglon = { t: string; pt: number; bold?: boolean; color: RGB };
-
 const lleno = (s: string | null | undefined): s is string => !!s && s.trim() !== "";
 
-function etiqueta(doc: jsPDF, txt: string, x: number, y: number, color: RGB = MARCA, align: "left" | "right" = "left") {
-  doc.setFont("helvetica", "bold").setFontSize(6.6).setTextColor(...color);
-  doc.text(pdfTxt(txt.toUpperCase()), x, y, { charSpace: 0.45, align });
-}
+type Renglon = { t: string; pt: number; bold?: boolean; color: RGB };
+type Campo = { l: string; v: string; completo?: boolean; normal?: boolean };
 
-/** Recuadro redondeado con una franja inferior de otro color (desde `yFranja`). */
-function recuadroConFranja(doc: jsPDF, x: number, y: number, w: number, h: number, yFranja: number | null, r = 2.2) {
-  if (yFranja != null && yFranja < y + h) {
-    doc.setFillColor(...TINTE_SUAVE).roundedRect(x, y, w, h, r, r, "F");
-    doc.setFillColor(...BLANCO).roundedRect(x, y, w, yFranja - y, r, r, "F");
-    doc.rect(x, yFranja - r, w, r, "F");
-    doc.setDrawColor(...LINEA).setLineWidth(0.25).line(x, yFranja, x + w, yFranja);
+/** Monto en letras, como en la factura. */
+export function totalEnLetras(v: number, moneda: "GS" | "USD"): string {
+  const n = Math.abs(Number(v) || 0);
+  if (moneda === "USD") {
+    let entero = Math.floor(n);
+    let cent = Math.round((n - entero) * 100);
+    if (cent === 100) { entero += 1; cent = 0; }
+    return `Son dólares americanos: ${numeroEnLetras(entero)} con ${String(cent).padStart(2, "0")}/100.`;
   }
-  doc.setDrawColor(...LINEA).setLineWidth(0.3).roundedRect(x, y, w, h, r, r, "S");
+  return `Son guaraníes: ${numeroEnLetras(Math.round(n))}.`;
 }
 
 export async function pdfPresupuesto(p: PresupuestoDoc & { emisor?: EmisorPresupuesto | null }, opciones: OpcionesPdfPresupuesto = {}) {
   const doc = nuevoDocumento();
-  const m = (v: number) => monto(v, p.moneda);
+  const usd = p.moneda === "USD";
+  const num = (v: number | null | undefined) =>
+    usd ? (Number(v) || 0).toLocaleString("es-PY", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Math.round(Number(v) || 0).toLocaleString("es-PY");
   const em = p.emisor ?? null;
   const empresa = em?.empresa || clienteConfig.nombre;
   const web = em?.web || clienteConfig.dominio;
   const ubicacion = [em?.direccion, em?.ciudad].filter(lleno).join(", ");
-  const numeroTxt = `N° ${p.numero}`;
-  const hayDescLinea = p.items.some((i) => Number(i.descuento_pct) > 0);
-  const vencido = p.estado === "vencido";
   const der = MX + ANCHO;
+  const vencido = p.estado === "vencido";
 
-  // ── 1. Membrete ──────────────────────────────────────────────────────────────
-  let y = 16;
+  // ── Piezas de dibujo ────────────────────────────────────────────────────────
+  const recuadro = (x: number, y: number, w: number, h: number) =>
+    doc.setDrawColor(...BORDE).setLineWidth(0.3).rect(x, y, w, h, "S");
+  const ALTO_BARRA = 5.4;
+  const barraTitulo = (txt: string, x: number, y: number, w: number) => {
+    doc.setFillColor(...TINTE).rect(x, y, w, ALTO_BARRA, "F");
+    doc.setDrawColor(...BORDE).setLineWidth(0.25).line(x, y + ALTO_BARRA, x + w, y + ALTO_BARRA);
+    doc.setFont("helvetica", "bold").setFontSize(6.6).setTextColor(...MARCA_OSC);
+    doc.text(pdfTxt(txt.toUpperCase()), x + 3, y + 3.75, { charSpace: 0.45 });
+  };
+  /** "Etiqueta: valor" con sangría colgante. Devuelve el alto. */
+  const campo = (x: number, y: number, w: number, c: Campo, dibujar: boolean) => {
+    const l = `${c.l}:`;
+    doc.setFont("helvetica", "normal").setFontSize(7.4);
+    const lw = doc.getTextWidth(pdfTxt(l)) + 1.6;
+    const peso = c.normal ? "normal" : "bold";
+    doc.setFont("helvetica", peso).setFontSize(7.8);
+    const lineas = doc.splitTextToSize(pdfTxt(c.v), Math.max(10, w - lw)) as string[];
+    if (dibujar) {
+      doc.setFont("helvetica", "normal").setFontSize(7.4).setTextColor(...APAGADO);
+      doc.text(pdfTxt(l), x, y + base(7.8));
+      doc.setFont("helvetica", peso).setFontSize(7.8).setTextColor(...(c.normal ? TEXTO : TINTA));
+      lineas.forEach((t, i) => doc.text(t, x + lw, y + base(7.8) + i * alto(7.8)));
+    }
+    return lineas.length * alto(7.8);
+  };
+  /** Grilla de campos en `cols` columnas (los "completos" ocupan la fila entera). */
+  const grilla = (campos: Campo[], x: number, y: number, w: number, cols: number, dibujar: boolean) => {
+    const gap = 6;
+    const wc = (w - gap * (cols - 1)) / cols;
+    let yy = y;
+    let fila: Campo[] = [];
+    const cerrar = () => {
+      if (!fila.length) return;
+      let h = 0;
+      fila.forEach((c, i) => {
+        h = Math.max(h, campo(x + i * (wc + gap), yy, c.completo ? w : wc, c, dibujar));
+      });
+      yy += h + 2;
+      fila = [];
+    };
+    for (const c of campos) {
+      if (c.completo) {
+        cerrar();
+        fila = [c];
+        cerrar();
+      } else {
+        fila.push(c);
+        if (fila.length === cols) cerrar();
+      }
+    }
+    cerrar();
+    return yy - y - 2;
+  };
+
+  // ── 1. Encabezado: emisor (izq.) | presupuesto (der.) ───────────────────────
+  let y = 13;
+  const gapCab = 3;
+  const wIzq = Math.round(ANCHO * 0.62);
+  const wDer = ANCHO - wIzq - gapCab;
+  const xDerCab = MX + wIzq + gapCab;
+
   const logo = await logoDoc();
-  let altoLogo = 0;
+  let wLogo = 0, hLogo = 0;
   if (logo) {
-    const h = 15;
-    const w = Math.min(42, (logo.w / logo.h) * h);
-    const hh = (w * logo.h) / logo.w;
-    doc.addImage(logo.data, "PNG", MX, y, w, hh, "logo", "FAST");
-    altoLogo = hh;
+    hLogo = 17;
+    wLogo = Math.min(34, (logo.w / logo.h) * hLogo);
+    hLogo = (wLogo * logo.h) / logo.w;
   }
-  doc.setFont("helvetica", "bold").setFontSize(11.5).setTextColor(...TINTA);
-  doc.text(pdfTxt(empresa), der, y + 4, { align: "right" });
-  let yd = y + 4 + 4.6;
-  const datosEmpresa = [
-    lleno(em?.ruc) ? `RUC ${em!.ruc}` : null,
+  const xTxt = MX + 5 + (logo ? wLogo + 6 : 0);
+  const wTxt = MX + wIzq - 4 - xTxt;
+  doc.setFont("helvetica", "bold").setFontSize(11.5);
+  const nombreEmp = doc.splitTextToSize(pdfTxt(empresa), wTxt) as string[];
+  const lineasEmp = [
+    lleno(em?.actividad) ? em!.actividad : null,
+    lleno(em?.ruc) ? `RUC: ${em!.ruc}` : null,
     ubicacion || null,
-    [lleno(em?.telefono) ? `Tel. ${em!.telefono}` : null, lleno(em?.email) ? em!.email : null].filter(Boolean).join("  ·  ") || null,
+    lleno(em?.telefono) ? `Tel.: ${em!.telefono}` : null,
+    lleno(em?.email) ? em!.email : null,
     web,
   ].filter(lleno);
-  doc.setFont("helvetica", "normal").setFontSize(7.8).setTextColor(...APAGADO);
-  for (const l of datosEmpresa) {
-    doc.text(pdfTxt(l), der, yd, { align: "right" });
-    yd += 3.7;
+  const altoTxtEmp = nombreEmp.length * alto(11.5) + 1 + lineasEmp.length * alto(7.6);
+
+  const rev = p.revision > 1;
+  const marcaVencido = !!opciones.interno && vencido;
+  const altoDerNat = 6 + 4.6 + 7 + (rev || marcaVencido ? 4.2 : 0) + 3.5 + 2 * 4.6 + 3;
+  const altoCab = Math.max(32, hLogo + 10, altoTxtEmp + 10, altoDerNat);
+
+  recuadro(MX, y, wIzq, altoCab);
+  if (logo) doc.addImage(logo.data, "PNG", MX + 5, y + (altoCab - hLogo) / 2, wLogo, hLogo, "logo", "FAST");
+  let ye = y + (altoCab - altoTxtEmp) / 2;
+  doc.setFont("helvetica", "bold").setFontSize(11.5).setTextColor(...TINTA);
+  for (const l of nombreEmp) {
+    doc.text(l, xTxt, ye + base(11.5));
+    ye += alto(11.5);
   }
-  y = Math.max(y + altoLogo, yd - 2) + 8;
+  ye += 1;
+  doc.setFont("helvetica", "normal").setFontSize(7.6).setTextColor(...TEXTO);
+  for (const l of lineasEmp) {
+    doc.text(pdfTxt(l), xTxt, ye + base(7.6), { maxWidth: wTxt });
+    ye += alto(7.6);
+  }
 
-  // ── 2. Cuadro del documento: título + N° · cliente | datos · condiciones | validez ──
-  const pad = 7;
-  const xIn = MX + pad;
-  const anchoIn = ANCHO - pad * 2;
-  const anchoMeta = 74;
-  const gapCol = 12;
-  const anchoCli = anchoIn - anchoMeta - gapCol;
-  const xMeta = der - pad - anchoMeta;
-  const xDiv = xMeta - gapCol / 2;
-
-  // Medidas: fila del título
-  const yCaja = y;
-  const altoTitulo = 20;
-  const yCuerpo = yCaja + altoTitulo;
-
-  // Cliente
-  const c = p.cliente;
-  doc.setFont("helvetica", "bold").setFontSize(11);
-  const nombreC = doc.splitTextToSize(pdfTxt(c.nombre || "Consumidor final"), anchoCli) as string[];
-  const lineasC: string[] = [];
-  const datoC = (txt: string) => {
-    doc.setFont("helvetica", "normal").setFontSize(8.2);
-    lineasC.push(...(doc.splitTextToSize(pdfTxt(txt), anchoCli) as string[]));
+  recuadro(xDerCab, y, wDer, altoCab);
+  doc.setFillColor(...MARCA).rect(xDerCab, y, wDer, 1.2, "F");
+  const cx = xDerCab + wDer / 2;
+  let yr = y + (altoCab - altoDerNat) / 2 + 6 + 3.2;
+  doc.setFont("helvetica", "bold").setFontSize(11).setTextColor(...TINTA);
+  doc.text("PRESUPUESTO", cx, yr, { align: "center", charSpace: 1.2 });
+  yr += 7.4;
+  doc.setFont("helvetica", "bold").setFontSize(14).setTextColor(...MARCA);
+  doc.text(pdfTxt(`N° ${p.numero}`), cx, yr, { align: "center" });
+  if (rev || marcaVencido) {
+    // "Revisión N" y/o la marca interna "VENCIDO", centrados bajo el número.
+    yr += 4.4;
+    doc.setFont("helvetica", "normal").setFontSize(7.6);
+    const tRev = rev ? `Revisión ${p.revision}` : "";
+    const wRev = rev ? doc.getTextWidth(tRev) : 0;
+    doc.setFont("helvetica", "bold").setFontSize(6.2);
+    const wTag = marcaVencido ? doc.getTextWidth("VENCIDO") + 4.5 : 0;
+    const gap = rev && marcaVencido ? 3 : 0;
+    let xs = cx - (wRev + gap + wTag) / 2;
+    if (rev) {
+      doc.setFont("helvetica", "normal").setFontSize(7.6).setTextColor(...APAGADO).text(tRev, xs, yr);
+      xs += wRev + gap;
+    }
+    if (marcaVencido) {
+      doc.setDrawColor(...AMBAR).setLineWidth(0.3).roundedRect(xs, yr - 3, wTag, 4, 0.8, 0.8);
+      doc.setFont("helvetica", "bold").setFontSize(6.2).setTextColor(...AMBAR).text("VENCIDO", xs + wTag / 2, yr - 0.15, { align: "center", charSpace: 0.3 });
+    }
+  }
+  yr += 3.2;
+  doc.setDrawColor(...LINEA).setLineWidth(0.25).line(xDerCab + 5, yr, xDerCab + wDer - 5, yr);
+  yr += 4.4;
+  const filaCab = (l: string, v: string) => {
+    doc.setFont("helvetica", "normal").setFontSize(7.4).setTextColor(...APAGADO);
+    doc.text(pdfTxt(l), xDerCab + 5, yr);
+    doc.setFont("helvetica", "bold").setFontSize(7.8).setTextColor(...TINTA);
+    doc.text(pdfTxt(v), xDerCab + wDer - 5, yr, { align: "right" });
+    yr += 4.6;
   };
-  if (lleno(c.ruc)) datoC(`RUC / CI: ${c.ruc}`);
-  if (lleno(c.direccion)) datoC(c.direccion);
-  if (lleno(c.telefono)) datoC(`Tel. ${c.telefono}`);
-  if (lleno(c.email)) datoC(c.email);
-  const altoCli = 4.4 + nombreC.length * alto(11) + 0.6 + lineasC.length * alto(8.2);
+  filaCab("Fecha de emisión", diaCorto(p.fecha));
+  filaCab("Válido hasta", `${diaCorto(p.valido_hasta)} (${p.validez_dias} día${p.validez_dias === 1 ? "" : "s"})`);
+  y += altoCab + 3;
 
-  // Datos del presupuesto (cada dato una sola vez)
-  const metas: { l: string; v: string; sub?: string[] }[] = [
-    { l: "Fecha de emisión", v: diaCorto(p.fecha) },
-    { l: "Válido hasta", v: `${diaCorto(p.valido_hasta)}  (${p.validez_dias} día${p.validez_dias === 1 ? "" : "s"})` },
-    { l: "Condición de pago", v: condicionTexto(p.condicion, p.plazo_dias) },
-    p.moneda === "USD"
-      ? { l: "Moneda", v: "Dólares (US$)", sub: Number(p.tipo_cambio) > 0 ? [`T.C. ref. Gs. ${Math.round(p.tipo_cambio).toLocaleString("es-PY")}`] : [] }
-      : { l: "Moneda", v: "Guaraníes (Gs.)" },
+  // ── 2. Datos de la operación (+ condiciones y validez) ──────────────────────
+  const padB = 3;
+  const xB = MX + padB, wB = ANCHO - padB * 2;
+  const operacion: Campo[] = [
+    { l: "Condición de venta", v: condicionTexto(p.condicion, p.plazo_dias) },
+    {
+      l: "Moneda",
+      v: usd ? `Dólares (US$)${Number(p.tipo_cambio) > 0 ? ` · T.C. Gs. ${Math.round(p.tipo_cambio).toLocaleString("es-PY")}` : ""}` : "Guaraníes (Gs.)",
+    },
   ];
   if (lleno(p.vendedor_nombre)) {
-    metas.push({ l: "Atendido por", v: p.vendedor_nombre, sub: [em?.vendedor_telefono, em?.vendedor_email].filter(lleno) });
+    const contacto = [em?.vendedor_telefono, em?.vendedor_email].filter(lleno).join(" · ");
+    operacion.push({ l: "Atendido por", v: `${p.vendedor_nombre}${contacto ? ` · ${contacto}` : ""}` });
   }
-  const anchoValor = anchoMeta - 30;
-  const medidas = metas.map((r) => {
-    doc.setFont("helvetica", "bold").setFontSize(8.3);
-    const v = doc.splitTextToSize(pdfTxt(r.v), anchoValor) as string[];
-    return { ...r, lineas: v, h: v.length * alto(8.3) + (r.sub?.length ?? 0) * alto(7) + 2 };
-  });
-  const altoMeta = 4.4 + medidas.reduce((a, r) => a + r.h, 0) - 2;
-  const altoCuerpo = pad + Math.max(altoCli, altoMeta) + pad - 1;
-
-  // Franja inferior: condiciones comerciales | validez de la oferta
   const notaValidez =
-    `Válido hasta el ${diaCorto(p.valido_hasta)} (${p.validez_dias} día${p.validez_dias === 1 ? "" : "s"} desde su emisión). ` +
-    `Pasada esa fecha, precios y disponibilidad quedan sujetos a confirmación. Precios con IVA incluido` +
-    `${p.moneda === "USD" ? ", en dólares americanos" : ", en guaraníes"}.`;
-  const hayCond = lleno(p.condiciones);
-  const anchoCond = hayCond ? anchoCli : 0;
-  const anchoVal = hayCond ? anchoMeta : anchoIn;
-  doc.setFont("helvetica", "normal").setFontSize(7.8);
-  const condLineas = hayCond ? (doc.splitTextToSize(pdfTxt(p.condiciones!), anchoCond) as string[]) : [];
-  const valLineas = doc.splitTextToSize(pdfTxt(notaValidez), anchoVal) as string[];
-  const altoFranja = 5.5 + 4.2 + Math.max(condLineas.length, valLineas.length) * alto(7.8) + 3.5;
+    `Hasta el ${diaCorto(p.valido_hasta)} (${p.validez_dias} día${p.validez_dias === 1 ? "" : "s"} desde su emisión). ` +
+    `Pasada esa fecha, precios y disponibilidad quedan sujetos a confirmación. Precios con IVA incluido.`;
+  // Renglones de las condiciones en un párrafo ("." al final de cada uno si no tiene).
+  const condTxt = lleno(p.condiciones)
+    ? p.condiciones.split(/\n+/).map((s) => s.trim()).filter(Boolean).map((s) => (/[.:;!?]$/.test(s) ? s : `${s}.`)).join(" ")
+    : null;
+  const condiciones: Campo[] = [
+    ...(condTxt ? [{ l: "Condiciones comerciales", v: condTxt, completo: true, normal: true }] : []),
+    { l: "Validez de la oferta", v: notaValidez, completo: true, normal: true },
+  ];
+  const altoCond = grilla(condiciones, xB, 0, wB, 1, false);
+  const condAparte = altoCond > 16; // largas: van en su propio recuadro, debajo del cliente
 
-  const yFranja = yCuerpo + altoCuerpo;
-  const altoCaja = altoTitulo + altoCuerpo + altoFranja;
-  recuadroConFranja(doc, MX, yCaja, ANCHO, altoCaja, yFranja);
-
-  // Fila del título
-  doc.setFont("helvetica", "normal").setFontSize(23).setTextColor(...TINTA);
-  doc.text("Presupuesto", xIn - 0.4, yCaja + 13.2);
-  etiqueta(doc, "Número", der - pad, yCaja + 7.6, APAGADO, "right");
-  doc.setFont("helvetica", "bold").setFontSize(12).setTextColor(...MARCA);
-  const numDer = `${p.numero}${p.revision > 1 ? `  ·  Rev. ${p.revision}` : ""}`;
-  doc.text(pdfTxt(numDer), der - pad, yCaja + 13.4, { align: "right" });
-  if (opciones.interno && vencido) {
-    const wNum = doc.getTextWidth(pdfTxt(numDer));
-    doc.setFont("helvetica", "bold").setFontSize(6.6);
-    const t = "VENCIDO";
-    const w = doc.getTextWidth(t) + 5;
-    const xT = der - pad - wNum - 4 - w;
-    doc.setDrawColor(...AMBAR).setLineWidth(0.3).roundedRect(xT, yCaja + 10.3, w, 4.4, 1, 1);
-    doc.setTextColor(...AMBAR).text(t, xT + w / 2, yCaja + 13.4, { align: "center", charSpace: 0.3 });
+  const hOp = grilla(operacion, xB, 0, wB, 3, false);
+  const altoOp = ALTO_BARRA + padB + hOp + padB - 0.4 + (condAparte ? 0 : altoCond + padB + 1.4);
+  recuadro(MX, y, ANCHO, altoOp);
+  barraTitulo("Datos de la operación", MX, y, ANCHO);
+  let yb = y + ALTO_BARRA + padB;
+  yb += grilla(operacion, xB, yb, wB, 3, true) + padB - 0.4;
+  if (!condAparte) {
+    doc.setDrawColor(...LINEA).setLineWidth(0.2).line(MX, yb, der, yb);
+    doc.setFillColor(...TINTE_SUAVE).rect(MX + 0.15, yb + 0.1, ANCHO - 0.3, y + altoOp - yb - 0.25, "F");
+    grilla(condiciones, xB, yb + padB - 0.4, wB, 1, true);
   }
-  doc.setDrawColor(...LINEA).setLineWidth(0.25).line(MX, yCuerpo, der, yCuerpo);
-  // acento de marca bajo el título
-  doc.setFillColor(...MARCA).rect(xIn, yCuerpo - 0.35, 16, 0.7, "F");
+  y += altoOp + 3;
 
-  // Cuerpo: cliente (izq.) | datos (der.), con divisor vertical
-  doc.setDrawColor(...LINEA).setLineWidth(0.25).line(xDiv, yCuerpo + pad - 1, xDiv, yFranja - pad + 1);
-  let yc = yCuerpo + pad + 1.6;
-  etiqueta(doc, "Preparado para", xIn, yc);
-  yc += 2.8;
-  doc.setFont("helvetica", "bold").setFontSize(11).setTextColor(...TINTA);
-  for (const l of nombreC) {
-    doc.text(l, xIn, yc + base(11));
-    yc += alto(11);
-  }
-  yc += 0.6;
-  doc.setFont("helvetica", "normal").setFontSize(8.2).setTextColor(...TEXTO);
-  for (const l of lineasC) {
-    doc.text(l, xIn, yc + base(8.2));
-    yc += alto(8.2);
+  // ── 3. Datos del cliente ────────────────────────────────────────────────────
+  const c = p.cliente;
+  const cliente: Campo[] = [{ l: "Nombre o razón social", v: c.nombre || "Consumidor final", completo: true }];
+  if (lleno(c.ruc)) cliente.push({ l: "RUC / CI", v: c.ruc });
+  if (lleno(c.telefono)) cliente.push({ l: "Teléfono", v: c.telefono });
+  if (lleno(c.direccion)) cliente.push({ l: "Dirección", v: c.direccion });
+  if (lleno(c.email)) cliente.push({ l: "Email", v: c.email });
+  const hCli = grilla(cliente, xB, 0, wB, 2, false);
+  const altoCli = ALTO_BARRA + padB + hCli + padB - 0.4;
+  recuadro(MX, y, ANCHO, altoCli);
+  barraTitulo("Datos del cliente", MX, y, ANCHO);
+  grilla(cliente, xB, y + ALTO_BARRA + padB, wB, 2, true);
+  y += altoCli + 3;
+
+  if (condAparte) {
+    const altoC = ALTO_BARRA + padB + altoCond + padB - 0.4;
+    recuadro(MX, y, ANCHO, altoC);
+    barraTitulo("Condiciones comerciales y validez", MX, y, ANCHO);
+    grilla(condiciones, xB, y + ALTO_BARRA + padB, wB, 1, true);
+    y += altoC + 3;
   }
 
-  let ym = yCuerpo + pad + 1.6;
-  etiqueta(doc, "Datos del presupuesto", xMeta, ym);
-  ym += 2.8;
-  for (const r of medidas) {
-    doc.setFont("helvetica", "normal").setFontSize(7.6).setTextColor(...APAGADO);
-    doc.text(pdfTxt(r.l), xMeta, ym + base(8.3));
-    doc.setFont("helvetica", "bold").setFontSize(8.3).setTextColor(...TINTA);
-    r.lineas.forEach((l, i) => doc.text(l, der - pad, ym + base(8.3) + i * alto(8.3), { align: "right" }));
-    let ys = ym + r.lineas.length * alto(8.3);
-    doc.setFont("helvetica", "normal").setFontSize(7).setTextColor(...APAGADO);
-    for (const s of r.sub ?? []) {
-      doc.text(pdfTxt(s), der - pad, ys + base(7), { align: "right" });
-      ys += alto(7);
-    }
-    ym += r.h;
-  }
-
-  // Franja: condiciones | validez
-  const yF = yFranja + 5.5;
-  const columnaFranja = (titulo: string, lineas: string[], x: number) => {
-    etiqueta(doc, titulo, x, yF);
-    doc.setFont("helvetica", "normal").setFontSize(7.8).setTextColor(...TEXTO);
-    lineas.forEach((l, i) => doc.text(l, x, yF + 4.2 + base(7.8) - 1 + i * alto(7.8)));
+  // ── 4. Detalle (Valor de venta: Exentas · 5% · 10%) ────────────────────────
+  const W = { cod: 19, cant: 13, precio: 23, dto: 15, tasa: 21 };
+  const wDesc = ANCHO - W.cod - W.cant - W.precio - W.dto - W.tasa * 3;
+  const columnStyles = {
+    0: { cellWidth: W.cod },
+    1: { cellWidth: W.cant, halign: "right" as const },
+    2: { cellWidth: wDesc },
+    3: { cellWidth: W.precio, halign: "right" as const },
+    4: { cellWidth: W.dto, halign: "right" as const },
+    5: { cellWidth: W.tasa, halign: "right" as const },
+    6: { cellWidth: W.tasa, halign: "right" as const },
+    7: { cellWidth: W.tasa, halign: "right" as const },
   };
-  if (hayCond) {
-    columnaFranja("Condiciones comerciales", condLineas, xIn);
-    columnaFranja("Validez de la oferta", valLineas, xMeta);
-  } else {
-    columnaFranja("Validez de la oferta", valLineas, xIn);
-  }
-  y = yCaja + altoCaja + 9;
+  const PAD = { top: 1.9, bottom: 1.9, left: 1.8, right: 1.8 };
+  const estiloBase = {
+    font: "helvetica", fontSize: 7.6, textColor: TINTA, cellPadding: PAD, valign: "top" as const,
+    overflow: "linebreak" as const, lineColor: BORDE, lineWidth: 0.2,
+  };
+  const encabezadoCorrido = () => {
+    doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(...TINTA);
+    doc.text(pdfTxt(empresa), MX, 14);
+    doc.setFont("helvetica", "normal").setFontSize(7.8).setTextColor(...APAGADO);
+    doc.text(pdfTxt(`Presupuesto N° ${p.numero}${rev ? ` · Rev. ${p.revision}` : ""}`), der, 14, { align: "right" });
+    doc.setDrawColor(...BORDE).setLineWidth(0.25).line(MX, 17, der, 17);
+  };
 
-  // ── 3. Ítems ────────────────────────────────────────────────────────────────
-  const anchos = { n: 8, cant: 19, precio: 29, desc: hayDescLinea ? 15 : 0, total: 31 };
-  const anchoDesc = ANCHO - anchos.n - anchos.cant - anchos.precio - anchos.desc - anchos.total;
-  const COL = { n: 0, desc: 1, cant: 2, precio: 3, ...(hayDescLinea ? { dcto: 4, total: 5 } : { dcto: -1, total: 4 }) };
-  const PAD = { top: 2.8, bottom: 2.8, left: 2.4, right: 2.4 };
-  const head = ["#", "Descripción", "Cant.", "Precio unit.", ...(hayDescLinea ? ["Desc."] : []), "Total"].map((h) => h.toUpperCase());
-  const ivaTxt = (t: string) => (t === "EXENTA" ? "Exenta" : `IVA ${t}`);
-
-  // Celdas "ricas" (varias tipografías): se miden acá y se dibujan en didDrawCell.
-  const ricas = new Map<string, { lineas: Renglon[]; derecha: boolean }>();
-  const medirRica = (lineas: Renglon[]) => lineas.reduce((a, l) => a + alto(l.pt), 0) + PAD.top + PAD.bottom - 0.6;
+  const ricas = new Map<number, Renglon[]>();
+  const sub = { ex: 0, c5: 0, c10: 0 };
   const filas = p.items.map((it, n) => {
-    doc.setFont("helvetica", "bold").setFontSize(8.6);
-    const nombre = (doc.splitTextToSize(pdfTxt(it.descripcion), anchoDesc - PAD.left - PAD.right) as string[]).map(
-      (t): Renglon => ({ t, pt: 8.6, bold: true, color: TINTA }),
+    doc.setFont("helvetica", "normal").setFontSize(7.6);
+    const nombre = (doc.splitTextToSize(pdfTxt(it.descripcion), wDesc - PAD.left - PAD.right) as string[]).map(
+      (t): Renglon => ({ t, pt: 7.6, color: TINTA }),
     );
-    const extra = [lleno(it.sku) ? `Cód. ${it.sku}` : null, lleno(it.detalle) ? it.detalle : null].filter(Boolean).join("  ·  ");
-    doc.setFont("helvetica", "normal").setFontSize(7.2);
-    const sub = extra
-      ? (doc.splitTextToSize(pdfTxt(extra), anchoDesc - PAD.left - PAD.right) as string[]).map((t): Renglon => ({ t, pt: 7.2, color: APAGADO }))
+    doc.setFontSize(6.6);
+    const det = lleno(it.detalle)
+      ? (doc.splitTextToSize(pdfTxt(it.detalle), wDesc - PAD.left - PAD.right) as string[]).map((t): Renglon => ({ t, pt: 6.6, color: APAGADO }))
       : [];
-    ricas.set(`${n}-${COL.desc}`, { lineas: [...nombre, ...sub], derecha: false });
-    const unidad = lleno(it.unidad) && it.unidad !== "Unidad" ? it.unidad : null;
-    ricas.set(`${n}-${COL.cant}`, {
-      lineas: [{ t: cantidad(it.cantidad), pt: 8.6, color: TINTA }, ...(unidad ? [{ t: pdfTxt(unidad), pt: 6.8, color: TENUE }] : [])],
-      derecha: true,
-    });
-    ricas.set(`${n}-${COL.precio}`, {
-      lineas: [{ t: pdfTxt(m(it.precio_unitario)), pt: 8.6, color: TINTA }, { t: ivaTxt(it.tipo_iva), pt: 6.8, color: TENUE }],
-      derecha: true,
-    });
+    ricas.set(n, [...nombre, ...det]);
+    const t = Number(it.total) || 0;
+    if (it.tipo_iva === "EXENTA") sub.ex += t;
+    else if (it.tipo_iva === "5%") sub.c5 += t;
+    else sub.c10 += t;
+    const unidad = lleno(it.unidad) && it.unidad !== "Unidad" ? ` ${it.unidad}` : "";
     return [
-      String(n + 1),
+      pdfTxt(it.sku ?? ""),
+      pdfTxt(`${cantidad(it.cantidad)}${unidad}`),
       "",
-      "",
-      "",
-      ...(hayDescLinea ? [Number(it.descuento_pct) > 0 ? pct(it.descuento_pct) : "—"] : []),
-      pdfTxt(m(it.total)),
+      num(it.precio_unitario),
+      Number(it.descuento_pct) > 0 ? pct(it.descuento_pct) : "",
+      it.tipo_iva === "EXENTA" ? num(t) : "",
+      it.tipo_iva === "5%" ? num(t) : "",
+      it.tipo_iva === "10%" ? num(t) : "",
     ];
   });
 
-  const encabezadoCorrido = () => {
-    doc.setFont("helvetica", "bold").setFontSize(8).setTextColor(...TINTA);
-    doc.text(pdfTxt(empresa), MX, 15);
-    doc.setFont("helvetica", "normal").setFontSize(7.8).setTextColor(...APAGADO);
-    doc.text(pdfTxt(`Presupuesto ${numeroTxt}${p.revision > 1 ? ` · Rev. ${p.revision}` : ""}`), der, 15, { align: "right" });
-    doc.setDrawColor(...LINEA).setLineWidth(0.25).line(MX, 18, der, 18);
-  };
+  const sp2 = { rowSpan: 2, styles: { valign: "middle" as const } };
+  const head: RowInput[] = [
+    [
+      { content: "CÓD.", ...sp2 },
+      { content: "CANT.", ...sp2, styles: { valign: "middle", halign: "right" } },
+      { content: "DESCRIPCIÓN", ...sp2 },
+      { content: "PRECIO UNIT.", ...sp2, styles: { valign: "middle", halign: "right" } },
+      { content: "DESC.", ...sp2, styles: { valign: "middle", halign: "right" } },
+      { content: "VALOR DE VENTA", colSpan: 3, styles: { halign: "center" } },
+    ],
+    [
+      { content: "EXENTAS", styles: { halign: "right" } },
+      { content: "5%", styles: { halign: "right" } },
+      { content: "10%", styles: { halign: "right" } },
+    ],
+  ];
 
   autoTable(doc, {
     startY: y,
     margin: { left: MX, right: MX, top: TOP_SIG, bottom: PIE },
-    head: [head],
+    head,
     body: filas,
-    theme: "plain",
+    theme: "grid",
     showHead: "everyPage",
     rowPageBreak: "avoid",
-    styles: {
-      font: "helvetica", fontSize: 8.6, textColor: TINTA, cellPadding: PAD, valign: "top", overflow: "linebreak",
-      lineColor: LINEA, lineWidth: { bottom: 0.2 },
-    },
-    headStyles: {
-      fillColor: TINTE, textColor: MARCA_OSC, fontStyle: "bold", fontSize: 6.9, valign: "middle",
-      cellPadding: { top: 2.6, bottom: 2.6, left: PAD.left, right: PAD.right }, lineWidth: 0.3, lineColor: TINTE,
-    },
-    columnStyles: {
-      [COL.n]: { cellWidth: anchos.n, halign: "center", textColor: TENUE, fontSize: 7.6 },
-      [COL.desc]: { cellWidth: anchoDesc },
-      [COL.cant]: { cellWidth: anchos.cant, halign: "right" },
-      [COL.precio]: { cellWidth: anchos.precio, halign: "right" },
-      ...(hayDescLinea ? { [COL.dcto]: { cellWidth: anchos.desc, halign: "right" as const, textColor: TEXTO } } : {}),
-      [COL.total]: { cellWidth: anchos.total, halign: "right", fontStyle: "bold" },
-    },
+    styles: estiloBase,
+    headStyles: { fillColor: TINTE, textColor: MARCA_OSC, fontStyle: "bold", fontSize: 6.4, cellPadding: { top: 1.7, bottom: 1.7, left: PAD.left, right: PAD.right }, lineColor: BORDE, lineWidth: 0.2 },
+    columnStyles: { ...columnStyles, 0: { ...columnStyles[0], textColor: APAGADO, fontSize: 6.8 } },
     didParseCell: (h: CellHookData) => {
-      if (h.section === "head") {
-        h.cell.styles.halign = h.column.index === COL.n ? "center" : h.column.index === COL.desc ? "left" : "right";
-        return;
-      }
-      const r = ricas.get(`${h.row.index}-${h.column.index}`);
+      if (h.section !== "body" || h.column.index !== 2) return;
+      const r = ricas.get(h.row.index);
       if (r) {
         h.cell.text = [""];
-        h.cell.styles.minCellHeight = medirRica(r.lineas);
+        h.cell.styles.minCellHeight = r.reduce((a, l) => a + alto(l.pt), 0) + PAD.top + PAD.bottom - 0.3;
       }
     },
     didDrawCell: (h: CellHookData) => {
-      if (h.section !== "body") return;
-      const r = ricas.get(`${h.row.index}-${h.column.index}`);
+      if (h.section !== "body" || h.column.index !== 2) return;
+      const r = ricas.get(h.row.index);
       if (!r) return;
       let yy = h.cell.y + PAD.top;
-      for (const l of r.lineas) {
+      for (const l of r) {
         doc.setFont("helvetica", l.bold ? "bold" : "normal").setFontSize(l.pt).setTextColor(...l.color);
-        const x = r.derecha ? h.cell.x + h.cell.width - PAD.right : h.cell.x + PAD.left;
-        doc.text(l.t, x, yy + base(l.pt), r.derecha ? { align: "right" } : undefined);
+        doc.text(l.t, h.cell.x + PAD.left, yy + base(l.pt));
         yy += alto(l.pt);
       }
     },
@@ -355,105 +405,84 @@ export async function pdfPresupuesto(p: PresupuestoDoc & { emisor?: EmisorPresup
       if (doc.getCurrentPageInfo().pageNumber > 1) encabezadoCorrido();
     },
   });
-  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 7;
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
 
-  const limite = PH - PIE;
-  const nuevaPagina = () => {
-    doc.addPage();
-    encabezadoCorrido();
-    return TOP_SIG + 2;
-  };
-
-  // ── 4. Totales: un recuadro del ancho de la tabla (IVA incluido | resumen y total) ──
-  const renglonesTot: [string, string][] = [];
-  if (Number(p.descuento_lineas) > 0 || Number(p.descuento_global) > 0) {
-    renglonesTot.push(["Subtotal", m(p.subtotal_bruto)]);
-    if (Number(p.descuento_lineas) > 0) renglonesTot.push(["Descuentos", `- ${m(p.descuento_lineas)}`]);
-    if (Number(p.descuento_global) > 0) renglonesTot.push([`Descuento general (${pct(p.descuento_pct)})`, `- ${m(p.descuento_global)}`]);
+  // ── 5. Totales (mismas columnas que el detalle, pegado debajo) ─────────────
+  const etiquetaFila = (txt: string, extra: Record<string, unknown> = {}) => ({
+    content: pdfTxt(txt), colSpan: 5, styles: { halign: "right" as const, fontStyle: "bold" as const, textColor: TEXTO, ...extra },
+  });
+  const tres = (txt: string, extra: Record<string, unknown> = {}) => ({ content: pdfTxt(txt), colSpan: 3, styles: { halign: "right" as const, ...extra } });
+  const cuerpoTot: RowInput[] = [[etiquetaFila("Subtotal"), num(sub.ex), num(sub.c5), num(sub.c10)]];
+  if (Number(p.descuento_lineas) > 0) {
+    cuerpoTot.push([
+      etiquetaFila("Descuentos por línea (ya aplicados en el detalle)", { fontStyle: "normal", textColor: APAGADO }),
+      tres(num(p.descuento_lineas), { textColor: APAGADO }),
+    ]);
   }
-  const ivas: [string, number, number | null][] = [];
-  if (Number(p.total_10)) ivas.push(["Gravado 10%", p.total_10, p.iva_10]);
-  if (Number(p.total_5)) ivas.push(["Gravado 5%", p.total_5, p.iva_5]);
-  if (Number(p.total_exenta)) ivas.push(["Exento", p.total_exenta, null]);
-
-  const padT = 6;
-  const anchoIvaCol = 82;
-  const xDivT = MX + padT + anchoIvaCol + 6;
-  const xRes = xDivT + 8;
-  const altoIvaCont = 4.4 + ivas.length * 4.4 + 1.2 + 4.4;
-  const altoResCont = renglonesTot.length * 5.4 + (renglonesTot.length ? 2.4 : 0) + 11;
-  const altoTot = padT * 2 + Math.max(altoIvaCont, altoResCont);
-  if (y + altoTot + 16 > limite) y = nuevaPagina();
-  const yT = y;
-  doc.setDrawColor(...LINEA).setLineWidth(0.3).roundedRect(MX, yT, ANCHO, altoTot, 2.2, 2.2, "S");
-  // Mitad izquierda con tinte suave
-  doc.setFillColor(...TINTE_SUAVE).roundedRect(MX + 0.15, yT + 0.15, xDivT - MX, altoTot - 0.3, 2.1, 2.1, "F");
-  doc.setFillColor(...TINTE_SUAVE).rect(xDivT - 3, yT + 0.15, 3, altoTot - 0.3, "F");
-  doc.setDrawColor(...LINEA).setLineWidth(0.25).line(xDivT, yT, xDivT, yT + altoTot);
-
-  // IVA incluido
-  const xI = MX + padT;
-  const xBase = xI + anchoIvaCol - 30, xIva = xI + anchoIvaCol;
-  let yi = yT + padT + 2.4 + (altoTot - padT * 2 - altoIvaCont) / 2;
-  doc.setFont("helvetica", "bold").setFontSize(6.6).setTextColor(...MARCA);
-  doc.text("IVA INCLUIDO", xI, yi, { charSpace: 0.45 });
-  doc.setTextColor(...APAGADO);
-  doc.text("GRAVADO", xBase, yi, { align: "right", charSpace: 0.45 });
-  doc.text("IVA", xIva, yi, { align: "right", charSpace: 0.45 });
-  yi += 4.6;
-  doc.setFont("helvetica", "normal").setFontSize(7.6);
-  for (const [l, b, iva] of ivas) {
-    doc.setTextColor(...APAGADO).text(l, xI, yi);
-    doc.setTextColor(...TEXTO).text(pdfTxt(m(b)), xBase, yi, { align: "right" });
-    doc.text(iva == null ? "—" : pdfTxt(m(iva)), xIva, yi, { align: "right" });
-    yi += 4.4;
+  if (Number(p.descuento_global) > 0) {
+    const d = (a: number, b: number) => (a - (Number(b) || 0) > 0.0001 ? `- ${num(a - (Number(b) || 0))}` : "");
+    cuerpoTot.push([
+      etiquetaFila(`Descuento general (${pct(p.descuento_pct)})`),
+      d(sub.ex, p.total_exenta), d(sub.c5, p.total_5), d(sub.c10, p.total_10),
+    ]);
   }
-  doc.setDrawColor(...mezcla(MARCA, BLANCO, 0.75)).setLineWidth(0.2).line(xI, yi - 2.8, xIva, yi - 2.8);
-  yi += 1.2;
-  doc.setFont("helvetica", "bold").setFontSize(7.6).setTextColor(...TINTA);
-  doc.text("Total IVA", xI, yi);
-  doc.text(pdfTxt(m(p.total_iva)), xIva, yi, { align: "right" });
+  cuerpoTot.push([
+    etiquetaFila("TOTAL DEL PRESUPUESTO", { textColor: TINTA, fontSize: 8.6, valign: "middle", fillColor: TINTE_SUAVE }),
+    tres(monto(p.total, p.moneda), { fontStyle: "bold", fontSize: 11.5, textColor: MARCA, valign: "middle", fillColor: TINTE_SUAVE, cellPadding: { top: 2.4, bottom: 2.4, left: PAD.left, right: PAD.right } }),
+  ]);
+  cuerpoTot.push([
+    { content: pdfTxt(`Total en letras: ${totalEnLetras(p.total, p.moneda)}`), colSpan: 8, styles: { fontStyle: "italic", textColor: TEXTO } },
+  ]);
+  const ivaCelda = (l: string, v: string) => ({ content: pdfTxt(`${l}: ${v}`), colSpan: 2, styles: { halign: "right" as const } });
+  cuerpoTot.push([
+    { content: "LIQUIDACIÓN DEL IVA", colSpan: 2, styles: { fontStyle: "bold", fontSize: 6.6, textColor: MARCA_OSC, fillColor: TINTE, valign: "middle" } },
+    ivaCelda("IVA 5%", num(p.iva_5)),
+    { content: pdfTxt(`IVA 10%: ${num(p.iva_10)}`), colSpan: 2, styles: { halign: "right" } },
+    { content: pdfTxt(`Total IVA: ${num(p.total_iva)}`), colSpan: 2, styles: { halign: "right", fontStyle: "bold" } },
+  ]);
 
-  // Resumen y total (abajo a la derecha)
-  const xResDer = der - padT;
-  let yr = yT + padT + (altoTot - padT * 2 - altoResCont) + 2.6;
-  doc.setFontSize(8.4);
-  for (const [l, v] of renglonesTot) {
-    doc.setFont("helvetica", "normal").setTextColor(...APAGADO).text(pdfTxt(l), xRes, yr);
-    doc.setTextColor(...TINTA).text(pdfTxt(v), xResDer, yr, { align: "right" });
-    yr += 5.4;
-  }
-  if (renglonesTot.length) {
-    doc.setDrawColor(...MARCA).setLineWidth(0.45).line(xRes, yr - 2.6, xResDer, yr - 2.6);
-    yr += 2.4;
-  }
-  etiqueta(doc, "Total", xRes, yr + 4.6, TINTA);
-  doc.setFont("helvetica", "bold").setFontSize(17).setTextColor(...MARCA);
-  doc.text(pdfTxt(m(p.total)), xResDer, yr + 5.6, { align: "right" });
-  y = yT + altoTot + 9;
+  autoTable(doc, {
+    startY: y,
+    margin: { left: MX, right: MX, top: TOP_SIG, bottom: PIE },
+    body: cuerpoTot,
+    theme: "grid",
+    pageBreak: "avoid",
+    rowPageBreak: "avoid",
+    styles: estiloBase,
+    columnStyles,
+    didDrawPage: () => {
+      if (doc.getCurrentPageInfo().pageNumber > 1) encabezadoCorrido();
+    },
+  });
+  y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
 
-  // ── 5. Consultas ────────────────────────────────────────────────────────────
+  // ── 6. Consultas ────────────────────────────────────────────────────────────
   const medios = [em?.vendedor_telefono || em?.telefono, em?.vendedor_email || em?.email].filter(lleno);
   if (lleno(p.vendedor_nombre) || medios.length) {
-    if (y + 12 > limite) y = nuevaPagina();
-    const quien = lleno(p.vendedor_nombre) ? `Contactá a ${p.vendedor_nombre}` : "Contactanos";
-    etiqueta(doc, "¿Consultas?", MX, y);
-    doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(...TEXTO);
-    const t = doc.splitTextToSize(pdfTxt(`${quien}${medios.length ? `: ${medios.join(" · ")}` : ""}. Gracias por tu confianza.`), ANCHO) as string[];
-    doc.text(t, MX, y + 4.6);
+    if (y + 8 > PH - PIE) {
+      doc.addPage();
+      encabezadoCorrido();
+      y = TOP_SIG;
+    }
+    const quien = lleno(p.vendedor_nombre) ? `contactá a ${p.vendedor_nombre}` : "contactanos";
+    doc.setFont("helvetica", "bold").setFontSize(7.8).setTextColor(...TINTA);
+    doc.text("¿Consultas?", MX, y);
+    const wl = doc.getTextWidth("¿Consultas?") + 1.6;
+    doc.setFont("helvetica", "normal").setTextColor(...TEXTO);
+    doc.text(pdfTxt(`${quien[0].toUpperCase()}${quien.slice(1)}${medios.length ? `: ${medios.join(" · ")}` : ""}. Gracias por tu confianza.`), MX + wl, y, { maxWidth: ANCHO - wl });
   }
 
-  // ── 6. Pie en cada página ───────────────────────────────────────────────────
+  // ── 7. Pie en cada página ───────────────────────────────────────────────────
   const total = doc.getNumberOfPages();
   const contacto = [empresa, ubicacion || null, lleno(em?.telefono) ? `Tel. ${em!.telefono}` : null, lleno(em?.email) ? em!.email : null, web]
     .filter(lleno)
     .join("   ·   ");
   for (let i = 1; i <= total; i++) {
     doc.setPage(i);
-    doc.setDrawColor(...MARCA).setLineWidth(0.35).line(MX, PH - 15, der, PH - 15);
+    doc.setDrawColor(...MARCA).setLineWidth(0.35).line(MX, PH - 14, der, PH - 14);
     doc.setFont("helvetica", "normal").setFontSize(6.9).setTextColor(...APAGADO);
-    doc.text(pdfTxt(contacto), MX, PH - 10.5, { maxWidth: ANCHO - 26 });
-    doc.text(`Página ${i} de ${total}`, der, PH - 10.5, { align: "right" });
+    doc.text(pdfTxt(contacto), MX, PH - 9.5, { maxWidth: ANCHO - 26 });
+    doc.text(`Página ${i} de ${total}`, der, PH - 9.5, { align: "right" });
   }
   return doc;
 }
