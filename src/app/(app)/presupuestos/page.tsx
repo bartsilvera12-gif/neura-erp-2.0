@@ -13,7 +13,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FileSignature, Plus, Search, Settings2 } from "lucide-react";
+import { FileSignature, Plus, Search, Settings2, X } from "lucide-react";
 import { apiFetchCache, apiFetchSWR, guardadoAlInstante, invalidar, precargar } from "@/lib/api/cache-cliente";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { hoyPY } from "@/lib/fecha/paraguay";
@@ -22,7 +22,6 @@ import { Select } from "@/components/Select";
 import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import { TablaTarjetas } from "@/components/TablaResponsive";
-import { BuscadorCliente } from "@/modules/clientes/gestion/BuscadorCliente";
 import { BadgeEstado, textoVigencia } from "@/modules/presupuestos/ui";
 import { ModalAjustes } from "@/modules/presupuestos/Modales";
 import { PresupuestoModal } from "@/modules/presupuestos/PresupuestoModal";
@@ -236,11 +235,18 @@ function Lista() {
                 className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
             </div>
           }>
-          <div className="min-w-[200px] flex-1">
-            <BuscadorCliente variant="toolbar" seleccionado={cliente?.nombre ?? null}
-              onSelect={(c) => { setCliente({ id: c.id, nombre: c.nombre }); setPagina(1); }}
-              onClear={() => { setCliente(null); setPagina(1); if (clienteUrl) router.replace("/presupuestos"); }} />
-          </div>
+          {/* El buscador de arriba ya encuentra por cliente; el filtro fijo por cliente solo
+              aparece al venir de su ficha (?cliente=), como un chip que se puede quitar. */}
+          {cliente ? (
+            <span className="inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-1 text-sm text-slate-700 sm:min-h-10">
+              <span className="truncate">Cliente: <b className="font-semibold">{cliente.nombre}</b></span>
+              <button type="button" aria-label="Quitar filtro de cliente"
+                onClick={() => { setCliente(null); setPagina(1); if (clienteUrl) router.replace("/presupuestos"); }}
+                className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-800">
+                <X className="h-4 w-4" />
+              </button>
+            </span>
+          ) : null}
           <Select value={vendedor} onChange={(v) => { setVendedor(v); setPagina(1); }} minWidth={170} etiqueta="Vendedor"
             options={[["", "Todos los vendedores"], ...vendedores.map((u): [string, string] => [u.id, u.nombre])]} />
           <div className="flex items-center gap-1.5 text-xs text-slate-500">
