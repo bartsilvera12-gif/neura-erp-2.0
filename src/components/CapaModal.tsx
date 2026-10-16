@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useViewportVisible } from "@/lib/ui/responsive";
 
 /**
  * Capa ÚNICA para todos los modales del ERP. Resuelve de una vez el "modal cortado":
@@ -13,8 +14,19 @@ import { createPortal } from "react-dom";
  *   · Escape y click afuera cierran (si se pasa onClose)
  * El panel de cada modal debe usar `max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3rem)]`
  * (clase ALTO_MAX_MODAL) con cabecera y pie fijos y el cuerpo con overflow-y-auto.
+ *
+ * RESPONSIVE (automático, sin tocar cada modal — reglas en globals.css):
+ *   · celular (< 640 px): el panel (hijo directo) pasa a HOJA INFERIOR a todo el ancho, con las
+ *     esquinas de arriba redondeadas y el safe-area de abajo. Si usa ALTO_MAX_MODAL (clase
+ *     `modal-alto`) se limita al alto VISIBLE: con el teclado abierto (también en iOS, vía
+ *     visualViewport → --capa-alto) el pie de acciones sigue a la vista; sus botones miden 44 px.
+ *   · táctil: los botones "Cerrar" (aria-label) miden 44 × 44.
+ *   · tablet/escritorio: igual que siempre (centrado con margen).
+ * Para que un modal nuevo se vea bien en celular alcanza con: panel = hijo directo de CapaModal,
+ * `flex flex-col` + ALTO_MAX_MODAL, cabecera y pie `shrink-0` (el pie, ÚLTIMO hijo) y el cuerpo
+ * `min-h-0 flex-1 overflow-y-auto`.
  */
-export const ALTO_MAX_MODAL = "max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3rem)]";
+export const ALTO_MAX_MODAL = "modal-alto max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3rem)]";
 
 export function CapaModal({
   onClose,
@@ -32,6 +44,8 @@ export function CapaModal({
   const [montado, setMontado] = useState(false);
   const capa = useRef<HTMLDivElement>(null);
   useEffect(() => setMontado(true), []);
+  // Celular/tablet: la capa sigue al viewport visible (teclado de iOS) y deja --capa-alto.
+  useViewportVisible(capa, montado);
 
   useEffect(() => {
     if (!montado) return;
@@ -68,7 +82,7 @@ export function CapaModal({
       style={{ animation: "modal-backdrop 0.15s ease-out" }}
       onMouseDown={afuera}
     >
-      <div className="flex min-h-full items-center justify-center p-4 sm:p-6" onMouseDown={afuera}>
+      <div data-capa-centro="" className="flex min-h-full items-center justify-center p-4 sm:p-6" onMouseDown={afuera}>
         {children}
       </div>
     </div>,

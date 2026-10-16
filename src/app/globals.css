@@ -57,6 +57,82 @@ body {
   to { opacity: 1; transform: translateY(0) scaleY(1); }
 }
 
+@keyframes sheet-up {
+  from { transform: translateY(32px); opacity: 0.4; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes cajon-in {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+/* ══ Responsive base ═══════════════════════════════════════════════════════════
+   Estas reglas van FUERA de @layer a propósito: le ganan a las utilidades de Tailwind
+   (que viven en @layer utilities) sin !important, así ~100 modales y formularios se
+   adaptan al celular sin tocarlos uno por uno.
+   Cortes: móvil < 640 px · tablet 640–1023 · escritorio ≥ 1024 (menú lateral fijo). */
+
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+/* Sin demora de 300 ms ni zoom por doble toque en controles; sin el flash gris de iOS. */
+a, button, input, select, textarea, label, summary, [role="button"], [role="tab"], [role="option"] { touch-action: manipulation; }
+* { -webkit-tap-highlight-color: transparent; }
+
+@media (max-width: 639.98px) {
+  /* iOS hace zoom al enfocar un campo con letra < 16 px: en celular todos los campos van a 16. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),
+  select, textarea { font-size: 16px; }
+
+  /* ── Modales (CapaModal) como hoja inferior alta ─────────────────────────────
+     El panel se apoya abajo, a todo el ancho, con las esquinas de arriba redondeadas. Los
+     paneles con ALTO_MAX_MODAL (clase `modal-alto`) se limitan al alto VISIBLE (sin teclado:
+     --capa-alto lo pone CapaModal) y mantienen cabecera y pie fijos con el cuerpo scrolleable. */
+  [data-capa-centro] {
+    align-items: flex-end;
+    padding: max(0.75rem, env(safe-area-inset-top)) 0 0 0;
+  }
+  [data-capa-centro] > * {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    border-radius: 1.25rem 1.25rem 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    animation: sheet-up 0.24s cubic-bezier(0.16, 1, 0.3, 1) !important; /* pisa el inline modal-pop */
+  }
+  [data-capa-centro] > .modal-alto {
+    max-height: calc(var(--capa-alto, 100dvh) - max(0.75rem, env(safe-area-inset-top)));
+  }
+  /* Botones del pie (última franja fija del panel): objetivo táctil de 44 px. */
+  [data-capa-centro] > .modal-alto > .shrink-0:last-child button,
+  [data-capa-centro] > .modal-alto > .shrink-0:last-child a { min-height: 44px; }
+}
+
+@media (pointer: coarse) {
+  /* Cruces de "Cerrar" de los modales: 44 × 44 al dedo, sin mover el diseño de escritorio. */
+  [data-capa-modal] button[aria-label="Cerrar"],
+  [data-capa-modal] button[aria-label^="Cerrar "] {
+    min-width: 44px; min-height: 44px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+}
+
+/* Contenedor con scroll horizontal SIN barra visible (pestañas, chips, atajos). */
+.scroll-x-oculto { overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+.scroll-x-oculto::-webkit-scrollbar { display: none; }
+
+/* TablaScroll con primera columna fija: la 1.ª celda de cada fila queda pegada a la izquierda
+   con el fondo de la fila; al desplazar aparece una sombra que separa lo que pasa por debajo. */
+.tabla-primera-fija :is(th, td):first-child {
+  position: sticky; left: 0; z-index: 1;
+  background-color: var(--tabla-fondo, #fff);
+  transition: box-shadow 0.15s;
+}
+.tabla-primera-fija thead :is(th, td):first-child { background-color: var(--tabla-fondo-cabecera, #f8fafc); }
+.tabla-desplazada.tabla-primera-fija :is(th, td):first-child { box-shadow: 8px 0 8px -8px rgba(15, 23, 42, 0.25); }
+
+/* Safe areas (iPhone con notch / barra de inicio) para barras fijas. */
+.pt-safe { padding-top: env(safe-area-inset-top); }
+.pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+
 /* Selector de color (react-colorful) a todo el ancho del panel */
 .selector-color .react-colorful { width: 100%; height: 160px; }
 .selector-color .react-colorful__saturation { border-radius: 12px 12px 0 0; }

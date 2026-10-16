@@ -99,8 +99,8 @@ export default function BienvenidaPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-[#f6f8fa] p-6">
-      <div className="animate-in w-full max-w-sm rounded-2xl bg-white p-7 shadow-[0_20px_50px_-20px_rgba(2,48,71,0.25)] ring-1 ring-slate-200/70">
+    <main className="flex min-h-dvh items-center justify-center bg-[#f6f8fa] px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+      <div className="animate-in w-full max-w-sm rounded-2xl bg-white p-5 sm:p-7 shadow-[0_20px_50px_-20px_rgba(2,48,71,0.25)] ring-1 ring-slate-200/70">
         <div className="mb-6 flex items-center gap-2.5">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl text-base font-black text-white" style={{ backgroundColor: BRAND }}>
             {clienteConfig.nombre.charAt(0)}
@@ -140,7 +140,7 @@ export default function BienvenidaPage() {
               <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input type={ver ? "text" : "password"} autoFocus required value={clave} onChange={(e) => setClave(e.target.value)} autoComplete="new-password"
                 className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-10 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
-              <button type="button" onClick={() => setVer((v) => !v)} aria-label={ver ? "Ocultar" : "Mostrar"} className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded p-1 text-slate-400 hover:text-slate-600">
+              <button type="button" onClick={() => setVer((v) => !v)} aria-label={ver ? "Ocultar" : "Mostrar"} className="absolute right-1 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded text-slate-400 hover:text-slate-600">
                 {ver ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
               </button>
             </div>

@@ -190,18 +190,18 @@ export function NotificacionesBell() {
         }}
         aria-label="Notificaciones"
         aria-expanded={abierto}
-        className="relative rounded-lg p-2 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-700"
+        className="relative inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 lg:h-9 lg:w-9 transition-colors hover:bg-slate-50 hover:text-slate-700"
       >
         <Bell className="h-5 w-5" />
         {total > 0 ? (
-          <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
+          <span className="absolute right-1 top-1 flex h-4 min-w-4 items-center lg:-right-0.5 lg:-top-0.5 justify-center rounded-full bg-rose-500 px-1 text-[10px] font-bold text-white">
             {total > 99 ? "99+" : total}
           </span>
         ) : null}
       </button>
 
       {abierto ? (
-        <div className="absolute right-0 top-full z-50 mt-2 w-[22rem] max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+        <div className="fixed inset-x-2 top-[calc(3.5rem+env(safe-area-inset-top)+0.25rem)] z-50 overflow-hidden sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-[22rem] rounded-xl border border-slate-200 bg-white shadow-xl">
           <div className="flex items-center justify-between border-b border-slate-100 px-3.5 py-2.5">
             <span className="text-sm font-semibold text-slate-900">Notificaciones</span>
             <div className="flex items-center gap-2">
@@ -255,7 +255,7 @@ export function NotificacionesBell() {
             })}
           </div>
 
-          <ul className="max-h-[26rem] divide-y divide-slate-100 overflow-y-auto">
+          <ul className="max-h-[min(26rem,calc(100dvh-11rem))] overscroll-contain divide-y divide-slate-100 overflow-y-auto">
             {itemsBandeja.length === 0 ? (
               <li className="px-4 py-8 text-center text-sm text-slate-400">
                 {cargando ? "Cargando…" : bandeja === "soporte" ? "No hay avisos de Soporte." : "Estás al día. No hay notificaciones."}

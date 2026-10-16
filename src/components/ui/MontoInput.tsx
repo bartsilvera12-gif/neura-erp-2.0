@@ -61,7 +61,11 @@ export default function MontoInput({
   return (
     <input
       type="text"
-      inputMode="decimal"
+      // Teclado numérico en celular (con coma si admite decimales). En celular los campos
+      // van a 16 px (globals.css) para que iOS no haga zoom al enfocarlos.
+      inputMode={decimals ? "decimal" : "numeric"}
+      autoComplete="off"
+      enterKeyHint="done"
       value={display}
       onChange={handleChange}
       className={className}

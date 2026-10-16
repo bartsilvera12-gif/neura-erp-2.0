@@ -35,6 +35,7 @@ import { Avatar, BadgeEstado, CategoriaChip, CodigoChip, TEAL, codigoCliente, es
 import { moduloEstaActivo } from "@/modules/registry";
 import { ProyectosDeCliente } from "@/modules/proyectos/ui/ProyectosDeCliente";
 import { PresupuestosDeCliente } from "@/modules/presupuestos/PresupuestosDeCliente";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 
 type Tab = "informacion" | "estado_cuenta" | "suscripciones" | "presupuestos" | "proyectos" | "historial";
 const CON_PROYECTOS = moduloEstaActivo("proyectos");
@@ -291,18 +292,19 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
 
       {/* Pestañas */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="border-b border-gray-200 flex overflow-x-auto">
+        {/* Responsive: scroll horizontal interno con desvanecido; la pestaña elegida a la vista. */}
+        <ScrollHorizontal role="tablist" className="border-b border-gray-200" claseFila="gap-0" dependencias={[tab]}>
           {tabs.map((t) => (
-            <button key={t.id} type="button" onClick={() => setTab(t.id)}
-              className={`px-5 py-3.5 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+            <button key={t.id} type="button" role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
+              className={`shrink-0 px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 sm:px-5 sm:py-3.5 ${
                 tab === t.id ? "border-gray-900 text-gray-900" : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
               }`}>
               {t.label}
             </button>
           ))}
-        </div>
+        </ScrollHorizontal>
         <div className="relative min-h-[220px]">
-          <div className="p-6">
+          <div className="p-3 sm:p-6">
             {tab === "informacion" ? (
               <TabInformacion cliente={c} esAdmin={esAdmin} onGuardado={() => void cambio()} />
             ) : null}

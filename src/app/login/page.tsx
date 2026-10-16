@@ -34,7 +34,7 @@ export default function LoginPage() {
   }
 
   return (
-    <main className="flex min-h-screen bg-white">
+    <main className="flex min-h-dvh bg-white">
       {/* Panel de marca (turquesa) — se oculta en móvil */}
       <aside
         className="relative hidden w-[46%] flex-col justify-between overflow-hidden p-12 text-white lg:flex"
@@ -64,7 +64,7 @@ export default function LoginPage() {
       </aside>
 
       {/* Formulario */}
-      <div className="flex flex-1 items-center justify-center p-6">
+      <div className="flex flex-1 items-center justify-center px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-6">
         <form onSubmit={onSubmit} className="animate-in w-full max-w-sm">
           <div className="mb-8">
             <div
@@ -82,6 +82,8 @@ export default function LoginPage() {
             <Mail className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="email"
+              autoComplete="email"
+              inputMode="email"
               required
               autoFocus
               value={email}
@@ -96,6 +98,7 @@ export default function LoginPage() {
             <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="password"
+              autoComplete="current-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}

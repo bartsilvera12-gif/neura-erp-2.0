@@ -9,6 +9,7 @@ import { useState } from "react";
 import { ChevronLeft, ChevronRight, Loader2, X } from "lucide-react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { clienteConfig } from "@/cliente.config";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 
 export const TEAL = clienteConfig.color;
 export const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] disabled:bg-slate-50 disabled:text-slate-400";
@@ -19,16 +20,17 @@ export const BOTON_SECUNDARIO = "inline-flex items-center justify-center gap-1.5
 
 export function Cabecera({ kicker, titulo, subtitulo, children }: { kicker: string; titulo: string; subtitulo?: string; children?: React.ReactNode }) {
   return (
-    <header className="flex flex-wrap items-start justify-between gap-4">
-      <div>
+    // Responsive: en celular el título baja a 20 px y las acciones van debajo, a todo el ancho.
+    <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-4">
+      <div className="min-w-0">
         <div className="flex items-center gap-2">
           <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>{kicker}</p>
         </div>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{titulo}</h1>
-        {subtitulo ? <p className="mt-1 text-sm text-slate-500">{subtitulo}</p> : null}
+        <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{titulo}</h1>
+        {subtitulo ? <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">{subtitulo}</p> : null}
       </div>
-      {children ? <div className="flex flex-wrap items-center gap-2">{children}</div> : null}
+      {children ? <div className="flex flex-wrap items-center gap-2 max-sm:[&>*]:min-h-11">{children}</div> : null}
     </header>
   );
 }
@@ -38,13 +40,15 @@ export function Pestanas({ opciones, valor, onChange }: {
   valor: string;
   onChange: (id: string) => void;
 }) {
+  // Responsive: si no entran, scrollean adentro (con desvanecido en el borde), nunca se cortan
+  // ni saltan de línea; la elegida queda a la vista. En celular miden 40 px de alto.
   return (
-    <div className="flex flex-wrap gap-1 rounded-xl bg-slate-100/80 p-1" role="tablist">
+    <ScrollHorizontal role="tablist" className="w-fit rounded-xl bg-slate-100/80 p-1" dependencias={[valor]}>
       {opciones.map((o) => {
         const sel = valor === o.id;
         return (
-          <button key={o.id} role="tab" aria-selected={sel} onClick={() => onChange(o.id)}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${sel ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+          <button key={o.id} type="button" role="tab" aria-selected={sel} onClick={() => onChange(o.id)}
+            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-10 max-sm:text-[13px] ${sel ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
             {o.label}
             {o.badge ? (
               <span className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums ${sel ? "bg-[var(--brand)] text-white" : "bg-amber-100 text-amber-700"}`}>{o.badge}</span>
@@ -52,7 +56,7 @@ export function Pestanas({ opciones, valor, onChange }: {
           </button>
         );
       })}
-    </div>
+    </ScrollHorizontal>
   );
 }
 
@@ -64,17 +68,18 @@ export function Paginador({ pagina, porPagina, total, cargando, onCambiar }: {
   const de = (pagina - 1) * porPagina + 1;
   const a = Math.min(pagina * porPagina, total);
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-slate-50/40 px-5 py-3.5">
-      <p className="text-xs text-slate-500">
+    // Responsive: en celular "Anterior / Siguiente" ocupan el ancho (44 px de alto) y el texto va arriba.
+    <div className="flex flex-col gap-2 border-t border-slate-100 bg-slate-50/40 px-3 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between sm:gap-3 sm:px-5 sm:py-3.5">
+      <p className="text-center text-xs text-slate-500 sm:text-left">
         Mostrando <span className="font-semibold text-slate-700">{de.toLocaleString("es-PY")}</span>–<span className="font-semibold text-slate-700">{a.toLocaleString("es-PY")}</span> de{" "}
         <span className="font-semibold text-slate-700">{total.toLocaleString("es-PY")}</span>
       </p>
-      <div className="flex items-center gap-1.5">
-        <button disabled={pagina <= 1 || cargando} onClick={() => onCambiar(pagina - 1)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-40">
+      <div className="flex items-center justify-between gap-1.5 sm:justify-start">
+        <button disabled={pagina <= 1 || cargando} onClick={() => onCambiar(pagina - 1)} className="inline-flex items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-40 max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">
           <ChevronLeft className="h-3.5 w-3.5" /> Anterior
         </button>
         <span className="px-3 py-1.5 text-xs font-semibold tabular-nums text-slate-700">{pagina} / {totalPaginas}</span>
-        <button disabled={pagina >= totalPaginas || cargando} onClick={() => onCambiar(pagina + 1)} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-40">
+        <button disabled={pagina >= totalPaginas || cargando} onClick={() => onCambiar(pagina + 1)} className="inline-flex items-center justify-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-40 max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">
           Siguiente <ChevronRight className="h-3.5 w-3.5" />
         </button>
       </div>
@@ -97,9 +102,9 @@ export function ModalDocumento({ titulo, subtitulo, extra, ancho = "max-w-3xl", 
       <div role="dialog" aria-modal="true"
         className={`flex w-full ${ancho} ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[#4FAEB2]/15`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-6 py-4">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 py-3 pl-4 pr-2 sm:px-6 sm:py-4">
           <div className="min-w-0">
-            <h2 className="flex flex-wrap items-center gap-2 text-lg font-semibold text-slate-900">{titulo}</h2>
+            <h2 className="flex flex-wrap items-center gap-2 text-base font-semibold text-slate-900 sm:text-lg">{titulo}</h2>
             {subtitulo ? <p className="mt-0.5 text-xs text-slate-500">{subtitulo}</p> : null}
           </div>
           <div className="flex shrink-0 items-center gap-2">
@@ -111,8 +116,8 @@ export function ModalDocumento({ titulo, subtitulo, extra, ancho = "max-w-3xl", 
             ) : null}
           </div>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{children}</div>
-        {footer ? <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-6 py-3.5">{footer}</div> : null}
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">{children}</div>
+        {footer ? <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-4 py-3 sm:px-6 sm:py-3.5">{footer}</div> : null}
       </div>
     </CapaModal>
   );

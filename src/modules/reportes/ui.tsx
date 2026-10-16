@@ -14,6 +14,8 @@ import { descargarArchivo } from "@/lib/api/client-blob";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { Select } from "@/components/Select";
 import { DeltaTexto } from "@/components/graficos/Graficos";
+import { TablaScroll } from "@/components/TablaResponsive";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import type { SucursalOpcion } from "@/modules/reportes/tipos";
 
 // ── Rango de fechas ─────────────────────────────────────────────────────────
@@ -119,7 +121,8 @@ export function EncabezadoReporte({ kicker, titulo, subtitulo, volver = { href: 
   kicker: string; titulo: ReactNode; subtitulo?: ReactNode; volver?: { href: string; label: string } | null; children?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-end justify-between gap-4">
+    // Responsive: en celular el título baja a 20 px y las acciones (Excel / PDF) van debajo.
+    <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4">
       <div className="min-w-0">
         {volver ? (
           <Link href={volver.href} className="mb-2 inline-flex items-center gap-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800">
@@ -130,10 +133,10 @@ export function EncabezadoReporte({ kicker, titulo, subtitulo, volver = { href: 
           <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: "var(--brand)", boxShadow: "0 0 0 3px var(--brand-100)" }} />
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand)]">{kicker}</p>
         </div>
-        <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{titulo}</h1>
-        {subtitulo ? <p className="mt-1 max-w-3xl text-sm text-slate-500">{subtitulo}</p> : null}
+        <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{titulo}</h1>
+        {subtitulo ? <p className="mt-1 max-w-3xl text-[13px] text-slate-500 sm:text-sm">{subtitulo}</p> : null}
       </div>
-      {children ? <div className="flex flex-wrap items-center gap-2">{children}</div> : null}
+      {children ? <div className="flex flex-wrap items-center gap-2 max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1">{children}</div> : null}
     </div>
   );
 }
@@ -151,29 +154,33 @@ export function FiltrosReporte({ filtros, atajos = ATAJOS_BASE, sucursales, carg
   etiquetaFechas?: string;
 }) {
   const { f, setAtajo, setRango, setSucursal } = filtros;
+  // Responsive: en celular los atajos son una fila con scroll horizontal (sin saltos de línea),
+  // las fechas van en 2 columnas a todo el ancho y la sucursal / extras a todo el ancho.
   return (
-    <section className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+    <section className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:p-3 max-sm:[&>*]:w-full">
       {!sinFechas ? (
         <>
-          <div className="flex flex-wrap rounded-xl bg-slate-100 p-1">
+          <ScrollHorizontal className="rounded-xl bg-slate-100 p-1 sm:w-fit" claseFila="gap-0" dependencias={[f.atajo]}>
             {atajos.map((k) => (
-              <button key={k} type="button" onClick={() => setAtajo(k)}
-                className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${f.atajo === k ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+              <button key={k} type="button" onClick={() => setAtajo(k)} aria-pressed={f.atajo === k} data-activo={f.atajo === k ? "true" : undefined}
+                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-10 max-sm:text-[13px] ${f.atajo === k ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
                 {ATAJO_LABEL[k]}
               </button>
             ))}
-          </div>
+          </ScrollHorizontal>
           {etiquetaFechas ? <span className="text-xs font-medium text-slate-400">{etiquetaFechas}</span> : null}
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">Desde
-            <input type="date" value={f.desde} max={f.hasta || undefined} onChange={(e) => setRango(e.target.value, f.hasta)} className={INPUT_FECHA} />
-          </label>
-          <label className="flex items-center gap-1.5 text-xs text-slate-500">Hasta
-            <input type="date" value={f.hasta} min={f.desde || undefined} max={hoyPY()} onChange={(e) => setRango(f.desde, e.target.value)} className={INPUT_FECHA} />
-          </label>
+          <div className="grid grid-cols-2 gap-2 sm:contents">
+            <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Desde
+              <input type="date" value={f.desde} max={f.hasta || undefined} onChange={(e) => setRango(e.target.value, f.hasta)} className={`${INPUT_FECHA} max-sm:h-11 max-sm:w-full max-sm:min-w-0`} />
+            </label>
+            <label className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Hasta
+              <input type="date" value={f.hasta} min={f.desde || undefined} max={hoyPY()} onChange={(e) => setRango(f.desde, e.target.value)} className={`${INPUT_FECHA} max-sm:h-11 max-sm:w-full max-sm:min-w-0`} />
+            </label>
+          </div>
         </>
       ) : null}
       {sucursales && sucursales.length > 1 ? (
-        <Select value={f.sucursal} onChange={setSucursal} minWidth={190}
+        <Select value={f.sucursal} onChange={setSucursal} minWidth={190} etiqueta="Sucursal"
           options={[["", "Todas las sucursales"], ...sucursales.map((s): [string, string] => [s.id, s.nombre])]} />
       ) : sucursales && sucursales.length === 1 ? (
         <span className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">{sucursales[0].nombre}</span>
@@ -234,14 +241,14 @@ export function Kpi({ label, valor, hint, delta, acento, tono, href, onClick }: 
   const cuerpo = (
     <>
       <p className="text-[10.5px] font-semibold uppercase tracking-[0.1em] text-slate-400">{label}</p>
-      <p className={`mt-1 truncate text-xl font-semibold tabular-nums ${color}`}>{valor}</p>
+      <p className={`mt-1 truncate text-base font-semibold tabular-nums sm:text-lg xl:text-xl ${color}`} title={typeof valor === "string" ? valor : undefined}>{valor}</p>
       {delta ? (
         <p className="mt-0.5 truncate text-xs"><DeltaTexto actual={delta.actual} anterior={delta.anterior} invertir={delta.invertir} />{delta.texto ? <span className="text-slate-400"> {delta.texto}</span> : null}</p>
       ) : null}
       {hint ? <p className="mt-0.5 truncate text-xs text-slate-400">{hint}</p> : null}
     </>
   );
-  const clase = `block min-w-0 rounded-2xl border bg-white p-4 text-left shadow-sm transition ${acento ? "border-[var(--brand-100)] bg-[var(--brand-50)]" : "border-slate-200"} ${href || onClick ? "hover:-translate-y-0.5 hover:shadow-md" : ""}`;
+  const clase = `block min-w-0 rounded-2xl border bg-white p-3 text-left shadow-sm transition sm:p-4 ${acento ? "border-[var(--brand-100)] bg-[var(--brand-50)]" : "border-slate-200"} ${href || onClick ? "hover:-translate-y-0.5 hover:shadow-md" : ""}`;
   if (href) return <Link href={href} className={clase}>{cuerpo}</Link>;
   if (onClick) return <button type="button" onClick={onClick} className={`${clase} w-full`}>{cuerpo}</button>;
   return <div className={clase}>{cuerpo}</div>;
@@ -249,7 +256,7 @@ export function Kpi({ label, valor, hint, delta, acento, tono, href, onClick }: 
 
 export function Tarjeta({ titulo, sub, extra, children, className = "" }: { titulo: ReactNode; sub?: ReactNode; extra?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={`min-w-0 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}>
+    <section className={`min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm sm:p-5 ${className}`}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5">
@@ -276,7 +283,9 @@ export function Tabla({ cols, filas, der = [], pie, onFila, vacio = "Sin datos."
 }) {
   if (!filas.length) return <p className="py-8 text-center text-sm text-slate-400">{vacio}</p>;
   return (
-    <div className="-mx-1 overflow-x-auto px-1">
+    // Responsive: tabla ancha → scroll horizontal INTERNO (la página nunca), 1.ª columna fija y
+    // sombra que indica que hay más (TablaScroll).
+    <TablaScroll primeraFija>
       <table className="w-full text-left text-sm" style={minW ? { minWidth: minW } : undefined}>
         <thead>
           <tr className="bg-slate-50 text-xs font-semibold text-slate-500">
@@ -303,7 +312,7 @@ export function Tabla({ cols, filas, der = [], pie, onFila, vacio = "Sin datos."
           </tfoot>
         ) : null}
       </table>
-    </div>
+    </TablaScroll>
   );
 }
 
@@ -325,11 +334,12 @@ export function Nota({ children }: { children: ReactNode }) {
 /** Botón-pestaña chico (vista: por proveedor / por documento, etc.). */
 export function Segmentos<T extends string>({ valor, opciones, onChange }: { valor: T; opciones: [T, string][]; onChange: (v: T) => void }) {
   return (
-    <div className="flex rounded-xl bg-slate-100 p-1">
+    // Responsive: si no entran, scroll horizontal interno (nunca se cortan ni saltan de línea).
+    <ScrollHorizontal className="w-fit rounded-xl bg-slate-100 p-1" claseFila="gap-0" dependencias={[valor]}>
       {opciones.map(([v, l]) => (
-        <button key={v} type="button" onClick={() => onChange(v)}
-          className={`rounded-lg px-3 py-1 text-xs font-semibold transition ${valor === v ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{l}</button>
+        <button key={v} type="button" onClick={() => onChange(v)} aria-pressed={valor === v} data-activo={valor === v ? "true" : undefined}
+          className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold transition max-sm:min-h-9 max-sm:text-[13px] ${valor === v ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{l}</button>
       ))}
-    </div>
+    </ScrollHorizontal>
   );
 }

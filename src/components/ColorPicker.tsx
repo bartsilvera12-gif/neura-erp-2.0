@@ -4,11 +4,14 @@
  * Selector de color: botón con el color actual que abre un panel con la PALETA COMPLETA
  * (cuadro de tono + barra de colores), el código exacto (#rrggbb) y 8 sugeridos para
  * elegir con un toque. Cierra con Esc, click afuera o "Listo".
+ * En celular (< 640 px) el panel se abre como HOJA INFERIOR (nunca se sale de la pantalla).
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { HexColorInput, HexColorPicker } from "react-colorful";
 import { Check, ChevronDown } from "lucide-react";
+import { HojaInferior } from "@/components/HojaInferior";
+import { useEsMovil } from "@/lib/ui/responsive";
 
 export const COLORES_SUGERIDOS: { hex: string; nombre: string }[] = [
   { hex: "#ef4444", nombre: "Rojo" },
@@ -26,6 +29,7 @@ export function nombreColor(hex: string) {
 }
 
 export function ColorPicker({ value, onChange, block = false }: { value: string; onChange: (hex: string) => void; block?: boolean }) {
+  const esMovil = useEsMovil();
   const [abierto, setAbierto] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const panel = useRef<HTMLDivElement>(null);
@@ -34,11 +38,11 @@ export function ColorPicker({ value, onChange, block = false }: { value: string;
   // El panel va a <body> con position: fixed: nunca queda cortado dentro de un modal con
   // scroll. Si abajo no entra (~360 px), se abre hacia arriba.
   useLayoutEffect(() => {
-    if (!abierto) return;
+    if (!abierto || esMovil) return;
     const ubicar = () => {
       const r = ref.current?.getBoundingClientRect();
       if (!r) return;
-      const left = Math.min(r.left, window.innerWidth - 268);
+      const left = Math.max(8, Math.min(r.left, window.innerWidth - 268));
       if (window.innerHeight - r.bottom >= 370 || r.top < 370) setPos({ left, top: r.bottom + 6 });
       else setPos({ left, bottom: window.innerHeight - r.top + 6 });
     };
@@ -46,10 +50,10 @@ export function ColorPicker({ value, onChange, block = false }: { value: string;
     window.addEventListener("resize", ubicar);
     window.addEventListener("scroll", ubicar, true);
     return () => { window.removeEventListener("resize", ubicar); window.removeEventListener("scroll", ubicar, true); };
-  }, [abierto]);
+  }, [abierto, esMovil]);
 
   useEffect(() => {
-    if (!abierto) return;
+    if (!abierto || esMovil) return;
     const fuera = (e: MouseEvent) => {
       const t = e.target as Node;
       if (ref.current?.contains(t) || panel.current?.contains(t)) return;
@@ -59,7 +63,44 @@ export function ColorPicker({ value, onChange, block = false }: { value: string;
     document.addEventListener("mousedown", fuera);
     document.addEventListener("keydown", esc, true);
     return () => { document.removeEventListener("mousedown", fuera); document.removeEventListener("keydown", esc, true); };
-  }, [abierto]);
+  }, [abierto, esMovil]);
+
+  const contenido = (
+    <>
+      <div className="selector-color">
+        <HexColorPicker color={value} onChange={onChange} />
+      </div>
+      <div className="mt-3 flex items-center gap-2">
+        <span className="h-8 w-8 shrink-0 rounded-lg ring-1 ring-black/10" style={{ backgroundColor: value }} />
+        <div className="flex flex-1 items-center rounded-lg border border-slate-200 px-2.5 focus-within:border-[var(--brand)]">
+          <span className="text-sm text-slate-400">#</span>
+          <HexColorInput color={value} onChange={onChange} aria-label="Código del color" className="w-full bg-transparent py-1.5 pl-1 font-mono text-sm uppercase text-slate-700 outline-none" />
+        </div>
+      </div>
+      <p className="mb-1.5 mt-3 text-[11px] font-medium text-slate-500">Sugeridos</p>
+      <div className="grid grid-cols-8 gap-1.5">
+        {COLORES_SUGERIDOS.map((c) => {
+          const sel = c.hex.toLowerCase() === value.toLowerCase();
+          return (
+            <button
+              key={c.hex}
+              type="button"
+              title={c.nombre}
+              aria-label={c.nombre}
+              onClick={() => onChange(c.hex)}
+              className="flex aspect-square items-center justify-center rounded-lg transition hover:scale-110"
+              style={{ backgroundColor: c.hex }}
+            >
+              {sel ? <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} /> : null}
+            </button>
+          );
+        })}
+      </div>
+      <button type="button" onClick={() => setAbierto(false)} className="mt-3 w-full rounded-lg bg-slate-100 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200 max-sm:min-h-11">
+        Listo
+      </button>
+    </>
+  );
 
   return (
     <div ref={ref} className={`relative ${block ? "w-full" : ""}`}>
@@ -74,44 +115,16 @@ export function ColorPicker({ value, onChange, block = false }: { value: string;
         <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${abierto ? "rotate-180" : ""}`} />
       </button>
 
-      {abierto && pos && typeof document !== "undefined" ? createPortal(
+      {abierto && esMovil ? (
+        <HojaInferior titulo="Elegí un color" onClose={() => setAbierto(false)} z="z-[200]">{contenido}</HojaInferior>
+      ) : null}
+      {abierto && !esMovil && pos && typeof document !== "undefined" ? createPortal(
         <div
           ref={panel}
           className="fixed z-[200] w-[260px] rounded-2xl border border-slate-200 bg-white p-3 shadow-[0_12px_32px_-8px_rgba(2,48,71,0.25)]"
           style={{ left: pos.left, top: pos.top, bottom: pos.bottom, animation: "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)" }}
         >
-          <div className="selector-color">
-            <HexColorPicker color={value} onChange={onChange} />
-          </div>
-          <div className="mt-3 flex items-center gap-2">
-            <span className="h-8 w-8 shrink-0 rounded-lg ring-1 ring-black/10" style={{ backgroundColor: value }} />
-            <div className="flex flex-1 items-center rounded-lg border border-slate-200 px-2.5 focus-within:border-[var(--brand)]">
-              <span className="text-sm text-slate-400">#</span>
-              <HexColorInput color={value} onChange={onChange} aria-label="Código del color" className="w-full bg-transparent py-1.5 pl-1 font-mono text-sm uppercase text-slate-700 outline-none" />
-            </div>
-          </div>
-          <p className="mb-1.5 mt-3 text-[11px] font-medium text-slate-500">Sugeridos</p>
-          <div className="grid grid-cols-8 gap-1.5">
-            {COLORES_SUGERIDOS.map((c) => {
-              const sel = c.hex.toLowerCase() === value.toLowerCase();
-              return (
-                <button
-                  key={c.hex}
-                  type="button"
-                  title={c.nombre}
-                  aria-label={c.nombre}
-                  onClick={() => onChange(c.hex)}
-                  className="flex aspect-square items-center justify-center rounded-lg transition hover:scale-110"
-                  style={{ backgroundColor: c.hex }}
-                >
-                  {sel ? <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} /> : null}
-                </button>
-              );
-            })}
-          </div>
-          <button type="button" onClick={() => setAbierto(false)} className="mt-3 w-full rounded-lg bg-slate-100 py-1.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-200">
-            Listo
-          </button>
+          {contenido}
         </div>,
         document.body,
       ) : null}

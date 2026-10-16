@@ -239,7 +239,7 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
   return (
     <div className="grid items-start gap-5 lg:grid-cols-[250px_1fr]">
       {/* Lista de perfiles */}
-      <aside className="space-y-2 lg:sticky lg:top-0">
+      <aside className="space-y-2 lg:sticky lg:top-10 lg:self-start">
         <button type="button" onClick={() => conCuidado(() => abrir({ ...NUEVO }))}
           className="flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
           <Plus className="h-4 w-4" /> Nuevo perfil
@@ -491,7 +491,7 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
             </div>
 
             {/* Vista previa */}
-            <aside className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 xl:sticky xl:top-0">
+            <aside className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 xl:sticky xl:top-10 xl:self-start">
               {previa ? <VistaPrevia b={previa} /> : null}
             </aside>
           </div>

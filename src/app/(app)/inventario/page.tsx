@@ -18,9 +18,12 @@ import { depositosPlanos, hayVariosDepositos, invalidarDepositos, opcionesAlcanc
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { MQ_MOVIL, useMediaQuery } from "@/lib/ui/responsive";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
+import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { colorCategoria, coloresPorCategoria, opcionesFiltroCategoria, partesCategoria, rutaCategoria, type Categoria, type ColorCategoria } from "@/modules/inventario/categorias";
 import { invalidarLista, precargarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { precargarFichaProducto } from "@/modules/inventario/ficha-cache";
@@ -53,6 +56,16 @@ const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-P
 const margenVenta = (costo: number, precio: number) => (precio ? ((precio - costo) / precio) * 100 : 0);
 const margenColor = (m: number) => (m >= 40 ? "text-green-600" : m >= 20 ? "text-yellow-600" : "text-red-600");
 const formatStock = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
+
+/** Stock que se muestra: el total, o el del depósito / la sucursal elegidos en "Stock". */
+function stockMostrado(p: ProductoInventario, alcanceDeposito: string | null, alcanceSucursal: string | null, depPorId: Map<string, DepositoPlano>) {
+  const porDep = p.stock_depositos ?? [];
+  return alcanceDeposito
+    ? porDep.find((x) => x.d === alcanceDeposito)?.c ?? 0
+    : alcanceSucursal
+      ? porDep.filter((x) => depPorId.get(x.d)?.sucursal_id === alcanceSucursal).reduce((a, x) => a + Number(x.c), 0)
+      : Number(p.stock_actual);
+}
 
 export default function InventarioPage() {
   const me = useUsuario();
@@ -196,6 +209,109 @@ export default function InventarioPage() {
     setPagina(1);
   }
 
+  const vistaTarjetas = useVistaTarjetas();
+  const esMovil = useMediaQuery(MQ_MOVIL);
+  // Tarjeta de producto (celular): nombre + SKU, precio arriba a la derecha, stock y categoría
+  // como chips, costo y margen a la vista; stock por depósito plegado; acciones al pie.
+  const columnasMovil = useMemo<ColumnaTabla<ProductoInventario>[]>(() => {
+    const cols: ColumnaTabla<ProductoInventario>[] = [
+      {
+        key: "producto", titulo: "Producto", movil: "titulo",
+        celda: (p) => (
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {p.imagen_url ? <img src={p.imagen_url} alt="" className="h-full w-full object-cover" /> : p.nombre.charAt(0).toUpperCase()}
+            </div>
+            <div className="min-w-0">
+              <p className="font-bold leading-snug text-slate-900">
+                {p.nombre}
+                {p.activo === false ? <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-700">Inactivo</span> : null}
+              </p>
+              {p.sku ? <p className="font-mono text-[12px] font-normal text-slate-500">{p.sku}</p> : null}
+            </div>
+          </div>
+        ),
+      },
+      { key: "precio", titulo: "Precio", movil: "valor", celda: (p) => gs(Number(p.precio_venta)) },
+      {
+        key: "stock", titulo: "Stock", movil: "chip",
+        celda: (p) => {
+          if (p.controla_stock === false) return <span className="text-xs font-medium text-slate-500">Stock: sin control</span>;
+          const stock = stockMostrado(p, alcanceSel.deposito, alcanceSel.sucursal, depPorId);
+          const bajo = !alcanceSel.deposito && !alcanceSel.sucursal && Number(p.stock_minimo) > 0 && Number(p.stock_actual) < Number(p.stock_minimo);
+          return (
+            <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums ${bajo ? "bg-red-50 text-red-700 ring-1 ring-red-100" : stock > 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" : "bg-slate-50 text-slate-500 ring-1 ring-slate-200"}`}>
+              Stock {formatStock(stock)} <span className="text-[10px] font-normal opacity-80">{p.unidad_medida}</span>
+            </span>
+          );
+        },
+      },
+      {
+        key: "categoria", titulo: "Categoría", movil: "chip",
+        celda: (p) => {
+          const { madre, sub } = partesCategoria(p.categoria_principal_id, categoriaPorId);
+          if (!madre) return <span className="text-xs text-slate-400">Sin categoría</span>;
+          const c = colores.get(madre.id) ?? colorCategoria(madre.nombre);
+          return (
+            <span className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-slate-200/70 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700">
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: c.dot }} />
+              <span className="truncate">{madre.nombre}{sub ? <span className="font-medium text-slate-500"> › {sub.nombre}</span> : null}</span>
+            </span>
+          );
+        },
+      },
+      { key: "costo", titulo: "Costo", movil: "dato", celda: (p) => (p.costo_promedio != null ? gs(Number(p.costo_promedio) || 0) : "—") },
+      {
+        key: "margen", titulo: "Margen", movil: "dato",
+        celda: (p) => {
+          if (p.costo_promedio == null) return "—";
+          const m = margenVenta(Number(p.costo_promedio) || 0, Number(p.precio_venta));
+          return <span className={`font-semibold tabular-nums ${margenColor(m)}`}>{m.toFixed(1)}%</span>;
+        },
+      },
+    ];
+    if (variosDepositos) {
+      cols.push({
+        key: "depositos", titulo: "Por depósito", movil: "detalle",
+        celda: (p) => p.controla_stock === false || !(p.stock_depositos ?? []).length ? "—" : (
+          <span className="flex flex-col items-end gap-1">
+            {[...(p.stock_depositos ?? [])].sort((a, b) => Number(b.c) - Number(a.c)).map((x) => {
+              const d = depPorId.get(x.d);
+              return (
+                <Link key={x.d} href={`/inventario/movimientos?producto=${p.id}&deposito=${x.d}`} className="inline-flex min-h-8 items-center gap-1.5 text-xs">
+                  <span className="text-slate-500">{d ? (d.sucursal_principal && d.es_principal ? d.nombre : `${d.sucursal} › ${d.nombre}`) : "Depósito"}</span>
+                  <strong className="tabular-nums text-slate-900">{formatStock(x.c)}</strong>
+                </Link>
+              );
+            })}
+          </span>
+        ),
+      });
+    }
+    cols.push({
+      key: "acciones", titulo: "", movil: "acciones",
+      celda: (p) => {
+        const inactivo = p.activo === false;
+        return (
+          <>
+            <button onClick={() => abrirForm(p)} onFocus={() => precargarFicha(p)} aria-label={`${inactivo ? "Ver" : "Editar"} ${p.nombre}`} className="inline-flex items-center justify-center rounded-lg text-slate-500 active:bg-[var(--brand-50)]">
+              {inactivo ? <Eye className="h-[18px] w-[18px]" /> : <Pencil className="h-[18px] w-[18px]" />}
+            </button>
+            <button onClick={() => toggleActivo(p)} disabled={togglingId === p.id} aria-label={`${inactivo ? "Reactivar" : "Desactivar"} ${p.nombre}`}
+              className={`inline-flex items-center justify-center rounded-lg disabled:opacity-40 ${inactivo ? "text-emerald-600" : "text-slate-500"}`}>
+              {togglingId === p.id ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : inactivo ? <RotateCcw className="h-[18px] w-[18px]" /> : <EyeOff className="h-[18px] w-[18px]" />}
+            </button>
+            <button onClick={() => setEliminando(p)} aria-label={`Eliminar ${p.nombre}`} className="inline-flex items-center justify-center rounded-lg text-slate-500 active:bg-red-50 active:text-red-600">
+              <Trash2 className="h-[18px] w-[18px]" />
+            </button>
+          </>
+        );
+      },
+    });
+    return cols;
+  }, [alcanceSel.deposito, alcanceSel.sucursal, depPorId, variosDepositos, categoriaPorId, colores, togglingId, abrirForm, toggleActivo, precargarFicha]);
+
   const opcionesCategoria: [string, string][] = [
     ["", "Todas las categorías"],
     ["__sin__", "— Sin categoría —"],
@@ -204,16 +320,20 @@ export default function InventarioPage() {
 
   return (
     <div className="space-y-6 pb-10">
-      {/* Encabezado */}
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Operaciones · Stock</p>
-          </div>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">Inventario</h1>
-          <p className="mt-1 text-sm text-slate-500">Gestión de productos y control de stock</p>
-        </div>
+      {/* Encabezado. En celular: "Exportar" a la vista y las importaciones en el menú ⋯. */}
+      <EncabezadoPagina
+        kicker="Operaciones · Stock"
+        titulo="Inventario"
+        subtitulo="Gestión de productos y control de stock"
+        acciones={esMovil ? (
+          <AccionesPagina acciones={[
+            { etiqueta: exportando ? "Generando..." : "Exportar Excel", icono: <Download />, onClick: exportar, cargando: exportando },
+            ...(esAdmin ? [
+              { etiqueta: "Importación inicial", href: "/inventario/import-inicial" },
+              { etiqueta: "Importar Excel", icono: <Upload />, onClick: () => setImportando(true) },
+            ] : []),
+          ]} />
+        ) : (
         <div className="flex flex-wrap items-center gap-2">
           <button onClick={exportar} disabled={exportando} className="inline-flex items-center gap-1.5 rounded-xl border px-3.5 py-2 text-sm font-semibold transition hover:bg-[var(--brand-50)] disabled:opacity-60" style={{ borderColor: `${TEAL}55`, color: TEAL }}>
             {exportando ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
@@ -232,7 +352,8 @@ export default function InventarioPage() {
             </>
           ) : null}
         </div>
-      </header>
+        )}
+      />
 
       {/* Tarjeta principal */}
       <section className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: `${TEAL}33` }}>
@@ -256,37 +377,44 @@ export default function InventarioPage() {
             </div>
           </div>
 
-          {/* Filtros */}
-          <div className="flex flex-col gap-2.5 lg:flex-row lg:items-center">
+          {/* Filtros: en celular, búsqueda + "Filtros (n)" (hoja inferior con el resto). */}
+          <BarraFiltros
+            plano
+            activos={(categoriaId ? 1 : 0) + (alcance ? 1 : 0) + (verInactivos ? 1 : 0)}
+            onLimpiar={() => { limpiarFiltros(); setAlcance(""); setVerInactivos(false); }}
+            busqueda={
             <div className="relative lg:min-w-[240px] lg:flex-1">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={busquedaBorrador}
                 onChange={(e) => setBusquedaBorrador(e.target.value)}
                 placeholder="Buscar por nombre, SKU o código de barras..."
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]"
+                type="search"
+                enterKeyHint="search"
+                aria-label="Buscar productos"
+                className="h-11 w-full rounded-xl md:h-10 border border-slate-200 bg-white pl-9 pr-9 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]"
               />
               {busquedaBorrador ? (
-                <button onClick={() => setBusquedaBorrador("")} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                <button onClick={() => setBusquedaBorrador("")} aria-label="Limpiar búsqueda" className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 md:right-2 md:h-auto md:w-auto md:p-1">
                   <X className="h-3.5 w-3.5" />
                 </button>
               ) : null}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select value={categoriaId} onChange={(v) => { setCategoriaId(v); setPagina(1); }} options={opcionesCategoria} minWidth={190} />
+            }
+          >
+              <Select value={categoriaId} onChange={(v) => { setCategoriaId(v); setPagina(1); }} options={opcionesCategoria} minWidth={190} etiqueta="Categoría" />
               {variosDepositos ? (
-                <Select value={alcance} onChange={setAlcance} options={opcionesAlcance(deps.datos, "Stock: todos los depósitos")} minWidth={220} />
+                <Select value={alcance} onChange={setAlcance} options={opcionesAlcance(deps.datos, "Stock: todos los depósitos")} minWidth={220} etiqueta="Ver stock de" />
               ) : null}
-              <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600" title="Mostrar también los productos inactivos (para reactivarlos)">
+              <label className="flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 md:h-10" title="Mostrar también los productos inactivos (para reactivarlos)">
                 <input type="checkbox" checked={verInactivos} onChange={(e) => { setVerInactivos(e.target.checked); setPagina(1); }} className="h-4 w-4 rounded border-slate-300" />
                 Ver inactivos
               </label>
-              <Select value={String(porPagina)} onChange={(v) => { setPorPagina(Number(v)); setPagina(1); }} options={POR_PAGINA.map((n): [string, string] => [String(n), `${n} / pág`])} minWidth={110} />
-            </div>
-          </div>
+              <Select value={String(porPagina)} onChange={(v) => { setPorPagina(Number(v)); setPagina(1); }} options={POR_PAGINA.map((n): [string, string] => [String(n), `${n} / pág`])} minWidth={110} etiqueta="Productos por página" />
+          </BarraFiltros>
 
           {hayFiltros ? (
-            <div className="flex items-center gap-2 text-xs text-slate-500">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span>Filtros activos:</span>
               {busqueda ? <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>Búsqueda: &quot;{busqueda}&quot;</span> : null}
               {categoriaId ? (
@@ -294,12 +422,30 @@ export default function InventarioPage() {
                   {categoriaId === "__sin__" ? "Sin categoría" : rutaCategoria(categoriaId, categoriaPorId) ?? "Categoría"}
                 </span>
               ) : null}
-              <button onClick={limpiarFiltros} className="ml-auto rounded text-slate-400 underline-offset-2 hover:text-slate-700 hover:underline">Limpiar</button>
+              <button onClick={limpiarFiltros} className="ml-auto rounded px-1 text-slate-400 underline-offset-2 hover:text-slate-700 hover:underline max-sm:min-h-9">Limpiar</button>
             </div>
           ) : null}
         </div>
 
-        {/* Tabla */}
+        {/* Lista: tarjetas en celular (< 768 px), la tabla de siempre desde tablet. */}
+        {vistaTarjetas ? (
+          <TablaTarjetas
+            filas={productos}
+            columnas={columnasMovil}
+            claveFila={claveProducto}
+            cargando={cargando}
+            vacio={
+              <div className="px-5 py-14 text-center">
+                {cargando ? (
+                  <><Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" /><p className="mt-2 text-xs text-slate-500">Cargando productos...</p></>
+                ) : (
+                  <><Package className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-3 text-sm font-medium text-slate-700">No se encontraron productos</p>
+                  <p className="mt-1 text-xs text-slate-500">{hayFiltros ? "Probá con otra búsqueda o cambiá los filtros." : "Aún no cargaste productos. Empezá creando uno nuevo."}</p></>
+                )}
+              </div>
+            }
+          />
+        ) : (
         <div className="overflow-x-auto">
           <table className="w-full min-w-[820px] text-left text-sm">
             <thead>
@@ -343,10 +489,11 @@ export default function InventarioPage() {
             </tbody>
           </table>
         </div>
+        )}
 
         {/* Paginado */}
         {total > 0 ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t-2 px-4 py-3 sm:px-5" style={{ borderColor: `${TEAL}26`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
+          <div className="flex flex-wrap items-center justify-center gap-3 border-t-2 px-3 py-3 sm:justify-between sm:px-5" style={{ borderColor: `${TEAL}26`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
             <p className="text-xs text-slate-500">
               Página <span className="font-semibold text-slate-900">{paginaSegura}</span> de <span className="font-semibold text-slate-900">{totalPaginas.toLocaleString("es-PY")}</span>
             </p>
@@ -361,7 +508,9 @@ export default function InventarioPage() {
                   max={totalPaginas}
                   value={paginaSegura}
                   onChange={(e) => { const n = parseInt(e.target.value, 10); if (Number.isFinite(n)) setPagina(Math.max(1, Math.min(totalPaginas, n))); }}
-                  className="h-8 w-16 rounded-md border border-slate-200 bg-white px-2 text-center text-xs outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]"
+                  inputMode="numeric"
+                  aria-label="Ir a la página"
+                  className="h-11 w-16 rounded-md border border-slate-200 bg-white px-2 text-center text-xs outline-none sm:h-8 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]"
                 />
               </div>
               <BotonPag onClick={() => setPagina((x) => Math.min(totalPaginas, x + 1))} disabled={paginaSegura >= totalPaginas} title="Siguiente"><ChevronRight className="h-4 w-4" /></BotonPag>
@@ -435,12 +584,7 @@ const FilaProducto = memo(function FilaProducto({
   // Sin "ver costos y márgenes" el servidor no manda el costo: se muestra "—".
   const conCosto = p.costo_promedio != null;
   const porDep = p.stock_depositos ?? [];
-  // Stock que se muestra: el total, o el del depósito / la sucursal elegidos en "Stock".
-  const stock = alcanceDeposito
-    ? porDep.find((x) => x.d === alcanceDeposito)?.c ?? 0
-    : alcanceSucursal
-      ? porDep.filter((x) => depPorId.get(x.d)?.sucursal_id === alcanceSucursal).reduce((a, x) => a + Number(x.c), 0)
-      : Number(p.stock_actual);
+  const stock = stockMostrado(p, alcanceDeposito, alcanceSucursal, depPorId);
   // Misma regla que el reporte de Stock mínimo: mínimo cargado y stock (total) por debajo.
   const stockBajo = Number(p.stock_minimo) > 0 && Number(p.stock_actual) < Number(p.stock_minimo);
   const margen = margenVenta(costo, Number(p.precio_venta));
@@ -551,10 +695,12 @@ const FilaProducto = memo(function FilaProducto({
   );
 });
 
+const claveProducto = (p: ProductoInventario) => p.id;
+
 function BotonPag({ children, onClick, disabled, title }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; title?: string }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled} title={title} aria-label={title}
-      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:border-slate-100 disabled:bg-slate-50 disabled:text-slate-300">
+      className="inline-flex h-11 w-11 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-600 transition sm:h-8 sm:w-8 hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:border-slate-100 disabled:bg-slate-50 disabled:text-slate-300">
       {children}
     </button>
   );

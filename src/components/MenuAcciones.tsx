@@ -3,15 +3,26 @@
 /**
  * Menú de acciones (⋯ o cualquier disparador): se abre flotando sobre la página (portal),
  * así no lo corta una tabla o tarjeta con overflow. Cierra con Esc, click afuera o scroll.
+ * En celular (< 640 px) se abre como HOJA INFERIOR con ítems de 48 px y "Cancelar" (nunca
+ * se sale de la pantalla); `etiqueta` es su título. En escritorio el panel se mantiene
+ * dentro de la ventana (izquierda/derecha y arriba/abajo).
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { HojaInferior } from "@/components/HojaInferior";
+import { useEsMovil } from "@/lib/ui/responsive";
 
 export type ItemMenu = {
   etiqueta: string;
   icono?: React.ReactNode;
   onClick: () => void;
   tono?: "normal" | "peligro" | "exito";
+};
+
+const TONO = {
+  normal: "text-slate-700 hover:bg-slate-100",
+  peligro: "text-amber-700 hover:bg-amber-50",
+  exito: "text-emerald-700 hover:bg-emerald-50",
 };
 
 export function MenuAcciones({
@@ -23,30 +34,31 @@ export function MenuAcciones({
 }: {
   items: ItemMenu[];
   children: React.ReactNode;
-  /** texto para lectores de pantalla */
+  /** texto para lectores de pantalla (y título de la hoja en celular) */
   etiqueta: string;
   className?: string;
   style?: React.CSSProperties;
 }) {
+  const esMovil = useEsMovil();
   const [abierto, setAbierto] = useState(false);
   const [pos, setPos] = useState<{ top: number; left: number } | null>(null);
   const btn = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    if (!abierto || !btn.current) return;
+    if (!abierto || esMovil || !btn.current) return;
     const r = btn.current.getBoundingClientRect();
     const ancho = 220;
     const alto = items.length * 38 + 10;
     const abajo = r.bottom + 6 + alto < window.innerHeight;
     setPos({
-      top: abajo ? r.bottom + 6 : r.top - 6 - alto,
+      top: abajo ? r.bottom + 6 : Math.max(8, r.top - 6 - alto),
       left: Math.max(8, Math.min(r.right - ancho, window.innerWidth - ancho - 8)),
     });
-  }, [abierto, items.length]);
+  }, [abierto, items.length, esMovil]);
 
   useEffect(() => {
-    if (!abierto) return;
+    if (!abierto || esMovil) return;
     const cerrar = () => setAbierto(false);
     const fuera = (e: MouseEvent) => {
       const t = e.target as Node;
@@ -63,20 +75,29 @@ export function MenuAcciones({
       window.removeEventListener("scroll", cerrar, true);
       window.removeEventListener("resize", cerrar);
     };
-  }, [abierto]);
-
-  const TONO = {
-    normal: "text-slate-700 hover:bg-slate-100",
-    peligro: "text-amber-700 hover:bg-amber-50",
-    exito: "text-emerald-700 hover:bg-emerald-50",
-  };
+  }, [abierto, esMovil]);
 
   return (
     <>
       <button ref={btn} type="button" aria-label={etiqueta} aria-haspopup="menu" aria-expanded={abierto} onClick={() => setAbierto((v) => !v)} className={className} style={style}>
         {children}
       </button>
-      {abierto && pos && typeof document !== "undefined"
+      {abierto && esMovil ? (
+        <HojaInferior titulo={etiqueta} onClose={() => setAbierto(false)} z="z-[160]" sinPadding
+          pie={<button type="button" onClick={() => setAbierto(false)} className="w-full rounded-xl border border-slate-200 bg-white py-3 text-[15px] font-semibold text-slate-700 active:bg-slate-50">Cancelar</button>}>
+          <div role="menu" className="p-2">
+            {items.map((it) => (
+              <button key={it.etiqueta} role="menuitem" type="button"
+                onClick={() => { setAbierto(false); it.onClick(); }}
+                className={`flex min-h-12 w-full items-center gap-3 rounded-xl px-3.5 text-left text-[15px] font-medium transition-colors active:bg-slate-100 ${TONO[it.tono ?? "normal"]}`}>
+                {it.icono ? <span className="flex h-5 w-5 shrink-0 items-center justify-center opacity-70">{it.icono}</span> : null}
+                {it.etiqueta}
+              </button>
+            ))}
+          </div>
+        </HojaInferior>
+      ) : null}
+      {abierto && !esMovil && pos && typeof document !== "undefined"
         ? createPortal(
             <div
               ref={panel}

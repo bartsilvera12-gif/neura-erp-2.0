@@ -47,7 +47,10 @@ export function QtyInput({
     <input
       ref={inputRef}
       type={usarTexto ? "text" : "number"}
-      inputMode={usarTexto ? "decimal" : undefined}
+      // Teclado numérico en celular: enteros → numérico puro (iOS: pattern), decimales → con coma.
+      inputMode={usarTexto || step !== 1 ? "decimal" : "numeric"}
+      pattern={!usarTexto && step === 1 ? "[0-9]*" : undefined}
+      enterKeyHint="done"
       min={usarTexto ? undefined : min}
       step={usarTexto ? undefined : step}
       value={text}

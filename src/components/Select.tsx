@@ -4,6 +4,8 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import { createPortal } from "react-dom";
 import { Check, ChevronDown } from "lucide-react";
 import { clienteConfig } from "@/cliente.config";
+import { HojaInferior } from "@/components/HojaInferior";
+import { useEsMovil } from "@/lib/ui/responsive";
 
 const BRAND = clienteConfig.color;
 
@@ -13,6 +15,8 @@ const BRAND = clienteConfig.color;
  * click afuera.
  * La lista se monta en <body> con position: fixed (como MenuAcciones): nunca queda cortada
  * dentro de un modal con scroll ni de una tabla; si abajo no entra, se abre hacia arriba.
+ * En celular (< 640 px) la lista se abre como HOJA INFERIOR a todo el ancho, con opciones de
+ * 48 px (cómodas al dedo) y nunca se sale de la pantalla; `etiqueta` es su título.
  */
 export function Select({
   value,
@@ -23,6 +27,7 @@ export function Select({
   disabled = false,
   compacto = false,
   className = "",
+  etiqueta,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -36,7 +41,10 @@ export function Select({
   /** mismo tamaño que un input de formulario compacto (rounded-lg, px-3 py-2, texto normal) */
   compacto?: boolean;
   className?: string;
+  /** título de la hoja inferior en celular (ej. "Categoría"); también aria-label del botón */
+  etiqueta?: string;
 }) {
+  const esMovil = useEsMovil();
   const [open, setOpen] = useState(false);
   const [hi, setHi] = useState(-1); // opción resaltada para el teclado
   const ref = useRef<HTMLDivElement>(null);
@@ -69,7 +77,7 @@ export function Select({
     }
   }, [options.length]);
   useLayoutEffect(() => {
-    if (!open) return;
+    if (!open || esMovil) return;
     ubicar();
     window.addEventListener("resize", ubicar);
     window.addEventListener("scroll", ubicar, true);
@@ -77,14 +85,17 @@ export function Select({
       window.removeEventListener("resize", ubicar);
       window.removeEventListener("scroll", ubicar, true);
     };
-  }, [open, ubicar]);
+  }, [open, ubicar, esMovil]);
 
   // Al abrir, la opción elegida queda a la vista (listas largas como horarios).
   useEffect(() => {
-    if (!open || !pos) return;
-    lista.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: "center" });
+    if (!open || (!pos && !esMovil)) return;
+    const ver = () => lista.current?.querySelector<HTMLElement>('[aria-selected="true"]')?.scrollIntoView({ block: "center" });
+    // En celular la hoja (portal de CapaModal) se monta un render después.
+    if (esMovil) { const t = window.setTimeout(ver, 40); return () => window.clearTimeout(t); }
+    ver();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, pos != null]);
+  }, [open, pos != null, esMovil]);
 
   // Navegación por teclado (combobox): ↑/↓ mueven, Enter elige, Esc cierra.
   function onTriggerKey(e: React.KeyboardEvent) {
@@ -112,14 +123,34 @@ export function Select({
         onKeyDown={onTriggerKey}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`flex w-full items-center justify-between gap-2 border bg-white text-sm outline-none ${compacto ? "rounded-lg px-3 py-2 text-slate-800" : "rounded-xl py-2.5 pl-3.5 pr-3 font-medium text-slate-600"} transition hover:border-slate-300 focus:border-[var(--brand)] focus:shadow-[0_0_0_4px_var(--brand-100)] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200`}
+        aria-label={etiqueta}
+        className={`flex w-full items-center justify-between gap-2 border bg-white text-sm outline-none max-sm:min-h-11 ${compacto ? "rounded-lg px-3 py-2 text-slate-800" : "rounded-xl py-2.5 pl-3.5 pr-3 font-medium text-slate-600"} transition hover:border-slate-300 focus:border-[var(--brand)] focus:shadow-[0_0_0_4px_var(--brand-100)] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200`}
         style={{ borderColor: open ? BRAND : "#e2e8f0", boxShadow: open ? `0 0 0 4px var(--brand-100)` : undefined }}
       >
         <span className="truncate">{current?.[1]}</span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
 
-      {open && !disabled && pos && typeof document !== "undefined" ? createPortal(
+      {open && !disabled && esMovil ? (
+        <HojaInferior titulo={etiqueta ?? "Elegí una opción"} onClose={() => setOpen(false)} z="z-[200]" sinPadding panelRef={lista}>
+          <div role="listbox" aria-label={etiqueta} className="p-2">
+            {options.map(([v, label]) => {
+              const sel = v === value;
+              return (
+                <button key={v} type="button" role="option" aria-selected={sel}
+                  onClick={() => { onChange(v); setOpen(false); }}
+                  className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-3.5 text-left text-[15px] transition-colors active:bg-slate-100 ${sel ? "font-semibold" : "text-slate-700"}`}
+                  style={sel ? { backgroundColor: "var(--brand-50)", color: BRAND } : undefined}>
+                  <span className="min-w-0 break-words py-2">{label}</span>
+                  {sel ? <Check className="h-5 w-5 shrink-0" /> : null}
+                </button>
+              );
+            })}
+          </div>
+        </HojaInferior>
+      ) : null}
+
+      {open && !disabled && !esMovil && pos && typeof document !== "undefined" ? createPortal(
         <div
           ref={lista}
           className="fixed z-[200] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_-8px_rgba(2,48,71,0.25)]"

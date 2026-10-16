@@ -56,8 +56,8 @@ export default async function PresupuestoPublicoPage({ params }: { params: Promi
 
 function Marco({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
+    <div className="min-h-dvh bg-slate-50">
+      <header className="pt-safe border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/brand/logo-doc.png" alt={clienteConfig.nombre} className="h-9 w-auto max-w-[160px] object-contain" />
@@ -67,7 +67,7 @@ function Marco({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10">{children}</main>
+      <main className="mx-auto max-w-3xl px-3 pt-4 pb-[calc(1.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:py-10">{children}</main>
     </div>
   );
 }

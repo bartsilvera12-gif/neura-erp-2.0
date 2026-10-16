@@ -67,14 +67,18 @@ function Usuarios() {
   return (
     <div className="space-y-5 pb-10">
       <Cabecera kicker="Configuración" titulo="Usuarios" subtitulo="Quién entra al sistema y qué puede ver y hacer cada uno" />
-      <Pestanas
-        valor={vista}
-        onChange={cambiarVista}
-        opciones={[
-          { id: "usuarios", label: "Usuarios", badge: pendientes || undefined },
-          { id: "perfiles", label: "Perfiles y permisos" },
-        ]}
-      />
+      {/* Las pestañas quedan fijas arriba al bajar (el top negativo compensa el padding del
+          <main>, que es el contenedor que scrollea). */}
+      <div className="sticky -top-4 z-20 -mx-3 bg-[#f6f8fa]/95 px-3 py-2 backdrop-blur sm:-top-5 sm:-mx-4 sm:px-4 lg:-top-6 lg:-mx-6 lg:px-6">
+        <Pestanas
+          valor={vista}
+          onChange={cambiarVista}
+          opciones={[
+            { id: "usuarios", label: "Usuarios", badge: pendientes || undefined },
+            { id: "perfiles", label: "Perfiles y permisos" },
+          ]}
+        />
+      </div>
       {vista === "usuarios" ? (
         <VistaUsuarios datos={datos} perfiles={perfiles} cargando={cargando} error={error} onCambio={refrescar} />
       ) : (

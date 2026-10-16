@@ -13,10 +13,15 @@
  *   · BarraTramos   una barra 100 % por tramos (antigüedad de deudas) con su detalle.
  *   · ColumnasMes   evolución mensual de Gastos (mercadería + operativos + presupuesto).
  *
+ * Responsive: el SVG se dibuja al ancho real (desde 240 px), las etiquetas del eje X se espacian
+ * según su largo (nunca se pisan en 360 px), el tooltip queda siempre dentro del gráfico y en
+ * pantallas táctiles se abre con un TAP (un 2.º tap sobre la misma columna ejecuta su onClick;
+ * tocar afuera lo cierra).
+ *
  * Paleta categórica fija (validada para daltonismo, orden fijo, nunca ciclada): SERIES.
  * El primer color (#16969b) es el turquesa de marca; el período anterior va en gris.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 /**
  * Ancho real del gráfico en px: el SVG se dibuja a ese ancho (viewBox = ancho) para que los
@@ -28,7 +33,7 @@ function useAncho(porDefecto = 720) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    const medir = () => setAncho(Math.max(280, Math.round(el.clientWidth)) || porDefecto);
+    const medir = () => setAncho(Math.max(240, Math.round(el.clientWidth)) || porDefecto);
     medir();
     const ro = new ResizeObserver(medir);
     ro.observe(el);
@@ -37,6 +42,42 @@ function useAncho(porDefecto = 720) {
   return [ref, ancho] as const;
 }
 import { corto, gs, mesCorto, nombreMes, pct, variacion } from "@/components/graficos/formato";
+
+/**
+ * Tooltip al TAP en pantallas táctiles: el 1.er toque sobre una marca la resalta y muestra el
+ * tooltip; el 2.º toque sobre la MISMA marca ejecuta su acción (navegar / filtrar). Tocar fuera
+ * del gráfico lo cierra. Con mouse, nada cambia (hover + click).
+ */
+function useTapTooltip<K>(ref: React.RefObject<HTMLElement | null>, hover: K | null, setHover: (k: K | null) => void) {
+  const tactil = useRef(false);
+  const antes = useRef<K | null>(null);
+  useEffect(() => {
+    if (hover == null) return;
+    const fuera = (e: PointerEvent) => {
+      if (e.pointerType === "mouse") return;
+      if (!ref.current?.contains(e.target as Node)) setHover(null);
+    };
+    document.addEventListener("pointerdown", fuera);
+    return () => document.removeEventListener("pointerdown", fuera);
+  }, [hover, ref, setHover]);
+  const alApretar = (e: React.PointerEvent) => {
+    tactil.current = e.pointerType !== "mouse";
+    antes.current = hover;
+  };
+  const alTocar = (k: K, accion?: () => void) => {
+    if (tactil.current && antes.current !== k) { setHover(k); return; }
+    accion?.();
+  };
+  return { alApretar, alTocar };
+}
+
+/** Cada cuántas etiquetas del eje X se dibuja una, para que no se pisen (≈ 6 px por carácter). */
+function pasoEtiquetas(etiquetas: string[], anchoUtil: number) {
+  const n = Math.max(etiquetas.length, 1);
+  const largo = Math.max(3, ...etiquetas.map((e) => e.length));
+  const necesita = largo * 6 + 10;
+  return Math.max(1, Math.ceil(n / Math.max(1, anchoUtil / necesita)));
+}
 
 /** Orden categórico fijo: turquesa, naranja, violeta, amarillo, verde, rosa, azul, rojo. */
 export const SERIES = ["#16969b", "#eb6834", "#4a3aa7", "#eda100", "#008300", "#e87ba4", "#2a78d6", "#e34948"];
@@ -97,9 +138,23 @@ function barra(x: number, y: number, w: number, h: number, r: number) {
 }
 
 function Tooltip({ izquierdaPct, children }: { izquierdaPct: number; children: ReactNode }) {
+  // Se mide y se corre para que NUNCA salga del gráfico (en 360 px el tooltip de 180 px
+  // centrado en la primera columna se salía de la pantalla y generaba scroll horizontal).
+  const ref = useRef<HTMLDivElement>(null);
+  const [dx, setDx] = useState(0);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const padre = el?.parentElement;
+    if (!el || !padre) return;
+    const w = el.offsetWidth;
+    const W = padre.clientWidth;
+    const centro = (izquierdaPct / 100) * W;
+    const min = w / 2 + 2, max = W - w / 2 - 2;
+    setDx(max < min ? W / 2 - centro : Math.min(Math.max(centro, min), max) - centro);
+  }, [izquierdaPct, children]);
   return (
-    <div className="pointer-events-none absolute top-1 z-10 min-w-[180px] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-xs shadow-lg backdrop-blur"
-      style={{ left: `${Math.min(Math.max(izquierdaPct, 15), 85)}%`, transform: "translateX(-50%)" }}>
+    <div ref={ref} className="pointer-events-none absolute top-1 z-10 min-w-[min(180px,100%)] max-w-[min(280px,100%)] rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-xs shadow-lg backdrop-blur"
+      style={{ left: `${izquierdaPct}%`, transform: `translateX(calc(-50% + ${dx}px))` }}>
       {children}
     </div>
   );
@@ -158,9 +213,10 @@ export function Columnas({
   const banda = (W - PADL - PADR) / n;
   const ancho = Math.max(2, Math.min(42, banda * (n > 20 ? 0.66 : 0.58)));
   const gap = n > 40 ? 0 : 2;
-  const cadaEtiqueta = Math.max(1, Math.ceil(n / (W / 52)));
+  const cadaEtiqueta = pasoEtiquetas(datos.map((d, i) => etiquetaX(d.x, i)), W - PADL - PADR);
   const sinDatos = totales.every((t) => t === 0) && datos.every((d) => !d.anterior);
   const h = hover != null ? datos[hover] : null;
+  const tap = useTapTooltip(ref, hover, setHover);
 
   return (
     <div ref={ref} className="relative select-none">
@@ -180,7 +236,8 @@ export function Columnas({
           const visibles = d.valores.map((v, s) => ({ v: Math.max(v, 0), s })).filter((p) => p.v > 0);
           const destacado = resaltar === d.x;
           return (
-            <g key={d.x} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onClick={() => onClick?.(d.x)}
+            <g key={d.x} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onPointerDown={tap.alApretar}
+              onClick={() => tap.alTocar(i, onClick ? () => onClick(d.x) : undefined)}
               style={{ cursor: onClick ? "pointer" : "default" }}>
               <rect x={PADL + banda * i} y={PADT} width={banda} height={H - PADT - PADB} fill={on ? "#f1f5f9" : "transparent"} rx={4} />
               {visibles.map((p, k) => {
@@ -252,7 +309,8 @@ export function Lineas({
   const y = (v: number) => PADT + (H - PADT - PADB) * (1 - (v - piso) / (techo - piso));
   const paso = n > 1 ? (W - PADL - PADR) / (n - 1) : 0;
   const px = (i: number) => (n > 1 ? PADL + paso * i : (W + PADL) / 2);
-  const cadaEtiqueta = Math.max(1, Math.ceil(n / (W / 56)));
+  const cadaEtiqueta = pasoEtiquetas(x.map((v, i) => etiquetaX(v, i)), W - PADL - PADR);
+  const tap = useTapTooltip(ref, hover, setHover);
   const ruta = (vals: number[]) => vals.map((v, i) => `${i === 0 ? "M" : "L"}${px(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
 
   return (
@@ -279,7 +337,8 @@ export function Lineas({
         {x.map((v, i) => (
           <g key={v}>
             <rect x={px(i) - (paso || W) / 2} y={PADT} width={paso || W} height={H - PADT - PADB} fill="transparent"
-              onMouseEnter={() => setHover(i)} onClick={() => onClick?.(v)} style={{ cursor: onClick ? "pointer" : "default" }} />
+              onMouseEnter={() => setHover(i)} onPointerDown={tap.alApretar}
+              onClick={() => tap.alTocar(i, onClick ? () => onClick(v) : undefined)} style={{ cursor: onClick ? "pointer" : "default" }} />
             {i % cadaEtiqueta === 0 || hover === i ? (
               <text x={px(i)} y={H - 8} textAnchor={n > 1 && i === n - 1 ? "end" : "middle"} fontSize={10.5} fill={hover === i ? "#0f172a" : "#64748b"} fontWeight={hover === i ? 600 : 400}>
                 {etiquetaX(v, i)}
@@ -398,6 +457,8 @@ export function ColumnasMes({ meses, onMes }: {
   const ancho = Math.min(46, banda * 0.56);
   const sinDatos = meses.every((m) => m.compras + m.operativos === 0);
   const h = hover != null ? meses[hover] : null;
+  const cadaEtiqueta = pasoEtiquetas(meses.map((m) => mesCorto(m.mes)), W - PADL);
+  const tap = useTapTooltip(ref, hover, setHover);
 
   return (
     <div ref={ref} className="relative">
@@ -417,7 +478,8 @@ export function ColumnasMes({ meses, onMes }: {
           const on = hover === i;
           const dim = hover != null && !on ? 0.45 : 1;
           return (
-            <g key={m.mes} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onClick={() => onMes?.(m.mes)}
+            <g key={m.mes} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onPointerDown={tap.alApretar}
+              onClick={() => tap.alTocar(i, onMes ? () => onMes(m.mes) : undefined)}
               style={{ cursor: onMes ? "pointer" : "default" }}>
               <rect x={PADL + banda * i} y={PADT} width={banda} height={H - PADT - PADB} fill={on ? "#f1f5f9" : "transparent"} rx={6} />
               {m.operativos > 0 ? (
@@ -429,7 +491,9 @@ export function ColumnasMes({ meses, onMes }: {
               {m.presupuesto ? (
                 <line x1={x - 5} x2={x + ancho + 5} y1={y(m.presupuesto)} y2={y(m.presupuesto)} stroke="#334155" strokeWidth={2} strokeDasharray="4 3" opacity={dim} />
               ) : null}
-              <text x={cx} y={H - 8} textAnchor="middle" fontSize={11} fill={on ? "#0f172a" : "#64748b"} fontWeight={on ? 600 : 400}>{mesCorto(m.mes)}</text>
+              {i % cadaEtiqueta === 0 || on ? (
+                <text x={cx} y={H - 8} textAnchor="middle" fontSize={11} fill={on ? "#0f172a" : "#64748b"} fontWeight={on ? 600 : 400}>{mesCorto(m.mes)}</text>
+              ) : null}
             </g>
           );
         })}
@@ -479,15 +543,18 @@ export function Dona({ partes, centro, sub, fmt = corto, onClick }: {
     return `M${p(R, s)} A${R},${R} 0 ${large} 1 ${p(R, e)} L${p(r, e)} A${r},${r} 0 ${large} 0 ${p(r, s)} Z`;
   };
   const h = hover != null ? arcos[hover] : null;
+  const caja = useRef<HTMLDivElement>(null);
+  const tap = useTapTooltip(caja, hover, setHover);
   return (
     // Container query: al lado si la tarjeta es ancha (≥ 448 px), apilada si es angosta.
-    <div className="@container">
+    <div className="@container" ref={caja}>
     <div className="flex flex-col items-center gap-4 @md:flex-row">
       <svg viewBox="0 0 180 180" className="h-40 w-40 shrink-0" role="img" aria-label={partes.map((p) => `${p.label} ${gs(p.valor)}`).join(", ")}>
         {total === 0 ? <circle cx={C} cy={C} r={(R + r) / 2} fill="none" stroke="#e2e8f0" strokeWidth={R - r} /> : null}
         {arcos.map((a, i) => a.frac > 0 ? (
           <path key={a.label} d={sector(a.a0, a.a1)} fill={a.color} fillRule="evenodd" opacity={hover != null && hover !== i ? 0.4 : 1}
-            onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onClick={() => a.key && onClick?.(a.key)}
+            onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} onPointerDown={tap.alApretar}
+            onClick={() => tap.alTocar(i, a.key && onClick ? () => onClick(a.key!) : undefined)}
             className="transition-opacity" style={{ cursor: onClick && a.key ? "pointer" : "default" }} />
         ) : null)}
         <text x={C} y={C - 2} textAnchor="middle" fontSize={15} fontWeight={700} fill="#0f172a">{h ? `${Math.round(h.frac * 100)} %` : centro}</text>
