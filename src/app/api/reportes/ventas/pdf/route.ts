@@ -4,6 +4,7 @@
  * Resultado del período + IVA (estado tipo contable), medios de pago, cajeros, días,
  * productos más vendidos y categorías. Mismo diseño que el arqueo de caja.
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import autoTable, { type UserOptions } from "jspdf-autotable";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -39,7 +40,7 @@ export const GET = withTenant(
     const k = r.kpis;
     const ticket = k.cantidad_ventas ? k.ventas_netas / k.cantidad_ventas : 0;
 
-    const doc = nuevoDocumento();
+    const doc = nuevoDocumento(await datosEmpresa(ctx.db));
     let y = await encabezado(doc, "REPORTE DE VENTAS", describirFiltros(f, nombres));
     y += 3;
 

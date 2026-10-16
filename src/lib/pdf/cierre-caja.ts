@@ -4,6 +4,7 @@
  * contado y crédito, crédito otorgado, cobros, egresos, retiros e ingresos, movimientos y
  * firmas. Con el turno abierto sale como "Arqueo parcial". Solo servidor.
  */
+import type { DatosEmpresa } from "@/modules/empresa/tipos";
 import autoTable from "jspdf-autotable";
 import type { jsPDF } from "jspdf";
 import { TZ_PY } from "@/lib/fecha/paraguay";
@@ -27,10 +28,10 @@ const ORIGEN: Record<string, string> = {
   pago_proveedor: "Pago a proveedor",
 };
 
-export async function pdfCierreCaja(r: ResumenTurno) {
+export async function pdfCierreCaja(r: ResumenTurno, empresa?: DatosEmpresa | null) {
   const c = r.caja;
   const cerrada = c.estado === "cerrada";
-  const doc = nuevoDocumento();
+  const doc = nuevoDocumento(empresa);
   let y = await encabezado(
     doc,
     cerrada ? "CIERRE DE CAJA" : "ARQUEO PARCIAL DE CAJA",

@@ -3,6 +3,7 @@
  * Mismo diseño que los demás documentos: membrete, datos del proveedor y del pedido,
  * productos con cantidad y costo, total, observación y firmas.
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import autoTable from "jspdf-autotable";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -29,7 +30,7 @@ export const GET = withTenant(async (ctx, req) => {
   const pr = await ctx.db.select("proveedores", "nombre, nombre_comercial, ruc, telefono, email, direccion, ciudad, contacto, contacto_telefono").eq("id", oc.proveedor_id).limit(1);
   const prov = (pr.data?.[0] ?? {}) as Record<string, string | null>;
 
-  const doc = nuevoDocumento();
+  const doc = nuevoDocumento(await datosEmpresa(ctx.db));
   const fechaOc = new Date(oc.fecha).toLocaleDateString("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit", year: "numeric" });
   let y = await encabezado(doc, `ORDEN DE COMPRA ${oc.numero_oc}`, `Emitida el ${fechaOc}${oc.estado === "cancelada" ? " · CANCELADA" : ""}`);
 

@@ -2,6 +2,7 @@
  * Pérdidas de producto en PDF: totales, impacto, por motivo, productos, depósitos y detalle.
  *   GET /api/reportes/perdidas/pdf?desde&hasta&sucursal → descarga
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import { withTenant } from "@/lib/api/with-tenant";
 import { COLOR, encabezado, gs, nuevoDocumento, pieDePagina, respuestaPdf } from "@/lib/pdf/documento";
 import { kpisPdf, tablaPdf } from "@/lib/pdf/tabla";
@@ -21,7 +22,7 @@ export const GET = withTenant(
     if (!r.ok) return r.res;
     const d = r.data;
     const t = d.totales;
-    const doc = nuevoDocumento();
+    const doc = nuevoDocumento(await datosEmpresa(ctx.db));
     let y = await encabezado(doc, "PÉRDIDAS DE PRODUCTO", describirRango(d));
     y = kpisPdf(doc, y, [
       { label: "Pérdidas al costo", valor: g(t.valor), sub: `${gs(t.unidades)} unidades · ${t.documentos} documentos`, color: COLOR.rojo },

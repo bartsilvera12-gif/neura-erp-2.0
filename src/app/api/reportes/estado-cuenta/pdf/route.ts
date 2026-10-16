@@ -3,6 +3,7 @@
  * flujo de caja, gastos por categoría, pérdidas y evolución mensual.
  *   GET /api/reportes/estado-cuenta/pdf?desde&hasta&sucursal → descarga
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import { withTenant } from "@/lib/api/with-tenant";
 import { COLOR, encabezado, gs, M, nuevoDocumento, pieDePagina, respuestaPdf, tituloSeccion, W, asegurarEspacio } from "@/lib/pdf/documento";
 import { kpisPdf, renglon, tablaPdf } from "@/lib/pdf/tabla";
@@ -23,7 +24,7 @@ export const GET = withTenant(
     if (!r.ok) return r.res;
     const d = r.data;
     const x = derivados(d);
-    const doc = nuevoDocumento();
+    const doc = nuevoDocumento(await datosEmpresa(ctx.db));
     let y = await encabezado(doc, "ESTADO DE CUENTA DE LA EMPRESA", describirRango(d));
 
     y = kpisPdf(doc, y, [

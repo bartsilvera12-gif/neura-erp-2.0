@@ -1,6 +1,7 @@
 /**
  * Nota de remisión de un traslado en PDF. GET /api/inventario/traslados/[id]/remision
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR, fail } from "@/lib/api/responses";
 import { respuestaPdf } from "@/lib/pdf/documento";
@@ -16,6 +17,6 @@ export const GET = withTenant(async (ctx, req) => {
   const { data, error } = await ctx.db.rpc<TrasladoDetalle>("traslado_detalle", { p_id: id });
   if (error) return /no encontrado/i.test(error.message) ? fail("Traslado no encontrado", 404) : ERR.server();
   if (!data) return ERR.notFound("traslado");
-  const doc = await pdfRemision(data);
+  const doc = await pdfRemision(data, await datosEmpresa(ctx.db));
   return respuestaPdf(doc, `remision-${data.remision_numero}.pdf`);
 });

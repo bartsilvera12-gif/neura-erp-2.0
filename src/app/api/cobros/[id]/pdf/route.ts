@@ -3,6 +3,7 @@
  * "Recibimos de … la suma de Gs. … (en letras)", medios de pago, a qué ventas se aplicó,
  * deuda que le queda al cliente y firma. Si está anulado, lo dice grande.
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import autoTable from "jspdf-autotable";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -35,7 +36,7 @@ export const GET = withTenant(async (ctx, req) => {
   ]);
   const doc0 = (cli.data?.[0] ?? {}) as { documento?: string | null; telefono?: string | null };
 
-  const doc = nuevoDocumento();
+  const doc = nuevoDocumento(await datosEmpresa(ctx.db));
   let y = await encabezado(doc, `RECIBO ${k.numero_recibo}`, fechaHoraPY(k.fecha));
 
   if (k.anulado_at) {

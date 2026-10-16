@@ -8,6 +8,7 @@ import path from "node:path";
 import { jsPDF } from "jspdf";
 import { clienteConfig } from "@/cliente.config";
 import { TZ_PY } from "@/lib/fecha/paraguay";
+import { membreteEmpresa, renglonesMembrete, type DatosEmpresa, type Membrete } from "@/modules/empresa/tipos";
 
 export type RGB = [number, number, number];
 const hex = (h: string): RGB => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
@@ -43,8 +44,21 @@ export async function logoDoc() {
   return logoCache;
 }
 
-export function nuevoDocumento() {
-  return new jsPDF({ unit: "mm", format: "a4", compress: true });
+// Membrete de cada documento (Configuración › Datos de la empresa). Se guarda al crear el
+// documento y lo leen el encabezado y el pie; sin datos, el respaldo de siempre (config).
+const membretes = new WeakMap<jsPDF, Membrete>();
+const RESPALDO = { nombre: clienteConfig.nombre, web: clienteConfig.dominio };
+
+/** Membrete del documento: los datos de la empresa con que se creó o el respaldo. */
+export function membreteDe(doc: jsPDF): Membrete {
+  return membretes.get(doc) ?? membreteEmpresa(null, RESPALDO);
+}
+
+/** Documento A4 nuevo. `empresa` = datos_empresa() (null → nombre y dominio del cliente). */
+export function nuevoDocumento(empresa?: DatosEmpresa | null) {
+  const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
+  membretes.set(doc, membreteEmpresa(empresa ?? null, RESPALDO));
+  return doc;
 }
 
 /** Membrete (logo + empresa) y título en recuadro. Devuelve la Y siguiente. */
@@ -53,17 +67,29 @@ export async function encabezado(doc: jsPDF, titulo: string, subtitulo?: string)
   let y = M;
   const logo = await logoDoc();
   let alto = 12;
+  let wLogo = 0;
   if (logo) {
-    const w = Math.min(45, (logo.w / logo.h) * 15);
-    const h = (w * logo.h) / logo.w;
-    doc.addImage(logo.data, "PNG", M, y, w, h, "logo", "FAST");
+    wLogo = Math.min(45, (logo.w / logo.h) * 15);
+    const h = (wLogo * logo.h) / logo.w;
+    doc.addImage(logo.data, "PNG", M, y, wLogo, h, "logo", "FAST");
     alto = Math.max(alto, h);
   }
+  // Empresa a la derecha: nombre, actividad y los renglones fiscales / de contacto.
+  const m = membreteDe(doc);
+  const maxW = W - (logo ? wLogo + 8 : 0);
   doc.setFont("helvetica", "bold").setFontSize(12).setTextColor(31, 41, 55);
-  doc.text(pdfTxt(clienteConfig.nombre), der, y + 4, { align: "right" });
-  doc.setFont("helvetica", "normal").setFontSize(8).setTextColor(107, 114, 128);
-  doc.text(clienteConfig.dominio, der, y + 9, { align: "right" });
-  doc.text("Paraguay", der, y + 13, { align: "right" });
+  doc.text(pdfTxt(m.nombre), der, y + 4, { align: "right", maxWidth: maxW });
+  let yt = y + 4;
+  doc.setFont("helvetica", "normal").setFontSize(7.8).setTextColor(107, 114, 128);
+  const renglones = renglonesMembrete(m);
+  if (!m.ruc && !m.ubicacion && !m.razonSocial) renglones.push("Paraguay");
+  for (const r of renglones) {
+    for (const l of doc.splitTextToSize(pdfTxt(r), maxW) as string[]) {
+      yt += 3.7;
+      doc.text(l, der, yt, { align: "right" });
+    }
+  }
+  alto = Math.max(alto, yt - y + 1.5);
   y += alto + 3;
   doc.setDrawColor(...COLOR.teal).setLineWidth(0.6).line(M, y, der, y);
   y += 6;
@@ -104,7 +130,8 @@ export function pieDePagina(doc: jsPDF, leyenda: string) {
     doc.setPage(p);
     doc.setDrawColor(187, 187, 187).setLineWidth(0.2).setLineDashPattern([0.8, 0.8], 0).line(M, 297 - 12, M + W, 297 - 12).setLineDashPattern([], 0);
     doc.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(...COLOR.gris);
-    doc.text(pdfTxt(`${leyenda} · ${clienteConfig.nombre} · ${generado}`), M, 297 - 8);
+    const m = membreteDe(doc);
+    doc.text(pdfTxt(`${leyenda} · ${m.nombre}${m.ruc ? ` · RUC ${m.ruc}` : ""} · ${generado}`), M, 297 - 8, { maxWidth: W - 26 });
     doc.text(`Página ${p} de ${paginas}`, M + W, 297 - 8, { align: "right" });
   }
 }

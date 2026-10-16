@@ -1,4 +1,5 @@
 /** Productos vendidos en PDF (resumen por producto), mismo diseño que los demás reportes. ADMIN. */
+import { datosEmpresa } from "@/modules/empresa/server";
 import autoTable from "jspdf-autotable";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -39,7 +40,7 @@ export const GET = withTenant(
       f.sinVentas ? "Incluye productos sin ventas" : null,
     ].filter(Boolean).join(" · ");
 
-    const doc = nuevoDocumento();
+    const doc = nuevoDocumento(await datosEmpresa(ctx.db));
     let y = await encabezado(doc, "PRODUCTOS VENDIDOS", sub);
 
     const cifras: [string, string][] = [

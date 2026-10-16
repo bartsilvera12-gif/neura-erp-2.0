@@ -2,6 +2,7 @@
  * Stock mínimo en PDF: sirve de lista de reposición/compra (con columna "Pedido" en
  * blanco para anotar a mano). Mismo diseño que los demás reportes. ADMIN.
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import autoTable from "jspdf-autotable";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -37,7 +38,7 @@ export const GET = withTenant(
       soloSinStock ? "Solo sin stock" : null,
     ].filter(Boolean).join(" · ");
 
-    const doc = nuevoDocumento();
+    const doc = nuevoDocumento(await datosEmpresa(ctx.db));
     let y = await encabezado(doc, "REPOSICIÓN · STOCK MÍNIMO", sub);
 
     // Resumen en una línea de cifras.

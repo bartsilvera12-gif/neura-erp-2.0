@@ -2,6 +2,7 @@
  * Estado de cuenta del cliente en PDF. GET /api/clientes/[id]/estado-cuenta/pdf
  * Deuda y vencido, ventas a crédito (con lo cobrado y lo que falta) y los cobros.
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import autoTable from "jspdf-autotable";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -27,7 +28,7 @@ export const GET = withTenant(async (ctx, req) => {
   const e = ec.data;
 
   const hoy = hoyPY();
-  const doc = nuevoDocumento();
+  const doc = nuevoDocumento(await datosEmpresa(ctx.db));
   let y = await encabezado(doc, "ESTADO DE CUENTA", `${pdfTxt(String(c.razon_social || c.nombre))} · al ${dia(hoy)}`);
 
   // Datos y cifras.

@@ -4,6 +4,7 @@
  * turnos y, por cada turno, su arqueo por forma de pago y la conciliación del efectivo.
  * El detalle de movimientos de cada turno está en su propio PDF (cierre-caja.ts). Solo servidor.
  */
+import type { DatosEmpresa } from "@/modules/empresa/tipos";
 import { COLOR, encabezado, fechaHoraPY, gs, M, nuevoDocumento, pieDePagina, W, asegurarEspacio, pdfTxt } from "@/lib/pdf/documento";
 import { kpisPdf, tablaPdf } from "@/lib/pdf/tabla";
 import type { CierreDiaDetalle } from "@/modules/reportes/tipos";
@@ -16,8 +17,8 @@ const conSigno = (v: number | null | undefined) => {
 const hora = (iso: string | null) =>
   iso ? new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso)) : "—";
 
-export async function pdfCierreDia(d: CierreDiaDetalle) {
-  const doc = nuevoDocumento();
+export async function pdfCierreDia(d: CierreDiaDetalle, empresa?: DatosEmpresa | null) {
+  const doc = nuevoDocumento(empresa);
   const fecha = new Date(`${d.fecha}T12:00:00Z`).toLocaleDateString("es-PY", { timeZone: "UTC", weekday: "long", day: "numeric", month: "long", year: "numeric" });
   const suc = d.sucursal_id ? d.sucursales.find((s) => s.id === d.sucursal_id)?.nombre ?? "Sucursal" : "Todas las sucursales";
   let y = await encabezado(doc, "CIERRE DE CAJA DEL DÍA", `${fecha} · ${suc}`);

@@ -7,6 +7,8 @@ import { TZ_PY } from "@/lib/fecha/paraguay";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
 import { clienteConfig } from "@/cliente.config";
+import { datosEmpresa } from "@/modules/empresa/server";
+import { membreteEmpresa } from "@/modules/empresa/tipos";
 
 function ventaId(req: { url: string }): string | null {
   const segs = new URL(req.url).pathname.split("/").filter(Boolean);
@@ -35,6 +37,9 @@ export const GET = withTenant(async (ctx, req) => {
   // Ancho del papel térmico: 80mm (default) o 58mm. La fuente escala con el ancho.
   const widthMm = sp.get("w") === "58" ? 58 : 80;
   const fontPx = widthMm === 58 ? 11 : 12;
+
+  // Membrete (Configuración › Datos de la empresa): en paralelo con la venta.
+  const empresaP = datosEmpresa(ctx.db);
 
   // Venta + ítems + cliente en UNA consulta (embebidos): el ticket sale después de cada venta.
   const vq = await ctx.db
@@ -88,12 +93,16 @@ export const GET = withTenant(async (ctx, req) => {
     })
     .join("");
 
+  const m = membreteEmpresa(await empresaP, { nombre: clienteConfig.nombre });
+  const emisor = [m.razonSocial, m.ruc ? `RUC ${m.ruc}` : null, m.ubicacion, m.telefono ? `Tel. ${m.telefono}` : null]
+    .filter(Boolean).map((l) => esc(l)).join("<br>");
+
   const html = `<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Ticket ${esc(v.numero_control)} — ${esc(clienteConfig.nombre)}</title>
+<title>Ticket ${esc(v.numero_control)} — ${esc(m.nombre)}</title>
 <style id="sz">
   :root { --w: ${widthMm}mm; --fs: ${fontPx}px; }
   @page { margin: 0; size: ${widthMm}mm auto; }
@@ -105,6 +114,7 @@ export const GET = withTenant(async (ctx, req) => {
   .paper { background: #fff; width: var(--w); margin: 0 auto 12mm; padding: 6mm 4mm; box-shadow: 0 1px 4px rgba(0,0,0,0.1); page-break-after: always; break-after: page; }
   .paper.last { page-break-after: auto; break-after: auto; margin-bottom: 0; }
   h1 { font-size: calc(var(--fs) + 4px); text-align: center; margin: 0 0 2mm; letter-spacing: 1px; }
+  .emisor { font-size: calc(var(--fs) - 2px); text-align: center; line-height: 1.35; margin: 0 0 2mm; }
   .meta { font-size: calc(var(--fs) - 1px); text-align: center; margin: 1mm 0 2mm; }
   .cliente { font-size: var(--fs); margin: 1mm 0; }
   hr { border: none; border-top: 1px dashed #000; margin: 2mm 0; }
@@ -135,7 +145,8 @@ export const GET = withTenant(async (ctx, req) => {
 <body class="${anulada ? "anulada" : ""}">
   <section class="paper last">
     ${anulada ? `<div class="anulado-banner">ANULADO</div>` : ""}
-    <h1>${esc(clienteConfig.nombre)}</h1>
+    <h1>${esc(m.nombre)}</h1>
+    ${emisor ? `<div class="emisor">${emisor}</div>` : ""}
     <hr>
     <div class="meta">${esc(v.numero_control)}<br>${esc(fecha)}${cajaTxt ? `<br>${esc(cajaTxt)}` : ""}${v.usuario_nombre ? ` · ${esc(v.usuario_nombre)}` : ""}</div>
     <hr>

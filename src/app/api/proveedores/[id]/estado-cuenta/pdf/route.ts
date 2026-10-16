@@ -2,6 +2,7 @@
  * Estado de cuenta del proveedor en PDF. GET /api/proveedores/[id]/estado-cuenta/pdf
  * Deuda (Gs. y USD) y vencido, facturas a crédito (con lo pagado y lo que falta) y los pagos.
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import autoTable from "jspdf-autotable";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -28,7 +29,7 @@ export const GET = withTenant(
     const e = ec.data;
 
     const hoy = hoyPY();
-    const doc = nuevoDocumento();
+    const doc = nuevoDocumento(await datosEmpresa(ctx.db));
     let y = await encabezado(doc, "ESTADO DE CUENTA · PROVEEDOR", `${pdfTxt(String(p.nombre))} · al ${dia(hoy)}`);
 
     doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(...COLOR.gris);

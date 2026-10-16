@@ -25,10 +25,16 @@ export type EmisorPresupuesto = {
   vendedor_telefono: string | null;
   vendedor_email: string | null;
   respuesta_online?: boolean | null;
+  // Configuración › Datos de la empresa (receta 57); faltan en documentos viejos.
+  razon_social?: string | null;
+  nombre_fantasia?: string | null;
   ruc?: string | null;
   email?: string | null;
   web?: string | null;
   actividad?: string | null;
+  departamento?: string | null;
+  /** la sucursal del membrete es la principal (casa matriz) */
+  sucursal_principal?: boolean | null;
 };
 export type OpcionesPdfPresupuesto = {
   /** Versión interna (descarga desde el ERP): marca discreta si está vencido. */
@@ -85,9 +91,13 @@ export async function pdfPresupuesto(p: PresupuestoDoc & { emisor?: EmisorPresup
   const num = (v: number | null | undefined) =>
     usd ? (Number(v) || 0).toLocaleString("es-PY", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : Math.round(Number(v) || 0).toLocaleString("es-PY");
   const em = p.emisor ?? null;
-  const empresa = em?.empresa || clienteConfig.nombre;
+  const empresa = [em?.nombre_fantasia, em?.razon_social, em?.empresa].find(lleno) || clienteConfig.nombre;
+  const razonSocial = lleno(em?.razon_social) && em!.razon_social!.trim() !== empresa.trim() ? em!.razon_social! : null;
   const web = em?.web || clienteConfig.dominio;
-  const ubicacion = [em?.direccion, em?.ciudad].filter(lleno).join(", ");
+  const depto = lleno(em?.departamento) && em!.departamento !== "Capital" && em!.departamento !== em?.ciudad ? em!.departamento : null;
+  const ubicacion = [em?.direccion, em?.ciudad, depto].filter(lleno).join(", ");
+  // Si atiende una sucursal que no es la casa matriz, se dice cuál.
+  const sucursalTxt = em && em.sucursal_principal === false && lleno(em.sucursal) ? em.sucursal : null;
   const der = MX + ANCHO;
   const vencido = p.estado === "vencido";
 
@@ -162,17 +172,23 @@ export async function pdfPresupuesto(p: PresupuestoDoc & { emisor?: EmisorPresup
   }
   const xTxt = MX + 5 + (logo ? wLogo + 6 : 0);
   const wTxt = MX + wIzq - 4 - xTxt;
-  doc.setFont("helvetica", "bold").setFontSize(11.5);
-  const nombreEmp = doc.splitTextToSize(pdfTxt(empresa), wTxt) as string[];
-  const lineasEmp = [
-    lleno(em?.actividad) ? em!.actividad : null,
-    lleno(em?.ruc) ? `RUC: ${em!.ruc}` : null,
-    ubicacion || null,
-    lleno(em?.telefono) ? `Tel.: ${em!.telefono}` : null,
-    lleno(em?.email) ? em!.email : null,
-    web,
-  ].filter(lleno);
-  const altoTxtEmp = nombreEmp.length * alto(11.5) + 1 + lineasEmp.length * alto(7.6);
+  // Recuadro del emisor: nombre (de fantasía) grande, razón social, actividad, RUC y contacto.
+  // Cada renglón se corta al ancho disponible (la actividad suele ser larga).
+  const partir = (t: string, pt: number, bold: boolean, color: RGB): Renglon[] => {
+    doc.setFont("helvetica", bold ? "bold" : "normal").setFontSize(pt);
+    return (doc.splitTextToSize(pdfTxt(t), wTxt) as string[]).map((x) => ({ t: x, pt, bold, color }));
+  };
+  const nombreEmp = partir(empresa, 11.5, true, TINTA);
+  const contactoEmp = [lleno(em?.telefono) ? `Tel. ${em!.telefono}` : null, lleno(em?.email) ? em!.email : null].filter(lleno).join("  ·  ");
+  const lineasEmp: Renglon[] = [
+    ...(razonSocial ? partir(razonSocial, 7.8, true, TEXTO) : []),
+    ...(lleno(em?.actividad) ? partir(em!.actividad!, 7.2, false, APAGADO) : []),
+    ...(lleno(em?.ruc) ? partir(`RUC ${em!.ruc}`, 7.8, true, TINTA) : []),
+    ...(ubicacion ? partir(sucursalTxt ? `${sucursalTxt}: ${ubicacion}` : ubicacion, 7.4, false, TEXTO) : []),
+    ...(contactoEmp ? partir(contactoEmp, 7.4, false, TEXTO) : []),
+    ...(lleno(web) ? partir(web, 7.4, false, TEXTO) : []),
+  ];
+  const altoTxtEmp = nombreEmp.length * alto(11.5) + 1.2 + lineasEmp.reduce((a, l) => a + alto(l.pt) + 0.25, 0);
 
   const rev = p.revision > 1;
   const marcaVencido = !!opciones.interno && vencido;
@@ -184,14 +200,14 @@ export async function pdfPresupuesto(p: PresupuestoDoc & { emisor?: EmisorPresup
   let ye = y + (altoCab - altoTxtEmp) / 2;
   doc.setFont("helvetica", "bold").setFontSize(11.5).setTextColor(...TINTA);
   for (const l of nombreEmp) {
-    doc.text(l, xTxt, ye + base(11.5));
+    doc.text(l.t, xTxt, ye + base(11.5));
     ye += alto(11.5);
   }
-  ye += 1;
-  doc.setFont("helvetica", "normal").setFontSize(7.6).setTextColor(...TEXTO);
+  ye += 1.2;
   for (const l of lineasEmp) {
-    doc.text(pdfTxt(l), xTxt, ye + base(7.6), { maxWidth: wTxt });
-    ye += alto(7.6);
+    doc.setFont("helvetica", l.bold ? "bold" : "normal").setFontSize(l.pt).setTextColor(...l.color);
+    doc.text(l.t, xTxt, ye + base(l.pt));
+    ye += alto(l.pt) + 0.25;
   }
 
   recuadro(xDerCab, y, wDer, altoCab);
@@ -474,9 +490,14 @@ export async function pdfPresupuesto(p: PresupuestoDoc & { emisor?: EmisorPresup
 
   // ── 7. Pie en cada página ───────────────────────────────────────────────────
   const total = doc.getNumberOfPages();
-  const contacto = [empresa, ubicacion || null, lleno(em?.telefono) ? `Tel. ${em!.telefono}` : null, lleno(em?.email) ? em!.email : null, web]
-    .filter(lleno)
-    .join("   ·   ");
+  // Un solo renglón: si no entra todo, se cae primero la web y después el teléfono.
+  const piezasPie = [razonSocial ?? empresa, lleno(em?.ruc) ? `RUC ${em!.ruc}` : null, ubicacion || null, lleno(em?.telefono) ? `Tel. ${em!.telefono}` : null, web];
+  doc.setFont("helvetica", "normal").setFontSize(6.9);
+  let contacto = "";
+  for (const corte of [5, 4, 3]) {
+    contacto = piezasPie.slice(0, corte).filter(lleno).join("   ·   ");
+    if (doc.getTextWidth(pdfTxt(contacto)) <= ANCHO - 26) break;
+  }
   for (let i = 1; i <= total; i++) {
     doc.setPage(i);
     doc.setDrawColor(...MARCA).setLineWidth(0.35).line(MX, PH - 14, der, PH - 14);

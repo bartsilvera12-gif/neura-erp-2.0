@@ -2,6 +2,7 @@
  * Cuentas por pagar en PDF (antigüedad, por proveedor y documentos).
  *   GET /api/reportes/cuentas-pagar/pdf?desde&hasta&sucursal&proveedor → descarga
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import { withTenant } from "@/lib/api/with-tenant";
 import { respuestaPdf } from "@/lib/pdf/documento";
 import { uuidONull } from "@/modules/inventario/server/rpc";
@@ -17,7 +18,7 @@ export const GET = withTenant(
     const sp = new URL(req.url).searchParams;
     const r = await leerReporte<CuentasPagar>(ctx.db, "reporte_cxp", { ...argsRango(filtrosRango(sp)), p_proveedor: uuidONull(sp.get("proveedor")) });
     if (!r.ok) return r.res;
-    return respuestaPdf(await pdfCxp(r.data), `${nombreArchivo("cuentas-por-pagar", r.data.hoy)}.pdf`);
+    return respuestaPdf(await pdfCxp(r.data, await datosEmpresa(ctx.db)), `${nombreArchivo("cuentas-por-pagar", r.data.hoy)}.pdf`);
   },
   { permiso: ["ver_reportes_financieros", "exportar"] },
 );

@@ -1,0 +1,438 @@
+"use client";
+
+/**
+ * /configuracion/empresa — Configuración › Datos de la empresa (nivel ADMIN + "Configuración
+ * del sistema"). Identificación fiscal y contacto que salen en el encabezado de todos los
+ * documentos (presupuesto con diseño de factura, recibos, remisiones, órdenes, reportes).
+ *   · Tarjetas: Identificación fiscal · Contacto · Logo (solo se muestra: lo carga la instalación).
+ *   · Vista previa en vivo del encabezado (presupuesto y documentos generales). En celular se
+ *     abre en una hoja (CapaModal) desde la barra de guardar.
+ *   · RUC: el dígito verificador (módulo 11 de la SET) se controla mientras se escribe; la base
+ *     rechaza un DV que no coincide.
+ *   · Barra fija de guardar con Descartar; avisa si salís con cambios sin guardar.
+ */
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import {
+  AlertTriangle, BadgeCheck, Building2, Eye, FileText, ImageIcon, Info, Loader2, MapPin, ReceiptText, Sparkles, X,
+} from "lucide-react";
+import { apiFetch } from "@/lib/api/client-fetch";
+import { invalidar } from "@/lib/api/cache-cliente";
+import { clienteConfig } from "@/cliente.config";
+import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
+import { EncabezadoPagina } from "@/components/EncabezadoPagina";
+import { Select } from "@/components/Select";
+import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT } from "@/modules/inventario/ui";
+import {
+  CAMPOS_EMPRESA, DEPARTAMENTOS_PY, membreteEmpresa, normalizarRuc, renglonesMembrete, validarRuc,
+  type DatosEmpresa, type FormEmpresa, type Membrete,
+} from "@/modules/empresa/tipos";
+
+const URL = "/api/configuracion/empresa";
+const TEAL = clienteConfig.color;
+const RESPALDO = { nombre: clienteConfig.nombre, web: clienteConfig.dominio };
+
+const vacio: FormEmpresa = {
+  razon_social: "", nombre_fantasia: "", ruc: "", actividad_economica: "", direccion: "", ciudad: "", departamento: "", telefono: "", email: "", web: "",
+};
+const deDatos = (d: DatosEmpresa): FormEmpresa =>
+  Object.fromEntries(CAMPOS_EMPRESA.map((k) => [k, (d[k] as string | null) ?? ""])) as FormEmpresa;
+
+const fechaHora = (iso: string) =>
+  new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+
+export default function DatosEmpresaPage() {
+  const [datos, setDatos] = useState<DatosEmpresa | null>(null);
+  const [f, setF] = useState<FormEmpresa>(vacio);
+  const [error, setError] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [guardando, setGuardando] = useState(false);
+  const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
+  const [okGuardar, setOkGuardar] = useState<string | null>(null);
+  const [previaMovil, setPreviaMovil] = useState(false);
+  const [confirmarDescarte, setConfirmarDescarte] = useState(false);
+
+  const cargar = useCallback(() => {
+    setCargando(true);
+    apiFetch<DatosEmpresa>(URL)
+      .then((d) => {
+        setDatos(d);
+        setF(deDatos(d));
+        setError(null);
+      })
+      .catch((e: Error) => setError(e.message))
+      .finally(() => setCargando(false));
+  }, []);
+  useEffect(cargar, [cargar]);
+
+  const original = useMemo(() => (datos ? deDatos(datos) : vacio), [datos]);
+  const sucio = CAMPOS_EMPRESA.some((k) => f[k].trim() !== original[k].trim());
+  const soloLectura = datos ? datos.puede_editar === false : false;
+
+  // Aviso del navegador si se va con cambios sin guardar.
+  useEffect(() => {
+    if (!sucio) return;
+    const h = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", h);
+    return () => window.removeEventListener("beforeunload", h);
+  }, [sucio]);
+
+  const set = <K extends keyof FormEmpresa>(k: K, v: string) => {
+    setF((x) => ({ ...x, [k]: v }));
+    setOkGuardar(null);
+    setErrorGuardar(null);
+  };
+
+  const ruc = validarRuc(f.ruc);
+  const emailMal = f.email.trim() !== "" && !/^[^@\s]+@[^@\s]+\.[^@\s.]{2,}$/.test(f.email.trim());
+  const telMal = f.telefono.trim() !== "" && !/^[0-9 +()/-]{6,40}$/.test(f.telefono.trim());
+  const faltaRazon = f.razon_social.trim().length < 2;
+  const bloqueo = faltaRazon ? "Escribí la razón social." : ruc.estado === "incompleto" || ruc.estado === "dv" ? `RUC: ${ruc.mensaje}.` : emailMal ? "Revisá el email." : telMal ? "Revisá el teléfono." : null;
+
+  const guardar = async () => {
+    if (bloqueo || !sucio || guardando) return;
+    setGuardando(true);
+    setErrorGuardar(null);
+    try {
+      const d = await apiFetch<DatosEmpresa>(URL, {
+        method: "PUT",
+        body: JSON.stringify({ ...f, ruc: f.ruc ? normalizarRuc(f.ruc) : "" }),
+      });
+      setDatos(d);
+      setF(deDatos(d));
+      setOkGuardar("Datos guardados: los documentos nuevos ya salen así.");
+      invalidar("/api/me");
+    } catch (e) {
+      setErrorGuardar((e as Error).message);
+    } finally {
+      setGuardando(false);
+    }
+  };
+
+  // Lo que se ve en los documentos con lo que está escrito ahora (con el mismo respaldo que el PDF).
+  const membrete = useMemo(
+    () => membreteEmpresa({ ...f, nombre: datos?.nombre ?? RESPALDO.nombre, actividad_economica: f.actividad_economica, sucursal_principal: datos?.sucursal_principal ?? null }, RESPALDO),
+    [f, datos],
+  );
+
+  if (cargando && !datos) {
+    return (
+      <div className="space-y-5 pb-10">
+        <EncabezadoPagina kicker="Configuración" titulo="Datos de la empresa" />
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+          <div className="space-y-4">
+            {[0, 1].map((i) => <div key={i} className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white" />)}
+          </div>
+          <div className="hidden h-80 animate-pulse rounded-2xl border border-slate-200 bg-white sm:block" />
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !datos) {
+    return (
+      <div className="space-y-5 pb-10">
+        <EncabezadoPagina kicker="Configuración" titulo="Datos de la empresa" />
+        <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 sm:flex-row sm:items-center">
+          <AlertTriangle className="h-5 w-5 shrink-0" />
+          <span className="min-w-0 flex-1">{error}</span>
+          <button type="button" onClick={cargar} className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:w-full`}>Reintentar</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <EncabezadoPagina
+        kicker="Configuración"
+        titulo="Datos de la empresa"
+        subtitulo="Así te identificás en presupuestos, recibos, remisiones, órdenes y reportes. Cambiá algo y mirá cómo queda."
+      />
+
+      {soloLectura ? (
+        <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+          <Info className="mt-0.5 h-4 w-4 shrink-0" /> Podés ver estos datos, pero cambiarlos es solo para el Administrador.
+        </div>
+      ) : null}
+
+      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="min-w-0 space-y-4">
+          {/* ── Identificación fiscal ─────────────────────────────────────── */}
+          <Tarjeta icono={<BadgeCheck className="h-4 w-4" />} titulo="Identificación fiscal" detalle="Como figura en tu constancia de RUC de la SET.">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Campo etiqueta="Razón social" requerido className="sm:col-span-2" ayuda={faltaRazon && sucio ? <span className="text-rose-600">Es obligatoria.</span> : "El nombre legal de la empresa."}>
+                <input value={f.razon_social} onChange={(e) => set("razon_social", e.target.value)} maxLength={160} placeholder="Ej. Comercial Demo S.A." disabled={soloLectura} className={INPUT} autoComplete="organization" />
+              </Campo>
+              <Campo etiqueta="Nombre de fantasía" opcional ayuda="Con el que te conocen los clientes. Va grande en los documentos.">
+                <input value={f.nombre_fantasia} onChange={(e) => set("nombre_fantasia", e.target.value)} maxLength={120} placeholder="Ej. Empresa Demo" disabled={soloLectura} className={INPUT} />
+              </Campo>
+              <Campo
+                etiqueta="RUC"
+                opcional
+                ayuda={
+                  ruc.estado === "ok" ? <span className="inline-flex items-center gap-1 text-emerald-700"><BadgeCheck className="h-3.5 w-3.5" /> Dígito verificador correcto</span>
+                  : ruc.estado === "vacio" ? "Con guion y dígito verificador, ej. 80012345-0."
+                  : (
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-rose-600">
+                      <span>{ruc.mensaje}</span>
+                      {ruc.dvSugerido !== null && !soloLectura ? (
+                        <button type="button" onClick={() => set("ruc", `${normalizarRuc(f.ruc).split("-")[0]}-${ruc.dvSugerido}`)}
+                          className="inline-flex min-h-7 items-center rounded-md bg-rose-50 px-2 font-semibold text-rose-700 ring-1 ring-rose-200 transition hover:bg-rose-100 max-sm:min-h-9">
+                          Corregir
+                        </button>
+                      ) : null}
+                    </span>
+                  )
+                }
+              >
+                <input
+                  value={f.ruc}
+                  onChange={(e) => set("ruc", e.target.value.replace(/[^\d.\s-]/g, ""))}
+                  onBlur={() => f.ruc && set("ruc", normalizarRuc(f.ruc))}
+                  inputMode="numeric"
+                  maxLength={14}
+                  placeholder="80012345-0"
+                  disabled={soloLectura}
+                  aria-invalid={ruc.estado === "incompleto" || ruc.estado === "dv"}
+                  className={`${INPUT} font-mono tabular-nums ${ruc.estado === "dv" || ruc.estado === "incompleto" ? "border-rose-300 focus:border-rose-400 focus:ring-rose-100" : ruc.estado === "ok" ? "border-emerald-300" : ""}`}
+                />
+              </Campo>
+              <Campo etiqueta="Actividad económica" opcional className="sm:col-span-2" ayuda="La principal, como figura en el RUC.">
+                <textarea value={f.actividad_economica} onChange={(e) => set("actividad_economica", e.target.value)} maxLength={200} rows={2}
+                  placeholder="Ej. Comercio al por menor de productos alimenticios y bebidas" disabled={soloLectura} className={`${INPUT} resize-none`} />
+              </Campo>
+            </div>
+          </Tarjeta>
+
+          {/* ── Contacto ──────────────────────────────────────────────────── */}
+          <Tarjeta icono={<MapPin className="h-4 w-4" />} titulo="Dirección y contacto" detalle="Casa matriz. Las sucursales usan sus propios datos cuando atienden ellas.">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <Campo etiqueta="Dirección" opcional className="sm:col-span-2">
+                <input value={f.direccion} onChange={(e) => set("direccion", e.target.value)} maxLength={200} placeholder="Ej. Av. Mcal. López 1234 c/ Washington" disabled={soloLectura} className={INPUT} autoComplete="street-address" />
+              </Campo>
+              <Campo etiqueta="Ciudad" opcional>
+                <input value={f.ciudad} onChange={(e) => set("ciudad", e.target.value)} maxLength={80} placeholder="Ej. Asunción" disabled={soloLectura} className={INPUT} autoComplete="address-level2" />
+              </Campo>
+              <Campo etiqueta="Departamento" opcional sinLabel>
+                <Select value={f.departamento} onChange={(v) => set("departamento", v)} block etiqueta="Departamento" disabled={soloLectura}
+                  options={[["", "Sin elegir"], ...DEPARTAMENTOS_PY.map((d): [string, string] => [d, d])]} />
+              </Campo>
+              <Campo etiqueta="Teléfono" opcional ayuda={telMal ? <span className="text-rose-600">Solo números, espacios y + ( ) - /</span> : undefined}>
+                <input type="tel" inputMode="tel" value={f.telefono} onChange={(e) => set("telefono", e.target.value)} maxLength={40} placeholder="021 600 000" disabled={soloLectura}
+                  aria-invalid={telMal} className={`${INPUT} ${telMal ? "border-rose-300" : ""}`} autoComplete="tel" />
+              </Campo>
+              <Campo etiqueta="Email" opcional ayuda={emailMal ? <span className="text-rose-600">Revisá el email.</span> : undefined}>
+                <input type="email" inputMode="email" value={f.email} onChange={(e) => set("email", e.target.value)} maxLength={160} placeholder="ventas@tuempresa.com.py" disabled={soloLectura}
+                  aria-invalid={emailMal} className={`${INPUT} ${emailMal ? "border-rose-300" : ""}`} autoComplete="email" />
+              </Campo>
+              <Campo etiqueta="Sitio web" opcional className="sm:col-span-2" ayuda="Sin https://, ej. www.tuempresa.com.py">
+                <input inputMode="url" value={f.web} onChange={(e) => set("web", e.target.value)} maxLength={160} placeholder="www.tuempresa.com.py" disabled={soloLectura} className={INPUT} autoComplete="url" />
+              </Campo>
+            </div>
+          </Tarjeta>
+
+          {/* ── Logo ──────────────────────────────────────────────────────── */}
+          <Tarjeta icono={<ImageIcon className="h-4 w-4" />} titulo="Logo de los documentos">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex h-20 w-full shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 sm:w-44">
+                <Logo className="max-h-14 w-auto max-w-full object-contain" />
+              </div>
+              <p className="text-sm text-slate-500">
+                Es el que sale arriba a la izquierda en todos los PDF. Lo configura Neura en la instalación; si querés cambiarlo, pedilo por Soporte.
+              </p>
+            </div>
+          </Tarjeta>
+
+          {datos?.updated_at ? (
+            <p className="px-1 text-xs text-slate-400">
+              Última actualización: {fechaHora(datos.updated_at)}{datos.updated_by_nombre ? ` · ${datos.updated_by_nombre}` : ""}
+            </p>
+          ) : null}
+        </div>
+
+        {/* ── Vista previa (≥ 640 px; en celular, en una hoja) ─────────────── */}
+        <aside className="hidden min-w-0 sm:block lg:sticky lg:top-2 lg:self-start">
+          <VistaPrevia m={membrete} />
+        </aside>
+      </div>
+
+      {/* ── Barra fija de guardar ─────────────────────────────────────────── */}
+      <div className={`sticky bottom-0 z-20 flex flex-wrap items-center gap-2 rounded-2xl border bg-white/95 px-3 py-2.5 shadow-[0_-8px_24px_-12px_rgba(2,48,71,0.18)] backdrop-blur transition-colors sm:gap-3 sm:px-4 sm:py-3 max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1 ${sucio ? "border-[var(--brand-100)]" : "border-slate-200"}`}>
+        <div className="min-w-0 flex-1 text-xs max-sm:basis-full" aria-live="polite">
+          {errorGuardar ? <span className="flex items-start gap-1.5 text-rose-700"><AlertTriangle className="mt-px h-4 w-4 shrink-0" /> {errorGuardar}</span>
+            : okGuardar && !sucio ? <span className="flex items-center gap-1.5 text-emerald-700"><Sparkles className="h-4 w-4 shrink-0" /> {okGuardar}</span>
+            : sucio && bloqueo ? <span className="flex items-center gap-1.5 text-amber-700"><AlertTriangle className="h-4 w-4 shrink-0" /> {bloqueo}</span>
+            : sucio ? <span className="flex items-center gap-1.5 text-slate-600"><Info className="h-4 w-4 shrink-0 text-[var(--brand)]" /> Tenés cambios sin guardar.</span>
+            : <span className="text-slate-400">{soloLectura ? "Solo lectura." : "Sin cambios."}</span>}
+        </div>
+        <button type="button" onClick={() => setPreviaMovil(true)} className={`${BOTON_SECUNDARIO} sm:hidden`}>
+          <Eye className="h-4 w-4" /> Vista previa
+        </button>
+        {!soloLectura && sucio ? (
+          <button type="button" onClick={() => setConfirmarDescarte(true)} disabled={guardando} className={BOTON_SECUNDARIO}>Descartar</button>
+        ) : null}
+        {!soloLectura ? (
+          <button type="button" onClick={guardar} disabled={guardando || !sucio || !!bloqueo} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
+            {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar cambios
+          </button>
+        ) : null}
+      </div>
+
+      {previaMovil ? (
+        <CapaModal onClose={() => setPreviaMovil(false)}>
+          <div role="dialog" aria-modal="true" aria-label="Vista previa" className={`flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${ALTO_MAX_MODAL}`}>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+              <p className="flex items-center gap-2 text-base font-semibold text-slate-900"><Eye className="h-4 w-4 text-[var(--brand)]" /> Vista previa</p>
+              <button type="button" aria-label="Cerrar" onClick={() => setPreviaMovil(false)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto p-3">
+              <VistaPrevia m={membrete} sinMarco />
+            </div>
+            <div className="shrink-0 border-t border-slate-100 p-3">
+              <button type="button" onClick={() => setPreviaMovil(false)} className={`${BOTON_SECUNDARIO} w-full`}>Volver a editar</button>
+            </div>
+          </div>
+        </CapaModal>
+      ) : null}
+
+      {confirmarDescarte ? (
+        <CapaModal onClose={() => setConfirmarDescarte(false)} z="z-[120]">
+          <div role="alertdialog" aria-modal="true" className={`w-full max-w-sm ${ALTO_MAX_MODAL} overflow-hidden rounded-2xl bg-white p-5 shadow-2xl`}>
+            <p className="text-base font-semibold text-slate-900">¿Descartar los cambios?</p>
+            <p className="mt-1 text-sm text-slate-500">Vuelven los datos guardados de la empresa.</p>
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setConfirmarDescarte(false)} className={`${BOTON_SECUNDARIO} max-sm:min-h-11`}>Seguir editando</button>
+              <button type="button" onClick={() => { setF(original); setConfirmarDescarte(false); setErrorGuardar(null); }}
+                className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 active:scale-[0.98] max-sm:min-h-11">
+                Descartar
+              </button>
+            </div>
+          </div>
+        </CapaModal>
+      ) : null}
+    </div>
+  );
+}
+
+// ── Piezas ───────────────────────────────────────────────────────────────────
+
+function Tarjeta({ icono, titulo, detalle, children }: { icono: ReactNode; titulo: string; detalle?: string; children: ReactNode }) {
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-5">
+      <header className="mb-4 flex items-start gap-3">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--brand-50,#eef7f7)] text-[var(--brand)]">{icono}</span>
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-slate-900">{titulo}</h2>
+          {detalle ? <p className="mt-0.5 text-xs text-slate-500">{detalle}</p> : null}
+        </div>
+      </header>
+      {children}
+    </section>
+  );
+}
+
+function Campo({ etiqueta, requerido, opcional, ayuda, sinLabel = false, className = "", children }: {
+  etiqueta: string; requerido?: boolean; opcional?: boolean; ayuda?: ReactNode; className?: string; children: ReactNode;
+  /** el control no es un input (ej. Select: un botón con su lista en un portal) */
+  sinLabel?: boolean;
+}) {
+  const Raiz = sinLabel ? "div" : "label";
+  return (
+    <Raiz className={`block min-w-0 ${className}`}>
+      <span className={ET}>
+        {etiqueta}
+        {requerido ? <span className="text-rose-500"> *</span> : null}
+        {opcional ? <span className="font-normal text-slate-400"> (opcional)</span> : null}
+      </span>
+      {children}
+      {ayuda ? <span className="mt-1 block text-[11px] leading-snug text-slate-400">{ayuda}</span> : null}
+    </Raiz>
+  );
+}
+
+/** El logo de los documentos (public/brand/logo-doc.png); si no hay, un ícono. */
+function Logo({ className }: { className?: string }) {
+  const [falla, setFalla] = useState(false);
+  if (falla) return <Building2 className="h-8 w-8 text-slate-300" />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src="/brand/logo-doc.png" alt="Logo de los documentos" className={className} onError={() => setFalla(true)} />;
+}
+
+/** Encabezado del documento como sale en el PDF (escala reducida). */
+function VistaPrevia({ m, sinMarco = false }: { m: Membrete; sinMarco?: boolean }) {
+  const [tipo, setTipo] = useState<"presupuesto" | "general">("presupuesto");
+  const renglones = renglonesMembrete(m);
+  const contacto = [m.telefono ? `Tel. ${m.telefono}` : null, m.email].filter(Boolean).join("  ·  ");
+  return (
+    <div className={sinMarco ? "" : "rounded-2xl border border-slate-200 bg-slate-50/70 p-3 sm:p-4"}>
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500"><Eye className="h-3.5 w-3.5" /> Así sale</p>
+        <div role="tablist" className="inline-flex rounded-lg bg-slate-200/70 p-0.5 text-xs font-semibold">
+          {([["presupuesto", "Presupuesto", FileText], ["general", "Recibos y reportes", ReceiptText]] as const).map(([id, label, Icono]) => (
+            <button key={id} type="button" role="tab" aria-selected={tipo === id} onClick={() => setTipo(id)}
+              className={`inline-flex min-h-8 items-center gap-1 rounded-md px-2.5 transition max-sm:min-h-10 ${tipo === id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+              <Icono className="h-3.5 w-3.5" /> {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Hoja A4 (recorte superior) */}
+      <div className="overflow-hidden rounded-lg bg-white p-3 shadow-[0_1px_3px_rgba(15,23,42,0.12),0_8px_24px_-12px_rgba(15,23,42,0.18)] ring-1 ring-slate-200 sm:p-4">
+        {tipo === "presupuesto" ? (
+          <div className="flex gap-1.5">
+            <div className="flex min-w-0 flex-[1.65] items-center gap-2.5 border border-slate-300 p-2.5">
+              <div className="flex w-14 shrink-0 items-center justify-center sm:w-16"><Logo className="max-h-11 w-auto max-w-full object-contain" /></div>
+              <div className="min-w-0 text-[9px] leading-[1.35] text-slate-600">
+                <p className="text-[12px] font-bold leading-tight text-slate-800 [overflow-wrap:anywhere]">{m.nombre}</p>
+                {m.razonSocial ? <p className="mt-0.5 font-semibold text-slate-600 [overflow-wrap:anywhere]">{m.razonSocial}</p> : null}
+                {m.actividad ? <p className="text-slate-400 [overflow-wrap:anywhere]">{m.actividad}</p> : null}
+                {m.ruc ? <p className="font-bold text-slate-800">RUC {m.ruc}</p> : null}
+                {m.ubicacion ? <p className="[overflow-wrap:anywhere]">{m.ubicacion}</p> : null}
+                {contacto ? <p className="[overflow-wrap:anywhere]">{contacto}</p> : null}
+                {m.web ? <p className="[overflow-wrap:anywhere]">{m.web}</p> : null}
+              </div>
+            </div>
+            <div className="flex min-w-0 flex-1 flex-col border border-slate-300">
+              <div className="h-[3px]" style={{ backgroundColor: TEAL }} />
+              <div className="flex flex-1 flex-col items-center justify-center px-1.5 py-2 text-center">
+                <p className="text-[8.5px] font-bold tracking-[0.25em] text-slate-800">PRESUPUESTO</p>
+                <p className="mt-1 text-[11px] font-bold tabular-nums" style={{ color: TEAL }}>N° PRE-000123</p>
+                <div className="my-1.5 h-px w-4/5 bg-slate-200" />
+                <p className="text-[8px] text-slate-400">Fecha de emisión</p>
+                <p className="text-[8.5px] font-semibold text-slate-700">16/10/2026</p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex w-16 shrink-0 items-start pt-0.5 sm:w-20"><Logo className="max-h-9 w-auto max-w-full object-contain" /></div>
+              <div className="min-w-0 text-right text-[9px] leading-[1.4] text-slate-500">
+                <p className="text-[12px] font-bold leading-tight text-slate-800 [overflow-wrap:anywhere]">{m.nombre}</p>
+                {renglones.map((r) => <p key={r} className="[overflow-wrap:anywhere]">{r}</p>)}
+                {!m.ruc && !m.ubicacion && !m.razonSocial ? <p>Paraguay</p> : null}
+              </div>
+            </div>
+            <div className="mt-2 h-[2px]" style={{ backgroundColor: TEAL }} />
+            <div className="mt-2.5 border-[1.5px] border-slate-900 py-1 text-center text-[10px] font-bold tracking-[0.15em] text-slate-900">RECIBO R-000123</div>
+            <p className="mt-1.5 text-center text-[8.5px] text-slate-500">16/10/2026 10:30</p>
+          </div>
+        )}
+        {/* Insinúa el resto de la hoja */}
+        <div className="mt-3 space-y-1.5" aria-hidden>
+          <div className="h-2 w-full rounded-sm bg-slate-100" />
+          <div className="h-2 w-5/6 rounded-sm bg-slate-100" />
+          <div className="h-2 w-2/3 rounded-sm bg-slate-100" />
+        </div>
+      </div>
+      <p className="mt-2.5 text-[11px] leading-snug text-slate-400">
+        {tipo === "presupuesto"
+          ? "Recuadro del emisor del presupuesto (diseño de factura A4). Si atiende otra sucursal, sale su dirección y teléfono."
+          : "Encabezado de recibos, estados de cuenta, remisiones, órdenes de compra y de pago, cierres de caja y reportes. El pie lleva nombre y RUC."}
+      </p>
+    </div>
+  );
+}

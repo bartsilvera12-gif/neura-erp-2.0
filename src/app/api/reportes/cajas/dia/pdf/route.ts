@@ -2,6 +2,7 @@
  * Cierre de caja del día en PDF (todas las cajas abiertas ese día).
  *   GET /api/reportes/cajas/dia/pdf?fecha=YYYY-MM-DD&sucursal=<id> → descarga
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import { withTenant } from "@/lib/api/with-tenant";
 import { respuestaPdf } from "@/lib/pdf/documento";
 import { pdfCierreDia } from "@/lib/pdf/cierre-dia";
@@ -17,7 +18,7 @@ export const GET = withTenant(
     const sp = new URL(req.url).searchParams;
     const r = await leerReporte<CierreDiaDetalle>(ctx.db, "reporte_cierre_dia", { p_fecha: fechaONull(sp.get("fecha")), p_sucursal: uuidONull(sp.get("sucursal")) });
     if (!r.ok) return r.res;
-    return respuestaPdf(await pdfCierreDia(r.data), `cierre-caja-dia-${r.data.fecha}.pdf`);
+    return respuestaPdf(await pdfCierreDia(r.data, await datosEmpresa(ctx.db)), `cierre-caja-dia-${r.data.fecha}.pdf`);
   },
   { permiso: ["ver_cierres_caja", "exportar"] },
 );

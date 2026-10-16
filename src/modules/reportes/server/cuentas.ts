@@ -1,6 +1,7 @@
 /**
  * Cuentas por pagar / cobrar — Excel y PDF (mismos datos que la pantalla). Solo servidor.
  */
+import type { DatosEmpresa } from "@/modules/empresa/tipos";
 import { buildXlsx, hoja } from "@/lib/excel/xlsx";
 import { COLOR, encabezado, gs, nuevoDocumento, pieDePagina } from "@/lib/pdf/documento";
 import { kpisPdf, tablaPdf } from "@/lib/pdf/tabla";
@@ -46,8 +47,8 @@ export function xlsxCxp(d: CuentasPagar) {
   ]);
 }
 
-export async function pdfCxp(d: CuentasPagar) {
-  const doc = nuevoDocumento();
+export async function pdfCxp(d: CuentasPagar, empresa?: DatosEmpresa | null) {
+  const doc = nuevoDocumento(empresa);
   let y = await encabezado(doc, "CUENTAS POR PAGAR", filtro(d));
   const t = d.tramos_gs;
   const usd = d.por_moneda.USD;
@@ -111,8 +112,8 @@ export function xlsxCxc(d: CuentasCobrar) {
   ]);
 }
 
-export async function pdfCxc(d: CuentasCobrar) {
-  const doc = nuevoDocumento();
+export async function pdfCxc(d: CuentasCobrar, empresa?: DatosEmpresa | null) {
+  const doc = nuevoDocumento(empresa);
   let y = await encabezado(doc, "CUENTAS POR COBRAR", filtro(d));
   const t = d.tramos;
   y = kpisPdf(doc, y, [

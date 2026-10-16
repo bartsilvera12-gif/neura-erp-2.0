@@ -4,14 +4,15 @@
  * chofer y transportista) para pasarla a electrónica más adelante sin cambiar el modelo.
  * Por ahora es un comprobante interno numerado (establecimiento-punto-número). Solo servidor.
  */
+import type { DatosEmpresa } from "@/modules/empresa/tipos";
 import autoTable from "jspdf-autotable";
 import { COLOR, encabezado, fechaHoraPY, gs, M, nuevoDocumento, pdfTxt, pieDePagina, tituloSeccion, W } from "@/lib/pdf/documento";
 import { dia, motivoTraslado, type TrasladoDetalle } from "@/modules/inventario/documentos";
 
 const cant = (n: number | null | undefined) => Number(n ?? 0).toLocaleString("es-PY", { maximumFractionDigits: 3 });
 
-export async function pdfRemision(t: TrasladoDetalle) {
-  const doc = nuevoDocumento();
+export async function pdfRemision(t: TrasladoDetalle, empresa?: DatosEmpresa | null) {
+  const doc = nuevoDocumento(empresa);
   const estado =
     t.estado === "anulado" ? " · ANULADO"
     : t.estado === "en_transito" ? " · En tránsito"

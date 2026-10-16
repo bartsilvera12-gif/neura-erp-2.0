@@ -4,6 +4,7 @@
  * deuda que le queda con el proveedor y firmas (autorizado / recibí conforme).
  * Si está anulada, lo dice grande.
  */
+import { datosEmpresa } from "@/modules/empresa/server";
 import autoTable from "jspdf-autotable";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -55,7 +56,7 @@ export const GET = withTenant(
     const pv = (prov.data?.[0] ?? {}) as { nombre?: string; ruc?: string | null; telefono?: string | null };
     const din = (v: number) => dinero(v, k.moneda);
 
-    const doc = nuevoDocumento();
+    const doc = nuevoDocumento(await datosEmpresa(ctx.db));
     let y = await encabezado(doc, `ORDEN DE PAGO ${k.numero}`, fechaHoraPY(k.fecha));
 
     if (k.anulado_at) {
