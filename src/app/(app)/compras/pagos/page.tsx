@@ -13,13 +13,10 @@ import { Ban, Banknote, CalendarClock, Download, Eye, Loader2, Printer, Search, 
 import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
-import { Select } from "@/components/Select";
 import { BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
-import { cargarProveedores } from "@/modules/proveedores/cache";
-import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos";
 import {
   ESTADO_CXP, dinero, hrefOrigenCxp, nombreMetodoPago, textoVencimiento,
   type AntiguedadPagar, type CuentaPagar, type ListaCuentasPagar, type Moneda, type PagoProveedor,
@@ -40,18 +37,14 @@ export default function PagosProveedoresPage() {
   const esAdmin = useUsuario()?.rol === "ADMIN";
   const [tab, setTab] = useState<"cuentas" | "pagos">("cuentas");
   const [moneda, setMoneda] = useState<Moneda>("GS");
-  const [proveedor, setProveedor] = useState("");
-  const [proveedores, setProveedores] = useState<ProveedorMin[]>([]);
   const [ant, setAnt] = useState<AntiguedadPagar | null>(null);
   const [pagando, setPagando] = useState<Pagando | null>(null);
   const [filtro, setFiltro] = useState("");
   const [recarga, setRecarga] = useState(0);
   const { nodo: aviso, avisar } = useAvisoPago();
 
-  useEffect(() => { void cargarProveedores().then(setProveedores); }, []);
   const refrescar = useCallback(() => setRecarga((k) => k + 1), []);
   const din = (v: number) => dinero(v, moneda);
-  const provSel = proveedores.find((p) => p.id === proveedor);
 
   return (
     <div className="space-y-5 pb-10 sm:space-y-6">
@@ -67,12 +60,6 @@ export default function PagosProveedoresPage() {
                   style={moneda === m ? { color: TEAL } : undefined}>{m === "GS" ? "Guaraníes" : "Dólares"}</button>
               ))}
             </div>
-            {provSel && esAdmin ? (
-              <button onClick={() => setPagando({ id: provSel.id, nombre: nombreProveedor(provSel) })}
-                className="inline-flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 max-sm:min-h-11" style={{ backgroundColor: TEAL }}>
-                <Banknote className="h-4 w-4 shrink-0" /> <span className="truncate">Registrar pago a {nombreProveedor(provSel)}</span>
-              </button>
-            ) : null}
           </div>
         }
       />
@@ -89,12 +76,12 @@ export default function PagosProveedoresPage() {
       </div>
 
       {tab === "cuentas" ? (
-        <TablaCuentas moneda={moneda} filtro={filtro} setFiltro={setFiltro} proveedor={proveedor} setProveedor={setProveedor} proveedores={proveedores} recarga={recarga}
+        <TablaCuentas moneda={moneda} filtro={filtro} setFiltro={setFiltro} recarga={recarga}
           onAntiguedad={setAnt} esAdmin={esAdmin} onPagar={setPagando} />
       ) : (
         <>
           <AntiguedadSilenciosa moneda={moneda} recarga={recarga} onAntiguedad={setAnt} />
-          <TablaPagos moneda={moneda} proveedor={proveedor} setProveedor={setProveedor} proveedores={proveedores} recarga={recarga} esAdmin={esAdmin} onCambio={refrescar} />
+          <TablaPagos moneda={moneda} recarga={recarga} esAdmin={esAdmin} onCambio={refrescar} />
         </>
       )}
 
@@ -159,12 +146,8 @@ function AntiguedadSilenciosa({ moneda, recarga, onAntiguedad }: { moneda: Moned
   return null;
 }
 
-function FiltroProveedor({ proveedor, setProveedor, proveedores }: { proveedor: string; setProveedor: (v: string) => void; proveedores: ProveedorMin[] }) {
-  return <Select value={proveedor} onChange={setProveedor} minWidth={200} etiqueta="Proveedor" className="max-md:!min-w-0" options={[["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])]} />;
-}
-
-function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, proveedores, recarga, onAntiguedad, esAdmin, onPagar }: {
-  moneda: Moneda; filtro: string; setFiltro: (f: string) => void; proveedor: string; setProveedor: (v: string) => void; proveedores: ProveedorMin[]; recarga: number;
+function TablaCuentas({ moneda, filtro, setFiltro, recarga, onAntiguedad, esAdmin, onPagar }: {
+  moneda: Moneda; filtro: string; setFiltro: (f: string) => void; recarga: number;
   onAntiguedad: (a: AntiguedadPagar) => void; esAdmin: boolean; onPagar: (p: Pagando) => void;
 }) {
   const [rows, setRows] = useState<CuentaPagar[]>([]);
@@ -181,15 +164,14 @@ function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, prov
     const t = setTimeout(() => { setQ(borrador.trim()); setPagina(1); }, 300);
     return () => clearTimeout(t);
   }, [borrador]);
-  useEffect(() => { setPagina(1); }, [moneda, proveedor, filtro]);
+  useEffect(() => { setPagina(1); }, [moneda, filtro]);
 
   const params = useCallback(() => {
     const sp = new URLSearchParams({ moneda });
     if (q) sp.set("q", q);
     if (filtro) sp.set("filtro", filtro);
-    if (proveedor) sp.set("proveedor", proveedor);
     return sp;
-  }, [moneda, q, filtro, proveedor]);
+  }, [moneda, q, filtro]);
 
   useEffect(() => {
     let cancel = false;
@@ -210,7 +192,7 @@ function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, prov
   }
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
-  const filtrosActivos = (proveedor ? 1 : 0) + (filtro ? 1 : 0);
+  const filtrosActivos = filtro ? 1 : 0;
 
   // Tabla en ≥ 768 px; en celular cada factura es una tarjeta (proveedor, factura, saldo, estado y "Pagar").
   const columnas: ColumnaTabla<CuentaPagar>[] = [
@@ -291,7 +273,7 @@ function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, prov
         <BarraFiltros
           plano
           activos={filtrosActivos}
-          onLimpiar={() => { setProveedor(""); setFiltro(""); setPagina(1); }}
+          onLimpiar={() => { setFiltro(""); setPagina(1); }}
           busqueda={
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -301,7 +283,6 @@ function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, prov
           }
           extra={<div className="flex items-center gap-2 max-md:hidden">{botonExcel}{contador}</div>}
         >
-          <FiltroProveedor proveedor={proveedor} setProveedor={setProveedor} proveedores={proveedores} />
           <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 md:flex" role="group" aria-label="Vencimiento">
             {([["", "Todas"], ["vencidas", "Vencidas"], ["semana", "Vencen esta semana"], ["por_vencer", "Por vencer"]] as const).map(([v, l]) => (
               <button key={v} onClick={() => { setFiltro(v); setPagina(1); }} aria-pressed={filtro === v}
@@ -318,7 +299,7 @@ function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, prov
       ) : rows.length === 0 ? (
         <div className="px-5 py-16 text-center">
           <Banknote className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-3 text-sm font-medium text-slate-700">{q || filtro || proveedor ? "Ninguna factura coincide" : `No le debés nada a ningún proveedor${moneda === "USD" ? " en dólares" : ""}`}</p>
+          <p className="mt-3 text-sm font-medium text-slate-700">{q || filtro ? "Ninguna factura coincide" : `No le debés nada a ningún proveedor${moneda === "USD" ? " en dólares" : ""}`}</p>
           <p className="mt-1 text-xs text-slate-500">Las compras y los gastos a crédito aparecen acá hasta que los pagues.</p>
         </div>
       ) : (
@@ -339,8 +320,8 @@ function TablaCuentas({ moneda, filtro, setFiltro, proveedor, setProveedor, prov
   );
 }
 
-function TablaPagos({ moneda, proveedor, setProveedor, proveedores, recarga, esAdmin, onCambio }: {
-  moneda: Moneda; proveedor: string; setProveedor: (v: string) => void; proveedores: ProveedorMin[]; recarga: number; esAdmin: boolean; onCambio: () => void;
+function TablaPagos({ moneda, recarga, esAdmin, onCambio }: {
+  moneda: Moneda; recarga: number; esAdmin: boolean; onCambio: () => void;
 }) {
   const POR = 25;
   const [rows, setRows] = useState<PagoProveedor[]>([]);
@@ -359,21 +340,20 @@ function TablaPagos({ moneda, proveedor, setProveedor, proveedores, recarga, esA
     const t = setTimeout(() => { setQ(borrador.trim()); setPagina(1); }, 300);
     return () => clearTimeout(t);
   }, [borrador]);
-  useEffect(() => { setPagina(1); }, [moneda, proveedor, anulados]);
+  useEffect(() => { setPagina(1); }, [moneda, anulados]);
 
   useEffect(() => {
     let cancel = false;
     setCargando(true);
     const sp = new URLSearchParams({ moneda, pagina: String(pagina), por_pagina: String(POR) });
     if (q) sp.set("q", q);
-    if (proveedor) sp.set("proveedor", proveedor);
     if (anulados) sp.set("anulados", "1");
     apiFetch<{ rows: PagoProveedor[]; total: number }>(`/api/pagos-proveedores?${sp}`)
       .then((r) => { if (!cancel) { setRows(r.rows); setTotal(r.total); } })
       .catch(() => { if (!cancel) { setRows([]); setTotal(0); } })
       .finally(() => { if (!cancel) setCargando(false); });
     return () => { cancel = true; };
-  }, [moneda, q, proveedor, anulados, pagina, recarga, recargaLocal]);
+  }, [moneda, q, anulados, pagina, recarga, recargaLocal]);
 
   const totalPaginas = Math.max(1, Math.ceil(total / POR));
   const contador = <p className="text-xs text-slate-500">{total} {total === 1 ? "orden de pago" : "órdenes de pago"}</p>;
@@ -438,8 +418,8 @@ function TablaPagos({ moneda, proveedor, setProveedor, proveedores, recarga, esA
       <div className="border-b border-slate-100 px-3 py-3 sm:px-5">
         <BarraFiltros
           plano
-          activos={(proveedor ? 1 : 0) + (anulados ? 1 : 0)}
-          onLimpiar={() => { setProveedor(""); setAnulados(false); }}
+          activos={anulados ? 1 : 0}
+          onLimpiar={() => setAnulados(false)}
           busqueda={
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -449,7 +429,6 @@ function TablaPagos({ moneda, proveedor, setProveedor, proveedores, recarga, esA
           }
           extra={<div className="max-md:hidden">{contador}</div>}
         >
-          <FiltroProveedor proveedor={proveedor} setProveedor={setProveedor} proveedores={proveedores} />
           <label className="flex cursor-pointer items-center gap-2 text-xs text-slate-600 max-md:min-h-11 max-md:text-sm">
             <input type="checkbox" checked={anulados} onChange={(e) => setAnulados(e.target.checked)} className="h-4 w-4 accent-[var(--brand)] max-md:h-5 max-md:w-5" />
             Ver también las anuladas
@@ -461,7 +440,7 @@ function TablaPagos({ moneda, proveedor, setProveedor, proveedores, recarga, esA
       {cargando && rows.length === 0 ? (
         <p className="px-5 py-12 text-center text-sm text-slate-400">Cargando…</p>
       ) : rows.length === 0 ? (
-        <p className="px-5 py-16 text-center text-sm text-slate-400">{q || proveedor ? "Ninguna orden de pago coincide." : "Todavía no registraste pagos a proveedores."}</p>
+        <p className="px-5 py-16 text-center text-sm text-slate-400">{q ? "Ninguna orden de pago coincide." : "Todavía no registraste pagos a proveedores."}</p>
       ) : (
         <TablaTarjetas
           filas={rows}

@@ -4,22 +4,22 @@
  * /gastos-empresariales/operativos — Gastos operativos (antes /gastos, "Gastos y Servicios"):
  * alquiler, servicios, sueldos, impuestos… con o sin comprobante fiscal.
  * Filtros en una fila (período —mes actual por defecto—, sucursal, categoría (rubro o
- * subcategoría), proveedor, tipo fijo/variable, IVA deducible, origen) + búsqueda; contadores por
+ * subcategoría), tipo fijo/variable, IVA deducible, origen) + búsqueda; contadores por
  * estado; lista paginada por SQL con el total confirmado (Gs.) y el IVA crédito fiscal de la vista.
- * Los filtros iniciales se pueden pasar por URL (los usan los gráficos del Resumen) y
- * ?ver=<id> abre el detalle; ?nuevo=1 abre el alta.
+ * Los filtros iniciales se pueden pasar por URL (los usan los gráficos del Resumen); el
+ * proveedor solo llega así (?proveedor=<id>&nombre=…) y se muestra como un chip que se
+ * quita (el buscador ya encuentra por proveedor). ?ver=<id> abre el detalle y
+ * ?nuevo=1 abre el alta.
  */
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Ban, CalendarClock, Eye, FolderCog, Paperclip, Pencil, Plus, Search, Trash2 } from "lucide-react";
+import { Ban, CalendarClock, Eye, FolderCog, Paperclip, Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { Select } from "@/components/Select";
 import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
-import { cargarProveedores } from "@/modules/proveedores/cache";
-import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos";
 import { FormGasto } from "@/modules/gastos/FormGasto";
 import { ConfirmarAccionGasto, DetalleGasto } from "@/modules/gastos/DetalleGasto";
 import { CatalogosGastos } from "@/modules/gastos/Catalogos";
@@ -79,11 +79,9 @@ function GastosOperativos() {
   const [accion, setAccion] = useState<{ modo: "anular" | "eliminar"; gasto: { id: string; numero: string | null } } | null>(null);
   const [catalogos, setCatalogos] = useState(false);
   const [cat, setCat] = useState<Catalogos | null>(null);
-  const [proveedores, setProveedores] = useState<ProveedorMin[]>([]);
 
   useEffect(() => {
     apiFetchCache<Catalogos>(URL_CATALOGOS).then(setCat).catch(() => setCat(null));
-    void cargarProveedores().then(setProveedores);
   }, [recarga]);
   useEffect(() => { if (ver && UUID.test(ver)) setDetalle(ver); }, [ver]);
   useEffect(() => {
@@ -116,7 +114,6 @@ function GastosOperativos() {
     ["", "Todas las categorías"],
     ...(cat?.rubros ?? []).flatMap((r): [string, string][] => [[r.id, `${r.nombre} (todo el rubro)`], ...r.subcategorias.map((s): [string, string] => [s.id, `   ${r.nombre} › ${s.nombre}`])]),
   ], [cat]);
-  const opcionesProveedor = useMemo<[string, string][]>(() => [["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])], [proveedores]);
   // Los handlers sólo usan setters de estado (estables): columnas memorizadas = filas memorizadas.
   const columnas = useMemo(() => columnasGastos({
     onVer: (g) => setDetalle(g.id),
@@ -124,13 +121,20 @@ function GastosOperativos() {
     onEliminar: (g) => setAccion({ modo: "eliminar", gasto: { id: g.id, numero: g.numero } }),
     onAnular: (g) => setAccion({ modo: "anular", gasto: { id: g.id, numero: g.numero } }),
   }), []);
-  const filtrosActivos =[f.sucursal, f.categoria, f.proveedor, f.tipo_costo, f.deducible, f.origen].filter(Boolean).length;
-  const limpiarFiltros = () => setF((x) => ({ ...x, sucursal: "", categoria: "", proveedor: "", tipo_costo: "", deducible: "", origen: "" }));
+  const filtrosActivos = [f.sucursal, f.categoria, f.proveedor, f.tipo_costo, f.deducible, f.origen].filter(Boolean).length;
+  // El filtro fijo por proveedor solo llega por URL (desde el Resumen): al quitarlo se limpia la URL.
+  const proveedorUrl = sp.get("proveedor");
+  const quitarProveedorDeUrl = () => { if (proveedorUrl) router.replace("/gastos-empresariales/operativos", { scroll: false }); };
+  const limpiarFiltros = () => {
+    setF((x) => ({ ...x, sucursal: "", categoria: "", proveedor: "", tipo_costo: "", deducible: "", origen: "" }));
+    quitarProveedorDeUrl();
+  };
 
   const r = datos?.resumen;
   const filas = datos?.rows ?? [];
   const total = datos?.total ?? 0;
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
+  const nombreProveedorFiltro = sp.get("nombre") || (f.proveedor ? filas.find((g) => g.proveedor_nombre)?.proveedor_nombre : null) || "Proveedor";
 
   return (
     <div className="space-y-5 pb-10">
@@ -185,7 +189,18 @@ function GastosOperativos() {
         <Select value={f.sucursal} onChange={(v) => setFiltro("sucursal", v)} minWidth={170} etiqueta="Sucursal"
           options={[["", "Todas las sucursales"], ...(cat?.sucursales ?? []).map((s): [string, string] => [s.id, s.nombre])]} />
         <Select value={f.categoria} onChange={(v) => setFiltro("categoria", v)} minWidth={220} etiqueta="Categoría" options={opcionesCategoria} />
-        <Select value={f.proveedor} onChange={(v) => setFiltro("proveedor", v)} minWidth={190} etiqueta="Proveedor" options={opcionesProveedor} />
+        {/* El buscador ya encuentra por proveedor; el filtro fijo solo aparece al venir del
+            Resumen (?proveedor=), como un chip que se puede quitar. */}
+        {f.proveedor ? (
+          <span className="inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 pl-3 pr-1 text-sm text-slate-700 sm:min-h-10">
+            <span className="truncate">Proveedor: <b className="font-semibold">{nombreProveedorFiltro}</b></span>
+            <button type="button" aria-label="Quitar filtro de proveedor"
+              onClick={() => { setFiltro("proveedor", ""); quitarProveedorDeUrl(); }}
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-white hover:text-slate-800">
+              <X className="h-4 w-4" />
+            </button>
+          </span>
+        ) : null}
         <Select value={f.tipo_costo} onChange={(v) => setFiltro("tipo_costo", v)} minWidth={140} etiqueta="Fijo o variable" options={[["", "Fijo y variable"], ["fijo", "Solo fijos"], ["variable", "Solo variables"]]} />
         <Select value={f.deducible} onChange={(v) => setFiltro("deducible", v)} minWidth={160} etiqueta="IVA" options={[["", "Deducible o no"], ["1", "IVA deducible"], ["0", "No deducible"]]} />
         <Select value={f.origen} onChange={(v) => setFiltro("origen", v)} minWidth={170} etiqueta="Origen"

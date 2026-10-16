@@ -2,7 +2,8 @@
 
 /**
  * Caja › Órdenes de venta: las ventas (contado y crédito) con filtros por sucursal, caja,
- * forma de pago, condición, IVA, estado, producto y fechas. Arriba, las cajas abiertas
+ * forma de pago, condición, IVA, estado y fechas (el producto se busca con el buscador).
+ * Arriba, las cajas abiertas
  * (cada una lleva a Apertura y cierre).
  */
 import Link from "next/link";
@@ -97,7 +98,6 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
   const [tipo, setTipo] = useState("");
   const [iva, setIva] = useState("");
   const [estado, setEstado] = useState("");
-  const [producto, setProducto] = useState("");
   const [sucursal, setSucursal] = useState("");
   const [punto, setPunto] = useState("");
   const [metodo, setMetodo] = useState("");
@@ -106,7 +106,6 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
   const [filtrosAbiertos, setFiltrosAbiertos] = useState(false);
   const angosta = useMediaQuery("(max-width: 767.98px)");
   const [viendo, setViendo] = useState<string | null>(null);
-  const [productosOpts, setProductosOpts] = useState<[string, string][]>([["", "Todos los productos"]]);
   // Paginado EN EL SERVIDOR: solo viaja la página visible (antes se bajaba todo el historial).
   const [porPagina, setPorPagina] = useState(25);
   const [pagina, setPagina] = useState(1);
@@ -133,13 +132,12 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
     if (tipo) sp.set("tipo", tipo);
     if (iva) sp.set("iva", iva);
     if (estado) sp.set("estado", estado);
-    if (producto) sp.set("producto", producto);
     if (sucursal) sp.set("sucursal", sucursal);
     if (punto) sp.set("punto", punto);
     if (metodo) sp.set("metodo", metodo);
     if (desde) sp.set("desde", desde);
     if (hasta) sp.set("hasta", hasta);
-    const firma = JSON.stringify([porPagina, q, tipo, iva, estado, producto, desde, hasta, sucursal, punto, metodo]);
+    const firma = JSON.stringify([porPagina, q, tipo, iva, estado, desde, hasta, sucursal, punto, metodo]);
     if (!recontar && contados.current === firma) sp.set("contar", "0");
     const n = ++pedido.current;
     setBuscando(true);
@@ -155,21 +153,13 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
       })
       .catch(() => { if (n === pedido.current) { setVentas([]); setTotal(0); contados.current = null; } })
       .finally(() => { if (n === pedido.current) setBuscando(false); });
-  }, [pagina, porPagina, q, tipo, iva, estado, producto, desde, hasta, sucursal, punto, metodo]);
+  }, [pagina, porPagina, q, tipo, iva, estado, desde, hasta, sucursal, punto, metodo]);
 
   useEffect(() => {
     cargar();
   }, [cargar]);
 
-  // Opciones del filtro por producto: el catálogo (ya no se deducen de lo cargado). Solo
-  // los nombres (antes se bajaba el catálogo entero con costos y stock para esto).
-  useEffect(() => {
-    apiFetch<{ nombre: string }[]>("/api/productos?pos=1&campos=nombre")
-      .then((ps) => setProductosOpts([["", "Todos los productos"], ...[...new Set(ps.map((p) => p.nombre))].sort().map((n): [string, string] => [n, n])]))
-      .catch(() => {});
-  }, []);
-
-  const filtrosActivos = (tipo ? 1 : 0) + (iva ? 1 : 0) + (estado ? 1 : 0) + (producto ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0) +
+  const filtrosActivos = (tipo ? 1 : 0) + (iva ? 1 : 0) + (estado ? 1 : 0) + (desde ? 1 : 0) + (hasta ? 1 : 0) +
     (sucursal ? 1 : 0) + (punto ? 1 : 0) + (metodo ? 1 : 0);
   // Opciones de sucursal y caja (las que ve el usuario).
   const sucursalesOpts = useMemo<[string, string][]>(
@@ -200,7 +190,6 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
               options={[["", "Todas las formas de pago"], ...METODOS_VENTA.map((m): [string, string] => [m.value, m.label]), ["mixto", "Pago mixto"]]} />
             <Select value={iva} onChange={conPagina1(setIva)} options={[["", "Todos los IVA"], ["10%", "IVA 10%"], ["5%", "IVA 5%"], ["EXENTA", "Exenta"]]} minWidth={140} etiqueta="IVA" />
             <Select value={estado} onChange={conPagina1(setEstado)} options={[["", "Todos los estados"], ["completada", "Completada"], ["anulada", "Anulada"]]} minWidth={160} etiqueta="Estado" />
-            <Select value={producto} onChange={conPagina1(setProducto)} options={productosOpts} minWidth={190} etiqueta="Producto" />
             <div className="flex flex-col gap-1">
               <span className="px-0.5 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Desde</span>
               <SelectorFecha compacto etiqueta="Desde" value={desde} onChange={(v) => { setDesde(v); setPagina(1); }} className="w-[150px] max-sm:w-full" />
@@ -212,7 +201,7 @@ function Ordenes({ cajas }: { cajas: EstadoCajas | null }) {
             {filtrosActivos ? (
               <button
                 type="button"
-                onClick={() => { setTipo(""); setIva(""); setEstado(""); setProducto(""); setDesde(""); setHasta(""); setSucursal(""); setPunto(""); setMetodo(""); setPagina(1); }}
+                onClick={() => { setTipo(""); setIva(""); setEstado(""); setDesde(""); setHasta(""); setSucursal(""); setPunto(""); setMetodo(""); setPagina(1); }}
                 className="inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-slate-500 transition-colors hover:text-rose-600"
               >
                 <X className="h-3.5 w-3.5" /> Limpiar

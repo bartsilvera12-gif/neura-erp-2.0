@@ -2,7 +2,7 @@
 
 /**
  * /compras/ordenes — órdenes de compra (Fase 3). Lista con búsqueda inteligente y filtro
- * por estado (por defecto las abiertas: pendientes y recibidas en parte) y proveedor, con
+ * por estado (por defecto las abiertas: pendientes y recibidas en parte), con
  * barra de cuánto llegó. El detalle muestra pedido / recibido / falta por producto y las
  * compras con que se recibió, y permite Recibir mercadería, PDF, Editar y Cancelar.
  */
@@ -18,8 +18,6 @@ import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/Enc
 import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 import { ESTADO_OC, type OrdenCompra } from "@/modules/compras/ordenes";
-import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos";
-import { cargarProveedores } from "@/modules/proveedores/cache";
 
 const TEAL = clienteConfig.color;
 const POR_PAGINA = 25;
@@ -38,14 +36,10 @@ export default function OrdenesPage() {
   const [borrador, setBorrador] = useState("");
   const [q, setQ] = useState("");
   const [estado, setEstado] = useState("abiertas");
-  const [proveedor, setProveedor] = useState("");
-  const [proveedores, setProveedores] = useState<ProveedorMin[]>([]);
   const [viendo, setViendo] = useState<string | null>(null);
   const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
-    // Solo para el filtro: la lista liviana compartida (sin rubros ni compras).
-    void cargarProveedores().then(setProveedores);
     // /compras/ordenes?ver=<id> (desde una compra o desde "Recibir"): abre esa orden.
     const ver = new URLSearchParams(window.location.search).get("ver");
     if (ver && /^[0-9a-f-]{36}$/i.test(ver)) { setViendo(ver); window.history.replaceState(null, "", "/compras/ordenes"); }
@@ -60,19 +54,18 @@ export default function OrdenesPage() {
     const sp = new URLSearchParams({ pagina: String(pagina), por_pagina: String(POR_PAGINA) });
     if (q) sp.set("q", q);
     if (estado) sp.set("estado", estado);
-    if (proveedor) sp.set("proveedor", proveedor);
     apiFetch<{ rows: OrdenCompra[]; total: number }>(`/api/ordenes-compra?${sp}`)
       .then((r) => { if (!cancel) { setRows(r.rows); setTotal(r.total); } })
       .catch(() => { if (!cancel) { setRows([]); setTotal(0); } })
       .finally(() => { if (!cancel) setCargando(false); });
     return () => { cancel = true; };
-  }, [pagina, q, estado, proveedor, recarga]);
+  }, [pagina, q, estado, recarga]);
 
   const refrescar = useCallback(() => setRecarga((k) => k + 1), []);
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
-  const filtrosActivos = (estado !== "abiertas" ? 1 : 0) + (proveedor ? 1 : 0);
-  const limpiar = () => { setBorrador(""); setQ(""); setEstado("abiertas"); setProveedor(""); setPagina(1); };
+  const filtrosActivos = estado !== "abiertas" ? 1 : 0;
+  const limpiar = () => { setBorrador(""); setQ(""); setEstado("abiertas"); setPagina(1); };
 
   // Tabla en ≥ 768 px; en celular cada orden es una tarjeta (proveedor, número · fecha, total, estado y cuánto llegó).
   const columnas: ColumnaTabla<OrdenCompra>[] = [
@@ -139,8 +132,6 @@ export default function OrdenesPage() {
             <Select value={estado} onChange={(v) => { setEstado(v); setPagina(1); }} minWidth={190} etiqueta="Estado" options={[
               ["abiertas", "Abiertas (por recibir)"], ["", "Todas"], ["pendiente", "Pendientes"], ["recibida_parcial", "Recibidas en parte"], ["recibida_total", "Recibidas"], ["cancelada", "Canceladas"],
             ]} />
-            <Select value={proveedor} onChange={(v) => { setProveedor(v); setPagina(1); }} minWidth={180} etiqueta="Proveedor"
-              options={[["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])]} />
           </BarraFiltros>
         </div>
 
@@ -149,7 +140,7 @@ export default function OrdenesPage() {
         ) : rows.length === 0 ? (
           <div className="px-5 py-16 text-center">
             <ClipboardList className="mx-auto h-8 w-8 text-slate-300" />
-            <p className="mt-3 text-sm font-medium text-slate-700">{estado === "abiertas" && !q && !proveedor ? "No hay órdenes esperando mercadería" : "Ninguna orden coincide"}</p>
+            <p className="mt-3 text-sm font-medium text-slate-700">{estado === "abiertas" && !q ? "No hay órdenes esperando mercadería" : "Ninguna orden coincide"}</p>
             <Link href="/compras/ordenes/nueva" className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white sm:min-h-0" style={{ backgroundColor: TEAL }}>
               <Plus className="h-4 w-4" /> Nueva orden
             </Link>

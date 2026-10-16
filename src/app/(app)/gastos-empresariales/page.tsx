@@ -231,7 +231,7 @@ function ResumenGastos() {
           {datos ? <BarrasH filas={datos.top_proveedores.map((p) => ({
             key: p.id ?? "sin", label: p.nombre,
             partes: [{ valor: Number(p.compras), color: C_MERCADERIA, label: "Mercadería" }, { valor: Number(p.operativos), color: C_OPERATIVOS, label: "Operativos" }],
-            onClick: p.id && Number(p.operativos) > 0 ? () => irAGastos({ proveedor: p.id!, estado: "confirmado" }) : undefined,
+            onClick: p.id && Number(p.operativos) > 0 ? () => irAGastos({ proveedor: p.id!, nombre: p.nombre, estado: "confirmado" }) : undefined,
           }))} vacio="Sin proveedores en el período" /> : <Esqueleto alto="h-48" />}
         </Tarjeta>
       </div>

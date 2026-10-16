@@ -3,8 +3,8 @@
 /**
  * /compras — facturas de compra (Fase 2). Lista paginada en el servidor con búsqueda
  * inteligente (número, proveedor, factura, timbrado, productos), filtros por fecha,
- * proveedor, condición y estado. Al tocar una compra se abre el detalle, desde donde se
- * puede anular (revierte stock y costos).
+ * condición y estado (el proveedor se busca con el buscador). Al tocar una compra se
+ * abre el detalle, desde donde se puede anular (revierte stock y costos).
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
@@ -17,8 +17,6 @@ import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/Enc
 import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { TZ_PY } from "@/lib/fecha/paraguay";
 import type { Compra } from "@/modules/compras/tipos";
-import { nombreProveedor, type ProveedorMin } from "@/modules/proveedores/tipos";
-import { cargarProveedores } from "@/modules/proveedores/cache";
 import { ComprobantesCompra } from "@/modules/compras/Comprobantes";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { ESTADO_CXP, dinero, nombreMetodoPago } from "@/modules/compras/pagos";
@@ -41,16 +39,12 @@ export default function ComprasPage() {
   const [q, setQ] = useState("");
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
-  const [proveedor, setProveedor] = useState("");
   const [tipoPago, setTipoPago] = useState("");
   const [estado, setEstado] = useState("");
-  const [proveedores, setProveedores] = useState<ProveedorMin[]>([]);
   const [viendo, setViendo] = useState<string | null>(null);
   const [recarga, setRecarga] = useState(0);
 
   useEffect(() => {
-    // Solo para el filtro: la lista liviana compartida (sin rubros ni compras).
-    void cargarProveedores().then(setProveedores);
     // /compras?ver=<id> (desde Pagos a proveedores): abre el detalle de esa compra.
     const ver = new URLSearchParams(window.location.search).get("ver");
     if (ver && /^[0-9a-f-]{36}$/i.test(ver)) { setViendo(ver); window.history.replaceState(null, "", "/compras"); }
@@ -67,7 +61,6 @@ export default function ComprasPage() {
     if (q) sp.set("q", q);
     if (desde) sp.set("desde", desde);
     if (hasta) sp.set("hasta", hasta);
-    if (proveedor) sp.set("proveedor", proveedor);
     if (tipoPago) sp.set("tipo_pago", tipoPago);
     if (estado) sp.set("estado", estado);
     apiFetch<{ rows: Compra[]; total: number }>(`/api/compras?${sp}`)
@@ -75,14 +68,14 @@ export default function ComprasPage() {
       .catch(() => { if (!cancel) { setRows([]); setTotal(0); } })
       .finally(() => { if (!cancel) setCargando(false); });
     return () => { cancel = true; };
-  }, [pagina, q, desde, hasta, proveedor, tipoPago, estado, recarga]);
+  }, [pagina, q, desde, hasta, tipoPago, estado, recarga]);
 
   const refrescar = useCallback(() => setRecarga((k) => k + 1), []);
-  const hayFiltros = !!(q || desde || hasta || proveedor || tipoPago || estado);
+  const hayFiltros = !!(q || desde || hasta || tipoPago || estado);
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
 
-  const filtrosActivos = [desde, hasta, proveedor, tipoPago, estado].filter(Boolean).length;
-  const limpiar = () => { setBorrador(""); setQ(""); setDesde(""); setHasta(""); setProveedor(""); setTipoPago(""); setEstado(""); setPagina(1); };
+  const filtrosActivos = [desde, hasta, tipoPago, estado].filter(Boolean).length;
+  const limpiar = () => { setBorrador(""); setQ(""); setDesde(""); setHasta(""); setTipoPago(""); setEstado(""); setPagina(1); };
 
   // Tabla en ≥ 768 px; en celular cada compra es una tarjeta (proveedor, número · fecha, total y condición).
   const columnas: ColumnaTabla<Compra>[] = [
@@ -184,8 +177,6 @@ export default function ComprasPage() {
               <span className="text-xs font-medium text-slate-600 md:hidden">Hasta</span>
               <SelectorFecha compacto etiqueta="Hasta" value={hasta} onChange={(v) => { setHasta(v); setPagina(1); }} claseBoton="h-11 rounded-xl px-3 text-slate-600 md:h-[38px]" className="w-full md:w-[150px]" />
             </div>
-            <Select value={proveedor} onChange={(v) => { setProveedor(v); setPagina(1); }} minWidth={180} etiqueta="Proveedor"
-              options={[["", "Todos los proveedores"], ...proveedores.map((p): [string, string] => [p.id, nombreProveedor(p)])]} />
             <Select value={tipoPago} onChange={(v) => { setTipoPago(v); setPagina(1); }} minWidth={140} etiqueta="Condición" options={[["", "Contado y crédito"], ["contado", "Contado"], ["credito", "Crédito"]]} />
             <Select value={estado} onChange={(v) => { setEstado(v); setPagina(1); }} minWidth={140} etiqueta="Estado" options={[["", "Todas"], ["registrada", "Registradas"], ["anulada", "Anuladas"]]} />
             {hayFiltros && !filtrosActivos ? (
