@@ -33,7 +33,7 @@ import { fechaDia, monto } from "@/modules/clientes/suscripciones/ui";
 import { BadgeEstado, TEAL, codigoCliente, estadoDe, fechaCorta, gs } from "@/modules/clientes/ui";
 import { BuscadorCliente, IconoLupa } from "@/modules/clientes/gestion/BuscadorCliente";
 import { ModalContactos } from "@/modules/clientes/gestion/ModalContactos";
-import { ModalCambioVencimiento, ModalElegirSuscripcion, ModalHistorial } from "@/modules/clientes/gestion/Modales";
+import { ModalCambioVencimiento, ModalElegirSuscripcion, ModalHistorial, ModalServicios } from "@/modules/clientes/gestion/Modales";
 import {
   FILTROS_VACIOS, type ClienteBuscado, type DocumentoCliente, type Documentos, type EstadoDocumento, type FiltrosDocumentos,
 } from "@/modules/clientes/gestion/tipos";
@@ -83,6 +83,7 @@ function GestionClientes() {
 
   const [modalContactos, setModalContactos] = useState(false);
   const [modalHistorial, setModalHistorial] = useState(false);
+  const [modalServicios, setModalServicios] = useState(false);
   const [accionSusc, setAccionSusc] = useState<AccionSusc | null>(null);
   const [cobrando, setCobrando] = useState<{ cxc: string | null } | null>(null);
   const [viendoVenta, setViendoVenta] = useState<string | null>(null);
@@ -381,7 +382,7 @@ function GestionClientes() {
                       <BotonOperativo label="Contactos" icon={<Users className="h-3.5 w-3.5" />} onClick={() => setModalContactos(true)} />
                       <BotonOperativo label="Facturación" icon={<Calendar className="h-3.5 w-3.5" />} onClick={() => sobreSuscripcion("facturacion")} />
                       <BotonOperativo label="Facturar venta" icon={<Receipt className="h-3.5 w-3.5" />} href={`/caja/nueva?cliente=${encodeURIComponent(c.id)}`} />
-                      <BotonOperativo label="Servicios asociados" icon={<Link2 className="h-3.5 w-3.5" />} title="No disponible" />
+                      <BotonOperativo label="Servicios asociados" icon={<Link2 className="h-3.5 w-3.5" />} onClick={() => setModalServicios(true)} />
                       <BotonOperativo label="Cambio de plan" icon={<RefreshCw className="h-3.5 w-3.5" />}
                         onClick={puedeOperar ? () => sobreSuscripcion("plan") : undefined}
                         title={puedeOperar ? undefined : "Solo un administrador o vendedor"} />
@@ -478,6 +479,11 @@ function GestionClientes() {
       {/* Modales */}
       {c && modalContactos ? (
         <ModalContactos clienteId={c.id} clienteNombre={nombre} puedeEditar={puedeOperar} onClose={() => setModalContactos(false)} />
+      ) : null}
+      {c && modalServicios ? (
+        <ModalServicios clienteId={c.id} clienteNombre={c.razon_social || c.nombre} suscripciones={subs}
+          onClose={() => setModalServicios(false)}
+          onVerFacturacion={(id) => { setModalServicios(false); setAccionSusc({ tipo: "facturacion", id }); }} />
       ) : null}
       {c && modalHistorial ? <ModalHistorial clienteId={c.id} clienteNombre={nombre} onClose={() => setModalHistorial(false)} /> : null}
       {c && accionSusc ? (

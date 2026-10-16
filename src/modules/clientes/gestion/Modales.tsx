@@ -9,7 +9,7 @@
  *  - ModalHistorial: la misma línea de tiempo que la pestaña Historial de la ficha.
  */
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CalendarClock, ChevronRight, Loader2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { Modal } from "@/components/Modal";
@@ -180,6 +180,96 @@ export function ModalHistorial({ clienteId, clienteNombre, onClose }: { clienteI
     <Modal titulo={`Historial del cliente · ${clienteNombre}`} onClose={onClose} size="xl">
       {/* El cuerpo del modal ya scrollea (sin scroll anidado). */}
       <TabHistorial clienteId={clienteId} recarga={0} />
+    </Modal>
+  );
+}
+
+type DeudaServicio = { suscripcion_id: string | null; plan: string | null; total_adeudado: number; cuotas_vencidas: number; tramo: string };
+
+/**
+ * "Servicios asociados": los servicios (suscripciones) del cliente con su estado, precio,
+ * día de facturación/vencimiento, cambio de plan programado y lo que debe de cada uno
+ * (la deuda sale del detalle de Cobranzas, una sola consulta). Lo de fuera de una
+ * suscripción (ventas a crédito, facturas al contado) aparece como "Otras deudas".
+ */
+export function ModalServicios({ clienteId, clienteNombre, suscripciones, onClose, onVerFacturacion }: {
+  clienteId: string;
+  clienteNombre: string;
+  suscripciones: SuscripcionCliente[];
+  onClose: () => void;
+  onVerFacturacion: (suscripcionId: string) => void;
+}) {
+  const [deudas, setDeudas] = useState<DeudaServicio[] | null>(null);
+  useEffect(() => {
+    let vivo = true;
+    apiFetch<{ servicios: DeudaServicio[] }>(`/api/cobranzas/clientes/${encodeURIComponent(clienteId)}`)
+      .then((d) => { if (vivo) setDeudas(d.servicios ?? []); })
+      .catch(() => { if (vivo) setDeudas([]); });
+    return () => { vivo = false; };
+  }, [clienteId]);
+
+  const deudaDe = (id: string | null) => deudas?.find((d) => d.suscripcion_id === id) ?? null;
+  const otras = deudas?.find((d) => d.suscripcion_id === null && d.total_adeudado > 0) ?? null;
+  const ordenadas = [...suscripciones].sort((a, b) => (a.estado === "cancelada" ? 1 : 0) - (b.estado === "cancelada" ? 1 : 0));
+
+  return (
+    <Modal titulo={`Servicios asociados · ${clienteNombre}`} onClose={onClose} size="lg">
+      {ordenadas.length === 0 && !otras ? (
+        <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-10 text-center">
+          <p className="text-sm font-semibold text-slate-700">Este cliente no tiene servicios</p>
+          <p className="mt-1 text-xs text-slate-500">Agregale una suscripción desde su ficha (Nueva suscripción).</p>
+          <Link href={`/clientes/${encodeURIComponent(clienteId)}`} className="mt-3 inline-flex min-h-11 items-center gap-1 rounded-xl px-4 text-sm font-semibold text-white sm:min-h-0 sm:py-2" style={{ backgroundColor: TEAL }}>
+            Ir a la ficha <ChevronRight className="h-4 w-4" />
+          </Link>
+        </div>
+      ) : (
+        <ul className="space-y-3">
+          {ordenadas.map((sv) => {
+            const d = deudaDe(sv.suscripcion_id);
+            const debe = Number(d?.total_adeudado ?? 0);
+            return (
+              <li key={sv.suscripcion_id} className={`rounded-2xl border border-slate-200 p-4 ${sv.estado === "cancelada" ? "opacity-60" : ""}`}>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-900 [overflow-wrap:anywhere]">{sv.plan}</p>
+                    <p className="mt-0.5 text-xs text-slate-500">
+                      {monto(sv.precio, sv.moneda)} / mes · factura el día {sv.dia_facturacion} · vence el día {sv.dia_vencimiento}
+                    </p>
+                  </div>
+                  <BadgeSuscripcion estado={sv.estado} />
+                </div>
+                {sv.plan_pendiente ? (
+                  <p className="mt-2 rounded-lg bg-violet-50 px-3 py-1.5 text-xs text-violet-700">
+                    Cambio programado a {sv.plan_pendiente}{sv.precio_pendiente != null ? ` (${monto(sv.precio_pendiente, sv.moneda)})` : ""}{sv.pendiente_desde ? ` desde ${sv.pendiente_desde.split("-").reverse().join("/")}` : ""}
+                  </p>
+                ) : null}
+                <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
+                  <p className="text-xs">
+                    {deudas === null ? (
+                      <span className="inline-flex items-center gap-1 text-slate-400"><Loader2 className="h-3 w-3 animate-spin" /> Calculando deuda…</span>
+                    ) : debe > 0 ? (
+                      <span className="font-semibold text-rose-600">Debe {monto(debe, "GS")}{d && d.cuotas_vencidas > 0 ? ` · ${d.cuotas_vencidas} cuota${d.cuotas_vencidas === 1 ? "" : "s"} vencida${d.cuotas_vencidas === 1 ? "" : "s"}` : ""}</span>
+                    ) : (
+                      <span className="font-medium text-emerald-600">Al día</span>
+                    )}
+                  </p>
+                  <button type="button" onClick={() => onVerFacturacion(sv.suscripcion_id)}
+                    className="inline-flex min-h-11 items-center gap-1 rounded-lg border border-slate-200 px-3 text-xs font-semibold text-slate-700 hover:border-[var(--brand)] hover:text-[var(--brand)] sm:min-h-0 sm:py-1.5">
+                    Ver facturación <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </li>
+            );
+          })}
+          {otras ? (
+            <li className="rounded-2xl border border-amber-200 bg-amber-50/50 p-4">
+              <p className="text-sm font-semibold text-slate-900">Otras deudas</p>
+              <p className="mt-0.5 text-xs text-slate-500">Ventas a crédito y facturas al contado fuera de una suscripción.</p>
+              <p className="mt-2 text-xs font-semibold text-rose-600">Debe {monto(otras.total_adeudado, "GS")}{otras.cuotas_vencidas > 0 ? ` · ${otras.cuotas_vencidas} vencida${otras.cuotas_vencidas === 1 ? "" : "s"}` : ""}</p>
+            </li>
+          ) : null}
+        </ul>
+      )}
     </Modal>
   );
 }
