@@ -7,6 +7,8 @@
  * "Cargar más". ADMIN/supervisores ven todas; el resto, las que cerró.
  */
 import { TablaTarjetas } from "@/components/TablaResponsive";
+import { Select } from "@/components/Select";
+import { SelectorFecha } from "@/components/SelectorFecha";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Eye, RotateCcw, SlidersHorizontal } from "lucide-react";
@@ -187,38 +189,43 @@ export function Finalizadas() {
           }}
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <label className={etiqueta}>
+            <div className={etiqueta}>
               Desde
-              <input type="date" value={borrador.desde} max={borrador.hasta || undefined} onChange={(e) => set("desde", e.target.value)} className={campo} />
-            </label>
-            <label className={etiqueta}>
+              <SelectorFecha compacto block className="font-normal normal-case tracking-normal" etiqueta="Desde" value={borrador.desde} max={borrador.hasta || undefined} onChange={(v) => set("desde", v)} />
+            </div>
+            <div className={etiqueta}>
               Hasta
-              <input type="date" value={borrador.hasta} min={borrador.desde || undefined} onChange={(e) => set("hasta", e.target.value)} className={campo} />
-            </label>
+              <SelectorFecha compacto block className="font-normal normal-case tracking-normal" etiqueta="Hasta" value={borrador.hasta} min={borrador.desde || undefined} onChange={(v) => set("hasta", v)} />
+            </div>
             {todas ? (
-              <label className={etiqueta}>
+              <div className={etiqueta}>
                 Cerrada por
-                <select value={borrador.asesor} onChange={(e) => set("asesor", e.target.value)} className={campo}>
-                  <option value="">Todos</option>
-                  {equipo.map((u) => (
-                    <option key={u.id} value={u.id}>{u.nombre}</option>
-                  ))}
-                </select>
-              </label>
+                <Select
+                  compacto
+                  block
+                  className="font-normal normal-case tracking-normal"
+                  etiqueta="Cerrada por"
+                  value={borrador.asesor}
+                  onChange={(v) => set("asesor", v)}
+                  options={[["", "Todos"], ...equipo.map((u): [string, string] => [u.id, u.nombre])]}
+                />
+              </div>
             ) : null}
-            <label className={etiqueta}>
+            <div className={etiqueta}>
               Estado de cierre
-              <select value={borrador.estado} onChange={(e) => set("estado", e.target.value)} className={campo}>
-                <option value="">Todos</option>
-                {(catalogo?.familias ?? []).map((f) => (
-                  <optgroup key={f.id} label={f.nombre}>
-                    {f.subestados.map((s) => (
-                      <option key={s.id} value={s.id}>{s.nombre}</option>
-                    ))}
-                  </optgroup>
-                ))}
-              </select>
-            </label>
+              <Select
+                compacto
+                block
+                className="font-normal normal-case tracking-normal"
+                etiqueta="Estado de cierre"
+                value={borrador.estado}
+                onChange={(v) => set("estado", v)}
+                options={[
+                  ["", "Todos"],
+                  ...(catalogo?.familias ?? []).flatMap((f) => f.subestados.map((s): [string, string] => [s.id, `${f.nombre} · ${s.nombre}`])),
+                ]}
+              />
+            </div>
             <label className={`${etiqueta} sm:col-span-2`}>
               Nombre, número u observación
               <input type="search" value={borrador.q} onChange={(e) => set("q", e.target.value)} placeholder="Buscar contacto…" className={campo} />

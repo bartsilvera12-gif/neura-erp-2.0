@@ -29,6 +29,8 @@ import {
 } from "@/modules/tipificacion/dominio";
 import { subirArchivos } from "@/modules/tipificacion/archivos";
 import { ZonaArchivos } from "@/modules/tipificacion/ZonaArchivos";
+import { Select } from "@/components/Select";
+import { SelectorFechaHora } from "@/components/SelectorFecha";
 
 // ── Estilos ──────────────────────────────────────────────────────────────────
 type Tono = "rosa" | "ambar" | "verde" | "indigo" | "turquesa" | "pizarra";
@@ -335,25 +337,34 @@ export default function TipificacionPage() {
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
                 <Campo etiqueta="Estado" requerido>
-                  <select aria-label="Estado" value={estadoId} onChange={(e) => elegirEstado(e.target.value)} className={claseInput}>
-                    <option value="">Elegí un estado…</option>
-                    {estadosCat.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-                  </select>
+                  <Select
+                    block
+                    etiqueta="Estado"
+                    value={estadoId}
+                    onChange={elegirEstado}
+                    options={[["", "Elegí un estado…"], ...estadosCat.map((e): [string, string] => [e.id, e.nombre])]}
+                  />
                 </Campo>
                 <Campo
                   etiqueta="Sub-estado"
                   requerido
                   ayuda={esTicket ? "Crea un ticket de Soporte" : esCapacitacion ? "Agenda una capacitación" : undefined}
                 >
-                  <select aria-label="Sub-estado" value={subestadoId} onChange={(e) => elegirSubestado(e.target.value)} disabled={!estadoId} className={`${claseInput} disabled:bg-slate-50 disabled:text-slate-400`}>
-                    <option value="">{estadoId ? "Elegí un sub-estado…" : "Elegí un estado primero"}</option>
-                    {(estadoElegido?.subestados ?? []).map((s) => (
-                      <option key={s.id} value={s.id}>
-                        {s.nombre}
-                        {s.comportamiento === "ticket_error" || s.comportamiento === "ticket_cambio" ? " · crea ticket" : s.comportamiento === "capacitacion" ? " · agenda capacitación" : ""}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    block
+                    etiqueta="Sub-estado"
+                    value={subestadoId}
+                    onChange={elegirSubestado}
+                    disabled={!estadoId}
+                    options={[
+                      ["", estadoId ? "Elegí un sub-estado…" : "Elegí un estado primero"],
+                      ...(estadoElegido?.subestados ?? []).map((s): [string, string] => [
+                        s.id,
+                        s.nombre +
+                          (s.comportamiento === "ticket_error" || s.comportamiento === "ticket_cambio" ? " · crea ticket" : s.comportamiento === "capacitacion" ? " · agenda capacitación" : ""),
+                      ]),
+                    ]}
+                  />
                 </Campo>
               </div>
             )}
@@ -429,13 +440,11 @@ export default function TipificacionPage() {
                       alerta={!!agenda.inicio && !enHorario}
                       ayuda={agenda.inicio && !enHorario ? `Fuera de horario: ${textoHorario(horario)}.` : `Horario laboral: ${textoHorario(horario)}.`}
                     >
-                      <input
-                        type="datetime-local"
-                        aria-label="Fecha y hora de la capacitación"
+                      <SelectorFechaHora
+                        block
+                        etiqueta="Fecha y hora de la capacitación"
                         value={agenda.inicio}
-                        step={900}
-                        onChange={(e) => { setError(null); setAgenda((a) => ({ ...a, inicio: e.target.value })); }}
-                        className={claseInput}
+                        onChange={(v) => { setError(null); setAgenda((a) => ({ ...a, inicio: v })); }}
                       />
                     </Campo>
                     <Campo etiqueta="Duración" requerido>
@@ -462,9 +471,13 @@ export default function TipificacionPage() {
                   </div>
                   <div className="grid gap-5 lg:grid-cols-2">
                     <Campo etiqueta="Quién la da" requerido>
-                      <select aria-label="Quién da la capacitación" value={capacitador} onChange={(e) => setAgenda((a) => ({ ...a, responsable_id: e.target.value }))} className={claseInput}>
-                        {(listado?.equipo ?? []).map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-                      </select>
+                      <Select
+                        block
+                        etiqueta="Quién da la capacitación"
+                        value={capacitador}
+                        onChange={(v) => setAgenda((a) => ({ ...a, responsable_id: v }))}
+                        options={(listado?.equipo ?? []).map((p): [string, string] => [p.id, p.nombre])}
+                      />
                     </Campo>
                     <Campo etiqueta="Lugar o enlace">
                       <input className={claseInput} value={agenda.ubicacion} maxLength={500} onChange={(e) => setAgenda((a) => ({ ...a, ubicacion: e.target.value }))} placeholder="Ej.: Google Meet, oficina del cliente…" />
