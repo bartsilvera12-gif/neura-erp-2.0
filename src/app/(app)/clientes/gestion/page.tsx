@@ -15,8 +15,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Calendar, CalendarClock, ChevronDown, ChevronUp, ClipboardList, ExternalLink, History,
-  Link2, Receipt, RefreshCw, SlidersHorizontal, Users,
+  FileText, Link2, Loader2, Receipt, RefreshCw, SlidersHorizontal, Users,
 } from "lucide-react";
+import { descargarArchivo } from "@/lib/api/client-blob";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { Select } from "@/components/Select";
@@ -388,6 +389,7 @@ function GestionClientes() {
                         onClick={puedeOperar ? () => sobreSuscripcion("vencimiento") : undefined}
                         title={puedeOperar ? undefined : "Solo un administrador o vendedor"} />
                       <BotonOperativo label="Historial cliente" icon={<History className="h-3.5 w-3.5" />} onClick={() => setModalHistorial(true)} />
+                      <BotonExtracto clienteId={c.id} nombre={c.razon_social || c.nombre} />
                       <BotonOperativo label="Ver ficha" icon={<ExternalLink className="h-3.5 w-3.5" />} href={`/clientes/${c.id}`} />
                     </div>
                   </>
@@ -708,5 +710,26 @@ function TarjetaSkeleton() {
         {Array.from({ length: 9 }).map((_, i) => <div key={i} className={`h-7 w-24 ${bar}`} />)}
       </div>
     </div>
+  );
+}
+
+/** "Extracto de cuenta": baja el PDF del estado de cuenta del cliente (mismo de la ficha). */
+function BotonExtracto({ clienteId, nombre }: { clienteId: string; nombre: string }) {
+  const [bajando, setBajando] = useState(false);
+  const [error, setError] = useState(false);
+  async function bajar() {
+    setBajando(true);
+    setError(false);
+    const archivo = `extracto-${nombre.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "cliente"}.pdf`;
+    try { await descargarArchivo(`/api/clientes/${clienteId}/estado-cuenta/pdf`, archivo); }
+    catch { setError(true); }
+    finally { setBajando(false); }
+  }
+  return (
+    <BotonOperativo
+      label={bajando ? "Generando…" : error ? "Reintentar extracto" : "Extracto de cuenta"}
+      icon={bajando ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+      onClick={bajando ? undefined : () => void bajar()}
+      title={error ? "No se pudo generar el PDF" : "Descargar el extracto de cuenta en PDF"} />
   );
 }
