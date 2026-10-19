@@ -189,6 +189,20 @@ export type CierreDiaDetalle = {
   detalle: ResumenTurno[];
 };
 
+// ── Formas de pago (reporte_formas_pago, receta 60) ─────────────────────────
+export type FormaPagoFila = { metodo: string; label: string; orden: number; ventas: number; cantidad: number; costo: number; ganancia: number };
+export type FormasPago = {
+  desde: string; hasta: string; sucursal_id: string | null; sucursales: SucursalOpcion[];
+  agrupacion: "dia" | "mes";
+  medios: FormaPagoFila[];
+  credito: { ventas: number; cantidad: number; costo: number; ganancia: number };
+  totales: { ventas: number; contado: number; credito: number; cantidad: number; costo: number; ganancia: number; mixtas: number; productos_sin_costo: number };
+  cobros: { total: number; cantidad: number; por_metodo: { metodo: string; label: string; total: number; cantidad: number }[] };
+  ingresos: { metodo: string; label: string; ventas: number; cobros: number; total: number }[];
+  anuladas: { cantidad: number; total: number };
+  evolucion: { x: string; por_metodo: Record<string, number>; cobros: number }[];
+};
+
 export const ORIGEN_CXC: Record<string, string> = { credito: "Venta a crédito", suscripcion: "Cuota de suscripción", factura_contado: "Factura al contado" };
 export const TRAMOS: { key: keyof Tramos; label: string }[] = [
   { key: "al_dia", label: "Al día" },

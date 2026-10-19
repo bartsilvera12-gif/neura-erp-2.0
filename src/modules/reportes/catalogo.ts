@@ -1,4 +1,4 @@
-import { Boxes, CalendarRange, HandCoins, Landmark, Lock, PackageMinus, PackageX, ShoppingCart, Truck, Wallet, type LucideIcon } from "lucide-react";
+import { Boxes, CalendarRange, CreditCard, HandCoins, Landmark, Lock, PackageMinus, PackageX, ShoppingCart, Truck, Wallet, type LucideIcon } from "lucide-react";
 
 /**
  * Catálogo de reportes: alimenta la pantalla /reportes (tarjetas agrupadas por sección).
@@ -74,6 +74,14 @@ export const REPORTES: Reporte[] = [
     subtitulo: "Ventas, ganancia e IVA",
     descripcion: "Cuánto se vendió y se ganó, ticket promedio, IVA a declarar, cobros por medio de pago, ventas por cajero, productos y categorías más vendidos.",
     icono: ShoppingCart,
+    seccion: "Ventas y caja",
+  },
+  {
+    href: "/reportes/formas-pago",
+    titulo: "Formas de pago",
+    subtitulo: "Cuánto entra y se gana por medio",
+    descripcion: "Ventas, ticket, costo, ganancia y margen por efectivo, tarjetas, transferencia, QR y demás (pagos mixtos repartidos), venta a crédito aparte, cobros de créditos por medio y evolución.",
+    icono: CreditCard,
     seccion: "Ventas y caja",
   },
   {
