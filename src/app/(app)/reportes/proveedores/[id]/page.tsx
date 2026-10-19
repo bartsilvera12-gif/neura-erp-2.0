@@ -109,7 +109,7 @@ function FichaProveedor() {
                 filas={d.compras.map((c) => ({
                   key: c.id, tenue: c.estado === "anulada",
                   celdas: [
-                    <Link key="n" href={`/compras?ver=${c.id}`} className="font-mono text-xs text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">{c.numero_control}</Link>,
+                    <Link key="n" href={`/gastos-empresariales/compras-gastos?ver=${c.id}&desde=&hasta=`} className="font-mono text-xs text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">{c.numero_control}</Link>,
                     fechaCorta(c.fecha), c.numero_factura ?? "—",
                     c.tipo_pago === "credito" ? "Crédito" : "Contado",
                     c.sucursal_nombre ?? "—", num(c.items),

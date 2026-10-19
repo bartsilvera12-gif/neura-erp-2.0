@@ -112,7 +112,7 @@ function Recurrentes() {
             : venc.rows.length === 0 ? <p className="px-4 py-8 text-center text-sm text-slate-400">Nada por vencer.</p> : (
               <ul className="divide-y divide-slate-100 lg:max-h-[34rem] lg:overflow-y-auto">
                 {venc.rows.map((v, i) => {
-                  const href = v.tipo === "a_pagar" ? "/compras/pagos" : v.gasto_id ? `/gastos-empresariales/operativos?ver=${v.gasto_id}` : null;
+                  const href = v.tipo === "a_pagar" ? "/compras/pagos" : v.gasto_id ? `/gastos-empresariales/compras-gastos?gasto=${v.gasto_id}&desde=&hasta=` : null;
                   const badge = v.tipo === "a_pagar" ? ["A pagar", "bg-sky-50 text-sky-700"] : v.tipo === "borrador" ? ["Borrador", "bg-slate-100 text-slate-600"] : ["Sin generar", "bg-amber-50 text-amber-700"];
                   const cuerpo = (
                     <div className="flex items-start gap-3 px-4 py-2.5">
@@ -168,7 +168,7 @@ function FilaPlantilla({ p, onEditar, onBorrar }: { p: Plantilla; onEditar: () =
           <p className="text-sm font-semibold tabular-nums text-slate-800">{Number(p.total) > 0 ? monto(p.total, p.moneda) : <span className="text-slate-400">variable</span>}</p>
           {!p.aplica ? <p className="text-[11px] text-slate-400">{p.activo ? "fuera de vigencia" : "—"}</p>
             : p.generado ? (
-              <Link href={`/gastos-empresariales/operativos?ver=${p.generado.id}`} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#3F8E91] hover:underline max-sm:-my-2 max-sm:min-h-11">
+              <Link href={`/gastos-empresariales/compras-gastos?gasto=${p.generado.id}&desde=&hasta=`} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#3F8E91] hover:underline max-sm:-my-2 max-sm:min-h-11">
                 <CheckCircle2 className="h-3 w-3" /> {p.generado.numero ?? "Borrador"} {est && p.generado.estado !== "confirmado" ? `· ${est.t.toLowerCase()}` : ""}
               </Link>
             ) : <p className="inline-flex items-center gap-1 text-[11px] text-amber-700"><CalendarClock className="h-3 w-3" /> pendiente · {fechaCorta(p.fecha_periodo)}</p>}
@@ -232,7 +232,7 @@ function GenerarMes({ periodo, pendientes, onClose, onHecho }: { periodo: string
                 {hecho.creados.map((c) => (
                   <li key={c.id} className="flex items-center justify-between gap-2 px-3 py-2 max-sm:py-0.5">
                     <span className="min-w-0 truncate">{c.plantilla} <span className="text-xs text-slate-400">· {fechaCorta(c.fecha)}</span></span>
-                    <Link href={`/gastos-empresariales/operativos?ver=${c.id}`} className="inline-flex shrink-0 items-center text-xs font-semibold text-[#3F8E91] hover:underline max-sm:min-h-11 max-sm:px-2">Abrir</Link>
+                    <Link href={`/gastos-empresariales/compras-gastos?gasto=${c.id}&desde=&hasta=`} className="inline-flex shrink-0 items-center text-xs font-semibold text-[#3F8E91] hover:underline max-sm:min-h-11 max-sm:px-2">Abrir</Link>
                   </li>
                 ))}
               </ul>
@@ -258,7 +258,7 @@ function GenerarMes({ periodo, pendientes, onClose, onHecho }: { periodo: string
         </div>
         <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
           {hecho ? (
-            <Link href="/gastos-empresariales/operativos?estado=borrador&desde=&hasta=" className="inline-flex items-center justify-center rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] max-sm:flex-1">Ver borradores</Link>
+            <Link href="/gastos-empresariales/compras-gastos?estado=borrador&desde=&hasta=" className="inline-flex items-center justify-center rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] max-sm:flex-1">Ver borradores</Link>
           ) : (
             <>
               <button onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 max-sm:flex-1">Cancelar</button>

@@ -76,10 +76,14 @@ function ResumenGastos() {
   }, [url, recarga]);
 
   const elegirAtajo = (k: string) => { setPreset(k); setRango(atajo(k)); };
+  // Lista unificada "Compras y gastos" (receta 59): por defecto lo que tiene gastos (incluye las
+  // compras mixtas); `tipo: ""` = todo y `tipo: "con_mercaderia"` = compras de mercadería.
   const irAGastos = (extra: Record<string, string>) => {
-    const p = new URLSearchParams({ desde: rango.desde, hasta: rango.hasta, ...extra });
+    const p = new URLSearchParams({ desde: rango.desde, hasta: rango.hasta, tipo: "con_gasto", ...extra });
+    if (!p.get("tipo")) p.delete("tipo");
+    if (p.get("estado") === "confirmado") p.set("estado", "vigente");
     if (sucursal) p.set("sucursal", sucursal);
-    router.push(`/gastos-empresariales/operativos?${p}`);
+    router.push(`/gastos-empresariales/compras-gastos?${p}`);
   };
 
   const t = datos?.totales;
@@ -96,7 +100,7 @@ function ResumenGastos() {
         subtitulo={<>Todo lo que salió de plata: compras de mercadería y gastos operativos de <span className="capitalize">{titulo}</span>.</>}
         acciones={<AccionesPagina acciones={[
           { etiqueta: "Presupuesto", icono: <Target />, onClick: () => setPresupuesto(true) },
-          { etiqueta: "Nuevo gasto", icono: <Plus />, href: "/gastos-empresariales/operativos?nuevo=1", primaria: true },
+          { etiqueta: "Nuevo gasto", icono: <Plus />, href: "/compras/nueva?tipo=gasto", primaria: true },
         ]} />} />
 
       {/* Filtros: atajos (scroll horizontal en celular) + rango + sucursal */}
@@ -134,11 +138,11 @@ function ResumenGastos() {
             </span>
           ) : ant ? <span className="text-slate-400">Sin gastos en el período anterior</span> : null} />
         <Kpi titulo="Compras de mercadería" valor={t?.compras} color={C_MERCADERIA} pie={t ? `${t.docs_compras} ${t.docs_compras === 1 ? "compra" : "compras"}` : null}
-          href="/compras" />
+          onClick={() => irAGastos({ tipo: "con_mercaderia", estado: "confirmado" })} />
         <Kpi titulo="Gastos operativos" valor={t?.operativos} color={C_OPERATIVOS} pie={t ? `${t.docs_gastos} ${t.docs_gastos === 1 ? "gasto" : "gastos"}` : null}
           onClick={() => irAGastos({ estado: "confirmado" })} />
         <Kpi titulo="IVA crédito fiscal" valor={t?.iva_credito} pie={t ? `No deducible: ${corto(t.no_deducible)}` : null}
-          onClick={() => irAGastos({ deducible: "0" })} />
+          onClick={() => irAGastos({ deducible: "0", tipo: "" })} />
         <Kpi titulo="Deuda con proveedores" valor={datos?.deuda.saldo_gs} href="/compras/pagos"
           pie={datos ? (datos.deuda.vencido_gs > 0
             ? <span className="inline-flex items-center gap-1 text-rose-600"><AlertTriangle className="h-3.5 w-3.5" /> Vencido {corto(datos.deuda.vencido_gs)}</span>
@@ -183,7 +187,7 @@ function ResumenGastos() {
                 key: r.id ?? "merc", label: r.nombre, presupuesto: r.presupuesto,
                 partes: [{ valor: Number(r.total), color: r.mercaderia ? C_MERCADERIA : C_OPERATIVOS, label: r.nombre }],
                 detalle: r.mercaderia ? "Compras registradas" : `Fijo ${corto(r.fijo)} · variable ${corto(r.variable)}`,
-                onClick: r.mercaderia ? () => router.push("/compras") : () => setRubroAbierto((x) => (x === r.id ? null : r.id)),
+                onClick: r.mercaderia ? () => irAGastos({ tipo: "con_mercaderia", estado: "confirmado" }) : () => setRubroAbierto((x) => (x === r.id ? null : r.id)),
               }))} />
               {rubroAbierto ? (() => {
                 const r = datos.por_rubro.find((x) => x.id === rubroAbierto);
@@ -231,7 +235,7 @@ function ResumenGastos() {
           {datos ? <BarrasH filas={datos.top_proveedores.map((p) => ({
             key: p.id ?? "sin", label: p.nombre,
             partes: [{ valor: Number(p.compras), color: C_MERCADERIA, label: "Mercadería" }, { valor: Number(p.operativos), color: C_OPERATIVOS, label: "Operativos" }],
-            onClick: p.id && Number(p.operativos) > 0 ? () => irAGastos({ proveedor: p.id!, nombre: p.nombre, estado: "confirmado" }) : undefined,
+            onClick: p.id && Number(p.operativos) > 0 ? () => irAGastos({ proveedor: p.id!, nombre: p.nombre, estado: "confirmado", tipo: "" }) : undefined,
           }))} vacio="Sin proveedores en el período" /> : <Esqueleto alto="h-48" />}
         </Tarjeta>
       </div>

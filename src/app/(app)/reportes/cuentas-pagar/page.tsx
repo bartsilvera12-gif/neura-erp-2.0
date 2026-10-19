@@ -12,6 +12,7 @@ import { BarraTramos, BarrasH, Columnas, C_TRAMOS, SERIES } from "@/components/g
 import { fechaCorta, gs, num } from "@/components/graficos/formato";
 import { Descargas, EncabezadoReporte, EstadoCarga, FilaKpis, FiltrosReporte, Kpi, Nota, Segmentos, Tabla, Tarjeta, useFiltrosReporte, useReporte, type Atajo } from "@/modules/reportes/ui";
 import { TRAMOS, type CuentasPagar, type Tramos } from "@/modules/reportes/tipos";
+import { hrefCompra, hrefGasto } from "@/modules/compras/pagos";
 
 const ATAJOS: Atajo[] = ["todo", "mes", "3m", "anio"];
 const usd = (n: number) => `USD ${Number(n).toLocaleString("es-PY", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -114,7 +115,7 @@ function CuentasPorPagar() {
                   key: r.id,
                   celdas: [
                     <span key="p" className="block max-w-[220px] truncate">{r.proveedor_nombre}</span>,
-                    <Link key="d" href={r.origen === "compra" ? `/compras?ver=${r.doc_id}` : `/gastos-empresariales/operativos?ver=${r.doc_id}`} className="font-mono text-xs text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">
+                    <Link key="d" href={r.origen === "compra" ? hrefCompra(r.doc_id) : hrefGasto(r.doc_id)} className="font-mono text-xs text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">
                       {r.documento}{r.factura ? <span className="ml-1 font-sans text-slate-400">· {r.factura}</span> : null}
                     </Link>,
                     r.origen === "compra" ? "Compra" : <span key="o" title={r.descripcion}>Gasto</span>,
