@@ -3,68 +3,65 @@
  *
  *   · Bucket PÚBLICO `empresas-logos` (receta 62): un logo no es sensible y lo usa también el
  *     link público del presupuesto. Escribe SOLO el servidor con el cliente de sistema; la ruta
- *     la arma siempre el servidor: {schema}/{empresa}/logo-<marca>.{png|jpg}.
- *   · Lo que sube el usuario (PNG / JPG / WEBP ≤ 2 MB) se normaliza con sharp: se endereza
- *     (EXIF), se achica a lado mayor ≤ 600 px y queda en PNG si tiene transparencia o en
- *     JPEG (fondo blanco) si no la tiene. jsPDF no dibuja SVG ni WEBP: por eso no se aceptan
- *     tal cual. Así los PDF no pesan y siempre tienen ancho/alto conocidos.
+ *     la arma siempre el servidor: {schema}/{empresa}/logo-<marca>.{png|jpg} (el que usan los
+ *     PDF) y {schema}/{empresa}/original-<marca>.{png|jpg} (receta 63: el original normalizado,
+ *     para volver a la imagen con fondo o volver a quitárselo).
+ *   · Lo que sube el usuario (PNG / JPG / WEBP ≤ 2 MB) se normaliza con sharp
+ *     (src/lib/empresa/logo-imagen.ts): original enderezado ≤ 1200 px y, a partir de él, el logo
+ *     ≤ 600 px; al subir se le quita el fondo liso automáticamente (PNG con transparencia). Si
+ *     no se detecta un fondo liso se guarda tal cual (PNG si tiene transparencia, si no JPEG).
+ *     jsPDF no dibuja SVG ni WEBP: por eso no se aceptan tal cual.
  */
 import { randomBytes } from "node:crypto";
 import { systemClient } from "@/lib/supabase/clients";
 import { tenantSchema } from "@/lib/tenant/schema";
+import { logoDesdeOriginal, prepararOriginal, type FondoLogo, type LogoNormalizado } from "@/lib/empresa/logo-imagen";
 
+export type { FondoLogo, LogoNormalizado };
 export const LOGOS_BUCKET = "empresas-logos";
 export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
-const LADO_MAX = 600;
-const SALIDA_MAX_BYTES = 1024 * 1024; // límite del bucket
 
-export type LogoNormalizado = { datos: Buffer; mime: "image/png" | "image/jpeg"; ext: "png" | "jpg"; ancho: number; alto: number };
-
-/** Valida y normaliza la imagen. Devuelve { error } con un mensaje para el usuario si no sirve. */
-export async function normalizarLogo(entrada: Buffer): Promise<LogoNormalizado | { error: string }> {
-  if (entrada.length < 1) return { error: "El archivo está vacío." };
-  if (entrada.length > LOGO_MAX_BYTES) return { error: "El logo no puede superar 2 MB." };
-  const sharp = (await import("sharp")).default;
-  let meta;
-  try {
-    meta = await sharp(entrada, { limitInputPixels: 40_000_000 }).metadata();
-  } catch {
-    return { error: "No se pudo leer la imagen: subí un PNG, JPG o WEBP válido." };
-  }
-  if (!meta.format || !["png", "jpeg", "webp"].includes(meta.format)) return { error: "Formato no aceptado: subí un PNG, JPG o WEBP (SVG no)." };
-  if ((meta.pages ?? 1) > 1) return { error: "El logo no puede ser animado." };
-  try {
-    const base = () =>
-      sharp(entrada, { limitInputPixels: 40_000_000 }).rotate().resize({ width: LADO_MAX, height: LADO_MAX, fit: "inside", withoutEnlargement: true });
-    const { isOpaque } = await base().stats();
-    const opaco = isOpaque || !meta.hasAlpha;
-    let out = opaco
-      ? await base().flatten({ background: "#ffffff" }).jpeg({ quality: 88, mozjpeg: true }).toBuffer({ resolveWithObject: true })
-      : await base().png({ compressionLevel: 9, adaptiveFiltering: true }).toBuffer({ resolveWithObject: true });
-    if (!opaco && out.data.length > SALIDA_MAX_BYTES) out = await base().png({ palette: true, compressionLevel: 9 }).toBuffer({ resolveWithObject: true });
-    if (out.data.length > SALIDA_MAX_BYTES) return { error: "El logo es demasiado pesado aun achicado: probá con una imagen más simple." };
-    return { datos: out.data, mime: opaco ? "image/jpeg" : "image/png", ext: opaco ? "jpg" : "png", ancho: out.info.width, alto: out.info.height };
-  } catch {
-    return { error: "No se pudo procesar la imagen: probá con otro archivo." };
-  }
+/** Valida lo que subió el usuario, arma el original y el logo (con el fondo quitado si corresponde). */
+export async function procesarLogoSubido(entrada: Buffer) {
+  const original = await prepararOriginal(entrada, LOGO_MAX_BYTES);
+  if ("error" in original) return original;
+  const r = await logoDesdeOriginal(original.datos, "auto");
+  if ("error" in r) return r;
+  return { original, ...r };
 }
+
+/** A partir del original guardado: con o sin el fondo (lo eligió el usuario). */
+export const logoDesdeOriginalGuardado = (original: Buffer, quitarFondo: boolean) =>
+  logoDesdeOriginal(original, quitarFondo ? "quitar" : "original");
 
 const prefijo = (empresaId: string) => `${tenantSchema()}/${empresaId}/`;
 const bucket = () => systemClient().storage.from(LOGOS_BUCKET);
+const marca = () => `${Date.now().toString(36)}-${randomBytes(4).toString("hex")}`;
 
-/** Sube el logo ya normalizado a una ruta nueva (cada versión su URL: sin cachés viejas). */
-export async function subirLogoEmpresa(empresaId: string, logo: LogoNormalizado): Promise<{ path: string; url: string } | { error: string }> {
+/** Sube un archivo a una ruta nueva (cada versión su URL: sin cachés viejas). */
+async function subir(empresaId: string, tipo: "logo" | "original", img: LogoNormalizado): Promise<{ path: string; url: string } | { error: string }> {
   if (!empresaId) return { error: "Falta la empresa" };
-  const path = `${prefijo(empresaId)}logo-${Date.now().toString(36)}-${randomBytes(4).toString("hex")}.${logo.ext}`;
-  const { error } = await bucket().upload(path, logo.datos, { contentType: logo.mime, upsert: false, cacheControl: "31536000" });
+  const path = `${prefijo(empresaId)}${tipo}-${marca()}.${img.ext}`;
+  const { error } = await bucket().upload(path, img.datos, { contentType: img.mime, upsert: false, cacheControl: "31536000" });
   if (error) return { error: `No se pudo guardar el logo: ${error.message}` };
   return { path, url: bucket().getPublicUrl(path).data.publicUrl };
 }
 
-/** Borra una versión vieja del logo (solo dentro de la carpeta de ESA empresa). */
-export async function borrarLogoEmpresa(empresaId: string, path: string | null | undefined): Promise<void> {
-  if (!path || !empresaId || !path.startsWith(prefijo(empresaId))) return;
-  await bucket().remove([path]).catch(() => {});
+export const subirLogoEmpresa = (empresaId: string, logo: LogoNormalizado) => subir(empresaId, "logo", logo);
+export const subirOriginalEmpresa = (empresaId: string, original: LogoNormalizado) => subir(empresaId, "original", original);
+
+/** Baja el original guardado (solo de la carpeta de ESA empresa). */
+export async function bajarOriginalEmpresa(empresaId: string, path: string | null | undefined): Promise<Buffer | null> {
+  if (!path || !empresaId || !path.startsWith(prefijo(empresaId)) || !/\/original-[0-9a-z-]+\.(png|jpg)$/.test(path)) return null;
+  const { data, error } = await bucket().download(path);
+  if (error || !data) return null;
+  return Buffer.from(await data.arrayBuffer());
+}
+
+/** Borra versiones viejas (logo u original; solo dentro de la carpeta de ESA empresa). */
+export async function borrarLogoEmpresa(empresaId: string, ...paths: (string | null | undefined)[]): Promise<void> {
+  const propias = paths.filter((p): p is string => !!p && !!empresaId && p.startsWith(prefijo(empresaId)));
+  if (propias.length) await bucket().remove(propias).catch(() => {});
 }
 
 /** URL pública esperada para un logo de este bucket (los PDF solo bajan de acá). */

@@ -24,6 +24,12 @@ export type DatosEmpresa = {
   logo_ancho?: number | null;
   logo_alto?: number | null;
   logo_actualizado?: string | null;
+  /** Receta 63: original normalizado guardado (para volver a la imagen con fondo o quitárselo). */
+  logo_original_path?: string | null;
+  /** La versión que usan los PDF es la recortada (sin fondo). */
+  logo_sin_fondo?: boolean | null;
+  /** Qué se detectó en el original: había un fondo liso (se puede quitar), no había, o ya venía transparente. */
+  logo_fondo?: "quitado" | "no_detectado" | "transparente" | null;
   updated_at?: string | null;
   updated_by_nombre?: string | null;
   sucursal_principal?: { nombre: string; direccion: string | null; ciudad: string | null; telefono: string | null } | null;

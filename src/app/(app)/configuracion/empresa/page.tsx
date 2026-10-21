@@ -5,7 +5,8 @@
  * del sistema"). Identificación fiscal y contacto que salen en el encabezado de todos los
  * documentos (presupuesto con diseño de factura, recibos, remisiones, órdenes, reportes).
  *   · Tarjetas: Identificación fiscal · Contacto · Logo (se cambia acá: se sube y se guarda solo,
- *     aparte del formulario; "Quitar" vuelve al logo de la instalación).
+ *     aparte del formulario; al subirlo el servidor le quita el fondo liso y se puede volver a la
+ *     imagen original o quitárselo de nuevo; "Quitar logo" vuelve al de la instalación).
  *   · Vista previa en vivo del encabezado (presupuesto y documentos generales). En celular se
  *     abre en una hoja (CapaModal) desde la barra de guardar.
  *   · RUC: el dígito verificador (módulo 11 de la SET) se controla mientras se escribe; la base
@@ -14,7 +15,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  AlertTriangle, BadgeCheck, Building2, Eye, FileText, ImageIcon, Info, Loader2, MapPin, ReceiptText, RotateCcw, Sparkles, Upload, X,
+  AlertTriangle, BadgeCheck, Building2, Eraser, Eye, FileText, ImageIcon, Info, Loader2, MapPin, ReceiptText, RotateCcw, Sparkles, Undo2, Upload, X,
 } from "lucide-react";
 import { apiFetch, apiForm } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
@@ -54,6 +55,7 @@ export default function DatosEmpresaPage() {
   // Logo (se guarda solo, aparte del formulario)
   const [subiendoLogo, setSubiendoLogo] = useState(false);
   const [quitandoLogo, setQuitandoLogo] = useState(false);
+  const [cambiandoFondo, setCambiandoFondo] = useState(false);
   const [errorLogo, setErrorLogo] = useState<string | null>(null);
   const [okLogo, setOkLogo] = useState<string | null>(null);
   const [confirmarQuitar, setConfirmarQuitar] = useState(false);
@@ -128,11 +130,32 @@ export default function DatosEmpresaPage() {
       fd.append("file", file);
       const d = await apiForm<DatosEmpresa>(`${URL}/logo`, fd);
       setDatos(d);
-      setOkLogo("Logo actualizado: los PDF nuevos ya salen con él.");
+      setOkLogo(
+        d.logo_fondo === "quitado" && d.logo_sin_fondo ? "Le quitamos el fondo automáticamente. Los PDF nuevos ya salen con este logo."
+        : d.logo_fondo === "quitado" ? "Tu logo es claro: lo dejamos con su fondo para que se vea en los documentos (salen en hoja blanca). Si igual lo querés sin fondo, tocá «Quitar fondo»."
+        : d.logo_fondo === "no_detectado" ? "No detectamos un fondo liso: se guardó tal cual."
+        : d.logo_fondo === "transparente" ? "Tu logo ya venía sin fondo: se guardó tal cual."
+        : "Logo actualizado: los PDF nuevos ya salen con él.",
+      );
     } catch (e) {
       setErrorLogo((e as Error).message);
     } finally {
       setSubiendoLogo(false);
+    }
+  };
+  // Alterna entre la imagen original (con fondo) y la versión sin fondo.
+  const alternarFondo = async (sinFondo: boolean) => {
+    setErrorLogo(null);
+    setOkLogo(null);
+    setCambiandoFondo(true);
+    try {
+      const d = await apiFetch<DatosEmpresa>(`${URL}/logo`, { method: "PATCH", body: JSON.stringify({ sin_fondo: sinFondo }) });
+      setDatos(d);
+      setOkLogo(sinFondo ? "Listo: le quitamos el fondo." : "Listo: se usa la imagen original, con su fondo.");
+    } catch (e) {
+      setErrorLogo((e as Error).message);
+    } finally {
+      setCambiandoFondo(false);
     }
   };
   const quitarLogo = async () => {
@@ -282,9 +305,11 @@ export default function DatosEmpresaPage() {
             nombre={membrete.nombre}
             subiendo={subiendoLogo}
             quitando={quitandoLogo}
+            cambiandoFondo={cambiandoFondo}
             error={errorLogo}
             exito={okLogo}
             onElegir={subirLogo}
+            onFondo={alternarFondo}
             onQuitar={() => setConfirmarQuitar(true)}
           />
           {datos?.updated_at ? (
@@ -421,22 +446,41 @@ function Logo({ src, className }: { src: string; className?: string }) {
 }
 
 /** Tarjeta "Logo de los documentos": vista previa, cambiar / quitar y un mini-membrete de ejemplo. */
-function TarjetaLogo({ datos, src, soloLectura, nombre, subiendo, quitando, error, exito, onElegir, onQuitar }: {
+function TarjetaLogo({ datos, src, soloLectura, nombre, subiendo, quitando, cambiandoFondo, error, exito, onElegir, onQuitar, onFondo }: {
   datos: DatosEmpresa | null; src: string; soloLectura: boolean; nombre: string;
-  subiendo: boolean; quitando: boolean; error: string | null; exito: string | null;
-  onElegir: (f: File) => void; onQuitar: () => void;
+  subiendo: boolean; quitando: boolean; cambiandoFondo: boolean; error: string | null; exito: string | null;
+  onElegir: (f: File) => void; onQuitar: () => void; onFondo: (sinFondo: boolean) => void;
 }) {
   const ref = useRef<HTMLInputElement>(null);
   const propio = !!datos?.logo_url;
-  const ocupado = subiendo || quitando;
+  const ocupado = subiendo || quitando || cambiandoFondo;
+  const sinFondo = propio && !!datos?.logo_sin_fondo;
+  // Alternar con / sin fondo: solo si se guardó el original y se detectó un fondo liso.
+  const alternable = propio && !!datos?.logo_original_path && datos?.logo_fondo === "quitado";
+  const estadoFondo = !propio ? null
+    : sinFondo ? "Sin fondo (se lo quitamos)"
+    : datos?.logo_fondo === "quitado" ? "Con su fondo original"
+    : datos?.logo_fondo === "no_detectado" ? "Con fondo: no detectamos un fondo liso para quitar"
+    : datos?.logo_fondo === "transparente" ? "Ya venía sin fondo"
+    : null;
   return (
     <Tarjeta icono={<ImageIcon className="h-4 w-4" />} titulo="Logo de los documentos" detalle="Sale arriba a la izquierda en todos los PDF: presupuestos, recibos, remisiones, órdenes, cierres de caja y reportes.">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        {/* Fondo cuadriculado: deja ver si el logo tiene transparencia */}
-        <div className="relative flex h-24 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white bg-[conic-gradient(#f1f5f9_25%,transparent_0_50%,#f1f5f9_0_75%,transparent_0)] bg-[length:16px_16px] p-3 sm:w-48">
-          <Logo key={src} src={src} className="max-h-16 w-auto max-w-full object-contain" />
+        {/* Cuadriculado (deja ver la transparencia) y franja oscura (deja ver halos del fondo) */}
+        <div className="relative w-full shrink-0 overflow-hidden rounded-xl border border-slate-200 sm:w-52">
+          <div className="flex h-24 items-center justify-center bg-white bg-[conic-gradient(#e2e8f0_25%,transparent_0_50%,#e2e8f0_0_75%,transparent_0)] bg-[length:14px_14px] p-3">
+            <Logo key={src} src={src} className="max-h-16 w-auto max-w-full object-contain" />
+          </div>
+          <div className="flex h-14 items-center justify-center bg-slate-900 px-3 py-2" title="Así se ve sobre un fondo oscuro">
+            <Logo key={`${src}#oscuro`} src={src} className="max-h-10 w-auto max-w-full object-contain" />
+          </div>
           {ocupado ? (
-            <span className="absolute inset-0 grid place-items-center bg-white/70"><Loader2 className="h-5 w-5 animate-spin text-[var(--brand)]" /></span>
+            <span className="absolute inset-0 grid place-items-center bg-white/70" aria-live="polite">
+              <span className="flex flex-col items-center gap-1 text-xs font-medium text-slate-600">
+                <Loader2 className="h-5 w-5 animate-spin text-[var(--brand)]" />
+                {subiendo ? "Quitando el fondo…" : cambiandoFondo ? "Procesando…" : null}
+              </span>
+            </span>
           ) : null}
         </div>
         <div className="min-w-0 flex-1 space-y-2.5">
@@ -445,6 +489,11 @@ function TarjetaLogo({ datos, src, soloLectura, nombre, subiendo, quitando, erro
               <>
                 <span className="font-semibold text-emerald-700">Logo propio</span>
                 {datos?.logo_ancho && datos?.logo_alto ? <span className="text-slate-500"> · {datos.logo_ancho} × {datos.logo_alto} px</span> : null}
+                {estadoFondo ? (
+                  <span className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
+                    {sinFondo ? <Eraser className="h-3.5 w-3.5 shrink-0 text-[var(--brand)]" /> : <ImageIcon className="h-3.5 w-3.5 shrink-0 text-slate-400" />} {estadoFondo}
+                  </span>
+                ) : null}
                 {datos?.logo_actualizado ? <span className="block text-xs text-slate-400">Cargado el {fechaHora(datos.logo_actualizado)}</span> : null}
               </>
             ) : (
@@ -469,15 +518,21 @@ function TarjetaLogo({ datos, src, soloLectura, nombre, subiendo, quitando, erro
                 <button type="button" onClick={() => ref.current?.click()} disabled={ocupado} className={`${BOTON_SECUNDARIO} max-sm:min-h-11`}>
                   {subiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} {subiendo ? "Subiendo…" : "Cambiar logo"}
                 </button>
+                {alternable ? (
+                  <button type="button" onClick={() => onFondo(!sinFondo)} disabled={ocupado} className={`${BOTON_SECUNDARIO} max-sm:min-h-11`}>
+                    {cambiandoFondo ? <Loader2 className="h-4 w-4 animate-spin" /> : sinFondo ? <Undo2 className="h-4 w-4" /> : <Eraser className="h-4 w-4" />}
+                    {sinFondo ? "Usar la imagen original (con fondo)" : "Quitar fondo"}
+                  </button>
+                ) : null}
                 {propio ? (
                   <button type="button" onClick={onQuitar} disabled={ocupado}
                     className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-50 max-sm:min-h-11">
-                    {quitando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />} {quitando ? "Quitando…" : "Quitar"}
+                    {quitando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />} {quitando ? "Quitando…" : "Quitar logo"}
                   </button>
                 ) : null}
               </div>
               <p className="text-[11px] leading-snug text-slate-400">
-                PNG, JPG o WEBP, hasta {LOGO_MAX_MB} MB. Recomendado: fondo transparente o blanco y formato horizontal. Se guarda al elegirlo (se achica solo para que los PDF no pesen).
+                PNG, JPG o WEBP, hasta {LOGO_MAX_MB} MB, mejor horizontal. Se guarda al elegirlo: si tiene un fondo liso (blanco o de un color) se lo quitamos solos, y se achica para que los PDF no pesen.
               </p>
             </>
           ) : (
