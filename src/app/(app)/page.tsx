@@ -14,7 +14,8 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRight, Boxes, CalendarClock, PackageMinus, PackageX, Truck, Wallet } from "lucide-react";
+import { AlertTriangle, ArrowRight, Boxes, CalendarClock, ChevronDown, PackageMinus, PackageX, Truck, Wallet } from "lucide-react";
+import { etiquetaCaja, hora, useEstadoCajas } from "@/modules/caja/turno";
 import { clienteConfig } from "@/cliente.config";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Select } from "@/components/Select";
@@ -197,15 +198,69 @@ export default function Inicio() {
             </section>
           ) : null}
 
-          <Link href="/caja/turnos" className="flex min-h-14 items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm shadow-sm transition hover:shadow-md sm:px-5">
-            <span className="flex min-w-0 items-center gap-3 text-slate-600">
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-50)] text-[var(--brand)]"><Wallet className="h-4 w-4" /></span>
-              {d.cajas_abiertas ? <><b className="text-slate-800">{d.cajas_abiertas}</b> caja{d.cajas_abiertas === 1 ? "" : "s"} abierta{d.cajas_abiertas === 1 ? "" : "s"} ahora</> : "No hay cajas abiertas"}
-            </span>
-            <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold text-[var(--brand)]"><span className="max-[400px]:sr-only">Apertura y cierre</span> <ArrowRight className="h-3.5 w-3.5" /></span>
-          </Link>
+          <CajasAbiertas cantidad={d.cajas_abiertas} />
         </>
       )}
+    </div>
+  );
+}
+
+/**
+ * "N cajas abiertas ahora": se despliega ahí mismo con cada caja (turno, quién la abrió,
+ * desde qué hora, ventas y total). El detalle se pide recién al abrir.
+ */
+function CajasAbiertas({ cantidad }: { cantidad: number }) {
+  const [abierto, setAbierto] = useState(false);
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <button type="button" onClick={() => setAbierto((v) => !v)} aria-expanded={abierto} disabled={!cantidad}
+        className="flex min-h-14 w-full items-center justify-between gap-3 rounded-2xl px-4 py-3.5 text-left text-sm transition enabled:hover:bg-slate-50/60 sm:px-5">
+        <span className="flex min-w-0 items-center gap-3 text-slate-600">
+          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-50)] text-[var(--brand)]"><Wallet className="h-4 w-4" /></span>
+          {cantidad ? <span><b className="text-slate-800">{cantidad}</b> caja{cantidad === 1 ? "" : "s"} abierta{cantidad === 1 ? "" : "s"} ahora</span> : "No hay cajas abiertas"}
+        </span>
+        {cantidad ? (
+          <span className="inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs font-semibold text-[var(--brand)]">
+            <span className="max-[400px]:sr-only">{abierto ? "Ocultar" : "Ver cajas"}</span>
+            <ChevronDown className={`h-4 w-4 transition-transform ${abierto ? "rotate-180" : ""}`} />
+          </span>
+        ) : null}
+      </button>
+      {abierto ? <DetalleCajas /> : null}
+    </div>
+  );
+}
+
+function DetalleCajas() {
+  const { datos, error } = useEstadoCajas();
+  const abiertas = datos ? datos.sucursales.flatMap((s) => s.cajas.filter((c) => c.turno).map((c) => ({ c, s }))) : [];
+  return (
+    <div className="border-t border-slate-100 px-4 pb-4 pt-3 sm:px-5">
+      {error ? <p className="py-2 text-sm text-rose-600">No se pudo cargar el detalle de las cajas.</p>
+        : !datos ? <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">{[0, 1].map((i) => <div key={i} className="h-[76px] animate-pulse rounded-xl bg-slate-100" />)}</div>
+        : abiertas.length === 0 ? <p className="py-2 text-sm text-slate-500">Ya no hay cajas abiertas.</p>
+        : (
+          <ul className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
+            {abiertas.map(({ c, s }) => (
+              <li key={c.id} className="rounded-xl border border-emerald-100 bg-emerald-50/30 px-3.5 py-3">
+                <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                  <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
+                  <span className="truncate">{etiquetaCaja({ punto_nombre: c.nombre, sucursal_nombre: s.nombre })}</span>
+                </p>
+                <p className="mt-0.5 text-[11px] text-slate-500">Turno N° {c.turno!.numero_caja} · {c.turno!.abierta_por_nombre ?? "—"} · desde {hora(c.turno!.fecha_apertura)}</p>
+                <p className="mt-1.5 flex items-baseline justify-between gap-3 text-xs">
+                  <span className="text-slate-500">{c.turno!.ventas_cantidad} venta{c.turno!.ventas_cantidad === 1 ? "" : "s"}</span>
+                  <span className="font-bold tabular-nums text-slate-900">{gs(c.turno!.ventas_total)}</span>
+                </p>
+              </li>
+            ))}
+          </ul>
+        )}
+      <div className="mt-3 flex justify-end">
+        <Link href="/caja/turnos" className="-my-2 inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-[var(--brand)] hover:underline sm:min-h-0">
+          Ir a Apertura y cierre <ArrowRight className="h-3.5 w-3.5" />
+        </Link>
+      </div>
     </div>
   );
 }
