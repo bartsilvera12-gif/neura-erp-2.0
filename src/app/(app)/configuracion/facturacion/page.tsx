@@ -3,7 +3,7 @@
 /**
  * /configuracion/facturacion — Configuración › Facturación (portada de sistemas-propio, mismo
  * contenido y comportamiento, con los componentes del 2.0). Nivel ADMIN + "Configuración del sistema".
- *   · Modo de facturación (3 tarjetas) con aviso según el modo y "Abrir configuración SIFEN →";
+ *   · Modo de facturación (3 tarjetas) con aviso según el modo (a SIFEN se entra solo desde su tarjeta);
  *     tipo de impresión por defecto y "Pedir datos del comprador al confirmar venta": se guardan
  *     al tocarlos (como el original). Modo autoimpresor → tarjeta con los datos del timbrado.
  *   · SIFEN / Facturación electrónica → /configuracion/facturacion-electronica.
@@ -16,7 +16,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle, ArrowRight, ClipboardList, Hash, Landmark, Loader2, Percent, Printer, ReceiptText, Sparkles, Stamp, Users,
+  AlertTriangle, ClipboardList, Hash, Landmark, Loader2, Percent, Printer, ReceiptText, Sparkles, Stamp, Users,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
@@ -226,14 +226,9 @@ export default function FacturacionPage() {
           {cfg.modo === "sin_factura_fiscal" ? (
             <Aviso>Al confirmar una venta solo se registra internamente. No se emite documento fiscal.</Aviso>
           ) : cfg.modo === "sifen" ? (
-            <div className="flex flex-col gap-3 rounded-xl border border-[var(--brand-100)] bg-[var(--brand-50,#eef7f7)] px-3 py-3 text-xs leading-relaxed text-slate-600 sm:flex-row sm:items-center sm:text-[13px]">
-              <span className="min-w-0 flex-1">
-                Las ventas confirmadas se emiten como Documentos Electrónicos al SIFEN. La configuración de timbrado, certificado y branding KuDE se administra desde la pantalla SIFEN.
-                <span className="mt-1 block text-slate-500">Por ahora este sistema todavía no envía a la SET: la caja sigue imprimiendo el ticket.</span>
-              </span>
-              <Link href="/configuracion/facturacion-electronica" className={`${BOTON_PRIMARIO} shrink-0 max-sm:min-h-11`} style={{ backgroundColor: TEAL }}>
-                Abrir configuración SIFEN <ArrowRight className="h-4 w-4" />
-              </Link>
+            <div className="rounded-xl border border-[var(--brand-100)] bg-[var(--brand-50,#eef7f7)] px-3 py-3 text-xs leading-relaxed text-slate-600 sm:text-[13px]">
+              Las ventas confirmadas se emiten como Documentos Electrónicos al SIFEN. El timbrado, el certificado y el KuDE se configuran en la tarjeta <b className="font-semibold text-slate-700">SIFEN</b> de abajo.
+              <span className="mt-1 block text-slate-500">Por ahora este sistema todavía no envía a la SET: la caja sigue imprimiendo el ticket.</span>
             </div>
           ) : (
             <Aviso tono="alerta">Configurá abajo timbrado autorizado, establecimiento, punto de expedición y rango de numeración. Sin estos datos no se podrán emitir facturas impresas.</Aviso>
