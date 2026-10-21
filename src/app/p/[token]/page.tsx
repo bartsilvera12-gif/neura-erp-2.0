@@ -10,6 +10,7 @@ import { CalendarClock, Download, FileText, UserRound } from "lucide-react";
 import { clienteConfig } from "@/cliente.config";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { presupuestoPorToken } from "@/modules/presupuestos/publico";
+import { LOGO_INSTALACION } from "@/modules/empresa/tipos";
 import {
   cantidad, condicionTexto, diaCorto, ESTADOS, monto, numeroConRevision, pct, type PresupuestoDoc,
 } from "@/modules/presupuestos/tipos";
@@ -48,19 +49,19 @@ export default async function PresupuestoPublicoPage({ params }: { params: Promi
     );
   }
   return (
-    <Marco>
+    <Marco logo={(p as { emisor?: { logo_url?: string | null } | null }).emisor?.logo_url}>
       <Documento p={p} token={token} />
     </Marco>
   );
 }
 
-function Marco({ children }: { children: React.ReactNode }) {
+function Marco({ children, logo }: { children: React.ReactNode; logo?: string | null }) {
   return (
     <div className="min-h-dvh bg-slate-50">
       <header className="pt-safe border-b border-slate-200 bg-white">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-3.5 sm:px-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/logo-doc.png" alt={clienteConfig.nombre} className="h-9 w-auto max-w-[160px] object-contain" />
+          <img src={logo || LOGO_INSTALACION} alt={clienteConfig.nombre} className="h-9 w-auto max-w-[160px] object-contain" />
           <div className="text-right">
             <p className="text-sm font-semibold text-slate-900">{clienteConfig.nombre}</p>
             <p className="text-[11px] text-slate-500">{clienteConfig.dominio}</p>

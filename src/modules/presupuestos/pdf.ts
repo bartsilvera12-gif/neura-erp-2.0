@@ -35,6 +35,12 @@ export type EmisorPresupuesto = {
   departamento?: string | null;
   /** la sucursal del membrete es la principal (casa matriz) */
   sucursal_principal?: boolean | null;
+  // Logo propio de la empresa (receta 62); null → el de la instalación.
+  logo_url?: string | null;
+  logo_mime?: string | null;
+  logo_ancho?: number | null;
+  logo_alto?: number | null;
+  logo_actualizado?: string | null;
 };
 export type OpcionesPdfPresupuesto = {
   /** Versión interna (descarga desde el ERP): marca discreta si está vencido. */
@@ -163,7 +169,7 @@ export async function pdfPresupuesto(p: PresupuestoDoc & { emisor?: EmisorPresup
   const wDer = ANCHO - wIzq - gapCab;
   const xDerCab = MX + wIzq + gapCab;
 
-  const logo = await logoDoc();
+  const logo = await logoDoc(em);
   let wLogo = 0, hLogo = 0;
   if (logo) {
     hLogo = 17;
@@ -196,7 +202,7 @@ export async function pdfPresupuesto(p: PresupuestoDoc & { emisor?: EmisorPresup
   const altoCab = Math.max(32, hLogo + 10, altoTxtEmp + 10, altoDerNat);
 
   recuadro(MX, y, wIzq, altoCab);
-  if (logo) doc.addImage(logo.data, "PNG", MX + 5, y + (altoCab - hLogo) / 2, wLogo, hLogo, "logo", "FAST");
+  if (logo) doc.addImage(logo.data, logo.formato, MX + 5, y + (altoCab - hLogo) / 2, wLogo, hLogo, "logo", "FAST");
   let ye = y + (altoCab - altoTxtEmp) / 2;
   doc.setFont("helvetica", "bold").setFontSize(11.5).setTextColor(...TINTA);
   for (const l of nombreEmp) {

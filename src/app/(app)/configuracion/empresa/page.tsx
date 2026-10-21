@@ -4,18 +4,19 @@
  * /configuracion/empresa — Configuración › Datos de la empresa (nivel ADMIN + "Configuración
  * del sistema"). Identificación fiscal y contacto que salen en el encabezado de todos los
  * documentos (presupuesto con diseño de factura, recibos, remisiones, órdenes, reportes).
- *   · Tarjetas: Identificación fiscal · Contacto · Logo (solo se muestra: lo carga la instalación).
+ *   · Tarjetas: Identificación fiscal · Contacto · Logo (se cambia acá: se sube y se guarda solo,
+ *     aparte del formulario; "Quitar" vuelve al logo de la instalación).
  *   · Vista previa en vivo del encabezado (presupuesto y documentos generales). En celular se
  *     abre en una hoja (CapaModal) desde la barra de guardar.
  *   · RUC: el dígito verificador (módulo 11 de la SET) se controla mientras se escribe; la base
  *     rechaza un DV que no coincide.
  *   · Barra fija de guardar con Descartar; avisa si salís con cambios sin guardar.
  */
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  AlertTriangle, BadgeCheck, Building2, Eye, FileText, ImageIcon, Info, Loader2, MapPin, ReceiptText, Sparkles, X,
+  AlertTriangle, BadgeCheck, Building2, Eye, FileText, ImageIcon, Info, Loader2, MapPin, ReceiptText, RotateCcw, Sparkles, Upload, X,
 } from "lucide-react";
-import { apiFetch } from "@/lib/api/client-fetch";
+import { apiFetch, apiForm } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { clienteConfig } from "@/cliente.config";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
@@ -23,7 +24,7 @@ import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { Select } from "@/components/Select";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT } from "@/modules/inventario/ui";
 import {
-  CAMPOS_EMPRESA, DEPARTAMENTOS_PY, membreteEmpresa, normalizarRuc, renglonesMembrete, validarRuc,
+  CAMPOS_EMPRESA, DEPARTAMENTOS_PY, LOGO_INSTALACION, LOGO_MAX_MB, LOGO_TIPOS, membreteEmpresa, normalizarRuc, renglonesMembrete, validarRuc,
   type DatosEmpresa, type FormEmpresa, type Membrete,
 } from "@/modules/empresa/tipos";
 
@@ -50,6 +51,12 @@ export default function DatosEmpresaPage() {
   const [okGuardar, setOkGuardar] = useState<string | null>(null);
   const [previaMovil, setPreviaMovil] = useState(false);
   const [confirmarDescarte, setConfirmarDescarte] = useState(false);
+  // Logo (se guarda solo, aparte del formulario)
+  const [subiendoLogo, setSubiendoLogo] = useState(false);
+  const [quitandoLogo, setQuitandoLogo] = useState(false);
+  const [errorLogo, setErrorLogo] = useState<string | null>(null);
+  const [okLogo, setOkLogo] = useState<string | null>(null);
+  const [confirmarQuitar, setConfirmarQuitar] = useState(false);
 
   const cargar = useCallback(() => {
     setCargando(true);
@@ -105,6 +112,42 @@ export default function DatosEmpresaPage() {
       setErrorGuardar((e as Error).message);
     } finally {
       setGuardando(false);
+    }
+  };
+
+  // El logo se guarda al elegirlo: no toca lo que esté escrito sin guardar en el formulario.
+  const logoSrc = datos?.logo_url || LOGO_INSTALACION;
+  const subirLogo = async (file: File) => {
+    setErrorLogo(null);
+    setOkLogo(null);
+    if (!(LOGO_TIPOS as readonly string[]).includes(file.type)) { setErrorLogo("Formato no aceptado: subí un PNG, JPG o WEBP."); return; }
+    if (file.size > LOGO_MAX_MB * 1024 * 1024) { setErrorLogo(`El logo no puede superar ${LOGO_MAX_MB} MB.`); return; }
+    setSubiendoLogo(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const d = await apiForm<DatosEmpresa>(`${URL}/logo`, fd);
+      setDatos(d);
+      setOkLogo("Logo actualizado: los PDF nuevos ya salen con él.");
+    } catch (e) {
+      setErrorLogo((e as Error).message);
+    } finally {
+      setSubiendoLogo(false);
+    }
+  };
+  const quitarLogo = async () => {
+    setConfirmarQuitar(false);
+    setErrorLogo(null);
+    setOkLogo(null);
+    setQuitandoLogo(true);
+    try {
+      const d = await apiFetch<DatosEmpresa>(`${URL}/logo`, { method: "DELETE" });
+      setDatos(d);
+      setOkLogo("Listo: los documentos vuelven a usar el logo por defecto.");
+    } catch (e) {
+      setErrorLogo((e as Error).message);
+    } finally {
+      setQuitandoLogo(false);
     }
   };
 
@@ -232,17 +275,18 @@ export default function DatosEmpresaPage() {
           </Tarjeta>
 
           {/* ── Logo ──────────────────────────────────────────────────────── */}
-          <Tarjeta icono={<ImageIcon className="h-4 w-4" />} titulo="Logo de los documentos">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="flex h-20 w-full shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 p-3 sm:w-44">
-                <Logo className="max-h-14 w-auto max-w-full object-contain" />
-              </div>
-              <p className="text-sm text-slate-500">
-                Es el que sale arriba a la izquierda en todos los PDF. Lo configura Neura en la instalación; si querés cambiarlo, pedilo por Soporte.
-              </p>
-            </div>
-          </Tarjeta>
-
+          <TarjetaLogo
+            datos={datos}
+            src={logoSrc}
+            soloLectura={soloLectura}
+            nombre={membrete.nombre}
+            subiendo={subiendoLogo}
+            quitando={quitandoLogo}
+            error={errorLogo}
+            exito={okLogo}
+            onElegir={subirLogo}
+            onQuitar={() => setConfirmarQuitar(true)}
+          />
           {datos?.updated_at ? (
             <p className="px-1 text-xs text-slate-400">
               Última actualización: {fechaHora(datos.updated_at)}{datos.updated_by_nombre ? ` · ${datos.updated_by_nombre}` : ""}
@@ -252,7 +296,7 @@ export default function DatosEmpresaPage() {
 
         {/* ── Vista previa (≥ 640 px; en celular, en una hoja) ─────────────── */}
         <aside className="hidden min-w-0 sm:block lg:sticky lg:top-2 lg:self-start">
-          <VistaPrevia m={membrete} />
+          <VistaPrevia m={membrete} logo={logoSrc} />
         </aside>
       </div>
 
@@ -288,10 +332,26 @@ export default function DatosEmpresaPage() {
               </button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto p-3">
-              <VistaPrevia m={membrete} sinMarco />
+              <VistaPrevia m={membrete} logo={logoSrc} sinMarco />
             </div>
             <div className="shrink-0 border-t border-slate-100 p-3">
               <button type="button" onClick={() => setPreviaMovil(false)} className={`${BOTON_SECUNDARIO} w-full`}>Volver a editar</button>
+            </div>
+          </div>
+        </CapaModal>
+      ) : null}
+
+      {confirmarQuitar ? (
+        <CapaModal onClose={() => setConfirmarQuitar(false)} z="z-[120]">
+          <div role="alertdialog" aria-modal="true" className={`w-full max-w-sm ${ALTO_MAX_MODAL} overflow-hidden rounded-2xl bg-white p-5 shadow-2xl`}>
+            <p className="text-base font-semibold text-slate-900">¿Quitar el logo propio?</p>
+            <p className="mt-1 text-sm text-slate-500">Los documentos vuelven a salir con el logo por defecto de la instalación. Podés volver a subir uno cuando quieras.</p>
+            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setConfirmarQuitar(false)} className={`${BOTON_SECUNDARIO} max-sm:min-h-11`}>Cancelar</button>
+              <button type="button" onClick={quitarLogo}
+                className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-rose-700 active:scale-[0.98] max-sm:min-h-11">
+                Quitar logo
+              </button>
             </div>
           </div>
         </CapaModal>
@@ -352,16 +412,100 @@ function Campo({ etiqueta, requerido, opcional, ayuda, sinLabel = false, classNa
   );
 }
 
-/** El logo de los documentos (public/brand/logo-doc.png); si no hay, un ícono. */
-function Logo({ className }: { className?: string }) {
+/** El logo de los documentos (el propio o el de la instalación); si no carga, un ícono. Usar con key={src}. */
+function Logo({ src, className }: { src: string; className?: string }) {
   const [falla, setFalla] = useState(false);
   if (falla) return <Building2 className="h-8 w-8 text-slate-300" />;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src="/brand/logo-doc.png" alt="Logo de los documentos" className={className} onError={() => setFalla(true)} />;
+  return <img src={src} alt="Logo de los documentos" className={className} onError={() => setFalla(true)} />;
+}
+
+/** Tarjeta "Logo de los documentos": vista previa, cambiar / quitar y un mini-membrete de ejemplo. */
+function TarjetaLogo({ datos, src, soloLectura, nombre, subiendo, quitando, error, exito, onElegir, onQuitar }: {
+  datos: DatosEmpresa | null; src: string; soloLectura: boolean; nombre: string;
+  subiendo: boolean; quitando: boolean; error: string | null; exito: string | null;
+  onElegir: (f: File) => void; onQuitar: () => void;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  const propio = !!datos?.logo_url;
+  const ocupado = subiendo || quitando;
+  return (
+    <Tarjeta icono={<ImageIcon className="h-4 w-4" />} titulo="Logo de los documentos" detalle="Sale arriba a la izquierda en todos los PDF: presupuestos, recibos, remisiones, órdenes, cierres de caja y reportes.">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
+        {/* Fondo cuadriculado: deja ver si el logo tiene transparencia */}
+        <div className="relative flex h-24 w-full shrink-0 items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white bg-[conic-gradient(#f1f5f9_25%,transparent_0_50%,#f1f5f9_0_75%,transparent_0)] bg-[length:16px_16px] p-3 sm:w-48">
+          <Logo key={src} src={src} className="max-h-16 w-auto max-w-full object-contain" />
+          {ocupado ? (
+            <span className="absolute inset-0 grid place-items-center bg-white/70"><Loader2 className="h-5 w-5 animate-spin text-[var(--brand)]" /></span>
+          ) : null}
+        </div>
+        <div className="min-w-0 flex-1 space-y-2.5">
+          <p className="text-sm text-slate-700">
+            {propio ? (
+              <>
+                <span className="font-semibold text-emerald-700">Logo propio</span>
+                {datos?.logo_ancho && datos?.logo_alto ? <span className="text-slate-500"> · {datos.logo_ancho} × {datos.logo_alto} px</span> : null}
+                {datos?.logo_actualizado ? <span className="block text-xs text-slate-400">Cargado el {fechaHora(datos.logo_actualizado)}</span> : null}
+              </>
+            ) : (
+              <span className="font-semibold text-slate-700">Logo por defecto de la instalación</span>
+            )}
+          </p>
+          {!soloLectura ? (
+            <>
+              <input
+                ref={ref}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                className="sr-only"
+                tabIndex={-1}
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  e.target.value = "";
+                  if (f) onElegir(f);
+                }}
+              />
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                <button type="button" onClick={() => ref.current?.click()} disabled={ocupado} className={`${BOTON_SECUNDARIO} max-sm:min-h-11`}>
+                  {subiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />} {subiendo ? "Subiendo…" : "Cambiar logo"}
+                </button>
+                {propio ? (
+                  <button type="button" onClick={onQuitar} disabled={ocupado}
+                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-50 max-sm:min-h-11">
+                    {quitando ? <Loader2 className="h-4 w-4 animate-spin" /> : <RotateCcw className="h-4 w-4" />} {quitando ? "Quitando…" : "Quitar"}
+                  </button>
+                ) : null}
+              </div>
+              <p className="text-[11px] leading-snug text-slate-400">
+                PNG, JPG o WEBP, hasta {LOGO_MAX_MB} MB. Recomendado: fondo transparente o blanco y formato horizontal. Se guarda al elegirlo (se achica solo para que los PDF no pesen).
+              </p>
+            </>
+          ) : (
+            <p className="text-xs text-slate-500">Cambiar el logo es solo para el Administrador.</p>
+          )}
+          {error ? <p className="flex items-start gap-1.5 text-xs text-rose-700" role="alert"><AlertTriangle className="mt-px h-3.5 w-3.5 shrink-0" /> {error}</p> : null}
+          {exito && !error ? <p className="flex items-start gap-1.5 text-xs text-emerald-700" aria-live="polite"><Sparkles className="mt-px h-3.5 w-3.5 shrink-0" /> {exito}</p> : null}
+        </div>
+      </div>
+
+      {/* Mini-membrete de ejemplo */}
+      <div className="mt-4 rounded-lg bg-white p-3 ring-1 ring-slate-200" aria-label="Ejemplo de membrete">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex h-10 w-24 shrink-0 items-center sm:w-28"><Logo key={src} src={src} className="max-h-10 w-auto max-w-full object-contain" /></div>
+          <p className="min-w-0 truncate text-right text-[12px] font-bold text-slate-800">{nombre}</p>
+        </div>
+        <div className="mt-2 h-[2px]" style={{ backgroundColor: TEAL }} />
+        <div className="mt-2 space-y-1" aria-hidden>
+          <div className="h-1.5 w-2/3 rounded-sm bg-slate-100" />
+          <div className="h-1.5 w-1/2 rounded-sm bg-slate-100" />
+        </div>
+      </div>
+    </Tarjeta>
+  );
 }
 
 /** Encabezado del documento como sale en el PDF (escala reducida). */
-function VistaPrevia({ m, sinMarco = false }: { m: Membrete; sinMarco?: boolean }) {
+function VistaPrevia({ m, logo, sinMarco = false }: { m: Membrete; logo: string; sinMarco?: boolean }) {
   const [tipo, setTipo] = useState<"presupuesto" | "general">("presupuesto");
   const renglones = renglonesMembrete(m);
   const contacto = [m.telefono ? `Tel. ${m.telefono}` : null, m.email].filter(Boolean).join("  ·  ");
@@ -384,7 +528,7 @@ function VistaPrevia({ m, sinMarco = false }: { m: Membrete; sinMarco?: boolean 
         {tipo === "presupuesto" ? (
           <div className="flex gap-1.5">
             <div className="flex min-w-0 flex-[1.65] items-center gap-2.5 border border-slate-300 p-2.5">
-              <div className="flex w-14 shrink-0 items-center justify-center sm:w-16"><Logo className="max-h-11 w-auto max-w-full object-contain" /></div>
+              <div className="flex w-14 shrink-0 items-center justify-center sm:w-16"><Logo key={logo} src={logo} className="max-h-11 w-auto max-w-full object-contain" /></div>
               <div className="min-w-0 text-[9px] leading-[1.35] text-slate-600">
                 <p className="text-[12px] font-bold leading-tight text-slate-800 [overflow-wrap:anywhere]">{m.nombre}</p>
                 {m.razonSocial ? <p className="mt-0.5 font-semibold text-slate-600 [overflow-wrap:anywhere]">{m.razonSocial}</p> : null}
@@ -409,7 +553,7 @@ function VistaPrevia({ m, sinMarco = false }: { m: Membrete; sinMarco?: boolean 
         ) : (
           <div>
             <div className="flex items-start justify-between gap-3">
-              <div className="flex w-16 shrink-0 items-start pt-0.5 sm:w-20"><Logo className="max-h-9 w-auto max-w-full object-contain" /></div>
+              <div className="flex w-16 shrink-0 items-start pt-0.5 sm:w-20"><Logo key={logo} src={logo} className="max-h-9 w-auto max-w-full object-contain" /></div>
               <div className="min-w-0 text-right text-[9px] leading-[1.4] text-slate-500">
                 <p className="text-[12px] font-bold leading-tight text-slate-800 [overflow-wrap:anywhere]">{m.nombre}</p>
                 {renglones.map((r) => <p key={r} className="[overflow-wrap:anywhere]">{r}</p>)}

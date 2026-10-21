@@ -17,6 +17,13 @@ export type DatosEmpresa = {
   telefono: string | null;
   email: string | null;
   web: string | null;
+  /** Logo propio de los documentos (receta 62); null → el de la instalación. */
+  logo_url?: string | null;
+  logo_path?: string | null;
+  logo_mime?: string | null;
+  logo_ancho?: number | null;
+  logo_alto?: number | null;
+  logo_actualizado?: string | null;
   updated_at?: string | null;
   updated_by_nombre?: string | null;
   sucursal_principal?: { nombre: string; direccion: string | null; ciudad: string | null; telefono: string | null } | null;
@@ -87,6 +94,13 @@ export function validarRuc(valor: string): ValidacionRuc {
   if (dv !== Number(m[2])) return { estado: "dv", mensaje: `El dígito verificador no coincide: para ${m[1]} es ${m[1]}-${dv}`, dvSugerido: dv };
   return { estado: "ok" };
 }
+
+// ── Logo ─────────────────────────────────────────────────────────────────────
+/** Logo de la instalación (lo pone Neura): el que se usa si la empresa no cargó uno. */
+export const LOGO_INSTALACION = "/brand/logo-doc.png";
+/** Lo que se acepta al subir (el servidor lo normaliza a PNG o JPEG, lado mayor ≤ 600 px). */
+export const LOGO_TIPOS = ["image/png", "image/jpeg", "image/webp"] as const;
+export const LOGO_MAX_MB = 2;
 
 // ── Membrete ─────────────────────────────────────────────────────────────────
 const lleno = (s: string | null | undefined): s is string => !!s && s.trim() !== "";

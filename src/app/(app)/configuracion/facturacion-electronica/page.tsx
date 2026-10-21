@@ -24,7 +24,7 @@ import { Select } from "@/components/Select";
 import { SelectorFecha } from "@/components/SelectorFecha";
 import { ColorPicker } from "@/components/ColorPicker";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, INPUT } from "@/modules/inventario/ui";
-import { normalizarRuc, validarRuc } from "@/modules/empresa/tipos";
+import { LOGO_INSTALACION, normalizarRuc, validarRuc } from "@/modules/empresa/tipos";
 import { Aviso, Campo, Chip, Interruptor, Tarjeta, fechaCorta, fechaHora } from "@/modules/facturacion/ui";
 import { sifenCompleta, type AmbienteSifen, type SifenLectura } from "@/modules/facturacion/tipos";
 
@@ -91,6 +91,13 @@ export default function FacturacionElectronicaPage() {
   const [subiendoLogo, setSubiendoLogo] = useState(false);
   const [quitandoLogo, setQuitandoLogo] = useState(false);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  // Sin logo propio del KuDE se usa el de la empresa (Datos de la empresa) o el de la instalación.
+  const [logoEmpresa, setLogoEmpresa] = useState<string | null>(null);
+  useEffect(() => {
+    apiFetch<{ logo_url?: string | null }>("/api/configuracion/empresa")
+      .then((e) => setLogoEmpresa(e.logo_url || LOGO_INSTALACION))
+      .catch(() => setLogoEmpresa(LOGO_INSTALACION));
+  }, []);
   const [color, setColor] = useState("");
   const [colorFill, setColorFill] = useState("");
   const [derivarFill, setDerivarFill] = useState(true);
@@ -248,7 +255,7 @@ export default function FacturacionElectronicaPage() {
     setError(null); setExito(null); setQuitandoLogo(true);
     try {
       aplicar(await apiFetch<Lectura>(`${URL}/kude-logo`, { method: "DELETE" }), false);
-      setExito("Logo personalizado eliminado. Se usará el logo por defecto.");
+      setExito("Logo propio del KuDE eliminado. Se usará el logo de la empresa.");
     } catch (e2) {
       setError((e2 as Error).message);
     } finally {
@@ -518,9 +525,9 @@ export default function FacturacionElectronicaPage() {
                 <input ref={logoRef} type="file" accept="image/png" className="sr-only" onChange={subirLogo} disabled={!cfg || subiendoLogo || quitandoLogo || soloLectura} />
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                   <div className="flex h-16 w-full shrink-0 items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 p-2 sm:w-40">
-                    {logoUrl ? (
+                    {logoUrl || logoEmpresa ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={logoUrl} alt="Logo del KuDE" className="max-h-12 w-auto max-w-full object-contain" />
+                      <img src={(logoUrl || logoEmpresa)!} alt="Logo del KuDE" className={`max-h-12 w-auto max-w-full object-contain ${logoUrl ? "" : "opacity-70"}`} />
                     ) : <ImageIcon className="h-6 w-6 text-slate-300" />}
                   </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
@@ -530,10 +537,10 @@ export default function FacturacionElectronicaPage() {
                     {logoCargado ? (
                       <button type="button" onClick={restaurarLogo} disabled={!cfg || subiendoLogo || quitandoLogo || soloLectura}
                         className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm font-semibold text-rose-700 shadow-sm transition hover:bg-rose-50 disabled:opacity-50 max-sm:min-h-11">
-                        {quitandoLogo ? "Restaurando…" : "Restaurar logo por defecto"}
+                        {quitandoLogo ? "Restaurando…" : "Usar el logo de la empresa"}
                       </button>
                     ) : null}
-                    <span className="text-xs text-slate-500">Estado: <span className={`font-medium ${logoCargado ? "text-emerald-700" : "text-slate-700"}`}>{logoCargado ? "Logo personalizado cargado" : "Logo por defecto"}</span></span>
+                    <span className="text-xs text-slate-500">Estado: <span className={`font-medium ${logoCargado ? "text-emerald-700" : "text-slate-700"}`}>{logoCargado ? "Logo propio del KuDE" : "Se usa el logo de la empresa (Datos de la empresa)"}</span></span>
                   </div>
                 </div>
                 {!cfg ? <p className="mt-2 text-xs text-amber-700">Guardá primero la configuración SIFEN base para habilitar la subida del logo.</p> : null}

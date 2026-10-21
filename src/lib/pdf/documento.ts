@@ -8,6 +8,7 @@ import path from "node:path";
 import { jsPDF } from "jspdf";
 import { clienteConfig } from "@/cliente.config";
 import { TZ_PY } from "@/lib/fecha/paraguay";
+import { esUrlLogoPropia } from "@/lib/empresa/logo";
 import { membreteEmpresa, renglonesMembrete, type DatosEmpresa, type Membrete } from "@/modules/empresa/tipos";
 
 export type RGB = [number, number, number];
@@ -31,22 +32,92 @@ export const fechaHoraPY = (iso: string) =>
 /** Helvetica de jsPDF es WinAnsi: el signo menos tipográfico y similares no existen. */
 export const pdfTxt = (s: string) => s.replace(/−/g, "-").replace(/→/g, "->").replace(/ | /g, " ");
 
-let logoCache: { data: string; w: number; h: number } | null | undefined;
-/** Logo de la empresa para documentos (public/brand/logo-doc.png), con su tamaño en px. */
-export async function logoDoc() {
-  if (logoCache !== undefined) return logoCache;
+// ── Logo de los documentos ───────────────────────────────────────────────────
+// 1) el propio de la empresa (Configuración › Datos de la empresa, receta 62), 2) el de la
+// instalación (public/brand/logo-doc.png), 3) sin logo. Cache en memoria por URL + versión
+// (cada carga tiene su URL y su `logo_actualizado`): un cambio sale en el próximo PDF.
+export type LogoPdf = { data: string; w: number; h: number; formato: "PNG" | "JPEG" };
+/** Lo que hace falta para encontrar el logo propio (sale de datos_empresa o del emisor del presupuesto). */
+export type FuenteLogo = {
+  logo_url?: string | null;
+  logo_mime?: string | null;
+  logo_ancho?: number | null;
+  logo_alto?: number | null;
+  logo_actualizado?: string | null;
+} | null | undefined;
+
+let logoInstalacion: LogoPdf | null | undefined;
+const logosEmpresa = new Map<string, { logo: LogoPdf | null; hasta: number }>();
+const FALLA_TTL_MS = 60_000;
+
+function tamanoPng(buf: Buffer): { w: number; h: number } | null {
+  const sig = buf.length > 24 && buf.readUInt32BE(0) === 0x89504e47 && buf.toString("ascii", 12, 16) === "IHDR";
+  return sig ? { w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) } : null;
+}
+
+async function logoDeInstalacion(): Promise<LogoPdf | null> {
+  if (logoInstalacion !== undefined) return logoInstalacion;
   try {
     const buf = await readFile(path.join(process.cwd(), "public", "brand", "logo-doc.png"));
-    logoCache = { data: `data:image/png;base64,${buf.toString("base64")}`, w: buf.readUInt32BE(16), h: buf.readUInt32BE(20) };
+    const t = tamanoPng(buf);
+    logoInstalacion = t ? { data: `data:image/png;base64,${buf.toString("base64")}`, ...t, formato: "PNG" } : null;
   } catch {
-    logoCache = null;
+    logoInstalacion = null;
   }
-  return logoCache;
+  return logoInstalacion;
+}
+
+async function bajarLogoEmpresa(f: NonNullable<FuenteLogo>): Promise<LogoPdf | null> {
+  const url = f.logo_url!;
+  if (!esUrlLogoPropia(url)) return null;
+  const r = await fetch(url, { signal: AbortSignal.timeout(6000), cache: "no-store" }).catch(() => null);
+  if (!r?.ok) return null;
+  const buf = Buffer.from(await r.arrayBuffer());
+  const png = tamanoPng(buf);
+  const jpeg = buf.length > 3 && buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff;
+  if (!png && !jpeg) return null;
+  const w = png?.w ?? Number(f.logo_ancho);
+  const h = png?.h ?? Number(f.logo_alto);
+  if (!(w > 0) || !(h > 0)) return null;
+  return { data: `data:${png ? "image/png" : "image/jpeg"};base64,${buf.toString("base64")}`, w, h, formato: png ? "PNG" : "JPEG" };
+}
+
+/** Logo para el documento: el de la empresa si tiene, si no el de la instalación, si no null. */
+export async function logoDoc(fuente?: FuenteLogo): Promise<LogoPdf | null> {
+  if (fuente?.logo_url) {
+    const clave = `${fuente.logo_url}|${fuente.logo_actualizado ?? ""}`;
+    const hit = logosEmpresa.get(clave);
+    if (hit && hit.hasta > Date.now()) {
+      if (hit.logo) return hit.logo;
+    } else {
+      const logo = await bajarLogoEmpresa(fuente).catch(() => null);
+      if (logosEmpresa.size > 200) logosEmpresa.clear();
+      logosEmpresa.set(clave, { logo, hasta: logo ? Number.POSITIVE_INFINITY : Date.now() + FALLA_TTL_MS });
+      if (logo) return logo;
+    }
+  }
+  return logoDeInstalacion();
+}
+
+/**
+ * Logo del KuDE (factura electrónica): el propio que se cargó en Facturación y SIFEN (receta 61,
+ * PNG en sifen_secretos) y, si no hay, el mismo de los demás documentos (logoDoc).
+ */
+export async function logoKude(empresaId: string, empresa?: FuenteLogo): Promise<LogoPdf | null> {
+  try {
+    const { kudeLogo } = await (await import("@/lib/sifen/secretos")).leerSecretos(empresaId);
+    const t = kudeLogo ? tamanoPng(kudeLogo) : null;
+    if (kudeLogo && t) return { data: `data:image/png;base64,${kudeLogo.toString("base64")}`, ...t, formato: "PNG" };
+  } catch {
+    /* sin secretos legibles: sigue con el logo de la empresa */
+  }
+  return logoDoc(empresa);
 }
 
 // Membrete de cada documento (Configuración › Datos de la empresa). Se guarda al crear el
 // documento y lo leen el encabezado y el pie; sin datos, el respaldo de siempre (config).
 const membretes = new WeakMap<jsPDF, Membrete>();
+const fuentesLogo = new WeakMap<jsPDF, FuenteLogo>();
 const RESPALDO = { nombre: clienteConfig.nombre, web: clienteConfig.dominio };
 
 /** Membrete del documento: los datos de la empresa con que se creó o el respaldo. */
@@ -54,10 +125,11 @@ export function membreteDe(doc: jsPDF): Membrete {
   return membretes.get(doc) ?? membreteEmpresa(null, RESPALDO);
 }
 
-/** Documento A4 nuevo. `empresa` = datos_empresa() (null → nombre y dominio del cliente). */
+/** Documento A4 nuevo. `empresa` = datos_empresa() (null → nombre y dominio del cliente, logo de la instalación). */
 export function nuevoDocumento(empresa?: DatosEmpresa | null) {
   const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
   membretes.set(doc, membreteEmpresa(empresa ?? null, RESPALDO));
+  fuentesLogo.set(doc, empresa ?? null);
   return doc;
 }
 
@@ -65,13 +137,13 @@ export function nuevoDocumento(empresa?: DatosEmpresa | null) {
 export async function encabezado(doc: jsPDF, titulo: string, subtitulo?: string): Promise<number> {
   const der = M + W;
   let y = M;
-  const logo = await logoDoc();
+  const logo = await logoDoc(fuentesLogo.get(doc));
   let alto = 12;
   let wLogo = 0;
   if (logo) {
     wLogo = Math.min(45, (logo.w / logo.h) * 15);
     const h = (wLogo * logo.h) / logo.w;
-    doc.addImage(logo.data, "PNG", M, y, wLogo, h, "logo", "FAST");
+    doc.addImage(logo.data, logo.formato, M, y, wLogo, h, "logo", "FAST");
     alto = Math.max(alto, h);
   }
   // Empresa a la derecha: nombre, actividad y los renglones fiscales / de contacto.
