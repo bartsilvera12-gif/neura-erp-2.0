@@ -50,6 +50,16 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
   useEffect(() => {
     apiFetchCache<Categoria[]>("/api/clientes/categorias").then(setCategorias).catch(() => {});
   }, []);
+  // Cliente nuevo: el plazo arranca con los "días de vencimiento por defecto" (Configuración › Facturación).
+  useEffect(() => {
+    if (editando) return;
+    apiFetchCache<{ dias_vencimiento_default?: number }>("/api/configuracion/facturacion", { ttlMs: 60_000 })
+      .then((c) => {
+        const n = Number(c?.dias_vencimiento_default);
+        if (n >= 1) setF((p) => (p.plazo_dias === "30" ? { ...p, plazo_dias: String(n) } : p));
+      })
+      .catch(() => {});
+  }, [editando]);
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault();

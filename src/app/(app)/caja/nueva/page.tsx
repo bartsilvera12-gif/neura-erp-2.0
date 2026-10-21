@@ -13,9 +13,12 @@
 import Link from "next/link";
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, ChevronRight, FileSignature, Package, Search, Trash2, UserRound, X } from "lucide-react";
+import { CheckCircle2, ChevronRight, FileSignature, Package, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
 import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { apiFetchCache } from "@/lib/api/cache-cliente";
+import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
+import { anchoTicket, type ConfigFacturacion } from "@/modules/facturacion/tipos";
 import { browserClient } from "@/lib/supabase/browser";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
@@ -74,12 +77,12 @@ type CartLine = {
   descuento_pct: number;
 };
 
-/** Abre el ticket imprimible en una pestaña nueva, adjuntando el Bearer. */
-async function imprimirTicket(ventaId: string) {
+/** Abre el ticket imprimible en una pestaña nueva, adjuntando el Bearer. Ancho: el de Configuración › Facturación. */
+async function imprimirTicket(ventaId: string, ancho: 58 | 80 = 80) {
   try {
     const { data } = await browserClient().auth.getSession();
     const token = data.session?.access_token;
-    const res = await fetch(`/api/ventas/${ventaId}/ticket?auto=1`, {
+    const res = await fetch(`/api/ventas/${ventaId}/ticket?auto=1${ancho === 58 ? "&w=58" : ""}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     if (!res.ok) return;
@@ -162,6 +165,21 @@ function CajaPageContenido() {
   const [clienteOpen, setClienteOpen] = useState(false);
   const [modalNuevoCliente, setModalNuevoCliente] = useState(false);
   const clienteContainerRef = useRef<HTMLDivElement>(null);
+
+  // ── Configuración › Facturación (receta 61): ancho del ticket, "pedir datos del comprador",
+  // plazo por defecto del crédito y el modo (texto del documento). Sin config: como siempre.
+  const [cfgFact, setCfgFact] = useState<ConfigFacturacion | null>(null);
+  useEffect(() => {
+    apiFetchCache<ConfigFacturacion>("/api/configuracion/facturacion", { ttlMs: 60_000 }).then(setCfgFact).catch(() => {});
+  }, []);
+  // "Pedir datos del comprador": antes de cobrar sin cliente se pregunta (una vez por venta).
+  const [pedirComprador, setPedirComprador] = useState(false);
+  const consumidorFinalRef = useRef(false);
+  /** Plazo sugerido al pasar a crédito: el del cliente o los días por defecto de la configuración. */
+  const plazoSugerido = (c: Cliente | null) => {
+    const n = Number(c?.plazo_dias) || Number(cfgFact?.dias_vencimiento_default ?? 30);
+    return n >= 1 ? String(n) : "";
+  };
 
   // ── Cobro (una o varias formas de pago: CobroModal) ─────────────────────────
   const [cobroOpen, setCobroOpen] = useState(false);
@@ -501,7 +519,20 @@ function CajaPageContenido() {
       if (!esEscritorio) setHojaOpciones(true);
       return;
     }
+    // Configuración › Facturación › "Pedir datos del comprador al confirmar venta".
+    if (cfgFact?.preguntar_datos_al_confirmar && !clienteId && !consumidorFinalRef.current) {
+      setPedirComprador(true);
+      return;
+    }
     setCobroOpen(true);
+  }
+
+  function elegirCompradorAhora(nuevo: boolean) {
+    setPedirComprador(false);
+    if (nuevo) { setModalNuevoCliente(true); return; }
+    if (!esEscritorio) setHojaOpciones(true);
+    setClienteOpen(true);
+    setTimeout(() => clienteContainerRef.current?.querySelector("input")?.focus(), 0);
   }
 
   async function confirmarCobro(pagos: PagoEnviar[]) {
@@ -553,7 +584,8 @@ function CajaPageContenido() {
       // Ticket imprimible (SIFEN inactivo → por ahora siempre ticket). La auth del
       // 2.0 es por Bearer, así que una pestaña nueva no lleva el token: traemos el
       // HTML con el token y lo abrimos como blob (el auto-print corre igual).
-      void imprimirTicket(venta.venta_id);
+      void imprimirTicket(venta.venta_id, anchoTicket(cfgFact?.impresion_tipo_default));
+      consumidorFinalRef.current = false;
       setVentaOk({ numero: venta.numero_control, vuelto: Number(venta.vuelto) || 0 });
       setCobroOpen(false);
       vaciarCarrito();
@@ -575,7 +607,7 @@ function CajaPageContenido() {
 
   // Espejo del estado para los atajos de teclado (siempre el último valor).
   kbRef.current = {
-    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente || hojaOpciones, cart, q, inputRef,
+    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente || hojaOpciones || pedirComprador, cart, q, inputRef,
     updateCant, removeFromCart, setCobroOpen, setQ, setClienteOpen,
   };
 
@@ -635,7 +667,7 @@ function CajaPageContenido() {
       {/* Condición */}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-slate-700">Condición</label>
-        <Segmented value={tipoVenta} onChange={(v) => { setTipoVenta(v); if (v === "CONTADO") setPlazoDias(""); }} options={[{ value: "CONTADO", label: "Contado" }, { value: "CREDITO", label: "Crédito", disabled: !!me && !puedeCredito, title: "Tu perfil no permite vender a crédito" }]} />
+        <Segmented value={tipoVenta} onChange={(v) => { setTipoVenta(v); if (v === "CONTADO") setPlazoDias(""); else if (!plazoDias) setPlazoDias(plazoSugerido(clienteSel)); }} options={[{ value: "CONTADO", label: "Contado" }, { value: "CREDITO", label: "Crédito", disabled: !!me && !puedeCredito, title: "Tu perfil no permite vender a crédito" }]} />
         {tipoVenta === "CREDITO" && (
           <div className="mt-2">
             <input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" min={1} value={plazoDias} onChange={(e) => setPlazoDias(e.target.value)} placeholder="Plazo (días)"
@@ -649,7 +681,13 @@ function CajaPageContenido() {
         <label className="mb-1.5 block text-sm font-medium text-slate-700">Documento</label>
         <Segmented value={tipoDocumento} onChange={setTipoDocumento} options={[{ value: "factura", label: "Factura" }, { value: "ticket", label: "Solo ticket" }]} />
         <p className="mt-1 text-[11px] text-slate-500">
-          {tipoDocumento === "factura" ? "Factura electrónica (SIFEN) — por ahora inactivo: se imprime el ticket." : "Registra la venta e imprime un ticket. No toca SIFEN."}
+          {tipoDocumento === "ticket"
+            ? "Registra la venta e imprime un ticket. No toca SIFEN."
+            : cfgFact?.modo === "autoimpresor"
+              ? "Factura impresa (autoimpresor) — todavía no se emite: se imprime el ticket."
+              : cfgFact?.modo === "sin_factura_fiscal"
+                ? "La empresa está en modo sin factura fiscal (Configuración › Facturación): se imprime el ticket."
+                : "Factura electrónica (SIFEN) — por ahora inactivo: se imprime el ticket."}
         </p>
       </div>
     </div>
@@ -1077,6 +1115,28 @@ function CajaPageContenido() {
       ) : null}
       {modalCaja === "cerrar" && caja ? (
         <CierreModal turnoId={caja.id} onClose={() => setModalCaja(null)} onCerrada={refrescarCajas} />
+      ) : null}
+
+      {/* Configuración › Facturación › "Pedir datos del comprador al confirmar venta" */}
+      {pedirComprador ? (
+        <CapaModal onClose={() => setPedirComprador(false)} z="z-[70]">
+          <div role="dialog" aria-modal="true" aria-labelledby="comprador-titulo" className={`w-full max-w-md overflow-y-auto rounded-2xl bg-white p-5 shadow-2xl ${ALTO_MAX_MODAL}`}>
+            <span className="grid h-10 w-10 place-items-center rounded-full" style={{ backgroundColor: `${TEAL}14`, color: TEAL }}><UserRound className="h-5 w-5" /></span>
+            <p id="comprador-titulo" className="mt-3 text-base font-semibold text-slate-900">¿A nombre de quién va la venta?</p>
+            <p className="mt-1 text-sm text-slate-500">Elegí o cargá el cliente con su RUC o CI para que salga en el comprobante, o seguí como consumidor final.</p>
+            <div className="mt-4 grid gap-2">
+              <button type="button" onClick={() => elegirCompradorAhora(false)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 active:scale-[0.98]" style={{ backgroundColor: TEAL }}>
+                <Search className="h-4 w-4" /> Buscar cliente
+              </button>
+              <button type="button" onClick={() => elegirCompradorAhora(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
+                <UserRoundPlus className="h-4 w-4" /> Cargar nuevo cliente
+              </button>
+              <button type="button" onClick={() => { consumidorFinalRef.current = true; setPedirComprador(false); setCobroOpen(true); }} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">
+                Seguir como consumidor final
+              </button>
+            </div>
+          </div>
+        </CapaModal>
       ) : null}
 
       {modalNuevoCliente && (

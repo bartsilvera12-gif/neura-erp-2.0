@@ -34,8 +34,16 @@ export const GET = withTenant(async (ctx, req) => {
   if (!id) return ERR.invalid("Falta el id de la venta");
   const sp = new URL(req.url).searchParams;
   const auto = sp.get("auto") === "1";
-  // Ancho del papel térmico: 80mm (default) o 58mm. La fuente escala con el ancho.
-  const widthMm = sp.get("w") === "58" ? 58 : 80;
+  // Ancho del papel térmico: ?w=58|80, o el de Configuración › Facturación (receta 61:
+  // ticket 58 / 80 mm; los PDF A4 / media hoja todavía no existen → 80 mm). La fuente escala con el ancho.
+  const wParam = sp.get("w");
+  let widthMm: 58 | 80 = wParam === "58" ? 58 : 80;
+  if (wParam !== "58" && wParam !== "80") {
+    try {
+      const cfg = await ctx.db.rpc<{ impresion_tipo_default?: string }>("config_facturacion");
+      if (cfg.data?.impresion_tipo_default === "ticket_58mm") widthMm = 58;
+    } catch { /* sin receta 61: 80 mm como siempre */ }
+  }
   const fontPx = widthMm === 58 ? 11 : 12;
 
   // Membrete (Configuración › Datos de la empresa): en paralelo con la venta.

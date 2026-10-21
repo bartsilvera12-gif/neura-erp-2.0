@@ -16,6 +16,7 @@ import MontoInput from "@/components/ui/MontoInput";
 import type { Categoria, ClienteCompleto } from "@/modules/clientes/esquema";
 import type { UsuarioMin } from "@/modules/clientes/ficha/tipos";
 import { TEAL, fechaCorta } from "@/modules/clientes/ui";
+import { PerfilTributario } from "@/modules/clientes/ficha/PerfilTributario";
 
 const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]";
 const LABEL = "mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500";
@@ -263,6 +264,9 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         </Tarjeta>
 
       </div>
+
+      {/* Solo con "gestión tributaria de clientes" activa (Configuración › Facturación). */}
+      <PerfilTributario clienteId={cliente.id} tipoCliente={cliente.tipo_cliente} />
 
       {abierto ? (
         <CapaModal onClose={busy ? undefined : () => setAbierto(false)} fondo="bg-slate-900/55 backdrop-blur-sm">
