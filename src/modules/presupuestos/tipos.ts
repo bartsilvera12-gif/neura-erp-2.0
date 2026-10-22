@@ -205,11 +205,11 @@ export const cuerpoPresupuesto = z.object({
   items: z
     .array(
       z.object({
-        producto_id: z.string().uuid().nullish(),
+        // Solo productos del inventario (receta 64): sin líneas libres.
+        producto_id: z.string({ required_error: "En un presupuesto solo van productos del inventario", invalid_type_error: "En un presupuesto solo van productos del inventario" })
+          .uuid("En un presupuesto solo van productos del inventario"),
         descripcion: texto(300),
         detalle: texto(1000),
-        unidad: texto(30),
-        tipo_iva: z.enum(["10%", "5%", "EXENTA"]).nullish(),
         cantidad: z.coerce.number().positive("La cantidad tiene que ser mayor a 0"),
         precio_unitario: z.coerce.number().positive("Falta el precio de alguna línea"),
         descuento_pct: z.coerce.number().min(0).max(99.99).default(0),

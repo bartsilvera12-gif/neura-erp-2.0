@@ -1,8 +1,9 @@
 /**
  * Presupuesto → Caja. Lo que trae GET /api/presupuestos/[id]/conversion y cómo se pasa a
  * líneas de la caja, con los avisos que hay que mostrar ANTES de cobrar: precio de lista
- * que cambió desde que se cotizó, stock que no alcanza, productos inactivos y líneas
- * libres (no son productos del catálogo: la caja no las puede vender).
+ * que cambió desde que se cotizó, stock que no alcanza, productos inactivos y líneas sin
+ * producto (`libres`). Desde la receta 64 un presupuesto nuevo solo lleva productos del
+ * inventario: `libres` queda solo para presupuestos viejos o si el producto se borró.
  *
  * La caja vende en guaraníes: un presupuesto en US$ se pasa con SU cotización. El
  * descuento global se combina con el de cada línea en un solo % por línea (la caja lo

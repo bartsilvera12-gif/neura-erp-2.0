@@ -363,7 +363,7 @@ export function PresupuestoDetalle({ id, onCerrar, onCambio, avisoInicial }: {
                     <>
                       <p className="font-medium text-slate-900">{i.descripcion}</p>
                       <p className="text-[11px] font-normal text-slate-400">
-                        {i.producto_id ? <span className="font-mono">{i.sku}</span> : <span className="font-semibold text-amber-600">Línea libre</span>}
+                        {i.producto_id ? <span className="font-mono">{i.sku}</span> : <span className="font-semibold text-amber-600" title="Línea de antes de la regla «solo productos del inventario»">Sin producto</span>}
                         {i.producto_id && i.precio_lista != null && Number(i.precio_lista) !== Number(i.precio_unitario) ? <> · lista {m(i.precio_lista)}</> : null}
                       </p>
                       {i.detalle ? <p className="mt-0.5 whitespace-pre-wrap text-xs font-normal text-slate-500">{i.detalle}</p> : null}
@@ -379,7 +379,7 @@ export function PresupuestoDetalle({ id, onCerrar, onCambio, avisoInicial }: {
                         <span className="ml-1.5 text-[11px] text-slate-400">IVA {i.tipo_iva === "EXENTA" ? "exenta" : i.tipo_iva}</span>
                       </p>
                       <p className="text-[11px] font-normal text-slate-400">
-                        {i.producto_id ? <span className="font-mono">{i.sku}</span> : <span className="font-semibold text-amber-600">Línea libre</span>}
+                        {i.producto_id ? <span className="font-mono">{i.sku}</span> : <span className="font-semibold text-amber-600" title="Línea de antes de la regla «solo productos del inventario»">Sin producto</span>}
                         {i.producto_id && i.precio_lista != null && Number(i.precio_lista) !== Number(i.precio_unitario) ? <> · lista {m(i.precio_lista)}</> : null}
                       </p>
                       {i.detalle ? <p className="mt-0.5 whitespace-pre-wrap text-xs font-normal text-slate-500">{i.detalle}</p> : null}

@@ -2,9 +2,10 @@
 
 /**
  * "Convertir a venta": antes de ir a la Caja muestra TODO lo que hay que saber —precios de
- * lista que cambiaron desde que se cotizó, stock que no alcanza, productos inactivos y
- * líneas libres (no son productos: la caja no las vende). Una línea libre se puede ligar
- * a un producto existente o crear el producto (administrador) sin salir de acá.
+ * lista que cambiaron desde que se cotizó, stock que no alcanza y productos inactivos.
+ * Los presupuestos nuevos solo llevan productos del inventario; si uno viejo tiene líneas
+ * sin producto, acá se pueden ligar a un producto existente o crear el producto
+ * (administrador) sin salir.
  * Nada se hace solo: la venta se confirma en la Caja como siempre.
  */
 import { useCallback, useEffect, useState } from "react";
@@ -33,7 +34,7 @@ export function ModalConvertir({ presupuestoId, validoHasta, onClose, onCambio }
   const [conv, setConv] = useState<ConversionPresupuesto | null>(null);
   const [a, setA] = useState<AnalisisConversion | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [eligiendo, setEligiendo] = useState<string | null>(null);   // item_id de la línea libre
+  const [eligiendo, setEligiendo] = useState<string | null>(null);   // item_id de la línea sin producto
   const [creando, setCreando] = useState<{ itemId: string; nombre: string } | null>(null);
   const [ligando, setLigando] = useState(false);
 
@@ -153,7 +154,7 @@ export function ModalConvertir({ presupuestoId, validoHasta, onClose, onCambio }
               ) : null}
 
               {a.libres.length ? (
-                <Bloque tono="ambar" icono={<Link2 className="h-4 w-4" />} titulo="Líneas libres: la caja solo vende productos del catálogo">
+                <Bloque tono="ambar" icono={<Link2 className="h-4 w-4" />} titulo="Líneas sin producto: la caja solo vende productos del inventario">
                   <p>Ligalas a un producto (o crealo) para que pasen. Si no, quedan afuera y las cobrás aparte.</p>
                   <ul className="mt-2 space-y-2">
                     {a.libres.map((l) => (

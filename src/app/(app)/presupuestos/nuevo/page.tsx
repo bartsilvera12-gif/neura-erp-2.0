@@ -5,23 +5,25 @@
  *   ?cliente=<id>  arranca con ese cliente (desde la ficha del cliente)
  *   ?editar=<id>   edita (borrador o enviado; editar uno enviado crea la revisión siguiente)
  * Cliente del ERP o prospecto (datos libres), validez en días o fecha, moneda, condición,
- * vendedor, líneas de productos (precio de lista e IVA del producto, descuento por línea)
- * y líneas libres (servicios sin producto, con su IVA), descuento general, condiciones
- * comerciales (las ve el cliente) y notas internas (no salen del ERP).
+ * vendedor, líneas de productos del inventario (precio de lista e IVA del producto,
+ * descuento por línea; si falta un producto se crea acá mismo, en un modal), descuento
+ * general, condiciones comerciales (las ve el cliente) y notas internas (no salen del ERP).
+ * Solo productos del inventario: no hay líneas libres (receta 64).
  */
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, FileSignature, Loader2, Lock, PenLine, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, FileSignature, Loader2, Lock, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
-import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { clienteConfig } from "@/cliente.config";
 import MontoInput from "@/components/ui/MontoInput";
 import { Select } from "@/components/Select";
 import { BuscadorCliente } from "@/modules/clientes/gestion/BuscadorCliente";
 import { BuscadorProductos, Segmentado, Tarjeta } from "@/modules/compras/partes";
+import { ProductoForm } from "@/modules/inventario/ProductoForm";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 import type { TipoIva } from "@/modules/caja/lib";
 import { CLASE_ETIQUETA as ET, CLASE_INPUT as INPUT } from "@/modules/presupuestos/ui";
@@ -32,10 +34,10 @@ import {
 import { SelectorFecha } from "@/components/SelectorFecha";
 
 const TEAL = clienteConfig.color;
-const IVAS: [string, string][] = [["10%", "IVA 10%"], ["5%", "IVA 5%"], ["EXENTA", "Exenta"]];
 
 type Linea = {
   key: string;
+  /** null solo en líneas viejas (de antes de "solo productos del inventario"): hay que quitarlas */
   producto_id: string | null;
   sku: string | null;
   descripcion: string;
@@ -111,6 +113,8 @@ function Formulario() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [idem] = useState(() => crypto.randomUUID());
+  const puedeCrearProducto = tienePermiso(me, "editar_productos");
+  const [creandoProd, setCreandoProd] = useState<string | null>(null);
 
   // Ajustes de la empresa (validez y condiciones por defecto) y vendedores.
   useEffect(() => {
@@ -206,10 +210,6 @@ function Formulario() {
       stock: Number(p.stock_actual), controla_stock: p.controla_stock,
     }]);
   }
-  function agregarLibre() {
-    setLineas((ls) => [...ls, { key: nuevaKey(), producto_id: null, sku: null, descripcion: "", detalle: "", verDetalle: false, unidad: null, cantidad: "1", precio: 0, descuento: "", tipo_iva: "10%" }]);
-    setTimeout(() => document.querySelector<HTMLInputElement>("[data-libre-nueva]")?.focus(), 30);
-  }
   const editar = (key: string, patch: Partial<Linea>) => setLineas((ls) => ls.map((l) => (l.key === key ? { ...l, ...patch } : l)));
   function mover(key: string, d: -1 | 1) {
     setLineas((ls) => {
@@ -251,7 +251,7 @@ function Formulario() {
     fecha > hoy && "una fecha que no sea futura",
     condicion === "credito" && !(parseInt(plazo) >= 1) && "el plazo del crédito",
     lineas.length === 0 && "al menos una línea",
-    lineas.some((l) => !l.producto_id && !l.descripcion.trim()) && "la descripción de una línea libre",
+    lineas.some((l) => !l.producto_id) && "quitar las líneas sin producto del inventario",
     lineas.some((l) => !(num(l.cantidad) > 0)) && "la cantidad de alguna línea",
     lineas.some((l) => !(l.precio > 0)) && "el precio de alguna línea",
     (lineas.some((l) => num(l.descuento) < 0 || num(l.descuento) >= 100) || dg < 0 || dg >= 100) && "descuentos entre 0 y 99,99 %",
@@ -284,8 +284,6 @@ function Formulario() {
           producto_id: l.producto_id,
           descripcion: l.descripcion.trim() || null,
           detalle: l.detalle.trim() || null,
-          unidad: l.producto_id ? null : l.unidad,
-          tipo_iva: l.producto_id ? null : l.tipo_iva,
           cantidad: num(l.cantidad),
           precio_unitario: l.precio,
           descuento_pct: num(l.descuento),
@@ -431,19 +429,25 @@ function Formulario() {
           </Tarjeta>
 
           <Tarjeta numero={3} titulo="Qué se cotiza" extra={lineas.length ? <span className="text-xs text-slate-500">{lineas.length} {lineas.length === 1 ? "línea" : "líneas"}</span> : null}>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <div className="min-w-0 flex-1"><BuscadorProductos mostrarPrecio onElegir={agregarProducto} /></div>
-              <button type="button" onClick={agregarLibre} title="Servicio o ítem que no es un producto del catálogo"
-                className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
-                <PenLine className="h-4 w-4" /> Línea libre
-              </button>
-            </div>
+            <BuscadorProductos mostrarPrecio onElegir={agregarProducto} onCrear={puedeCrearProducto ? (t) => setCreandoProd(t) : undefined} />
+            <p className="mt-1.5 text-[11px] text-slate-500">
+              Solo productos del inventario.{puedeCrearProducto ? " Si falta uno, crealo con el botón + y queda cargado en el inventario." : " Si falta uno, pedí que lo carguen en el inventario."}
+            </p>
+            {creandoProd !== null ? (
+              <ProductoForm modal inicial={{ nombre: creandoProd }}
+                onClose={() => setCreandoProd(null)}
+                onSaved={async (c) => {
+                  setCreandoProd(null);
+                  // El producto recién creado entra solo al presupuesto.
+                  if (c?.id) { try { agregarProducto(await apiFetch<ProductoInventario>(`/api/productos/${c.id}`)); } catch { /* lo busca a mano */ } }
+                }} />
+            ) : null}
             {moneda === "USD" && !(cambio > 0) ? <p className="mt-2 text-[11px] text-amber-700">Cargá la cotización para que los productos entren con su precio en dólares.</p> : null}
 
             {lineas.length === 0 ? (
               <div className="mt-4 rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center">
                 <FileSignature className="mx-auto h-7 w-7 text-slate-300" />
-                <p className="mt-2 text-sm text-slate-500">Buscá productos del catálogo o agregá una línea libre (servicio, mano de obra, flete…).</p>
+                <p className="mt-2 text-sm text-slate-500">Buscá los productos del inventario que vas a cotizar.</p>
               </div>
             ) : (
               <ul className="mt-4 space-y-2">
@@ -464,11 +468,10 @@ function Formulario() {
                             {l.producto_id ? (
                               <span className="shrink-0 rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-500">{l.sku}</span>
                             ) : (
-                              <span className="shrink-0 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Libre</span>
+                              <span className="shrink-0 rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-semibold text-rose-700">Sin producto</span>
                             )}
                             <input value={l.descripcion} onChange={(e) => editar(l.key, { descripcion: e.target.value })} maxLength={300}
-                              {...(!l.producto_id && !l.descripcion ? { "data-libre-nueva": "" } : {})}
-                              placeholder={l.producto_id ? "" : "Ej: Instalación y puesta en marcha"} aria-label="Descripción"
+                              aria-label="Descripción"
                               className="min-w-0 flex-1 rounded-lg border border-transparent px-1.5 py-1 text-sm font-semibold text-slate-900 outline-none hover:border-slate-200 focus:border-[var(--brand)] max-sm:min-h-11 max-sm:border-slate-200" />
                             <button type="button" onClick={() => setLineas((ls) => ls.filter((x) => x.key !== l.key))} aria-label={`Quitar ${l.descripcion || "línea"}`}
                               className="-mr-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 sm:hidden"><Trash2 className="h-4 w-4" /></button>
@@ -480,6 +483,7 @@ function Formulario() {
                             <button type="button" onClick={() => editar(l.key, { verDetalle: true })} className="mt-0.5 px-1.5 text-[11px] font-medium text-slate-400 hover:text-[var(--brand)] max-sm:min-h-10 max-sm:text-xs">+ detalle</button>
                           )}
                           {sinStock ? <p className="mt-1 px-1.5 text-[11px] font-medium text-amber-700">Hoy hay {l.stock?.toLocaleString("es-PY")} en stock.</p> : null}
+                          {!l.producto_id ? <p className="mt-1 px-1.5 text-[11px] font-medium text-rose-700">No es un producto del inventario: quitala y agregá el producto con el buscador.</p> : null}
                         </div>
                         <div className="grid grid-cols-2 gap-2 max-sm:w-full sm:contents">
                           <label className="sm:w-20"><span className={ET}>Cant.</span>
@@ -490,11 +494,7 @@ function Formulario() {
                             <input inputMode="decimal" enterKeyHint="done" value={l.descuento} onChange={(e) => editar(l.key, { descuento: e.target.value.replace(/[^\d.,]/g, "").slice(0, 6) })} placeholder="0" className={`${INPUT} px-2 py-2 text-right tabular-nums`} /></label>
                           <div className="sm:w-28">
                             <span className={ET}>IVA</span>
-                            {l.producto_id ? (
-                              <p className="rounded-xl border border-transparent px-1 py-2 text-sm text-slate-600" title="El IVA del producto">{l.tipo_iva === "EXENTA" ? "Exenta" : l.tipo_iva}</p>
-                            ) : (
-                              <Select value={l.tipo_iva} onChange={(v) => editar(l.key, { tipo_iva: v as TipoIva })} options={IVAS} block compacto etiqueta="IVA de la línea" />
-                            )}
+                            <p className="rounded-xl border border-transparent px-1 py-2 text-sm text-slate-600" title="El IVA del producto">{l.tipo_iva === "EXENTA" ? "Exenta" : l.tipo_iva}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between gap-2 max-sm:w-full max-sm:border-t max-sm:border-slate-100 max-sm:pt-2 sm:block sm:w-28 sm:pt-5 sm:text-right">
@@ -565,11 +565,6 @@ function Formulario() {
             </button>
             <p className="mt-2 text-center text-[11px] text-slate-400">{editando ? "Queda registrado en el historial." : "Se guarda como borrador. Después lo mandás."}</p>
           </div>
-          {lineas.length > 0 ? (
-            <button type="button" onClick={agregarLibre} className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 py-2 text-xs font-semibold text-slate-500 hover:border-[var(--brand)] hover:text-[var(--brand)]">
-              <Plus className="h-3.5 w-3.5" /> Otra línea libre
-            </button>
-          ) : null}
         </aside>
       </div>
 

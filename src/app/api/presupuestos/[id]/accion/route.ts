@@ -3,7 +3,7 @@
  *   { accion: "enviar", canal: whatsapp|link|email|manual }  borrador → enviado (+ historial)
  *   { accion: "aceptar" } · { accion: "rechazar", motivo } · { accion: "reabrir" }
  *   { accion: "duplicar" } → { id, numero } del borrador nuevo
- *   { accion: "vincular_producto", item_id, producto_id }  línea libre → producto del catálogo
+ *   { accion: "vincular_producto", item_id, producto_id }  línea vieja sin producto → producto del inventario
  * Cada función de la base valida empresa y rol adentro.
  */
 import { withTenant } from "@/lib/api/with-tenant";
