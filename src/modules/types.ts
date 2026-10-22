@@ -15,7 +15,14 @@ export type Modulo = {
   /** roles que pueden verlo (vacío = todos los autenticados) */
   roles?: string[];
   /** sub-pantallas del módulo, para navegar directo desde el sidebar */
-  children?: { label: string; href: string; /** roles que ven esta sub-pantalla (vacío = todos) */ roles?: string[] }[];
+  children?: {
+    label: string;
+    href: string;
+    /** roles que ven esta sub-pantalla (vacío = todos) */
+    roles?: string[];
+    /** permiso propio de esta sub-pantalla (si no, el del módulo) */
+    permiso?: string;
+  }[];
   /**
    * El ítem del menú abre su propio panel (`href`, con tarjetas de las sub-pantallas) y las
    * sub-pantallas NO se despliegan en el menú. Igual cuentan como pantallas de los perfiles.

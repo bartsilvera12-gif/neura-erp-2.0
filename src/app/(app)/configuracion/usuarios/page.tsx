@@ -67,7 +67,7 @@ function Usuarios() {
 
   return (
     <div className="space-y-5 pb-10">
-      <EncabezadoPagina kicker="Configuración" titulo="Usuarios" subtitulo="Quién entra al sistema y qué puede ver y hacer cada uno" />
+      <EncabezadoPagina volver={{ href: "/configuracion", label: "Configuración" }} kicker="Configuración" titulo="Usuarios" subtitulo="Quién entra al sistema y qué puede ver y hacer cada uno" />
       {/* Las pestañas quedan fijas arriba al bajar (el top negativo compensa el padding del
           <main>, que es el contenedor que scrollea). */}
       <div className="sticky -top-4 z-20 -mx-3 bg-[#f6f8fa]/95 px-3 py-2 backdrop-blur sm:-top-5 sm:-mx-4 sm:px-4 lg:-top-6 lg:-mx-6 lg:px-6">
