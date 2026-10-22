@@ -272,8 +272,47 @@ export function TablaScroll({
     return () => { ro.disconnect(); el.removeEventListener("scroll", medir); };
   }, [medir]);
 
+  // Desplazamiento al borde (solo mouse): con el puntero cerca del borde derecho o izquierdo la
+  // tabla se va corriendo sola hacia ese lado; más cerca del borde, más rápido. En pantallas
+  // táctiles no hace nada (ahí se desliza con el dedo) y con "reducir movimiento" tampoco.
+  const velocidad = useRef(0);
+  const animando = useRef<number | null>(null);
+  const parar = useCallback(() => {
+    velocidad.current = 0;
+    if (animando.current != null) cancelAnimationFrame(animando.current);
+    animando.current = null;
+  }, []);
+  const ultimo = useRef(0);
+  const paso = useCallback((t: number) => {
+    const el = ref.current;
+    if (!el || !velocidad.current) { animando.current = null; return; }
+    // Por tiempo (no por cuadro): la misma velocidad con 60 o con 144 Hz.
+    const dt = ultimo.current ? Math.min(50, t - ultimo.current) : 16;
+    ultimo.current = t;
+    const antes = el.scrollLeft;
+    el.scrollLeft += (velocidad.current * dt) / 16;
+    if (el.scrollLeft === antes) { animando.current = null; return; } // llegó al tope
+    animando.current = requestAnimationFrame(paso);
+  }, []);
+  const alMover = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    const el = ref.current;
+    if (!el || e.pointerType !== "mouse" || el.scrollWidth <= el.clientWidth + 1) return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const r = el.getBoundingClientRect();
+    const zona = Math.min(80, r.width / 6);
+    const x = e.clientX - r.left;
+    const MAX = 12; // px cada 16 ms en el borde mismo (~750 px/s)
+    let v = 0;
+    if (x > r.width - zona) v = Math.ceil(((x - (r.width - zona)) / zona) * MAX);
+    else if (x < zona) v = -Math.ceil(((zona - x) / zona) * MAX);
+    velocidad.current = v;
+    if (v && animando.current == null) { ultimo.current = 0; animando.current = requestAnimationFrame(paso); }
+    if (!v) parar();
+  }, [paso, parar]);
+  useEffect(() => parar, [parar]);
+
   return (
-    <div className={`relative min-w-0 ${className}`}>
+    <div className={`relative min-w-0 ${className}`} onPointerMove={alMover} onPointerLeave={parar}>
       <div
         ref={ref}
         className={`overflow-x-auto overscroll-x-contain ${primeraFija ? "tabla-primera-fija" : ""} ${bordes.izq ? "tabla-desplazada" : ""}`}
