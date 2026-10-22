@@ -65,7 +65,7 @@ export function TarjetaImagen({
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "linear-gradient(to top, hsl(var(--tema) / 0.96), hsl(var(--tema) / 0.88) 70px, hsl(var(--tema) / 0.55) 125px, hsl(var(--tema) / 0.15) 165px, transparent 200px), linear-gradient(to top, rgb(0 0 0 / 0.25), transparent 170px)",
+              "linear-gradient(to top, hsl(var(--tema) / 0.93), hsl(var(--tema) / 0.78) 55px, hsl(var(--tema) / 0.45) 105px, hsl(var(--tema) / 0.15) 145px, transparent 175px), linear-gradient(to top, rgb(0 0 0 / 0.24), transparent 130px)",
           }}
         />
 
