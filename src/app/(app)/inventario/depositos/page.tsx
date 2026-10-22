@@ -56,7 +56,7 @@ export default function DepositosPage() {
 
   return (
     <div className="space-y-5 pb-10 sm:space-y-6">
-      <EncabezadoPagina kicker="Inventario · Configuración" titulo="Sucursales y depósitos" subtitulo="Dónde está la mercadería: cada sucursal con sus depósitos"
+      <EncabezadoPagina volver={{ href: "/inventario/panel", label: "Inventario" }} kicker="Inventario · Configuración" titulo="Sucursales y depósitos" subtitulo="Dónde está la mercadería: cada sucursal con sus depósitos"
         acciones={<AccionesPagina acciones={[{ etiqueta: "Nueva sucursal", icono: <Plus />, onClick: () => setSucursal({ abierta: true, s: null }), primaria: true }]} />} />
 
       {cargando ? (

@@ -129,7 +129,7 @@ function Ajustes() {
 
   return (
     <div className="space-y-5 pb-10 sm:space-y-6">
-      <Cabecera kicker="Inventario · Documentos" titulo="Ajustes y pérdidas" subtitulo="Conteos, correcciones y bajas de mercadería, documentados y valorizados al costo">
+      <Cabecera volver={{ href: "/inventario/panel", label: "Inventario" }} kicker="Inventario · Documentos" titulo="Ajustes y pérdidas" subtitulo="Conteos, correcciones y bajas de mercadería, documentados y valorizados al costo">
         {puedePerdida ? (
           <Link href="/inventario/ajustes/nuevo?tipo=perdida" className={BOTON_SECUNDARIO}>
             <PackageMinus className="h-4 w-4" /> Nueva pérdida

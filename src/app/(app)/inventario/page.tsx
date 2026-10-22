@@ -322,8 +322,9 @@ export default function InventarioPage() {
     <div className="space-y-6 pb-10">
       {/* Encabezado. En celular: "Exportar" a la vista y las importaciones en el menú ⋯. */}
       <EncabezadoPagina
+        volver={{ href: "/inventario/panel", label: "Inventario" }}
         kicker="Operaciones · Stock"
-        titulo="Inventario"
+        titulo="Productos"
         subtitulo="Gestión de productos y control de stock"
         acciones={esMovil ? (
           <AccionesPagina acciones={[

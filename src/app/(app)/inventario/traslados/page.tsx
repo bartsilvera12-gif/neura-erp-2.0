@@ -129,7 +129,7 @@ function Traslados() {
 
   return (
     <div className="space-y-5 pb-10 sm:space-y-6">
-      <Cabecera kicker="Inventario · Documentos" titulo="Traslados" subtitulo="Mercadería que se mueve entre depósitos y sucursales, con su nota de remisión">
+      <Cabecera volver={{ href: "/inventario/panel", label: "Inventario" }} kicker="Inventario · Documentos" titulo="Traslados" subtitulo="Mercadería que se mueve entre depósitos y sucursales, con su nota de remisión">
         {esAdmin ? (
           <Link href="/inventario/traslados/nuevo" className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
             <Plus className="h-4 w-4" /> Nuevo traslado
