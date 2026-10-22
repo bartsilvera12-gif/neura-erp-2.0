@@ -299,7 +299,8 @@ function NavMenu({
             // actual, entre todos los del menú (/clientes/gestion marca "Gestión Clientes",
             // no "Clientes"; /clientes/<id> marca "Clientes").
             const active = m.id === itemActivo;
-            const tieneHijos = !!m.children?.length;
+            // Con panel propio (ej. Configuración) las sub-pantallas son tarjetas del panel.
+            const tieneHijos = !!m.children?.length && !m.panel;
             // Buscando, se despliegan solos para que se vea la sub-pantalla encontrada.
             const abierto = (q.trim() ? true : (abiertos[m.id] ?? active)) && !collapsed;
             return (
@@ -589,7 +590,8 @@ function BuscadorPantallas({ modulos, onCerrar }: { modulos: Modulo[]; onCerrar:
     for (const [fam, items] of agruparPorFamilia(modulos, qq)) {
       for (const m of items) {
         const hijos = m.children ?? [];
-        if (!hijos.length) { add({ href: m.href, label: m.label, contexto: fam, icon: m.icon }); continue; }
+        if (!hijos.length || m.panel) add({ href: m.href, label: m.label, contexto: fam, icon: m.icon });
+        if (!hijos.length) continue;
         // Con búsqueda: las sub-pantallas que coinciden (o todas, si coincide el módulo).
         const coinciden = qq ? hijos.filter((c) => coincide(qq, { principal: c.label })) : hijos;
         for (const c of coinciden.length ? coinciden : hijos) {

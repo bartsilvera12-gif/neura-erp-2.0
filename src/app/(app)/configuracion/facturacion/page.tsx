@@ -177,6 +177,7 @@ export default function FacturacionPage() {
   return (
     <div className="space-y-5">
       <EncabezadoPagina
+        volver={{ href: "/configuracion", label: "Configuración" }}
         kicker="Configuración"
         titulo="Facturación"
         subtitulo="SIFEN, numeración, condiciones de cobro, y (en tarjeta propia) la opción de gestión tributaria de clientes."

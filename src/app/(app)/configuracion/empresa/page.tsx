@@ -199,6 +199,7 @@ export default function DatosEmpresaPage() {
   return (
     <div className="space-y-5">
       <EncabezadoPagina
+        volver={{ href: "/configuracion", label: "Configuración" }}
         kicker="Configuración"
         titulo="Datos de la empresa"
         subtitulo="Así te identificás en presupuestos, recibos, remisiones, órdenes y reportes."

@@ -148,7 +148,7 @@ export function modulosDelPerfil(rol: string | undefined, perfil: PerfilSesion |
     if (m.children?.length) {
       const hijos = m.children.filter((c) => ve(c.href));
       if (!hijos.length) return [];
-      return [{ ...m, href: hijos.some((c) => c.href === m.href) ? m.href : hijos[0].href, children: hijos }];
+      return [{ ...m, href: m.panel || hijos.some((c) => c.href === m.href) ? m.href : hijos[0].href, children: hijos }];
     }
     return ve(m.href) ? [m] : [];
   });
