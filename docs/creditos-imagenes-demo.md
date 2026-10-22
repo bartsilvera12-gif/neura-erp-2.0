@@ -151,7 +151,7 @@ Fotos de fondo de las tarjetas de `/reportes` (componente `TarjetaImagen`, misma
 | Reportes › Ventas del período | `public/reportes/ventas-periodo-dashboard-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Formas de pago | `public/reportes/formas-pago-posnet-tarjeta-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Productos vendidos | `public/reportes/productos-vendidos-graficos-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
-| Reportes › Pérdidas de producto | `public/reportes/perdidas-caja-danada.webp` | Glory Cycles | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución | [Flickr: 525 Damaged in Shipping](https://www.flickr.com/photos/29558127@N06/15206873741) |
+| Reportes › Pérdidas de producto | `public/reportes/perdidas-inspeccion-danados-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Stock mínimo | `public/reportes/stock-minimo-estanterias-vacias-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 
 Notas:

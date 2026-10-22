@@ -24,7 +24,7 @@ const FOTOS: Record<string, { imagen: string; color: string; posicion?: string }
   "/reportes/ventas": { imagen: "/reportes/ventas-periodo-dashboard-dueno.webp", color: "168 36% 21%", posicion: "45% 50%" },
   "/reportes/formas-pago": { imagen: "/reportes/formas-pago-posnet-tarjeta-dueno.webp", color: "232 32% 28%", posicion: "55% 50%" },
   "/reportes/productos-vendidos": { imagen: "/reportes/productos-vendidos-graficos-dueno.webp", color: "96 30% 22%", posicion: "40% 50%" },
-  "/reportes/perdidas": { imagen: "/reportes/perdidas-caja-danada.webp", color: "16 48% 24%", posicion: "40% 30%" },
+  "/reportes/perdidas": { imagen: "/reportes/perdidas-inspeccion-danados-dueno.webp", color: "16 48% 24%", posicion: "55% 45%" },
   "/reportes/stock-minimo": { imagen: "/reportes/stock-minimo-estanterias-vacias-dueno.webp", color: "36 44% 22%", posicion: "50% 50%" },
 };
 const FOTO_GENERICA = { imagen: "/finanzas/reportes-graficos-pantalla.webp", color: "196 45% 20%", posicion: "40% 30%" };
