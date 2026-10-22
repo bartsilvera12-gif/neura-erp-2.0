@@ -83,13 +83,10 @@ function resumenEmpresa(d: DatosEmpresa): ReactNode {
   const ruc = d.ruc ? normalizarRuc(d.ruc) : "";
   const rucOk = !!ruc && validarRuc(ruc).estado === "ok";
   return (
-    <>
-      <p className="truncate">{nombre}</p>
-      <div className="mt-1.5 flex flex-wrap gap-1.5">
-        <ChipTarjeta>{!ruc ? "Falta el RUC" : rucOk ? `RUC ${ruc} ✓` : `RUC ${ruc} · revisar`}</ChipTarjeta>
-        <ChipTarjeta>{d.logo_url ? "Logo propio" : "Logo por defecto"}</ChipTarjeta>
-      </div>
-    </>
+    <div className="flex flex-wrap gap-1.5">
+      <ChipTarjeta>{nombre}</ChipTarjeta>
+      <ChipTarjeta>{!ruc ? "Falta el RUC" : rucOk ? `RUC ${ruc} ✓` : `RUC ${ruc} · revisar`}</ChipTarjeta>
+    </div>
   );
 }
 
@@ -156,15 +153,15 @@ export default function ConfiguracionPage() {
       <EncabezadoPagina kicker="Ajustes" titulo="Configuración" subtitulo="Elegí qué querés configurar." />
 
       {!me ? (
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3" aria-busy="true">
-          {[0, 1, 2].map((i) => <div key={i} className="h-[280px] animate-pulse rounded-2xl bg-slate-200/80 sm:h-[300px] md:h-[380px] xl:h-[400px]" />)}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4" aria-busy="true">
+          {[0, 1, 2].map((i) => <div key={i} className="h-[190px] animate-pulse rounded-2xl bg-slate-200/80" />)}
         </div>
       ) : visibles.length === 0 ? (
         <p className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-400">No tenés configuraciones habilitadas.</p>
       ) : (
-        <ul className="m-0 grid list-none gap-4 p-0 md:grid-cols-2 md:gap-5 xl:grid-cols-3">
+        <ul className="m-0 grid list-none gap-4 p-0 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
           {visibles.map((t) => (
-            <li key={t.href} className="h-[280px] sm:h-[300px] md:h-[380px] xl:h-[400px]">
+            <li key={t.href} className="h-[190px]">
               <TarjetaImagen
                 imagen={t.imagen}
                 titulo={t.titulo}

@@ -47,13 +47,13 @@ export function TarjetaImagen({
         href={href}
         aria-label={ariaLabel ?? titulo}
         aria-describedby={datos ? idDatos : undefined}
-        className="relative flex h-full flex-col overflow-hidden rounded-2xl bg-[hsl(var(--tema))] shadow-[0_0_40px_-15px_hsl(var(--tema)/0.5)] outline-none transition-[transform,box-shadow] duration-500 ease-out hover:shadow-[0_0_60px_-15px_hsl(var(--tema)/0.6)] focus-visible:ring-4 focus-visible:ring-[hsl(var(--tema)/0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f6f8fa] md:group-hover:scale-[1.02] motion-reduce:transition-shadow motion-reduce:md:group-hover:scale-100"
+        className="relative flex h-full flex-col overflow-hidden rounded-2xl bg-[hsl(var(--tema))] shadow-[0_8px_24px_-12px_hsl(var(--tema)/0.55)] outline-none transition-[transform,box-shadow] duration-500 ease-out hover:shadow-[0_14px_32px_-12px_hsl(var(--tema)/0.6)] focus-visible:ring-4 focus-visible:ring-[hsl(var(--tema)/0.55)] focus-visible:ring-offset-2 focus-visible:ring-offset-[#f6f8fa] md:group-hover:scale-[1.02] motion-reduce:transition-shadow motion-reduce:md:group-hover:scale-100"
       >
         <Image
           src={imagen}
           alt=""
           fill
-          sizes="(min-width: 1280px) 33vw, (min-width: 768px) 50vw, 100vw"
+          sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
           className="object-cover transition-transform duration-500 ease-out group-hover:scale-110 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
           style={posicionImagen ? { objectPosition: posicionImagen } : undefined}
         />
@@ -65,23 +65,27 @@ export function TarjetaImagen({
           className="pointer-events-none absolute inset-0"
           style={{
             background:
-              "linear-gradient(to top, hsl(var(--tema) / 0.95), hsl(var(--tema) / 0.85) 150px, hsl(var(--tema) / 0.6) 230px, hsl(var(--tema) / 0.2) 290px, transparent 340px), linear-gradient(to top, rgb(0 0 0 / 0.3), transparent 280px)",
+              "linear-gradient(to top, hsl(var(--tema) / 0.96), hsl(var(--tema) / 0.88) 70px, hsl(var(--tema) / 0.55) 125px, hsl(var(--tema) / 0.15) 165px, transparent 200px), linear-gradient(to top, rgb(0 0 0 / 0.25), transparent 170px)",
           }}
         />
 
         {etiqueta && (
-          <span className="absolute top-4 left-4 inline-flex items-center rounded-full bg-black/35 px-2.5 py-1 text-[11px] font-semibold tracking-wide text-white uppercase ring-1 ring-white/20 backdrop-blur-md sm:top-5 sm:left-5">
+          <span className="absolute top-3 left-3 inline-flex items-center rounded-full bg-black/30 px-2 py-0.5 text-[10px] font-semibold tracking-wider text-white uppercase ring-1 ring-white/20 backdrop-blur-md">
             {etiqueta}
           </span>
         )}
 
-        <div className="relative mt-auto flex flex-col p-5 text-white sm:p-6">
-          <h2 className="text-2xl font-bold tracking-tight [text-shadow:0_1px_12px_rgb(0_0_0/0.35)] sm:text-3xl">{titulo}</h2>
-          {datos && <div id={idDatos} className="mt-2 text-sm font-medium text-white/90">{datos}</div>}
-          <div className="mt-5 flex items-center justify-between rounded-lg border border-[hsl(var(--tema)/0.3)] bg-[hsl(var(--tema)/0.2)] px-4 py-3 backdrop-blur-md transition-colors duration-300 group-hover:border-[hsl(var(--tema)/0.5)] group-hover:bg-[hsl(var(--tema)/0.4)] sm:mt-7">
-            <span className="text-sm font-semibold">{accion}</span>
-            <ArrowRight aria-hidden className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-1 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
+        <div className="relative mt-auto flex items-end gap-3 p-4 text-white">
+          <div className="min-w-0 flex-1">
+            <h2 className="truncate text-lg font-semibold tracking-tight [text-shadow:0_1px_10px_rgb(0_0_0/0.35)]">{titulo}</h2>
+            {/* Alto fijo (2 renglones de chips): los títulos quedan alineados entre tarjetas. */}
+            {datos && <div id={idDatos} className="mt-1.5 h-[46px] overflow-hidden text-xs font-medium text-white/90">{datos}</div>}
           </div>
+          {/* Acción: un botón redondo chico con la flecha (el texto queda para lectores de pantalla) */}
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/25 bg-white/15 backdrop-blur-md transition-colors duration-300 group-hover:bg-white/30" title={accion}>
+            <span className="sr-only">{accion}</span>
+            <ArrowRight aria-hidden className="h-4 w-4 transition-transform duration-300 group-hover:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover:translate-x-0" />
+          </span>
         </div>
       </Link>
     </div>
