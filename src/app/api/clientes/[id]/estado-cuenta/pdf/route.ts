@@ -3,6 +3,7 @@
  * Deuda y vencido, ventas a crédito (con lo cobrado y lo que falta) y los cobros.
  */
 import { datosEmpresa } from "@/modules/empresa/server";
+import { nombreParaFactura, rucParaFactura } from "@/modules/empresa/tipos";
 import autoTable from "jspdf-autotable";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -19,7 +20,7 @@ export const GET = withTenant(async (ctx, req) => {
   const id = segs[segs.indexOf("clientes") + 1];
   if (!/^[0-9a-f-]{36}$/i.test(id ?? "")) return ERR.invalid("Falta el id del cliente");
   const [cli, ec] = await Promise.all([
-    ctx.db.select("clientes", "nombre, razon_social, documento, telefono, direccion, ciudad, condicion_pago, plazo_dias, limite_credito").eq("id", id).limit(1),
+    ctx.db.select("clientes", "nombre, razon_social, ruc, documento, telefono, direccion, ciudad, condicion_pago, plazo_dias, limite_credito").eq("id", id).limit(1),
     ctx.db.rpc<EstadoCuenta>("estado_cuenta_cliente", { p_cliente: id }),
   ]);
   if (cli.error || ec.error || !ec.data) return ERR.server();
@@ -29,12 +30,15 @@ export const GET = withTenant(async (ctx, req) => {
 
   const hoy = hoyPY();
   const doc = nuevoDocumento(await datosEmpresa(ctx.db));
-  let y = await encabezado(doc, "ESTADO DE CUENTA", `${pdfTxt(String(c.razon_social || c.nombre))} · al ${dia(hoy)}`);
+  // Receptor (receta 66): razón social → nombre; RUC (Datos para facturación) → documento con formato de RUC → CI.
+  const cTxt = { nombre: c.nombre as string | null, razon_social: c.razon_social as string | null, ruc: c.ruc as string | null, documento: c.documento as string | null };
+  const ruc = rucParaFactura(cTxt);
+  let y = await encabezado(doc, "ESTADO DE CUENTA", `${pdfTxt(nombreParaFactura(cTxt))} · al ${dia(hoy)}`);
 
   // Datos y cifras.
   doc.setFont("helvetica", "normal").setFontSize(8.5).setTextColor(...COLOR.gris);
   const datos = [
-    c.documento ? `RUC/CI ${c.documento}` : null,
+    ruc ? `RUC ${ruc}` : c.documento ? `CI ${c.documento}` : null,
     c.telefono ? `Tel. ${c.telefono}` : null,
     [c.direccion, c.ciudad].filter(Boolean).join(", ") || null,
     c.condicion_pago === "CREDITO" ? `Crédito ${c.plazo_dias ?? 30} días${Number(c.limite_credito) > 0 ? ` · límite Gs. ${gs(Number(c.limite_credito))}` : ""}` : "Contado",

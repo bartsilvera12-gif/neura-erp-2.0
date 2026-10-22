@@ -21,6 +21,8 @@ const ventaSchema = z.object({
   caja_id: z.string().uuid().nullish(),
   cliente_id: z.string().uuid().nullish(),
   tipo_venta: z.enum(["CONTADO", "CREDITO"]).default("CONTADO"),
+  // Receta 66: "factura" solo con cliente con RUC (la base lo rechaza si no); "ticket" siempre.
+  tipo_documento: z.enum(["factura", "ticket"]).default("ticket"),
   metodo_pago: z.string().trim().max(30).nullish(),
   moneda: z.enum(["GS", "USD"]).default("GS"),
   observaciones: z.string().trim().max(500).nullish(),
@@ -101,6 +103,7 @@ export const POST = withTenant(
       p_plazo_dias: input.tipo_venta === "CREDITO" ? (input.plazo_dias ?? null) : null,
       p_deposito_id: null,
       p_caja_id: input.caja_id ?? null,
+      p_tipo_documento: input.tipo_documento,
     });
 
     if (error) {

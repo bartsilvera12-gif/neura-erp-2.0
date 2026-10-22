@@ -101,6 +101,28 @@ export function validarRuc(valor: string): ValidacionRuc {
   return { estado: "ok" };
 }
 
+// ── Receptor de la factura (receta 66: "sin RUC no hay factura") ─────────────
+/**
+ * RUC con el que se le factura a un cliente (mismo criterio que ruc_receptor() en la base):
+ * primero `ruc` (Datos para facturación); si está vacío, `documento` SOLO si es un RUC con
+ * dígito verificador correcto. Una CI sola no alcanza → null (solo ticket).
+ */
+export function rucParaFactura(c: { ruc?: string | null; documento?: string | null } | null | undefined): string | null {
+  if (!c) return null;
+  const ruc = (c.ruc ?? "").trim();
+  if (ruc) return ruc;
+  const doc = normalizarRuc(c.documento ?? "");
+  return doc && validarRuc(doc).estado === "ok" ? doc : null;
+}
+
+/** Nombre con el que se factura (como nombre_receptor() en la base): razón social; si no, el nombre. */
+export function nombreParaFactura(c: { razon_social?: string | null; nombre?: string | null } | null | undefined): string {
+  return (c?.razon_social ?? "").trim() || (c?.nombre ?? "").trim();
+}
+
+/** Aviso que ve el usuario cuando el cliente no tiene RUC. */
+export const AVISO_SIN_RUC = "Este cliente no tiene RUC: solo se puede emitir ticket. Cargá su RUC en Datos para facturación.";
+
 // ── Logo ─────────────────────────────────────────────────────────────────────
 /** Logo de la instalación (lo pone Neura): el que se usa si la empresa no cargó uno. */
 export const LOGO_INSTALACION = "/brand/logo-doc.png";

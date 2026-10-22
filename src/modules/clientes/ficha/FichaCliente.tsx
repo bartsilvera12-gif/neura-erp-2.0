@@ -23,6 +23,7 @@ import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
 import { RegistrarTransferencia } from "@/modules/cobranzas/RegistrarTransferencia";
 import { FacturaContadoModal } from "@/modules/clientes/ficha/FacturaContadoModal";
+import { nombreParaFactura, rucParaFactura } from "@/modules/empresa/tipos";
 import type { Detalle } from "@/modules/clientes/ficha/tipos";
 import { TabInformacion } from "@/modules/clientes/ficha/TabInformacion";
 import { TabEstadoCuenta } from "@/modules/clientes/ficha/TabEstadoCuenta";
@@ -194,8 +195,8 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
                 <h1 className="mt-1 text-xl font-semibold leading-tight [overflow-wrap:anywhere] sm:truncate tracking-tight text-slate-900 sm:text-2xl">{c.nombre}</h1>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
                   <CodigoChip codigo={codigoCliente(c)} fondo="bg-white" />
-                  {c.ruc || (c.tipo_cliente === "empresa" && c.documento) ? (
-                    <span className="text-[11px] text-slate-500"><span className="font-medium text-slate-400">RUC:</span> {c.ruc || c.documento}</span>
+                  {rucParaFactura(c) ? (
+                    <span className="text-[11px] text-slate-500"><span className="font-medium text-slate-400">RUC:</span> {rucParaFactura(c)}</span>
                   ) : c.documento ? (
                     <span className="text-[11px] text-slate-500"><span className="font-medium text-slate-400">CI:</span> {c.documento}</span>
                   ) : null}
@@ -319,7 +320,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
                 onCambio={() => void cambio()} />
             ) : null}
             {tab === "suscripciones" ? (
-              <TabSuscripciones clienteNombre={c.razon_social || c.nombre} suscripciones={subs} cargando={subsCargando} error={subsError}
+              <TabSuscripciones clienteNombre={c.razon_social || c.nombre} ruc={rucParaFactura(c)} suscripciones={subs} cargando={subsCargando} error={subsError}
                 rol={me?.rol} onNueva={() => setNuevaSusc(true)} onCambio={suscripcionesCambiaron} />
             ) : null}
             {tab === "presupuestos" && puedePresupuestar ? <PresupuestosDeCliente clienteId={c.id} clienteNombre={c.razon_social || c.nombre} /> : null}
@@ -335,8 +336,9 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
           onHecho={(m) => { setTransfiriendo(null); setAviso(m); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); void cambio(); }} />
       ) : null}
       {facturaContado ? (
-        <FacturaContadoModal clienteId={c.id} clienteNombre={c.razon_social || c.nombre} moneda={c.moneda_preferida === "USD" ? "USD" : "GS"}
+        <FacturaContadoModal clienteId={c.id} clienteNombre={nombreParaFactura(c)} ruc={rucParaFactura(c)} moneda={c.moneda_preferida === "USD" ? "USD" : "GS"}
           onClose={() => setFacturaContado(false)}
+          onEditarCliente={() => { setFacturaContado(false); setTab("informacion"); }}
           onEmitida={(m) => { setFacturaContado(false); setAviso(m); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); void cambio(); }} />
       ) : null}
       {cobrando !== null ? (

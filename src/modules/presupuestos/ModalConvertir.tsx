@@ -109,7 +109,7 @@ export function ModalConvertir({ presupuestoId, validoHasta, onClose, onCambio }
                 </Bloque>
               ) : (
                 <Bloque tono="ambar" icono={<UserRound className="h-4 w-4" />} titulo={`Es un prospecto: ${p.cliente_nombre}`}>
-                  En la caja elegí o cargá el cliente (para factura o venta a crédito es obligatorio). Para ticket al contado podés seguir sin cliente.
+                  En la caja elegí o cargá el cliente (para venta a crédito es obligatorio; para factura, un cliente con RUC). Para ticket al contado podés seguir sin cliente.
                 </Bloque>
               )}
 

@@ -4,6 +4,7 @@
  * deuda que le queda al cliente y firma. Si está anulado, lo dice grande.
  */
 import { datosEmpresa } from "@/modules/empresa/server";
+import { nombreParaFactura, rucParaFactura } from "@/modules/empresa/tipos";
 import autoTable from "jspdf-autotable";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -31,10 +32,13 @@ export const GET = withTenant(async (ctx, req) => {
   const pagos = (p.data ?? []) as unknown as { metodo: string; monto: number; referencia: string | null }[];
   const apl = (a.data ?? []) as unknown as { monto: number; cuentas_por_cobrar: { numero: string; fecha_emision: string; monto: number; saldo: number } | null }[];
   const [cli, deuda] = await Promise.all([
-    ctx.db.select("clientes", "documento, telefono").eq("id", k.cliente_id).limit(1),
+    ctx.db.select("clientes", "nombre, razon_social, ruc, documento, telefono").eq("id", k.cliente_id).limit(1),
     ctx.db.rpc<number>("cliente_saldo", { p_cliente_id: k.cliente_id }),
   ]);
-  const doc0 = (cli.data?.[0] ?? {}) as { documento?: string | null; telefono?: string | null };
+  const doc0 = (cli.data?.[0] ?? {}) as { nombre?: string | null; razon_social?: string | null; ruc?: string | null; documento?: string | null; telefono?: string | null };
+  // Receptor (receta 66): razón social → nombre; RUC (Datos para facturación) → documento con formato de RUC → CI.
+  const rucCli = rucParaFactura(doc0);
+  const docCli = rucCli ? `RUC ${rucCli}` : doc0.documento ? `CI ${doc0.documento}` : "";
 
   const doc = nuevoDocumento(await datosEmpresa(ctx.db));
   let y = await encabezado(doc, `RECIBO ${k.numero_recibo}`, fechaHoraPY(k.fecha));
@@ -48,7 +52,7 @@ export const GET = withTenant(async (ctx, req) => {
 
   // Recibimos de … la suma de …
   doc.setFont("helvetica", "normal").setFontSize(10).setTextColor(...COLOR.negro);
-  const frase = `Recibimos de ${k.cliente_nombre}${doc0.documento ? ` (RUC/CI ${doc0.documento})` : ""} la suma de guaraníes ${numeroEnLetras(k.total)}.`;
+  const frase = `Recibimos de ${nombreParaFactura(doc0) || k.cliente_nombre}${docCli ? ` (${docCli})` : ""} la suma de guaraníes ${numeroEnLetras(k.total)}.`;
   const lineas = doc.splitTextToSize(pdfTxt(frase), W - 50) as string[];
   doc.text(lineas, M, y + 5);
   doc.setFont("helvetica", "bold").setFontSize(16);

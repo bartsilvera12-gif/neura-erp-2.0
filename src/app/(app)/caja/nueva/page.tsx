@@ -19,6 +19,7 @@ import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { anchoTicket, type ConfigFacturacion } from "@/modules/facturacion/tipos";
+import { AVISO_SIN_RUC, rucParaFactura } from "@/modules/empresa/tipos";
 import { browserClient } from "@/lib/supabase/browser";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
@@ -424,6 +425,28 @@ function CajaPageContenido() {
     [clientes, clienteQuery, clientesBuscados],
   );
 
+  // Receta 66: sin RUC no hay factura. RUC = el de Datos para facturación o el documento si es un
+  // RUC con dígito verificador (una CI sola no alcanza). Sin cliente o sin RUC → solo ticket.
+  const rucFactura = rucParaFactura(clienteSel);
+  const puedeFacturar = !!rucFactura;
+  useEffect(() => {
+    if (!puedeFacturar && tipoDocumento === "factura") setTipoDocumento("ticket");
+  }, [puedeFacturar, tipoDocumento]);
+  // El RUC se carga en la ficha (otra pestaña): al volver a la caja se relee el cliente elegido.
+  const recargarCliente = useCallback((id: string) => {
+    apiFetch<{ cliente: Cliente }>(`/api/clientes/${encodeURIComponent(id)}`)
+      .then(({ cliente: c }) => { if (c?.id) setClientes((prev) => prev.map((x) => (x.id === c.id ? { ...x, ...c } : x))); })
+      .catch(() => {});
+  }, []);
+  const clienteSinRuc = clienteSel && !puedeFacturar ? clienteSel.id : null;
+  useEffect(() => {
+    if (!clienteSinRuc) return;
+    const alVolver = () => { if (document.visibilityState === "visible") recargarCliente(clienteSinRuc); };
+    window.addEventListener("focus", alVolver);
+    document.addEventListener("visibilitychange", alVolver);
+    return () => { window.removeEventListener("focus", alVolver); document.removeEventListener("visibilitychange", alVolver); };
+  }, [clienteSinRuc, recargarCliente]);
+
   const clienteObligatorio = tipoDocumento === "factura" || tipoVenta === "CREDITO";
   const plazoDiasNum = parseInt(plazoDias) || 0;
 
@@ -559,6 +582,7 @@ function CajaPageContenido() {
           caja_id: caja.id,
           cliente_id: clienteId || null,
           tipo_venta: tipoVenta,
+          tipo_documento: tipoDocumento,
           moneda: "GS",
           idempotency_key: idempotencyKeyRef.current,
           plazo_dias: tipoVenta === "CREDITO" ? plazoDiasNum : undefined,
@@ -648,7 +672,7 @@ function CajaPageContenido() {
         {/* Cliente elegido: RUC (o documento) y teléfono, para confirmar que es el correcto. */}
         {clienteSel ? (
           <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
-            <span>CI o RUC <b className="font-mono font-semibold text-slate-700">{clienteSel.ruc || clienteSel.documento || "—"}</b></span>
+            <span>CI o RUC <b className="font-mono font-semibold text-slate-700">{rucFactura || clienteSel.documento || "—"}</b></span>
             <span>Tel. <b className="font-semibold text-slate-700">{clienteSel.telefono || "—"}</b></span>
           </p>
         ) : null}
@@ -687,7 +711,29 @@ function CajaPageContenido() {
       {/* Documento */}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-slate-700">Documento</label>
-        <Segmented value={tipoDocumento} onChange={setTipoDocumento} options={[{ value: "factura", label: "Factura" }, { value: "ticket", label: "Solo ticket" }]} />
+        <Segmented value={tipoDocumento} onChange={setTipoDocumento} options={[
+          { value: "factura", label: "Factura", disabled: !puedeFacturar, title: clienteSel ? AVISO_SIN_RUC : "Para emitir factura elegí un cliente con RUC" },
+          { value: "ticket", label: "Solo ticket" },
+        ]} />
+        {!puedeFacturar ? (
+          clienteSel ? (
+            <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
+              <p>{AVISO_SIN_RUC}</p>
+              <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
+                <a href={`/clientes/${encodeURIComponent(clienteSel.id)}`} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex min-h-11 items-center font-semibold text-amber-900 underline underline-offset-2 lg:min-h-0">
+                  Editar cliente
+                </a>
+                <button type="button" onClick={() => recargarCliente(clienteSel.id)}
+                  className="inline-flex min-h-11 items-center font-semibold text-amber-900 underline underline-offset-2 lg:min-h-0">
+                  Ya lo cargué
+                </button>
+              </p>
+            </div>
+          ) : (
+            <p className="mt-1 text-[11px] text-slate-500">Para emitir factura elegí un cliente con RUC. Sin cliente, solo ticket.</p>
+          )
+        ) : null}
         <p className="mt-1 text-[11px] text-slate-500">
           {tipoDocumento === "ticket"
             ? "Registra la venta e imprime un ticket. No toca SIFEN."
