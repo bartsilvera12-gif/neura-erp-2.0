@@ -26,8 +26,6 @@ export type ClienteFicha = Cliente & {
   plazo_dias?: number | null; notas?: string | null; activo?: boolean; categoria_id?: string | null; nombre_contacto?: string | null;
   telefono_secundario?: string | null; email_secundario?: string | null;
   ruc?: string | null;
-  sifen_naturaleza?: string | null; sifen_ti_ope?: string | null; sifen_extranjero?: boolean | null; sifen_pais_iso3?: string | null;
-  sifen_tipo_documento?: string | null; sifen_num_id?: string | null; sifen_direccion?: string | null; sifen_numero_casa?: string | null;
 };
 
 export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFicha | null; onClose: () => void; onSaved: (id: string) => void }) {
@@ -50,14 +48,6 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
     limite_credito: Number(cliente?.limite_credito ?? 0),
     // Datos para facturación (como en sistemas-propio)
     ruc: cliente?.ruc ?? "",
-    sifen_naturaleza: cliente?.sifen_naturaleza ?? "",
-    sifen_ti_ope: cliente?.sifen_ti_ope ?? "",
-    sifen_extranjero: !!cliente?.sifen_extranjero,
-    sifen_pais_iso3: cliente?.sifen_pais_iso3 && cliente.sifen_pais_iso3 !== "PRY" ? cliente.sifen_pais_iso3 : "",
-    sifen_tipo_documento: cliente?.sifen_tipo_documento ?? "",
-    sifen_num_id: cliente?.sifen_num_id ?? "",
-    sifen_direccion: cliente?.sifen_direccion ?? "",
-    sifen_numero_casa: cliente?.sifen_numero_casa ?? "",
   });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -68,13 +58,9 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
     apiFetchCache<Categoria[]>("/api/clientes/categorias").then(setCategorias).catch(() => {});
   }, []);
 
-  const pais = f.sifen_pais_iso3.trim().toUpperCase();
-  const errorPais = f.sifen_extranjero && (!pais || pais === "PRY") ? "Para un receptor extranjero, el país tiene que ser distinto de PRY (ej. ARG, BRA)." : null;
-
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
     if (!f.nombre.trim()) return;
-    if (errorPais) { setError(errorPais); return; }
     setBusy(true);
     setError(null);
     try {
@@ -88,14 +74,6 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
         // RUC para factura: el que se cargó en "Datos para facturación"; si está vacío y el
         // documento es un RUC (con dígito verificador), se usa ese.
         ruc: f.ruc.trim() || (esRuc ? doc : null),
-        sifen_naturaleza: f.sifen_naturaleza || null,
-        sifen_ti_ope: f.sifen_ti_ope || null,
-        sifen_extranjero: f.sifen_extranjero,
-        sifen_pais_iso3: f.sifen_extranjero ? pais : "PRY",
-        sifen_tipo_documento: f.sifen_tipo_documento || null,
-        sifen_num_id: f.sifen_num_id.trim() || null,
-        sifen_direccion: f.sifen_direccion.trim() || null,
-        sifen_numero_casa: f.sifen_numero_casa.trim() || null,
         categoria_id: f.categoria_id || null,
         nombre_contacto: empresa ? f.nombre_contacto.trim() || null : undefined,
         // Empresa: teléfono y email de la persona de contacto (los principales son de la empresa).
@@ -197,59 +175,6 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
               <input value={f.ruc} onChange={(e) => set("ruc", e.target.value)} maxLength={40} placeholder="00000000-0" className={`${INPUT} font-mono`} />
             </label>
           </div>
-          <details className="rounded-xl border border-slate-200 bg-slate-50/40 open:bg-white" open={!!(f.sifen_naturaleza || f.sifen_ti_ope || f.sifen_extranjero || f.sifen_tipo_documento) || undefined}>
-            <summary className="min-h-11 cursor-pointer select-none px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-600">
-              Datos SIFEN del receptor (avanzado)
-            </summary>
-            <div className="space-y-4 border-t border-slate-100 px-4 pb-4 pt-3">
-              <p className="text-[11px] leading-snug text-slate-500">
-                Solo para factura electrónica. Si lo dejás vacío, se arma solo con el RUC o el documento del cliente.
-              </p>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="block">
-                  <span className={ET}>Naturaleza del receptor</span>
-                  <Select value={f.sifen_naturaleza} onChange={(v) => set("sifen_naturaleza", v)} block etiqueta="Naturaleza del receptor"
-                    options={[["", "— Automática —"], ["contribuyente", "Contribuyente (tiene RUC)"], ["no_contribuyente", "No contribuyente"]]} />
-                </div>
-                <div className="block">
-                  <span className={ET}>Tipo de operación</span>
-                  <Select value={f.sifen_ti_ope} onChange={(v) => set("sifen_ti_ope", v)} block etiqueta="Tipo de operación"
-                    options={[["", "— Automática —"], ["B2B", "B2B (a empresa)"], ["B2C", "B2C (a consumidor)"], ["B2G", "B2G (al Estado)"], ["B2F", "B2F (con el exterior)"]]} />
-                </div>
-              </div>
-              <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm text-slate-800 sm:min-h-0">
-                <input type="checkbox" checked={f.sifen_extranjero} onChange={(e) => set("sifen_extranjero", e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]" />
-                Receptor extranjero
-              </label>
-              {f.sifen_extranjero ? (
-                <label className="block">
-                  <span className={ET}>País (código ISO de 3 letras)</span>
-                  <input value={f.sifen_pais_iso3} onChange={(e) => set("sifen_pais_iso3", e.target.value.toUpperCase().replace(/[^A-Z]/g, "").slice(0, 3))}
-                    placeholder="Ej. ARG" maxLength={3} className={`${INPUT} uppercase`} />
-                  {errorPais ? <span className="mt-1 block text-[11px] text-rose-600">{errorPais}</span> : null}
-                </label>
-              ) : null}
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="block">
-                  <span className={ET}>Tipo de documento</span>
-                  <Select value={f.sifen_tipo_documento} onChange={(v) => set("sifen_tipo_documento", v)} block etiqueta="Tipo de documento"
-                    options={[["", "— Según naturaleza —"], ["cedula", "Cédula paraguaya"], ["pasaporte", "Pasaporte"], ["carnet_extranjero", "Cédula / carnet extranjero"], ["otro", "Otro"]]} />
-                </div>
-                <label className="block">
-                  <span className={ET}>Número de documento</span>
-                  <input value={f.sifen_num_id} onChange={(e) => set("sifen_num_id", e.target.value)} maxLength={40} placeholder="Si está vacío, se usa el del cliente" className={INPUT} />
-                </label>
-                <label className="block">
-                  <span className={ET}>Dirección</span>
-                  <input value={f.sifen_direccion} onChange={(e) => set("sifen_direccion", e.target.value)} maxLength={200} placeholder="Si está vacía, se usa la del cliente" className={INPUT} />
-                </label>
-                <label className="block">
-                  <span className={ET}>Número de casa</span>
-                  <input value={f.sifen_numero_casa} onChange={(e) => set("sifen_numero_casa", e.target.value)} maxLength={20} placeholder="0 si no tiene" className={INPUT} />
-                </label>
-              </div>
-            </div>
-          </details>
         </Bloque>
 
         <Bloque titulo={empresa ? "Contacto y dirección" : "Dirección"}>
