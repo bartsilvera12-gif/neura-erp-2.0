@@ -10,6 +10,7 @@ export const moduloPagos: Modulo = {
   id: "pagos",
   label: "Pagos",
   href: "/pagos",
+  grupo: "finanzas",
   icon: "banknote",
   familia: "Finanzas",
 };

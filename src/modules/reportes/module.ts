@@ -9,6 +9,7 @@ export const moduloReportes: Modulo = {
   id: "reportes",
   label: "Reportes",
   href: "/reportes",
+  grupo: "finanzas",
   icon: "chart",
   familia: "Finanzas",
   roles: ["ADMIN", "SUPERVISOR"],

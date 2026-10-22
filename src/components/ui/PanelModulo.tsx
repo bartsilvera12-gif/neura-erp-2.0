@@ -5,7 +5,7 @@
  * una TarjetaImagen por sub-pantalla (foto + degradé de color + título + flecha). Muestra solo las
  * tarjetas que el perfil puede abrir (mismas reglas que el menú y el guard: `pantallasCatalogo`
  * + `perfilVePantalla`; las de acceso propio, además, según `acceso`). Lo usan /configuracion,
- * /inventario/panel y /omnicanal.
+ * /inventario/panel, /omnicanal, /finanzas, /caja/panel y /gastos-empresariales/panel.
  *
  *   <PanelModulo kicker="Operaciones" titulo="Inventario" subtitulo="…" tarjetas={TARJETAS}
  *     vacio="No tenés pantallas de inventario habilitadas." />
@@ -33,6 +33,11 @@ export type TarjetaPanel = {
    * (ej. Monitoreo para un supervisor de cola que no es ADMIN).
    */
   acceso?: string;
+  /**
+   * Tarjeta de un panel de grupo (ej. /finanzas → Caja): su `href` no es una pantalla (es otro
+   * panel), así que se muestra si el perfil ve alguna de estas pantallas (`hrefsDeModulo`).
+   */
+  pantallas?: string[];
 };
 
 /** "#3F8E91" → "182 39% 28%": el color de la marca, oscurecido lo justo para texto blanco. */
@@ -53,8 +58,10 @@ export function hslDeMarca(hex: string, maxL = 28): string {
 const GRILLA = "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4";
 
 export function PanelModulo({
-  kicker, titulo, subtitulo, tarjetas, vacio = "No tenés pantallas habilitadas en este módulo.",
+  kicker, titulo, subtitulo, tarjetas, vacio = "No tenés pantallas habilitadas en este módulo.", volver,
 }: {
+  /** link "← …" arriba del título (ej. el panel de Caja vuelve a Finanzas). */
+  volver?: { href: string; label: string };
   kicker?: string;
   titulo: string;
   subtitulo?: string;
@@ -92,14 +99,17 @@ export function PanelModulo({
     if (!me) return [];
     const catalogo = pantallasCatalogo();
     return tarjetas.filter((t) => {
-      const p = catalogo.find((x) => x.href === t.href);
-      return !!p && (perfilVePantalla(p, me.rol, me.perfil) || permitidas.has(t.href));
+      const ve = (href: string) => {
+        const p = catalogo.find((x) => x.href === href);
+        return !!p && perfilVePantalla(p, me.rol, me.perfil);
+      };
+      return t.pantallas ? t.pantallas.some(ve) : ve(t.href) || permitidas.has(t.href);
     });
   }, [me, tarjetas, permitidas]);
 
   return (
     <div className="space-y-6 pb-10">
-      <EncabezadoPagina kicker={kicker} titulo={titulo} subtitulo={subtitulo} />
+      <EncabezadoPagina volver={volver} kicker={kicker} titulo={titulo} subtitulo={subtitulo} />
 
       {!me || (!visibles.length && aConsultar.length > 0 && !consultado) ? (
         <div className={GRILLA} aria-busy="true">

@@ -71,3 +71,31 @@ Fotos de fondo de las tarjetas de `/omnicanal` (componente `PanelModulo` → `Ta
 | Finalizadas | `public/omnicanal/finalizadas-checklist-dueno.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 | Monitoreo | `public/omnicanal/monitoreo-pantallas-dueno.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 | Historial omnicanal | `public/omnicanal/historial-archivo-dueno.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
+
+## Panel Finanzas
+
+Fotos de fondo de las tarjetas de `/finanzas`, `/caja/panel` y `/gastos-empresariales/panel` (componente `PanelModulo` → `TarjetaImagen`). Están en el repo, en `public/finanzas/` (WEBP, 1000 px de ancho, recortadas por `object-position`). Todas de Wikimedia Commons; las CC BY / CC BY-SA piden nombrar al autor y la licencia (esta tabla). El dueño puede reemplazar cualquiera por una propia (con un nombre de archivo nuevo).
+
+| Tarjeta | Archivo | Autor | Licencia | Origen |
+|---|---|---|---|---|
+| Finanzas › Caja | `public/finanzas/caja-teclas-registradora.webp` | Håkan Dahlström | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) | [File:Cash register (3537693467).jpg](https://commons.wikimedia.org/wiki/File:Cash_register_(3537693467).jpg) |
+| Finanzas › Cobranzas | `public/finanzas/cobranzas-agenda-vencimientos.webp` | Fluff | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) | [File:Calendar-leapyeardate.jpg](https://commons.wikimedia.org/wiki/File:Calendar-leapyeardate.jpg) |
+| Finanzas › Conciliación | `public/finanzas/conciliacion-planilla-laptop.webp` | MikeRun | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | [File:Lab-notebook-spreadsheet-simulation.jpg](https://commons.wikimedia.org/wiki/File:Lab-notebook-spreadsheet-simulation.jpg) |
+| Finanzas › Pagos | `public/finanzas/pagos-tarjeta-terminal.webp` | Mañico | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Card Payment (176811287).jpeg](https://commons.wikimedia.org/wiki/File:Card_Payment_(176811287).jpeg) |
+| Finanzas › Gastos empresariales | `public/finanzas/gastos-calculadora-teclas.webp` | jakeandlindsay | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) | [File:Calculator (5639214967).jpg](https://commons.wikimedia.org/wiki/File:Calculator_(5639214967).jpg) |
+| Finanzas › Reportes | `public/finanzas/reportes-graficos-pantalla.webp` | Negative Space | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Blur-chart-data-69760.jpg](https://commons.wikimedia.org/wiki/File:Blur-chart-data-69760.jpg) |
+| Caja › Nueva venta | `public/finanzas/nueva-venta-escaner-celular.webp` | Richard Tanzer Fotografie / VeroPay | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) | [File:Mobile Payment.jpg](https://commons.wikimedia.org/wiki/File:Mobile_Payment.jpg) |
+| Caja › Apertura y cierre | `public/finanzas/apertura-cierre-billetes-mano.webp` | Niels Steeman | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Well-earned cash (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Well-earned_cash_(Unsplash).jpg) |
+| Caja › Órdenes de venta | `public/finanzas/ordenes-venta-ticket-impreso.webp` | Donald Trung Quoc Don (徵國單) | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | [File:Sahan Supermarket receipt, Hillegersberg, Rotterdam (2021) 01.jpg](https://commons.wikimedia.org/wiki/File:Sahan_Supermarket_receipt,_Hillegersberg,_Rotterdam_(2021)_01.jpg) |
+| Caja › Ventas a crédito | `public/finanzas/credito-libro-cuentas.webp` | Joxemai | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | [File:Kontu liburua.JPG](https://commons.wikimedia.org/wiki/File:Kontu_liburua.JPG) |
+| Gastos › Resumen | `public/finanzas/gastos-resumen-graficos-papel.webp` | William Iven | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Crunching the numbers (Unsplash).png](https://commons.wikimedia.org/wiki/File:Crunching_the_numbers_(Unsplash).png) |
+| Gastos › Compras y gastos | `public/finanzas/compras-canasto-supermercado.webp` | safaritravelplus | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Shopping Cart Supermarket.jpg](https://commons.wikimedia.org/wiki/File:Shopping_Cart_Supermarket.jpg) |
+| Gastos › Órdenes de compra | `public/finanzas/ordenes-compra-caja-pedido.webp` | Bench Accounting | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Ships out today (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Ships_out_today_(Unsplash).jpg) |
+| Gastos › Proveedores | `public/finanzas/proveedores-apreton-manos.webp` | rawpixel.com | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Business agreement handshake at coffee shop.jpg](https://commons.wikimedia.org/wiki/File:Business_agreement_handshake_at_coffee_shop.jpg) |
+| Gastos › Pagos a proveedores | `public/finanzas/pagos-proveedores-celular-laptop.webp` | Alejandro Escamilla | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Man with smartphone and laptop (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Man_with_smartphone_and_laptop_(Unsplash).jpg) |
+| Gastos › Recurrentes | `public/finanzas/recurrentes-calendario-mensual.webp` | Claudio Elias | Dominio público | [File:WallCalendar.jpg](https://commons.wikimedia.org/wiki/File:WallCalendar.jpg) |
+
+Notas:
+- Pagos: en la terminal se lee chico "Spire Payments"; Nueva venta: el celular dice "SAMSUNG" en letra chica. No son respaldos de marca.
+- Órdenes de venta: ticket de un supermercado neerlandés, sin datos personales.
+- Recurrentes: calendario de 2007; el recorte deja a la vista la grilla de días y el mes queda bajo el degradé.

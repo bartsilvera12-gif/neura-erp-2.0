@@ -17,7 +17,7 @@ export default function ReportesPage() {
 
   return (
     <div className="space-y-6 pb-10 sm:space-y-8">
-      <EncabezadoReporte kicker="Análisis" titulo="Reportes" subtitulo="Todos los números de la empresa en un solo lugar: elegí un reporte para ver el detalle, filtrarlo y bajarlo en Excel o PDF." volver={null} />
+      <EncabezadoReporte kicker="Análisis" titulo="Reportes" subtitulo="Todos los números de la empresa en un solo lugar: elegí un reporte para ver el detalle, filtrarlo y bajarlo en Excel o PDF." volver={{ href: "/finanzas", label: "Finanzas" }} />
 
       {!me ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{[0, 1, 2].map((i) => <div key={i} className="h-40 animate-pulse rounded-2xl border border-slate-200 bg-white" />)}</div>

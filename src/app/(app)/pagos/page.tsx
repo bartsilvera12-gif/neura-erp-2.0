@@ -123,6 +123,7 @@ export default function PagosPage() {
   return (
     <div className="w-full min-w-0 max-w-full space-y-4 pb-10 sm:space-y-6">
       <EncabezadoPagina
+        volver={{ href: "/finanzas", label: "Finanzas" }}
         kicker="Cobranzas"
         titulo="Pagos"
         subtitulo="Registrar pagos de facturas pendientes de cobro"

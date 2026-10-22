@@ -311,7 +311,7 @@ function Conciliacion() {
   return (
     <div className="w-full min-w-0 space-y-4 pb-10 sm:space-y-5">
       <EncabezadoPagina
-        volver={{ href: "/cobranzas", label: "Seguimiento" }}
+        volver={{ href: "/finanzas", label: "Finanzas" }}
         kicker="Finanzas · Cobranzas"
         titulo="Conciliación bancaria"
         subtitulo="Transferencias de clientes: se registran, un administrador las aprueba y recién ahí baja la deuda."

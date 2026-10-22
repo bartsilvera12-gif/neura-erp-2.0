@@ -13,7 +13,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { CheckCircle2, ChevronRight, FileSignature, Package, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronRight, FileSignature, Package, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
 import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
@@ -704,7 +704,12 @@ function CajaPageContenido() {
     >
       {/* Header compacto: todo en una línea para no gastar alto vertical. */}
       <div className="flex shrink-0 items-center justify-between gap-3 sm:gap-4">
-        <div className="flex min-w-0 items-baseline gap-2">
+        <div className="flex min-w-0 items-center gap-1.5">
+          {/* Volver al panel de Caja: discreto, en la misma línea (no le quita alto al POS). */}
+          <Link href="/caja/panel" aria-label="Volver a Caja" title="Volver a Caja"
+            className="-ml-1.5 inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 lg:h-8 lg:w-8">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
           <h1 className="text-lg font-semibold tracking-tight text-slate-900">Caja</h1>
           <span className="hidden text-xs text-slate-400 sm:inline">· Escaneá y cobrá directo</span>
         </div>

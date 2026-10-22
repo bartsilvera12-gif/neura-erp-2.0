@@ -23,7 +23,8 @@ import type { PerfilSesion } from "@/modules/usuarios/permisos";
 
 // El orden de acá es el orden dentro de cada familia del menú (igual que sistemas-propio):
 // Comercial: Clientes, CRM Funnel, Presupuestos, Gestión Clientes, Planes, Agenda, Proyectos · Finanzas: Caja, Cobranzas, Conciliación, Pagos,
-// Gastos empresariales (compras + gastos operativos), Reportes · Operaciones: Inventario · Omnicanal: Omnicanal (panel: Conversaciones, Finalizadas, Monitoreo, Historial omnicanal) ·
+// Gastos empresariales (compras + gastos operativos), Reportes — en el menú son UN ítem "Finanzas" (grupo, panel /finanzas;
+// Caja y Gastos con panel propio) · Operaciones: Inventario · Omnicanal: Omnicanal (panel: Conversaciones, Finalizadas, Monitoreo, Historial omnicanal) ·
 // Soporte: Soporte · Configuración: Configuración (panel: Datos de la empresa, Facturación, Usuarios).
 const TODOS: Modulo[] = [
   moduloClientes,
@@ -119,14 +120,69 @@ export function pantallaDeRuta(pathname: string, catalogo: Pantalla[] = pantalla
   return mejor;
 }
 
+// ── Ítems agrupadores del menú ───────────────────────────────────────────────
+// Varios módulos (`grupo` en su module.ts) se muestran en el menú como UN solo ítem que abre un
+// panel de tarjetas, una por módulo. Los módulos siguen existiendo igual: sus pantallas, rutas,
+// roles y permisos no cambian (catálogo de perfiles, guard). El panel del grupo es una página
+// propia (ej. src/app/(app)/finanzas/page.tsx).
+
+export type GrupoMenu = { id: string; label: string; href: string; icon: string; familia: string };
+
+export const GRUPOS_MENU: GrupoMenu[] = [
+  // Caja · Cobranzas · Conciliación · Pagos · Gastos empresariales · Reportes
+  { id: "finanzas", label: "Finanzas", href: "/finanzas", icon: "landmark", familia: "Finanzas" },
+];
+
+/** Junta los módulos de cada grupo en su ítem (en el lugar del primero del grupo). */
+function agruparEnMenu(mods: Modulo[]): Modulo[] {
+  const out: Modulo[] = [];
+  const items = new Map<string, Modulo>();
+  for (const m of mods) {
+    const g = m.grupo ? GRUPOS_MENU.find((x) => x.id === m.grupo) : undefined;
+    if (!g) {
+      out.push(m);
+      continue;
+    }
+    let item = items.get(g.id);
+    if (!item) {
+      item = { id: g.id, label: g.label, href: g.href, icon: g.icon, familia: g.familia, panel: true, children: [] };
+      items.set(g.id, item);
+      out.push(item);
+    }
+    // Hijos del ítem = todo lo que se puede abrir del módulo: su panel (si tiene) y sus
+    // pantallas. Sirven para marcar "Finanzas" activo y para el buscador del menú.
+    if (m.children?.length) {
+      if (m.panel) item.children!.push({ label: m.label, href: m.href });
+      item.children!.push(...m.children.map((c) => ({ ...c, seccion: m.label })));
+    } else {
+      item.children!.push({ label: m.label, href: m.href });
+    }
+  }
+  return out;
+}
+
 /**
- * El módulo con panel propio cuyo panel es exactamente esta ruta (ej. /inventario/panel), o null.
- * El panel no es una pantalla de los perfiles: se puede abrir si el perfil ve el módulo (alguna
- * de sus sub-pantallas). El guard lo usa antes de `pantallaDeRuta`, porque /inventario/panel
- * cae bajo el prefijo de Productos (/inventario).
+ * El panel (de un módulo con `panel`, o de un grupo del menú) que es exactamente esta ruta, con
+ * las pantallas que agrupa; o null. El panel no es una pantalla de los perfiles: se puede abrir
+ * si el perfil ve alguna de esas pantallas. El guard lo usa antes de `pantallaDeRuta`, porque
+ * /inventario/panel cae bajo el prefijo de Productos (/inventario) y /caja/panel bajo Órdenes de
+ * venta (/caja).
  */
-export function panelDeRuta(pathname: string): Modulo | null {
-  return TODOS.find((m) => m.panel && m.href === pathname && clienteConfig.modulos.includes(m.id)) ?? null;
+export function panelDeRuta(pathname: string): { id: string; label: string; pantallas: Pantalla[] } | null {
+  const catalogo = pantallasCatalogo();
+  const m = TODOS.find((x) => x.panel && x.href === pathname && clienteConfig.modulos.includes(x.id));
+  if (m) return { id: m.id, label: m.label, pantallas: catalogo.filter((p) => p.moduloId === m.id) };
+  const g = GRUPOS_MENU.find((x) => x.href === pathname);
+  if (!g) return null;
+  const ids = new Set(TODOS.filter((x) => x.grupo === g.id).map((x) => x.id));
+  return { id: g.id, label: g.label, pantallas: catalogo.filter((p) => ids.has(p.moduloId)) };
+}
+
+/** Las pantallas (hrefs) de un módulo, para las tarjetas de un panel de grupo. */
+export function hrefsDeModulo(id: string): string[] {
+  const m = TODOS.find((x) => x.id === id);
+  if (!m) return [];
+  return m.children?.length ? m.children.map((c) => c.href) : [m.href];
 }
 
 /** ¿El perfil puede abrir esta pantalla? (nivel base + pantallas del perfil + permiso) */
@@ -139,9 +195,14 @@ export function perfilVePantalla(p: Pantalla, rol: string | undefined, perfil: P
 
 /**
  * Menú del usuario: los módulos activos que deja su rol, recortados a las pantallas de su
- * perfil (un módulo con submenú queda con las sub-pantallas permitidas).
+ * perfil (un módulo con submenú queda con las sub-pantallas permitidas). Los módulos con
+ * `grupo` salen juntos en el ítem de su grupo (ej. "Finanzas"), solo con lo que el perfil ve.
  */
 export function modulosDelPerfil(rol: string | undefined, perfil: PerfilSesion | null | undefined): Modulo[] {
+  return agruparEnMenu(modulosVisibles(rol, perfil));
+}
+
+function modulosVisibles(rol: string | undefined, perfil: PerfilSesion | null | undefined): Modulo[] {
   const base = modulosActivos(rol);
   if (!perfil) return base;
   const catalogo = pantallasCatalogo();

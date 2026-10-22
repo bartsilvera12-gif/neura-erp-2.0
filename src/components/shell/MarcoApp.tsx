@@ -299,8 +299,11 @@ function NavMenu({
             // actual, entre todos los del menú (/clientes/gestion marca "Gestión Clientes",
             // no "Clientes"; /clientes/<id> marca "Clientes").
             const active = m.id === itemActivo;
-            // Con panel propio (ej. Configuración) las sub-pantallas son tarjetas del panel.
-            const tieneHijos = !!m.children?.length && !m.panel;
+            // Con panel propio (ej. Configuración, Finanzas) las sub-pantallas son tarjetas del
+            // panel; buscando, se despliegan las que coinciden para ir directo a ellas
+            // ("nueva venta" → Finanzas › Nueva venta).
+            const hijos = !m.children?.length ? [] : !m.panel ? m.children : q.trim() ? m.children.filter((c) => coincide(q, { principal: c.label })) : [];
+            const tieneHijos = hijos.length > 0;
             // Buscando, se despliegan solos para que se vea la sub-pantalla encontrada.
             const abierto = (q.trim() ? true : (abiertos[m.id] ?? active)) && !collapsed;
             return (
@@ -325,11 +328,11 @@ function NavMenu({
                     <div className="min-h-0" inert={!abierto}>
                       <div className="relative ml-[30px] mt-1 space-y-1 pl-3">
                         <span className="absolute left-0 top-1 bottom-1 w-px bg-white/10" />
-                        {m.children!.map((c) => {
+                        {hijos.map((c) => {
                           // Activo: ruta exacta, o la sub-página del hijo con el prefijo más largo
                           // (/reportes/cajas/<id> marca "Cierres de caja", no "Todos los reportes").
                           const coincideRuta = (h: string) => pathname === h || pathname.startsWith(`${h}/`);
-                          const mejor = m.children!.filter((x) => coincideRuta(x.href)).sort((a, b) => b.href.length - a.href.length)[0];
+                          const mejor = hijos.filter((x) => coincideRuta(x.href)).sort((a, b) => b.href.length - a.href.length)[0];
                           const ca = mejor?.href === c.href;
                           return (
                             <Link
@@ -342,7 +345,8 @@ function NavMenu({
                               {ca ? (
                                 <span className="absolute -left-[13px] top-1/2 h-4 w-[3px] -translate-y-1/2 rounded-full" style={{ backgroundColor: ACCENT, boxShadow: `0 0 8px ${ACCENT}` }} />
                               ) : null}
-                              {c.label}
+                              <span className="min-w-0 truncate">{c.label}</span>
+                              {c.seccion ? <span className="ml-1.5 min-w-0 shrink truncate text-[11px] text-slate-500">· {c.seccion}</span> : null}
                             </Link>
                           );
                         })}
@@ -590,12 +594,15 @@ function BuscadorPantallas({ modulos, onCerrar }: { modulos: Modulo[]; onCerrar:
     for (const [fam, items] of agruparPorFamilia(modulos, qq)) {
       for (const m of items) {
         const hijos = m.children ?? [];
-        if (!hijos.length || m.panel) add({ href: m.href, label: m.label, contexto: fam, icon: m.icon });
-        if (!hijos.length) continue;
         // Con búsqueda: las sub-pantallas que coinciden (o todas, si coincide el módulo).
         const coinciden = qq ? hijos.filter((c) => coincide(qq, { principal: c.label })) : hijos;
+        // El panel (ej. Finanzas) va primero solo si lo buscado es él (o no coincide ninguna
+        // pantalla): "nueva venta" + Enter abre Nueva venta, no el panel de Finanzas.
+        if (!hijos.length || (m.panel && (!qq || !coinciden.length || coincide(qq, { principal: m.label })))) add({ href: m.href, label: m.label, contexto: fam, icon: m.icon });
+        if (!hijos.length) continue;
         for (const c of coinciden.length ? coinciden : hijos) {
-          add({ href: c.href, label: c.label === m.label ? m.label : c.label, contexto: c.label === m.label ? fam : `${m.label}`, icon: m.icon });
+          const contexto = c.label === m.label ? fam : c.seccion ? `${m.label} › ${c.seccion}` : m.label;
+          add({ href: c.href, label: c.label, contexto, icon: m.icon });
         }
       }
     }

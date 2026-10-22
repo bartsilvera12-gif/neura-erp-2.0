@@ -24,12 +24,23 @@ export type Modulo = {
     permiso?: string;
     /** como `accesoPropio` del módulo, pero solo para esta sub-pantalla (ej. Omnicanal › Monitoreo) */
     accesoPropio?: boolean;
+    /**
+     * Solo en los ítems agrupadores del menú (ver `grupo`): el módulo del que viene esta
+     * pantalla (ej. "Gastos empresariales" para "Resumen"), para el buscador del menú.
+     */
+    seccion?: string;
   }[];
   /**
    * El ítem del menú abre su propio panel (`href`, con tarjetas de las sub-pantallas) y las
    * sub-pantallas NO se despliegan en el menú. Igual cuentan como pantallas de los perfiles.
    */
   panel?: boolean;
+  /**
+   * El módulo NO va suelto en el menú: se junta con los demás del mismo grupo en un solo ítem
+   * con panel propio (`GRUPOS_MENU` en registry.ts; ej. "finanzas" → Finanzas, /finanzas).
+   * Sigue existiendo igual para el catálogo de pantallas, los perfiles y el guard.
+   */
+  grupo?: string;
   /** permiso del perfil que además hace falta para verlo (ej. "administrar_usuarios") */
   permiso?: string;
   /**

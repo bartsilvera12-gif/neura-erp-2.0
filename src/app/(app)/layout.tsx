@@ -61,15 +61,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // (Las APIs y la base lo vuelven a validar; esto es para no mostrar una pantalla rota.)
   const pantallaBloqueada = useMemo(() => {
     if (!me || !perfil) return null;
-    // Panel de un módulo (ej. /inventario/panel): entra quien ve el módulo en el menú, o sea,
-    // alguna de sus sub-pantallas (aunque no tenga la del prefijo, ej. Productos = /inventario).
+    // Panel de un módulo (ej. /inventario/panel, /caja/panel) o de un grupo del menú (/finanzas):
+    // entra quien ve alguna de sus pantallas (aunque no tenga la del prefijo, ej. Productos =
+    // /inventario). Si no ve ninguna, sigue la regla de siempre (el panel muestra solo las
+    // tarjetas permitidas).
     const panel = panelDeRuta(pathname);
-    // Si no lo ve, sigue la regla de siempre (el panel muestra solo las tarjetas permitidas).
-    if (panel && modulos.some((m) => m.id === panel.id)) return null;
+    if (panel && panel.pantallas.some((x) => perfilVePantalla(x, rol, perfil))) return null;
     const p = pantallaDeRuta(pathname);
     if (!p || p.accesoPropio) return null;
     return perfilVePantalla(p, rol, perfil) ? null : p;
-  }, [me, perfil, rol, pathname, modulos]);
+  }, [me, perfil, rol, pathname]);
 
   if (!ready) {
     return (

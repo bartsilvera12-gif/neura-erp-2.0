@@ -12,11 +12,15 @@ import type { Modulo } from "@/modules/types";
  * Las URLs viejas siguen funcionando: /gastos y /gastos-empresariales/operativos redirigen a la
  * lista con el filtro de gastos y /compras con el de mercadería; /compras/nueva, /compras/ordenes,
  * /compras/pagos y /proveedores son las mismas páginas, con las pestañas del módulo.
+ * Va dentro del ítem "Finanzas" del menú (grupo "finanzas" → /finanzas) y tiene su propio panel
+ * de tarjetas (/gastos-empresariales/panel); el Resumen sigue en /gastos-empresariales.
  */
 export const moduloGastosEmpresariales: Modulo = {
   id: "gastos-empresariales",
   label: "Gastos empresariales",
-  href: "/gastos-empresariales",
+  href: "/gastos-empresariales/panel",
+  panel: true,
+  grupo: "finanzas",
   icon: "wallet-cards",
   familia: "Finanzas",
   roles: ["ADMIN"],

@@ -45,7 +45,7 @@ export default function CajaDashboard() {
   return (
     <div className="space-y-4 pb-10 sm:space-y-6">
       {/* Encabezado: en celular "Nueva venta" a la vista y el resto en "⋯". */}
-      <EncabezadoPagina kicker="Finanzas · Caja" titulo="Órdenes de venta" subtitulo="Todas las ventas de las cajas, con su forma de pago"
+      <EncabezadoPagina volver={{ href: "/caja/panel", label: "Caja" }} kicker="Finanzas · Caja" titulo="Órdenes de venta" subtitulo="Todas las ventas de las cajas, con su forma de pago"
         acciones={<AccionesPagina acciones={[
           { etiqueta: "Nueva venta", icono: <Plus />, href: "/caja/nueva", primaria: true },
           { etiqueta: "Apertura y cierre", icono: <Wallet />, href: "/caja/turnos" },

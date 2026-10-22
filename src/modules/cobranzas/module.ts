@@ -11,6 +11,7 @@ export const moduloCobranzas: Modulo = {
   id: "cobranzas",
   label: "Cobranzas",
   href: "/cobranzas",
+  grupo: "finanzas",
   icon: "coins",
   familia: "Finanzas",
 };
@@ -19,6 +20,7 @@ export const moduloConciliacion: Modulo = {
   id: "conciliacion",
   label: "Conciliación",
   href: "/cobranzas/conciliacion",
+  grupo: "finanzas",
   icon: "scale",
   familia: "Finanzas",
 };

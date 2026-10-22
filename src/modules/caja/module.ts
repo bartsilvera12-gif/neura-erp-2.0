@@ -1,10 +1,17 @@
 import type { Modulo } from "@/modules/types";
 
-/** Manifiesto del módulo Caja (POS por sucursal: apertura, venta, arqueo, cierre, crédito). */
+/**
+ * Manifiesto del módulo Caja (POS por sucursal: apertura, venta, arqueo, cierre, crédito).
+ * Va dentro del ítem "Finanzas" del menú (grupo "finanzas" → /finanzas) y tiene su propio
+ * panel de tarjetas (/caja/panel). Las sub-pantallas no se mueven (Órdenes de venta sigue en
+ * /caja), así los perfiles guardados y los links siguen valiendo.
+ */
 export const moduloCaja: Modulo = {
   id: "caja",
   label: "Caja",
-  href: "/caja",
+  href: "/caja/panel",
+  panel: true,
+  grupo: "finanzas",
   icon: "wallet",
   familia: "Finanzas",
   roles: ["ADMIN", "SUPERVISOR", "CAJERO", "VENDEDOR"],

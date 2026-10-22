@@ -3,7 +3,7 @@
  * y acá se traduce al componente. Centralizado para que el sidebar y el dashboard usen
  * el mismo set y agregar un módulo no toque más que su propio manifiesto.
  */
-import { Banknote, BarChart3, CalendarDays, Coins, LayoutGrid, LifeBuoy, Users, UserSearch, Wallet, Package, FileText, Truck, ShoppingCart, Sparkles, MessagesSquare, ListChecks, Activity, History, FolderKanban, Scale, Receipt, FileSignature, WalletCards, UserCog, Building2, ReceiptText, Settings, type LucideIcon } from "lucide-react";
+import { Banknote, BarChart3, CalendarDays, Coins, LayoutGrid, LifeBuoy, Users, UserSearch, Wallet, Package, FileText, Truck, ShoppingCart, Sparkles, MessagesSquare, ListChecks, Activity, History, FolderKanban, Scale, Receipt, FileSignature, WalletCards, UserCog, Building2, ReceiptText, Settings, Landmark, type LucideIcon } from "lucide-react";
 
 const ICONOS: Record<string, LucideIcon> = {
   wallet: Wallet,
@@ -33,6 +33,7 @@ const ICONOS: Record<string, LucideIcon> = {
   building: Building2,
   "receipt-text": ReceiptText,
   settings: Settings,
+  landmark: Landmark,
 };
 
 export function iconoModulo(nombre?: string): LucideIcon {

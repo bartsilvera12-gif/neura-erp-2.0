@@ -364,6 +364,7 @@ export default function SeguimientoCobranzasPage() {
   return (
     <div className="space-y-4 pb-10 sm:space-y-5">
       <EncabezadoPagina
+        volver={{ href: "/finanzas", label: "Finanzas" }}
         kicker="Finanzas · Cobranzas"
         titulo="Seguimiento Cobranzas"
         subtitulo={`Clientes con deuda y tramos de mora${data?.hoy ? ` · al ${fechaCorta(data.hoy)}` : ""}.`}
