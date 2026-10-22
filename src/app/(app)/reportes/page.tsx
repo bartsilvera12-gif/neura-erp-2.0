@@ -19,7 +19,7 @@ const FOTOS: Record<string, { imagen: string; color: string; posicion?: string }
   "/reportes/cuentas-cobrar": { imagen: "/reportes/cuentas-cobrar-deudas-laptop-dueno.webp", color: "152 34% 22%", posicion: "45% 40%" },
   "/reportes/cuentas-pagar": { imagen: "/reportes/cuentas-pagar-facturas-calculadora-dueno.webp", color: "8 40% 26%", posicion: "50% 45%" },
   "/reportes/proveedores": { imagen: "/reportes/proveedores-descarga-camion-dueno.webp", color: "200 38% 22%", posicion: "50% 45%" },
-  "/reportes/cajas": { imagen: "/reportes/cierre-caja-cajon-abierto.webp", color: "258 28% 28%", posicion: "50% 66%" },
+  "/reportes/cajas": { imagen: "/reportes/cierre-caja-cajero-billetes-dueno.webp", color: "258 28% 28%", posicion: "50% 62%" },
   "/reportes/ventas-mensuales": { imagen: "/reportes/ventas-mes-grafico-calendario.webp", color: "190 42% 22%", posicion: "30% 95%" },
   "/reportes/ventas": { imagen: "/reportes/ventas-periodo-cobro-mostrador.webp", color: "168 36% 21%", posicion: "40% 62%" },
   "/reportes/formas-pago": { imagen: "/reportes/formas-pago-tarjeta-lector.webp", color: "232 32% 28%", posicion: "40% 35%" },
