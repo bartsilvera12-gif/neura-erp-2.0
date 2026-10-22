@@ -16,7 +16,7 @@ const TARJETAS: TarjetaPanel[] = [
   { href: "/inventario/traslados", titulo: "Traslados", imagen: "/inventario/traslados-autoelevador.webp", color: "26 55% 24%", posicion: "45% 60%" },
   { href: "/inventario/ajustes", titulo: "Ajustes y pérdidas", imagen: "/inventario/ajustes.webp", color: "352 42% 27%", posicion: "50% 0%" },
   { href: "/inventario/vencimientos", titulo: "Vencimientos", imagen: "/inventario/vencimientos-fecha.webp", color: "150 38% 22%", posicion: "65% 45%" },
-  { href: "/inventario/categorias", titulo: "Categorías", imagen: "/inventario/categorias.webp", color: "258 28% 30%", posicion: "50% 40%" },
+  { href: "/inventario/categorias", titulo: "Categorías", imagen: "/inventario/categorias-cajas.webp", color: "258 28% 30%", posicion: "50% 30%" },
   { href: "/inventario/depositos", titulo: "Depósitos", imagen: "/inventario/depositos-racks.webp", color: "205 32% 21%", posicion: "50% 40%" },
 ];
 

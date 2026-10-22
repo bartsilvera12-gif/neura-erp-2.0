@@ -53,7 +53,7 @@ Fotos de fondo de las tarjetas de `/inventario/panel` (componente `PanelModulo` 
 | Traslados | `public/inventario/traslados-autoelevador.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 | Ajustes y pérdidas | `public/inventario/ajustes.webp` | Liz Roll (FEMA) | Dominio público | https://commons.wikimedia.org/wiki/File:FEMA_-_24316_-_Photograph_by_Liz_Roll_taken_on_05-11-2006_in_Texas.jpg |
 | Vencimientos | `public/inventario/vencimientos-fecha.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
-| Categorías | `public/inventario/categorias.webp` | Wilfredor | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Collection_of_piano_rolls_in_their_original_boxes_in_Collections_of_the_Deutsches_Museum.jpg |
+| Categorías | `public/inventario/categorias-cajas.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 | Depósitos | `public/inventario/depositos-racks.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 
 Notas:
