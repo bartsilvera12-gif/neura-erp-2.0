@@ -474,7 +474,8 @@ export default function CrmClient() {
         ) : (
           <div className={`transition-opacity ${cargando ? "opacity-60" : ""}`}>
             <KanbanScroller>
-              <div className="flex h-full min-w-max items-start gap-3">
+              {/* pr-3: la última columna (Perdido) no queda pegada/cortada contra el borde al final del scroll */}
+              <div className="flex h-full min-w-max items-start gap-3 pr-3">
                 {columnas.map((c) => (
                   <ColumnaKanban
                     key={c.codigo}

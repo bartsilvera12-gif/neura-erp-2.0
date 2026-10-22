@@ -80,13 +80,13 @@ export const ProspectoCard = memo(function ProspectoCard({
       }}
       onDragEnd={acciones.onDragEnd}
       onClick={() => acciones.onAbrir(t.id)}
-      className={`group select-none rounded-2xl border border-l-4 border-slate-200 bg-white p-3 shadow-sm transition-all [contain-intrinsic-size:auto_220px] [content-visibility:auto] ${tactil ? "cursor-pointer active:bg-slate-50" : "cursor-grab hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing"} ${tono.borderLeft}`}
+      className={`group flex shrink-0 select-none flex-col rounded-2xl border border-l-4 border-slate-200 bg-white p-3 shadow-sm transition-all [contain-intrinsic-size:auto_400px] [content-visibility:auto] [@media(pointer:coarse)]:[contain-intrinsic-size:auto_520px] ${tactil ? "cursor-pointer active:bg-slate-50" : "cursor-grab hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing"} ${tono.borderLeft}`}
     >
       <div className="flex items-start gap-2">
         <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${tono.dot}`} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-semibold leading-tight text-slate-900 max-md:text-sm">{t.empresa || t.contacto}</p>
-          <p className="mt-0.5 font-mono text-[10px] text-slate-400">{t.numero_control}</p>
+          <p className="truncate text-[13px] font-semibold leading-tight text-slate-900 max-md:text-sm" title={t.empresa || t.contacto}>{t.empresa || t.contacto}</p>
+          <p className="mt-0.5 truncate font-mono text-[10px] leading-tight text-slate-400">{t.numero_control}</p>
         </div>
         <button
           type="button"
@@ -99,29 +99,39 @@ export const ProspectoCard = memo(function ProspectoCard({
         </button>
       </div>
 
-      {t.servicio ? <p className="mt-1.5 line-clamp-1 text-[11px] text-slate-500">{t.servicio}</p> : null}
+      {/* Todas las filas se muestran siempre (con un texto gris si están vacías) y con alto fijo:
+          así todas las tarjetas miden lo mismo, en cualquier columna. */}
+      <p className={`mt-1.5 h-4 truncate text-[11px] leading-4 ${t.servicio ? "text-slate-500" : "italic text-slate-300"}`} title={t.servicio || undefined}>
+        {t.servicio || "Sin plan"}
+      </p>
 
-      <div className="mt-2 flex items-baseline justify-between gap-2">
+      <div className="mt-2 flex h-5 items-baseline justify-between gap-2">
         <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Valor</span>
-        <span className="text-sm font-semibold tabular-nums text-slate-900">{gsCompleto(t.valor_estimado)}</span>
+        <span className="truncate text-sm font-semibold tabular-nums text-slate-900">{gsCompleto(t.valor_estimado)}</span>
       </div>
 
-      {t.origen_creacion && t.origen_creacion !== "manual" ? (
-        <div className="mt-2 flex flex-wrap gap-1">
-          <span className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium ${
+      <div className="mt-2 flex h-5 items-center gap-1 overflow-hidden">
+        {t.origen_creacion && t.origen_creacion !== "manual" ? (
+          <span className={`inline-flex min-w-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium leading-none ${
             t.origen_creacion === "whatsapp" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-600"
           }`}>
-            <span aria-hidden className={`h-1 w-1 rounded-full ${t.origen_creacion === "whatsapp" ? "bg-emerald-500" : "bg-slate-400"}`} />
-            {ORIGEN_LABEL[t.origen_creacion] ?? t.origen_creacion}
+            <span aria-hidden className={`h-1 w-1 shrink-0 rounded-full ${t.origen_creacion === "whatsapp" ? "bg-emerald-500" : "bg-slate-400"}`} />
+            <span className="truncate">{ORIGEN_LABEL[t.origen_creacion] ?? t.origen_creacion}</span>
           </span>
-        </div>
-      ) : null}
+        ) : (
+          <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-200 px-1.5 py-0.5 text-[10px] leading-none text-slate-300">
+            Carga manual
+          </span>
+        )}
+      </div>
 
-      {t.empresa ? (
-        <div className="mt-2 rounded-xl bg-slate-50/80 px-2.5 py-1.5">
-          <p className="truncate text-[11px] text-slate-700"><span className="font-medium text-slate-500">Contacto: </span>{t.contacto}</p>
-        </div>
-      ) : null}
+      <div className="mt-2 flex h-7 items-center rounded-xl bg-slate-50/80 px-2.5">
+        {t.empresa && t.contacto ? (
+          <p className="truncate text-[11px] text-slate-700" title={t.contacto}><span className="font-medium text-slate-500">Contacto: </span>{t.contacto}</p>
+        ) : (
+          <p className="truncate text-[11px] italic text-slate-300">Sin contacto</p>
+        )}
+      </div>
 
       {tel ? (
         <button
@@ -133,33 +143,44 @@ export const ProspectoCard = memo(function ProspectoCard({
             window.setTimeout(() => setCopiado(false), 1500);
           }}
           title={copiado ? "Copiado" : "Hacé click para copiar el número"}
-          className={`mt-2 flex w-full items-center justify-between gap-2 rounded-xl border px-2.5 py-1.5 text-left text-[11px] transition-colors [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-[13px] ${
+          className={`mt-2 flex h-8 w-full items-center justify-between gap-2 rounded-xl border px-2.5 text-left text-[11px] transition-colors [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:text-[13px] ${
             copiado ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--brand)]/30 bg-[var(--brand)]/[0.08] text-[var(--brand-600)] hover:border-[var(--brand)]/50"
           }`}
         >
           <span className="flex min-w-0 flex-1 items-center gap-1.5">
             <Phone className={`h-3 w-3 shrink-0 ${copiado ? "text-emerald-600" : "text-[var(--brand)]"}`} />
-            <span className="min-w-0 flex-1 break-all font-mono font-medium tabular-nums">{telefonoLindo(tel)}</span>
+            <span className="min-w-0 flex-1 truncate font-mono font-medium tabular-nums">{telefonoLindo(tel)}</span>
           </span>
           {copiado ? <Check className="h-3 w-3 shrink-0 text-emerald-600" /> : <Copy className="h-3 w-3 shrink-0 text-[var(--brand)]/70" />}
         </button>
-      ) : null}
+      ) : (
+        <div className="mt-2 flex h-8 w-full items-center gap-1.5 rounded-xl border border-dashed border-slate-200 px-2.5 text-[11px] italic text-slate-300 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:text-[13px]">
+          <Phone className="h-3 w-3 shrink-0" aria-hidden /> Sin teléfono
+        </div>
+      )}
 
       {t.proxima_accion || t.fecha_proxima_accion ? (
-        <div className={`mt-2 flex items-start gap-1.5 rounded-lg border px-2 py-1.5 ${
-          t.accion_vencida && abierta ? "border-rose-200 bg-rose-50/80" : "border-amber-100 bg-amber-50/70"
-        }`}>
-          <Clock className={`mt-0.5 h-3 w-3 shrink-0 ${t.accion_vencida && abierta ? "text-rose-500" : "text-amber-500"}`} />
-          <p className={`line-clamp-2 text-[10px] leading-tight ${t.accion_vencida && abierta ? "text-rose-800" : "text-amber-800"}`}>
+        <div
+          className={`mt-2 flex h-7 items-center gap-1.5 rounded-lg border px-2 ${
+            t.accion_vencida && abierta ? "border-rose-200 bg-rose-50/80" : "border-amber-100 bg-amber-50/70"
+          }`}
+          title={[t.proxima_accion, t.fecha_proxima_accion ? fechaSimple(t.fecha_proxima_accion) : ""].filter(Boolean).join(" · ")}
+        >
+          <Clock className={`h-3 w-3 shrink-0 ${t.accion_vencida && abierta ? "text-rose-500" : "text-amber-500"}`} />
+          <p className={`truncate text-[10px] leading-tight ${t.accion_vencida && abierta ? "text-rose-800" : "text-amber-800"}`}>
             {t.proxima_accion}
             {t.fecha_proxima_accion ? (
               <span className="font-semibold">{t.proxima_accion ? " · " : ""}{fechaSimple(t.fecha_proxima_accion)}{t.accion_vencida && abierta ? " (vencida)" : ""}</span>
             ) : null}
           </p>
         </div>
-      ) : null}
+      ) : (
+        <div className="mt-2 flex h-7 items-center gap-1.5 rounded-lg border border-dashed border-slate-200 px-2 text-[10px] italic text-slate-300">
+          <Clock className="h-3 w-3 shrink-0" aria-hidden /> Sin próxima acción
+        </div>
+      )}
 
-      <div className="mt-2 flex items-center justify-between gap-2 border-t border-slate-100 pt-2">
+      <div className="mt-2 flex h-8 items-center justify-between gap-2 border-t border-slate-100 pt-2">
         {t.responsable_nombre ? (
           <div className="flex min-w-0 items-center gap-1.5">
             <AvatarIni nombre={t.responsable_nombre} />
@@ -207,7 +228,7 @@ export const ProspectoCard = memo(function ProspectoCard({
         <>
         <span className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-500">Mover a etapa</span>
         <Select
-          compacto
+          chico
           block
           etiqueta="Mover a etapa"
           value={t.etapa}
@@ -218,31 +239,46 @@ export const ProspectoCard = memo(function ProspectoCard({
         )}
       </div>
 
+      {/* Atajos Ganado / Perdido (etapas abiertas) o, si la etapa ya está cerrada, una fila de estado
+          del mismo alto: así no cambia el tamaño de la tarjeta entre columnas. */}
       {abierta && ganado && perdido ? (
-        <div className="mt-2 flex gap-1 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100">
+        <div className="mt-2 flex h-7 gap-1 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:h-11">
           <button type="button" onClick={(e) => { e.stopPropagation(); acciones.onMover(t, ganado); }}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-200 px-2 py-1 text-[10px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-xs">
+            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-200 px-2 text-[10px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 [@media(pointer:coarse)]:text-xs">
             <Check className="h-3 w-3" /> Ganado
           </button>
           <button type="button" onClick={(e) => { e.stopPropagation(); acciones.onMover(t, perdido); }}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-rose-200 px-2 py-1 text-[10px] font-semibold text-rose-700 transition-colors hover:bg-rose-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-xs">
+            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-rose-200 px-2 text-[10px] font-semibold text-rose-700 transition-colors hover:bg-rose-50 [@media(pointer:coarse)]:text-xs">
             <X className="h-3 w-3" /> Perdido
           </button>
         </div>
-      ) : null}
+      ) : (
+        <div className={`mt-2 flex h-7 items-center justify-center gap-1 rounded-lg border px-2 text-[10px] font-semibold [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:text-xs ${
+          etapa?.es_ganado ? "border-emerald-100 bg-emerald-50/60 text-emerald-700"
+            : etapa?.es_perdido ? "border-rose-100 bg-rose-50/60 text-rose-700"
+            : "border-slate-100 bg-slate-50 text-slate-500"
+        }`}>
+          {etapa?.es_ganado ? <><Check className="h-3 w-3" /> Ganado · etapa cerrada</>
+            : etapa?.es_perdido ? <><X className="h-3 w-3" /> Perdido · etapa cerrada</>
+            : <span className="truncate">{etapa?.nombre ?? t.etapa}</span>}
+        </div>
+      )}
 
+      {/* Acción final anclada abajo */}
+      <div className="mt-auto pt-2">
       {t.cliente_id ? (
         <Link href={`/clientes/${t.cliente_id}`} onClick={parar} draggable={false}
-          className="mt-2 flex items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50/80 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-xs">
+          className="flex h-7 w-full items-center justify-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50/80 px-2 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:text-xs">
           <Check className="h-3 w-3" /> Cliente creado · ver ficha
         </Link>
       ) : (
         <button type="button" onClick={(e) => { e.stopPropagation(); acciones.onTransformar(t); }}
           title="Crear el cliente con estos datos y marcar el lead como Ganado"
-          className="mt-2 flex w-full items-center justify-center gap-1 rounded-lg bg-[var(--brand)] px-2 py-1 text-[10px] font-semibold text-white transition-colors hover:bg-[var(--brand-600)] [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:text-xs">
+          className="flex h-7 w-full items-center justify-center gap-1 rounded-lg bg-[var(--brand)] px-2 text-[10px] font-semibold text-white transition-colors hover:bg-[var(--brand-600)] [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:text-xs">
           <Check className="h-3 w-3" /> Transformar a cliente
         </button>
       )}
+      </div>
     </div>
   );
 });

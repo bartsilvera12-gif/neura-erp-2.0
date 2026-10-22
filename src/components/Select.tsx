@@ -26,6 +26,7 @@ export function Select({
   block = false,
   disabled = false,
   compacto = false,
+  chico = false,
   className = "",
   etiqueta,
 }: {
@@ -40,6 +41,8 @@ export function Select({
   disabled?: boolean;
   /** mismo tamaño que un input de formulario compacto (rounded-lg, px-3 py-2, texto normal) */
   compacto?: boolean;
+  /** aún más chico (36 px, texto 13 px; 44 px en pantallas táctiles): selects dentro de tarjetas */
+  chico?: boolean;
   className?: string;
   /** título de la hoja inferior en celular (ej. "Categoría"); también aria-label del botón */
   etiqueta?: string;
@@ -124,7 +127,7 @@ export function Select({
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-label={etiqueta}
-        className={`flex w-full items-center justify-between gap-2 border bg-white text-sm outline-none max-sm:min-h-11 ${compacto ? "rounded-lg px-3 py-2 text-slate-800" : "rounded-xl py-2.5 pl-3.5 pr-3 font-medium text-slate-600"} transition hover:border-slate-300 focus:border-[var(--brand)] focus:shadow-[0_0_0_4px_var(--brand-100)] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200`}
+        className={`flex w-full items-center justify-between gap-2 border bg-white outline-none max-sm:min-h-11 ${chico ? "h-9 rounded-lg px-2.5 text-[13px] text-slate-800 [@media(pointer:coarse)]:h-11" : compacto ? "rounded-lg px-3 py-2 text-sm text-slate-800" : "rounded-xl py-2.5 pl-3.5 pr-3 text-sm font-medium text-slate-600"} transition hover:border-slate-300 focus:border-[var(--brand)] focus:shadow-[0_0_0_4px_var(--brand-100)] disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400 disabled:hover:border-slate-200`}
         style={{ borderColor: open ? BRAND : "#e2e8f0", boxShadow: open ? `0 0 0 4px var(--brand-100)` : undefined }}
       >
         <span className="truncate">{current?.[1]}</span>
