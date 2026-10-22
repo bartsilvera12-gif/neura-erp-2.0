@@ -59,7 +59,7 @@ export function ModalBaja({ clienteId, nombre, onCancel, onHecho }: { clienteId:
             Cancelar
           </button>
           <button type="button" onClick={confirmar} disabled={busy || motivo.trim().length < 3}
-            className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 disabled:opacity-50">
+            className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 disabled:opacity-50">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {busy ? "Procesando…" : "Confirmar baja"}
           </button>
@@ -83,7 +83,7 @@ export function PanelBaja({ clienteId, onCancel, onHecho }: { clienteId: string;
         {error ? <p className="mt-1 text-xs text-rose-600">{error}</p> : null}
       </div>
       <div className="flex gap-2 max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1">
-        <button type="button" onClick={confirmar} disabled={busy} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-700 disabled:opacity-50">
+        <button type="button" onClick={confirmar} disabled={busy} className="rounded-lg bg-rose-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-rose-700 disabled:opacity-50">
           {busy ? "Procesando…" : "Confirmar baja"}
         </button>
         <button type="button" onClick={onCancel} disabled={busy} className="rounded-lg border border-amber-200 px-3 py-1.5 text-xs text-amber-700 hover:bg-amber-100 disabled:opacity-50">

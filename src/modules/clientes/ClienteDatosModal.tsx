@@ -95,12 +95,12 @@ export function ClienteDatosModal({ id, onCerrar, onCambio }: { id: string; onCe
         estado === "activo" ? (
           esAdmin ? (
             <button type="button" onClick={() => setBajando(true)}
-              className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm font-semibold text-amber-700 shadow-sm transition-colors hover:bg-amber-100 sm:mr-auto">
+              className="rounded-xl border border-rose-600 bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 sm:mr-auto">
               Dar de baja
             </button>
           ) : (
             <button type="button" onClick={() => void cambiarActivo(false)} disabled={cambiando}
-              className={`${BTN_SECUNDARIO} inline-flex items-center gap-2 sm:mr-auto`}>
+              className="inline-flex items-center gap-2 rounded-xl border border-rose-600 bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 disabled:opacity-50 sm:mr-auto">
               {cambiando ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Desactivar
             </button>
           )
