@@ -29,3 +29,15 @@ Todas salen de Wikimedia Commons y tienen licencias que permiten uso comercial. 
 Notas:
 - En Commons, las fotos de Fanta y Pepsi tienen la marca "trademarked": la foto es libre, pero el logo es una marca registrada. Sirve para mostrar el producto en la demo; no se puede usar como logo propio ni para insinuar respaldo de la marca.
 - Varias fotos muestran un producto genérico del mismo tipo, no el de la marca o el envase exactos: la cerveza (copa de pils), los fideos (paquete de spaghetti de otra marca), el yogur bebible (batido de frutilla en copa) y el mate cocido (mate en saquito dentro de una taza).
+
+## Panel de Configuración
+
+Fotos de fondo de las tarjetas de `/configuracion` (componente `TarjetaImagen`). Están en el repo, en `public/configuracion/`. Salen de Wikimedia Commons (copias de fotos publicadas en Unsplash) y son CC0 1.0: dominio público, uso comercial libre y sin obligación de atribución (igual se deja el crédito). Se redimensionaron a 1200 px de ancho y se pasaron a WEBP (< 200 KB).
+
+| Tarjeta | Archivo | Autor | Licencia | Origen |
+|---|---|---|---|---|
+| Datos de la empresa | `public/configuracion/empresa.webp` | Justin Main (photified) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Modern_skyscraper_facades_(Unsplash).jpg (original: https://unsplash.com/photos/srDN5nHM35g) |
+| Facturación | `public/configuracion/facturacion.webp` | Autor no indicado en Commons | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Desktop_with_laptop_and_calculator_(Unsplash).jpg (original: https://unsplash.com/photos/U_5BNLNfPn4) |
+| Usuarios | `public/configuracion/usuarios.webp` | Tim Gouw (punttim) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Busy_people_at_a_coffee_shop_(Unsplash).jpg (original: https://unsplash.com/photos/NSFG5sJYZgQ) |
+
+Nota: en la foto de Usuarios se lee chico el cartel "COFFEEBAR GASTOWN" del local; las personas se ven desde arriba, sin caras en primer plano.
