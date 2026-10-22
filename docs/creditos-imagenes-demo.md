@@ -150,7 +150,7 @@ Fotos de fondo de las tarjetas de `/reportes` (componente `TarjetaImagen`, misma
 | Reportes › Ventas por mes | `public/reportes/ventas-mes-grafico-barras-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Ventas del período | `public/reportes/ventas-periodo-dashboard-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Formas de pago | `public/reportes/formas-pago-posnet-tarjeta-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
-| Reportes › Productos vendidos | `public/reportes/productos-vendidos-canasta-verduras.webp` | leonie wise | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Healthy Grocery Shopping (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Healthy_Grocery_Shopping_(Unsplash).jpg) |
+| Reportes › Productos vendidos | `public/reportes/productos-vendidos-graficos-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Pérdidas de producto | `public/reportes/perdidas-caja-danada.webp` | Glory Cycles | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución | [Flickr: 525 Damaged in Shipping](https://www.flickr.com/photos/29558127@N06/15206873741) |
 | Reportes › Stock mínimo | `public/reportes/stock-minimo-estante-vacio.webp` | GhostInTheMachine | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) — pide atribución (y compartir igual si se modifica) | [File:Pasta shelf is empty.jpg](https://commons.wikimedia.org/wiki/File:Pasta_shelf_is_empty.jpg) |
 

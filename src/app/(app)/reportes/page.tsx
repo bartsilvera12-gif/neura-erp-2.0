@@ -23,7 +23,7 @@ const FOTOS: Record<string, { imagen: string; color: string; posicion?: string }
   "/reportes/ventas-mensuales": { imagen: "/reportes/ventas-mes-grafico-barras-dueno.webp", color: "190 42% 22%", posicion: "50% 30%" },
   "/reportes/ventas": { imagen: "/reportes/ventas-periodo-dashboard-dueno.webp", color: "168 36% 21%", posicion: "45% 50%" },
   "/reportes/formas-pago": { imagen: "/reportes/formas-pago-posnet-tarjeta-dueno.webp", color: "232 32% 28%", posicion: "55% 50%" },
-  "/reportes/productos-vendidos": { imagen: "/reportes/productos-vendidos-canasta-verduras.webp", color: "96 30% 22%", posicion: "50% 30%" },
+  "/reportes/productos-vendidos": { imagen: "/reportes/productos-vendidos-graficos-dueno.webp", color: "96 30% 22%", posicion: "40% 50%" },
   "/reportes/perdidas": { imagen: "/reportes/perdidas-caja-danada.webp", color: "16 48% 24%", posicion: "40% 30%" },
   "/reportes/stock-minimo": { imagen: "/reportes/stock-minimo-estante-vacio.webp", color: "36 44% 22%", posicion: "50% 60%" },
 };
