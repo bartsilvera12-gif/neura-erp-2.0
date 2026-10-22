@@ -210,6 +210,7 @@ export default function SoporteDashboardPage() {
   return (
     <Pagina>
       <Encabezado
+        volver={{ href: "/soporte/panel", label: "Soporte" }}
         titulo="Soporte"
         subtitulo="Vista general del estado de los tickets"
         icono={Headphones}

@@ -12,6 +12,7 @@ export default function SoporteTicketsPage() {
   return (
     <Pagina>
       <Encabezado
+        volver={{ href: "/soporte/panel", label: "Soporte" }}
         titulo="Tickets"
         subtitulo="Listado de tickets de soporte"
         icono={ListChecks}

@@ -31,7 +31,7 @@ export default function SoporteMisTicketsPage() {
 
   return (
     <Pagina>
-      <Encabezado titulo="Mis tickets" subtitulo="Los tickets donde tenés la próxima acción" icono={UserRoundCheck} tono="violeta" />
+      <Encabezado volver={{ href: "/soporte/panel", label: "Soporte" }} titulo="Mis tickets" subtitulo="Los tickets donde tenés la próxima acción" icono={UserRoundCheck} tono="violeta" />
       {qa == null ? (
         <Cargando />
       ) : (

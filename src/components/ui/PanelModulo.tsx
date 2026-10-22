@@ -5,7 +5,7 @@
  * una TarjetaImagen por sub-pantalla (foto + degradé de color + título + flecha). Muestra solo las
  * tarjetas que el perfil puede abrir (mismas reglas que el menú y el guard: `pantallasCatalogo`
  * + `perfilVePantalla`; las de acceso propio, además, según `acceso`). Lo usan /configuracion,
- * /inventario/panel, /omnicanal, /finanzas, /caja/panel y /gastos-empresariales/panel.
+ * /inventario/panel, /omnicanal, /finanzas, /caja/panel, /gastos-empresariales/panel y /soporte/panel.
  *
  *   <PanelModulo kicker="Operaciones" titulo="Inventario" subtitulo="…" tarjetas={TARJETAS}
  *     vacio="No tenés pantallas de inventario habilitadas." />
@@ -58,8 +58,10 @@ export function hslDeMarca(hex: string, maxL = 28): string {
 const GRILLA = "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4";
 
 export function PanelModulo({
-  kicker, titulo, subtitulo, tarjetas, vacio = "No tenés pantallas habilitadas en este módulo.", volver,
+  kicker, titulo, subtitulo, tarjetas, vacio = "No tenés pantallas habilitadas en este módulo.", volver, cargando = false,
 }: {
+  /** la página todavía filtra `tarjetas` con un dato propio (ej. /soporte/panel → /api/soporte/acceso): esqueleto. */
+  cargando?: boolean;
   /** link "← …" arriba del título (ej. el panel de Caja vuelve a Finanzas). */
   volver?: { href: string; label: string };
   kicker?: string;
@@ -111,7 +113,7 @@ export function PanelModulo({
     <div className="space-y-6 pb-10">
       <EncabezadoPagina volver={volver} kicker={kicker} titulo={titulo} subtitulo={subtitulo} />
 
-      {!me || (!visibles.length && aConsultar.length > 0 && !consultado) ? (
+      {!me || cargando || (!visibles.length && aConsultar.length > 0 && !consultado) ? (
         <div className={GRILLA} aria-busy="true">
           {tarjetas.slice(0, 3).map((t) => <div key={t.href} className="h-[150px] animate-pulse rounded-2xl bg-slate-200/80" />)}
         </div>

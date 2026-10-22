@@ -7,7 +7,7 @@
  */
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { Check, ChevronDown, Loader2, Search, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Check, ChevronDown, Loader2, Search, type LucideIcon } from "lucide-react";
 import { Select } from "@/components/Select";
 import { HojaInferior } from "@/components/HojaInferior";
 import { useEsMovil } from "@/lib/ui/responsive";
@@ -76,15 +76,25 @@ export function Encabezado({
   acciones,
   icono,
   tono = "turquesa",
+  volver,
 }: {
   titulo: string;
   subtitulo?: ReactNode;
   acciones?: ReactNode;
   icono?: LucideIcon;
   tono?: Tono;
+  /** link "← …" arriba del título (ej. "← Soporte" al panel /soporte/panel). */
+  volver?: { href: string; label: string };
 }) {
   return (
     <header className="mb-4 flex flex-wrap items-center justify-between gap-3 sm:mb-6 sm:gap-4">
+      {volver ? (
+        <div className="-mb-2 basis-full sm:-mb-3">
+          <Link href={volver.href} className="-ml-1 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 no-underline transition-colors hover:text-slate-800">
+            <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> {volver.label}
+          </Link>
+        </div>
+      ) : null}
       <div className="flex min-w-0 items-center gap-3 sm:gap-3.5">
         {icono ? <IconoTile icono={icono} tono={tono} tam="lg" /> : null}
         <div className="min-w-0">

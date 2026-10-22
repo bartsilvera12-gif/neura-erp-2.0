@@ -99,3 +99,18 @@ Notas:
 - Pagos: en la terminal se lee chico "Spire Payments"; Nueva venta: el celular dice "SAMSUNG" en letra chica. No son respaldos de marca.
 - Órdenes de venta: ticket de un supermercado neerlandés, sin datos personales.
 - Recurrentes: calendario de 2007; el recorte deja a la vista la grilla de días y el mes queda bajo el degradé.
+
+## Panel Soporte
+
+Fotos de fondo de las tarjetas de `/soporte/panel` (componente `PanelModulo` → `TarjetaImagen`). Están en el repo, en `public/soporte/` (WEBP, 1000 px de ancho, recortadas por `object-position`). Las 4 son de Wikimedia Commons con licencia CC0 (no piden atribución; se anota igual). El dueño puede reemplazar cualquiera por una propia (con un nombre de archivo nuevo).
+
+| Tarjeta | Archivo | Autor | Licencia | Origen |
+|---|---|---|---|---|
+| Dashboard | `public/soporte/dashboard-metricas-pantalla.webp` | Carlos Muza | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Statistics on a laptop (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Statistics_on_a_laptop_(Unsplash).jpg) |
+| Tickets | `public/soporte/tickets-mesa-ayuda.webp` | Álvaro Bernal | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Macro headphones laptop (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Macro_headphones_laptop_(Unsplash).jpg) |
+| Mis tickets | `public/soporte/mis-tickets-lista-pendientes.webp` | Glenn Carstens-Peters | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Paperlist.jpg](https://commons.wikimedia.org/wiki/File:Paperlist.jpg) |
+| Configuración | `public/soporte/configuracion-engranajes.webp` | W.carter | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Cog wheel on a huge crane claw - 1.jpg](https://commons.wikimedia.org/wiki/File:Cog_wheel_on_a_huge_crane_claw_-_1.jpg) |
+
+Notas:
+- Tickets: auriculares sobre el teclado de una laptop; en el auricular se ve chico el logo del fabricante. No es un respaldo de marca.
+- Configuración: engranajes de una grúa; el recorte deja a la vista el piñón engranado con la corona.

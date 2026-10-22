@@ -478,6 +478,7 @@ export default function SoporteConfiguracionPage() {
   return (
     <Pagina>
       <Encabezado
+        volver={{ href: "/soporte/panel", label: "Soporte" }}
         titulo="Configuración de Soporte"
         subtitulo="Parámetros y catálogos del módulo"
         icono={Settings2}
