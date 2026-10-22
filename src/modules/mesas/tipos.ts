@@ -1,0 +1,135 @@
+/**
+ * Mesas con QR y pedidos (receta 68). Tipos y helpers compartidos por Configuración › Mesas,
+ * Caja › Pedidos de mesas, Cocina y el menú público /m/<token>.
+ */
+
+export const TOKEN_MESA_RE = /^[0-9a-f]{64}$/;
+export const SEGUIMIENTO_RE = /^[0-9a-f]{32}$/;
+
+export type EstadoPedido = "nuevo" | "aceptado" | "en_preparacion" | "listo" | "entregado" | "rechazado";
+
+export const ESTADOS_PEDIDO: Record<EstadoPedido, { texto: string; clase: string; cliente: string }> = {
+  nuevo: { texto: "Nuevo", clase: "bg-amber-100 text-amber-800", cliente: "Enviado: esperando que la caja lo confirme" },
+  aceptado: { texto: "Aceptado", clase: "bg-sky-100 text-sky-800", cliente: "Confirmado: ya pasó a la cocina" },
+  en_preparacion: { texto: "En preparación", clase: "bg-violet-100 text-violet-800", cliente: "Lo están preparando" },
+  listo: { texto: "Listo", clase: "bg-emerald-100 text-emerald-800", cliente: "¡Listo! Ya te lo llevan" },
+  entregado: { texto: "Entregado", clase: "bg-slate-100 text-slate-600", cliente: "Entregado. ¡Buen provecho!" },
+  rechazado: { texto: "Rechazado", clase: "bg-rose-100 text-rose-700", cliente: "No se pudo tomar el pedido" },
+};
+
+export type Mesa = {
+  id: string;
+  sucursal_id: string;
+  sucursal_nombre: string;
+  nombre: string;
+  zona: string | null;
+  token: string;
+  activa: boolean;
+  orden: number;
+  cuenta_abierta: boolean;
+};
+
+export type MesasConfig = {
+  mesas: Mesa[];
+  sucursales: { id: string; nombre: string }[];
+  empresa: string | null;
+};
+
+export type ItemPedido = { nombre: string; cantidad: number; precio_unitario: number; total: number; nota: string | null };
+
+export type PedidoMesa = {
+  id: string;
+  numero: number;
+  estado: EstadoPedido;
+  cuenta_id: string;
+  mesa: { id: string; nombre: string; zona: string | null };
+  sucursal: { id: string; nombre: string };
+  nombre_cliente: string | null;
+  nota: string | null;
+  total: number;
+  creado_at: string;
+  aceptado_at: string | null;
+  aceptado_por_nombre: string | null;
+  rechazado_at: string | null;
+  motivo_rechazo: string | null;
+  preparando_at: string | null;
+  listo_at: string | null;
+  entregado_at: string | null;
+  items: ItemPedido[];
+};
+
+export type CuentaMesa = {
+  id: string;
+  abierta_at: string;
+  mesa: { id: string; nombre: string; zona: string | null };
+  sucursal: { id: string; nombre: string };
+  total: number;
+  pedidos: number;
+  pendientes: number;
+  items: { nombre: string; cantidad: number; precio_unitario: number; total: number }[];
+};
+
+export type TableroMesas = {
+  ahora: string;
+  pedidos: PedidoMesa[];
+  cuentas: CuentaMesa[];
+  puede_atender: boolean;
+  puede_cocina: boolean;
+};
+
+export const URL_TABLERO = "/api/mesas/tablero";
+
+/** "Mesa 4 · Patio · Casa central" */
+export function origenPedido(p: { mesa: { nombre: string; zona: string | null }; sucursal?: { nombre: string } }, conSucursal = true): string {
+  return [p.mesa.nombre, p.mesa.zona, conSucursal ? p.sucursal?.nombre : null].filter(Boolean).join(" · ");
+}
+
+/** "hace 3 min" respecto de `ahora` (la hora del servidor, para no depender del reloj del equipo). */
+export function haceCuanto(iso: string, ahora: number = Date.now()): string {
+  const s = Math.max(0, Math.round((ahora - Date.parse(iso)) / 1000));
+  if (s < 45) return "recién";
+  const m = Math.round(s / 60);
+  if (m < 60) return `hace ${m} min`;
+  const h = Math.floor(m / 60);
+  return `hace ${h} h ${m % 60 ? `${m % 60} min` : ""}`.trim();
+}
+
+export const horaCorta = (iso: string) =>
+  new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+
+export const gs = (n: number) => `Gs. ${Math.round(Number(n) || 0).toLocaleString("es-PY")}`;
+
+export const cant = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
+
+/** Link del menú de una mesa (el que va en el QR). */
+export function linkMesa(token: string, origen?: string): string {
+  const base = origen ?? (typeof window !== "undefined" ? window.location.origin : "");
+  return `${base}/m/${token}`;
+}
+
+/** Pitido corto (WebAudio, sin archivos) para avisar que llegó un pedido. */
+export function pitido() {
+  try {
+    const W = window as unknown as { AudioContext?: typeof AudioContext; webkitAudioContext?: typeof AudioContext };
+    const Ctx = W.AudioContext ?? W.webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const tono = (frec: number, desde: number, dura: number) => {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = "sine";
+      o.frequency.value = frec;
+      g.gain.setValueAtTime(0.0001, ctx.currentTime + desde);
+      g.gain.exponentialRampToValueAtTime(0.25, ctx.currentTime + desde + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + desde + dura);
+      o.connect(g).connect(ctx.destination);
+      o.start(ctx.currentTime + desde);
+      o.stop(ctx.currentTime + desde + dura + 0.05);
+    };
+    tono(880, 0, 0.18);
+    tono(1320, 0.2, 0.25);
+    setTimeout(() => void ctx.close().catch(() => {}), 1000);
+  } catch {
+    /* sin audio: queda el aviso visual */
+  }
+}

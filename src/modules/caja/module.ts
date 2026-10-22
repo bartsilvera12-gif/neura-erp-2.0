@@ -20,5 +20,8 @@ export const moduloCaja: Modulo = {
     { label: "Apertura y cierre", href: "/caja/turnos" },
     { label: "Órdenes de venta", href: "/caja" },
     { label: "Ventas a crédito", href: "/caja/credito" },
+    // Receta 68: pedidos por QR de las mesas (cola + cuentas abiertas) y la pantalla de cocina.
+    { label: "Pedidos de mesas", href: "/caja/mesas", permiso: "pedidos_mesas" },
+    { label: "Cocina", href: "/caja/cocina", permiso: "cocina" },
   ],
 };

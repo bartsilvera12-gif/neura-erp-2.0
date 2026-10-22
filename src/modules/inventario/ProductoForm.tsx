@@ -85,6 +85,17 @@ export function ProductoForm({
   const [stockIni, setStockIni] = useState({ cantidad: "", deposito: "", lote: loteAutomatico(hoyPY()), vencimiento: "" });
   const depositoInicial = stockIni.deposito || deps.datos?.mi_deposito_id || "";
   const [imagenUrl, setImagenUrl] = useState<string | null>(producto?.imagen_url ?? null);
+  // Receta 68: "En el menú QR". La lista de Inventario no lo trae: al editar se lee del detalle
+  // (null = todavía no llegó; mientras tanto no se manda, así no se pisa lo guardado).
+  const [enMenu, setEnMenu] = useState<boolean | null>(producto ? (producto.en_menu_qr ?? null) : false);
+  useEffect(() => {
+    if (!producto?.id || producto.en_menu_qr !== undefined) return;
+    let vivo = true;
+    apiFetch<{ en_menu_qr?: boolean }>(`/api/productos/${producto.id}`)
+      .then((d) => { if (vivo) setEnMenu(!!d.en_menu_qr); })
+      .catch(() => {});
+    return () => { vivo = false; };
+  }, [producto?.id, producto?.en_menu_qr]);
   const [subiendo, setSubiendo] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -178,6 +189,7 @@ export function ProductoForm({
       controla_stock: f.controla_stock,
       controla_lotes: f.controla_stock && f.controla_lotes,
       es_vendible: f.es_vendible,
+      en_menu_qr: enMenu ?? undefined,
       imagen_url: imagenUrl ?? undefined,
     };
     try {
@@ -389,6 +401,8 @@ export function ProductoForm({
                   detalle="Perecibles: cada compra pide lote y vencimiento; la caja vende primero el que vence antes y no vende los vencidos." />
               ) : null}
               <Interruptor checked={f.es_vendible} onChange={(v) => set("es_vendible", v)} label="Se vende en caja" detalle="Aparece en el buscador de la caja." />
+              <Interruptor checked={!!enMenu} onChange={(v) => setEnMenu(v)} label="En el menú QR"
+                detalle={enMenu === null ? "Cargando…" : "Sale en el menú que abren los clientes con el QR de las mesas (con su foto y precio)."} />
             </div>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">

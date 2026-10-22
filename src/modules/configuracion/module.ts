@@ -21,6 +21,7 @@ export const moduloConfiguracion: Modulo = {
   children: [
     { label: "Datos de la empresa", href: "/configuracion/empresa", permiso: "configuracion" },
     { label: "Facturación", href: "/configuracion/facturacion", permiso: "configuracion" },
+    { label: "Mesas y QR", href: "/configuracion/mesas", permiso: "configuracion" },
     { label: "Usuarios", href: "/configuracion/usuarios", permiso: "administrar_usuarios" },
   ],
 };

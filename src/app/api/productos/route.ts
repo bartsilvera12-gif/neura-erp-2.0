@@ -212,6 +212,8 @@ const crearProducto = z.object({
   controla_stock: z.boolean().default(true),
   controla_lotes: z.boolean().default(false),
   es_vendible: z.boolean().default(true),
+  /** receta 68: sale en el menú QR de las mesas */
+  en_menu_qr: z.boolean().default(false),
   imagen_url: z.string().url().max(500).nullish(),
 });
 

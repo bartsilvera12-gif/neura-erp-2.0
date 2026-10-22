@@ -21,6 +21,8 @@ export type ProductoInventario = {
   /** lotes con vencimiento (perecibles): cada entrada lleva lote + vencimiento; salida FEFO */
   controla_lotes?: boolean;
   es_vendible: boolean;
+  /** receta 68: sale en el menú QR de las mesas (viene en el detalle, no en la lista) */
+  en_menu_qr?: boolean;
   activo: boolean;
   imagen_url: string | null;
   /** lista paginada de Inventario: unidades por depósito (solo los que tienen) */

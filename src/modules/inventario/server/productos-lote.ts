@@ -7,7 +7,7 @@ import type { TenantDb } from "@/lib/api/tenant-db";
 
 /** Columnas del detalle de un producto (GET /api/productos/[id] y /api/productos/lote). */
 export const COLS_PRODUCTO_DETALLE =
-  "id, nombre, sku, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, controla_lotes, es_vendible, activo, imagen_url, descripcion, codigo_barras, categoria_principal_id, proveedor_principal_id";
+  "id, nombre, sku, costo_promedio, precio_venta, precio_mayorista, precio_distribuidor, descuento_pct, stock_actual, stock_minimo, unidad_medida, tipo_iva, tipo_producto, controla_stock, controla_lotes, es_vendible, en_menu_qr, activo, imagen_url, descripcion, codigo_barras, categoria_principal_id, proveedor_principal_id";
 
 /** Tope de ids por request (la URL hacia la base no puede crecer sin límite). */
 export const LOTE_MAX_IDS = 200;

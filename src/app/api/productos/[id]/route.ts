@@ -49,6 +49,7 @@ const editar = z.object({
   controla_stock: z.boolean().optional(),
   controla_lotes: z.boolean().optional(),
   es_vendible: z.boolean().optional(),
+  en_menu_qr: z.boolean().optional(),
   imagen_url: z.string().url().max(500).nullish(),
   activo: z.boolean().optional(),
 });

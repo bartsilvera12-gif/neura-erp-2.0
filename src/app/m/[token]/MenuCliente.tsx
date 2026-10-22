@@ -1,0 +1,402 @@
+"use client";
+
+/**
+ * Menú de la mesa en el celular del cliente (mobile-first): categorías, productos con foto y
+ * precio, carrito (con nota por producto y nota general), nombre opcional y "Enviar pedido".
+ * Después de enviar, "Tus pedidos" muestra el estado de cada uno (consulta cada 5 s mientras
+ * haya alguno en curso). Los códigos de seguimiento se guardan en este celular (localStorage).
+ * Precios y total los pone el servidor: lo que se ve acá es solo una vista previa.
+ */
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { CheckCircle2, ChefHat, Clock3, Loader2, MessageSquareText, Minus, Plus, Search, ShoppingBag, Trash2, X, XCircle } from "lucide-react";
+import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
+import type { EstadoPedidoPublico, MenuMesa, ProductoMenu } from "@/modules/mesas/publico";
+import { ESTADOS_PEDIDO, gs, horaCorta } from "@/modules/mesas/tipos";
+
+type Menu = Extract<MenuMesa, { activa: true }>;
+type Linea = { cantidad: number; nota: string };
+
+const CLAVE = (token: string) => `neura.mesa.${token.slice(0, 16)}.pedidos`;
+const FINALES = new Set(["entregado", "rechazado"]);
+
+function leerSeguimientos(token: string): string[] {
+  try {
+    const v = JSON.parse(localStorage.getItem(CLAVE(token)) ?? "[]");
+    return Array.isArray(v) ? v.filter((x) => typeof x === "string").slice(-20) : [];
+  } catch {
+    return [];
+  }
+}
+function guardarSeguimientos(token: string, segs: string[]) {
+  try {
+    localStorage.setItem(CLAVE(token), JSON.stringify(segs.slice(-20)));
+  } catch { /* sin storage: el estado se ve mientras la página siga abierta */ }
+}
+
+export function MenuCliente({ token, menu, color, logoInstalacion }: { token: string; menu: Menu; color: string; logoInstalacion: string }) {
+  const [carrito, setCarrito] = useState<Record<string, Linea>>({});
+  const [verCarrito, setVerCarrito] = useState(false);
+  const [q, setQ] = useState("");
+  const [cat, setCat] = useState<string | null>(null);
+  const [nota, setNota] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [enviando, setEnviando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [enviado, setEnviado] = useState<number | null>(null);
+  const [segs, setSegs] = useState<string[]>([]);
+  const [pedidos, setPedidos] = useState<EstadoPedidoPublico[]>([]);
+  const enviandoRef = useRef(false);
+
+  const porId = useMemo(() => new Map(menu.productos.map((p) => [p.id, p])), [menu.productos]);
+  const categorias = useMemo(() => [...new Set(menu.productos.map((p) => p.categoria))], [menu.productos]);
+  const filtrados = useMemo(() => {
+    const t = q.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    return menu.productos.filter((p) => {
+      if (cat && p.categoria !== cat) return false;
+      if (!t) return true;
+      return `${p.nombre} ${p.descripcion ?? ""} ${p.categoria}`.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(t);
+    });
+  }, [menu.productos, q, cat]);
+  const grupos = useMemo(() => {
+    const m = new Map<string, ProductoMenu[]>();
+    for (const p of filtrados) m.set(p.categoria, [...(m.get(p.categoria) ?? []), p]);
+    return [...m.entries()];
+  }, [filtrados]);
+
+  const lineas = Object.entries(carrito).filter(([id, l]) => l.cantidad > 0 && porId.has(id));
+  const unidades = lineas.reduce((a, [, l]) => a + l.cantidad, 0);
+  const total = lineas.reduce((a, [id, l]) => a + l.cantidad * (porId.get(id)?.precio ?? 0), 0);
+
+  const cambiar = (id: string, delta: number) =>
+    setCarrito((c) => {
+      const actual = c[id]?.cantidad ?? 0;
+      const n = Math.max(0, Math.min(50, actual + delta));
+      const sig = { ...c };
+      if (n === 0) delete sig[id];
+      else sig[id] = { cantidad: n, nota: c[id]?.nota ?? "" };
+      return sig;
+    });
+  const notaLinea = (id: string, v: string) => setCarrito((c) => (c[id] ? { ...c, [id]: { ...c[id], nota: v.slice(0, 200) } } : c));
+
+  // ── Estado de mis pedidos (polling cada 5 s mientras haya alguno en curso) ──
+  useEffect(() => { setSegs(leerSeguimientos(token)); }, [token]);
+  const consultar = useCallback(async (lista: string[]) => {
+    if (!lista.length) { setPedidos([]); return; }
+    try {
+      const r = await fetch(`/api/publico/mesas/${token}/estado`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ seguimientos: lista }), cache: "no-store",
+      });
+      const b = await r.json().catch(() => null);
+      if (!r.ok || !b?.ok) return;
+      const data = b.data as EstadoPedidoPublico[];
+      // La cuenta ya se cobró: esos pedidos se dejan de seguir en este celular.
+      const vigentes = data.filter((p) => !p.cuenta_cerrada);
+      setPedidos(vigentes);
+      // Se dejan de seguir los de esta consulta que ya no vuelven (cuenta cobrada, QR cambiado o
+      // muy viejos); los que se agregaron mientras tanto quedan.
+      const siguen = new Set(vigentes.map((p) => p.seguimiento));
+      if (lista.some((s) => !siguen.has(s))) {
+        setSegs((cur) => {
+          const nuevos = cur.filter((s) => !lista.includes(s) || siguen.has(s));
+          guardarSeguimientos(token, nuevos);
+          return nuevos;
+        });
+      }
+    } catch { /* sin red: se reintenta en el próximo ciclo */ }
+  }, [token]);
+  const enCurso = pedidos.some((p) => !FINALES.has(p.estado)) || (segs.length > 0 && pedidos.length === 0);
+  const segsRef = useRef(segs);
+  segsRef.current = segs;
+  const enCursoRef = useRef(enCurso);
+  enCursoRef.current = enCurso;
+  useEffect(() => { void consultar(segs); }, [segs, consultar]);
+  const hayQueSeguir = segs.length > 0;
+  useEffect(() => {
+    if (!hayQueSeguir) return;
+    const id = setInterval(() => {
+      if (document.visibilityState === "visible" && enCursoRef.current) void consultar(segsRef.current);
+    }, 5000);
+    return () => clearInterval(id);
+  }, [hayQueSeguir, consultar]);
+
+  async function enviar() {
+    if (enviandoRef.current || !lineas.length) return;
+    enviandoRef.current = true;
+    setEnviando(true);
+    setError(null);
+    try {
+      const r = await fetch(`/api/publico/mesas/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          items: lineas.map(([id, l]) => ({ producto_id: id, cantidad: l.cantidad, nota: l.nota.trim() || null })),
+          nota: nota.trim() || null,
+          nombre: nombre.trim() || null,
+        }),
+      });
+      const b = await r.json().catch(() => null);
+      if (!r.ok || !b?.ok) throw new Error(b?.error?.message || "No se pudo enviar el pedido. Probá de nuevo.");
+      const ped = b.data as { seguimiento: string; numero: number; total: number };
+      const nuevos = [...segs.filter((s) => s !== ped.seguimiento), ped.seguimiento];
+      guardarSeguimientos(token, nuevos);
+      setSegs(nuevos);
+      setCarrito({});
+      setNota("");
+      setVerCarrito(false);
+      setEnviado(ped.numero);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      enviandoRef.current = false;
+      setEnviando(false);
+    }
+  }
+
+  const subtitulo = [menu.zona, menu.sucursal].filter(Boolean).join(" · ");
+
+  return (
+    <div className="min-h-dvh bg-slate-50 pb-[calc(6rem+env(safe-area-inset-bottom))]" style={{ ["--brand" as string]: color }}>
+      {/* Cabecera */}
+      <header className="pt-safe bg-white">
+        <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 pt-3 pb-2">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={menu.logo_url || logoInstalacion} alt="" className="h-9 w-auto max-w-[120px] shrink-0 object-contain" />
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">{menu.empresa}</p>
+        </div>
+        <div className="mx-auto max-w-2xl px-4 pb-3">
+          <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-white" style={{ backgroundColor: color }}>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-base font-bold">
+              {menu.mesa.replace(/^mesa\s*/i, "").slice(0, 3) || "•"}
+            </span>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-bold leading-tight">{menu.mesa}</p>
+              <p className="truncate text-xs text-white/85">{subtitulo || "Pedí desde tu celular"}</p>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <main className="mx-auto max-w-2xl px-4">
+        {/* Mis pedidos */}
+        {enviado != null || pedidos.length > 0 ? (
+          <section className="mt-3 space-y-2" aria-live="polite">
+            {enviado != null ? (
+              <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm text-emerald-800">
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <p className="min-w-0 flex-1">Pedido #{enviado} enviado. La caja lo confirma en un momento.</p>
+                <button type="button" onClick={() => setEnviado(null)} aria-label="Cerrar aviso" className="-m-1 p-1 text-emerald-700"><X className="h-4 w-4" /></button>
+              </div>
+            ) : null}
+            {pedidos.length ? <h2 className="pt-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Tus pedidos</h2> : null}
+            {pedidos.map((p) => <TarjetaEstado key={p.seguimiento} p={p} />)}
+          </section>
+        ) : null}
+
+        {/* Buscador + categorías */}
+        <div className="sticky top-0 z-10 -mx-4 mt-3 bg-slate-50/95 px-4 pt-2 pb-2 backdrop-blur">
+          <label className="relative block">
+            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+            <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar en el menú" enterKeyHint="search"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-base outline-none focus:border-[var(--brand)]" />
+          </label>
+          {categorias.length > 1 ? (
+            <div className="scroll-x-oculto -mx-4 mt-2 flex gap-2 px-4 pb-1">
+              {[null, ...categorias].map((c) => (
+                <button key={c ?? "_todas"} type="button" onClick={() => setCat(c)}
+                  className={`h-9 shrink-0 rounded-full border px-3.5 text-sm font-medium transition ${cat === c ? "border-transparent text-white" : "border-slate-200 bg-white text-slate-700"}`}
+                  style={cat === c ? { backgroundColor: color } : undefined}>
+                  {c ?? "Todo"}
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        {/* Productos */}
+        {menu.productos.length === 0 ? (
+          <p className="mt-8 rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">Todavía no hay productos en el menú. Pedile a quien te atiende.</p>
+        ) : grupos.length === 0 ? (
+          <p className="mt-8 text-center text-sm text-slate-500">No encontramos “{q}” en el menú.</p>
+        ) : (
+          grupos.map(([nombreCat, prods]) => (
+            <section key={nombreCat} className="mt-4">
+              <h2 className="mb-2 text-base font-bold text-slate-900">{nombreCat}</h2>
+              <ul className="grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2">
+                {prods.map((p) => (
+                  <TarjetaProducto key={p.id} p={p} cantidad={carrito[p.id]?.cantidad ?? 0} color={color} onCambiar={(d) => cambiar(p.id, d)} />
+                ))}
+              </ul>
+            </section>
+          ))
+        )}
+        <p className="mt-8 text-center text-[11px] text-slate-400">Precios con IVA incluido. Se paga en la caja al final.</p>
+      </main>
+
+      {/* Barra del carrito */}
+      {unidades > 0 ? (
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur">
+          <button type="button" onClick={() => { setError(null); setVerCarrito(true); }}
+            className="mx-auto flex h-12 w-full max-w-2xl items-center gap-3 rounded-xl px-4 text-white shadow-sm active:scale-[0.99]" style={{ backgroundColor: color }}>
+            <span className="grid h-7 min-w-7 place-items-center rounded-full bg-white/25 px-1.5 text-sm font-bold">{unidades}</span>
+            <span className="flex-1 text-left text-base font-semibold">Ver pedido</span>
+            <span className="text-base font-bold tabular-nums">{gs(total)}</span>
+          </button>
+        </div>
+      ) : null}
+
+      {/* Carrito */}
+      {verCarrito ? (
+        <CapaModal onClose={() => !enviando && setVerCarrito(false)}>
+          <div className={`flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-xl ${ALTO_MAX_MODAL}`}>
+            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
+              <div className="min-w-0">
+                <p className="text-base font-semibold text-slate-900">Tu pedido</p>
+                <p className="truncate text-xs text-slate-500">{menu.mesa}{subtitulo ? ` · ${subtitulo}` : ""}</p>
+              </div>
+              <button type="button" aria-label="Cerrar" onClick={() => setVerCarrito(false)} disabled={enviando} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+              {lineas.length === 0 ? (
+                <p className="py-8 text-center text-sm text-slate-500">No hay productos en el pedido.</p>
+              ) : (
+                <ul className="divide-y divide-slate-100">
+                  {lineas.map(([id, l]) => {
+                    const p = porId.get(id)!;
+                    return (
+                      <li key={id} className="py-3">
+                        <div className="flex items-start gap-3">
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-medium text-slate-900">{p.nombre}</p>
+                            <p className="text-xs tabular-nums text-slate-500">{gs(p.precio)} c/u · <span className="font-semibold text-slate-700">{gs(p.precio * l.cantidad)}</span></p>
+                          </div>
+                          <Contador cantidad={l.cantidad} color={color} onCambiar={(d) => cambiar(id, d)} />
+                        </div>
+                        <NotaLinea valor={l.nota} onCambiar={(v) => notaLinea(id, v)} />
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-slate-600">Nota para el pedido <span className="font-normal text-slate-400">(opcional)</span></span>
+                  <textarea value={nota} onChange={(e) => setNota(e.target.value.slice(0, 500))} rows={2} placeholder="Ej.: traer todo junto, sin cubiertos…"
+                    className="w-full resize-none rounded-xl border border-slate-200 px-3 py-2 text-base outline-none focus:border-[var(--brand)]" />
+                </label>
+                <label className="block">
+                  <span className="mb-1 block text-xs font-medium text-slate-600">Tu nombre <span className="font-normal text-slate-400">(opcional)</span></span>
+                  <input value={nombre} onChange={(e) => setNombre(e.target.value.slice(0, 60))} placeholder="Para saber de quién es" autoComplete="given-name"
+                    className="h-11 w-full rounded-xl border border-slate-200 px-3 text-base outline-none focus:border-[var(--brand)]" />
+                </label>
+              </div>
+            </div>
+            <div className="shrink-0 border-t border-slate-100 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))]">
+              {error ? <p className="mb-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{error}</p> : null}
+              <div className="mb-2 flex items-baseline justify-between">
+                <span className="text-sm text-slate-600">Total estimado</span>
+                <span className="text-xl font-bold tabular-nums text-slate-900">{gs(total)}</span>
+              </div>
+              <button type="button" onClick={() => void enviar()} disabled={enviando || !lineas.length}
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold text-white shadow-sm disabled:opacity-50" style={{ backgroundColor: color }}>
+                {enviando ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <ShoppingBag className="h-5 w-5" aria-hidden />}
+                {enviando ? "Enviando…" : "Enviar pedido"}
+              </button>
+              <p className="mt-2 text-center text-[11px] text-slate-400">La caja confirma el pedido. Se suma a la cuenta de la mesa y se paga al final.</p>
+            </div>
+          </div>
+        </CapaModal>
+      ) : null}
+    </div>
+  );
+}
+
+function TarjetaProducto({ p, cantidad, color, onCambiar }: { p: ProductoMenu; cantidad: number; color: string; onCambiar: (d: number) => void }) {
+  const [sinFoto, setSinFoto] = useState(!p.imagen_url);
+  return (
+    <li className={`flex gap-3 rounded-2xl border bg-white p-2.5 shadow-sm transition ${cantidad ? "border-[var(--brand)]" : "border-slate-200"}`}>
+      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100">
+        {sinFoto ? (
+          <div className="grid h-full w-full place-items-center text-2xl font-bold text-slate-300">{p.nombre.slice(0, 1)}</div>
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={p.imagen_url!} alt="" loading="lazy" className="h-full w-full object-cover" onError={() => setSinFoto(true)} />
+        )}
+      </div>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <p className="line-clamp-2 text-sm font-semibold leading-snug text-slate-900">{p.nombre}</p>
+        {p.descripcion ? <p className="mt-0.5 line-clamp-2 text-xs text-slate-500">{p.descripcion}</p> : null}
+        <div className="mt-auto flex items-end justify-between gap-2 pt-2">
+          <div className="min-w-0">
+            {p.precio_lista ? <p className="text-[11px] tabular-nums text-slate-400 line-through">{gs(p.precio_lista)}</p> : null}
+            <p className="text-sm font-bold tabular-nums text-slate-900">{gs(p.precio)}</p>
+          </div>
+          {cantidad > 0 ? (
+            <Contador cantidad={cantidad} color={color} onCambiar={onCambiar} />
+          ) : (
+            <button type="button" onClick={() => onCambiar(1)} aria-label={`Agregar ${p.nombre}`}
+              className="grid h-10 w-10 place-items-center rounded-full text-white shadow-sm active:scale-95" style={{ backgroundColor: color }}>
+              <Plus className="h-5 w-5" aria-hidden />
+            </button>
+          )}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function Contador({ cantidad, color, onCambiar }: { cantidad: number; color: string; onCambiar: (d: number) => void }) {
+  return (
+    <div className="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white p-0.5">
+      <button type="button" onClick={() => onCambiar(-1)} aria-label={cantidad === 1 ? "Quitar" : "Uno menos"}
+        className="grid h-9 w-9 place-items-center rounded-full text-slate-700 active:bg-slate-100">
+        {cantidad === 1 ? <Trash2 className="h-4 w-4" aria-hidden /> : <Minus className="h-4 w-4" aria-hidden />}
+      </button>
+      <span className="min-w-6 text-center text-sm font-bold tabular-nums">{cantidad}</span>
+      <button type="button" onClick={() => onCambiar(1)} aria-label="Uno más" disabled={cantidad >= 50}
+        className="grid h-9 w-9 place-items-center rounded-full text-white disabled:opacity-40" style={{ backgroundColor: color }}>
+        <Plus className="h-4 w-4" aria-hidden />
+      </button>
+    </div>
+  );
+}
+
+function NotaLinea({ valor, onCambiar }: { valor: string; onCambiar: (v: string) => void }) {
+  const [abierta, setAbierta] = useState(!!valor);
+  if (!abierta) {
+    return (
+      <button type="button" onClick={() => setAbierta(true)} className="mt-1.5 inline-flex items-center gap-1 text-xs font-medium text-slate-500">
+        <MessageSquareText className="h-3.5 w-3.5" aria-hidden /> Agregar aclaración
+      </button>
+    );
+  }
+  return (
+    <input value={valor} onChange={(e) => onCambiar(e.target.value)} placeholder="Ej.: sin cebolla, bien frío" autoFocus
+      className="mt-2 h-10 w-full rounded-lg border border-slate-200 px-3 text-base outline-none focus:border-[var(--brand)]" />
+  );
+}
+
+function TarjetaEstado({ p }: { p: EstadoPedidoPublico }) {
+  const e = ESTADOS_PEDIDO[p.estado];
+  const Icono = p.estado === "rechazado" ? XCircle : p.estado === "listo" || p.estado === "entregado" ? CheckCircle2 : p.estado === "en_preparacion" ? ChefHat : Clock3;
+  const pasos = ["nuevo", "aceptado", "en_preparacion", "listo"] as const;
+  const i = pasos.indexOf(p.estado as (typeof pasos)[number]);
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm">
+      <div className="flex items-center gap-2">
+        <Icono className={`h-5 w-5 shrink-0 ${p.estado === "rechazado" ? "text-rose-600" : p.estado === "nuevo" ? "text-amber-600" : "text-emerald-600"}`} aria-hidden />
+        <p className="min-w-0 flex-1 text-sm font-semibold text-slate-900">Pedido #{p.numero} <span className="font-normal text-slate-400">· {horaCorta(p.creado_at)}</span></p>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${e.clase}`}>{e.texto}</span>
+      </div>
+      <p className="mt-1 text-sm text-slate-600">{e.cliente}{p.estado === "rechazado" && p.motivo_rechazo ? `: ${p.motivo_rechazo}` : ""}</p>
+      {i >= 0 ? (
+        <div className="mt-2 grid grid-cols-4 gap-1" aria-hidden>
+          {pasos.map((_, n) => <span key={n} className={`h-1.5 rounded-full ${n <= i ? "bg-[var(--brand)]" : "bg-slate-200"}`} />)}
+        </div>
+      ) : null}
+      <p className="mt-2 text-xs text-slate-500">
+        {p.items.map((it) => `${Number(it.cantidad)} × ${it.nombre}`).join(" · ")} — <span className="font-semibold text-slate-700">{gs(p.total)}</span>
+      </p>
+    </div>
+  );
+}
