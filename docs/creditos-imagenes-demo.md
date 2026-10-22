@@ -135,3 +135,29 @@ Notas:
 - Gestión Clientes: libreta con una lista de llamadas tildadas; se leen a mano nombres de empresas de servicios de EE. UU. y sus teléfonos comerciales (no son datos personales).
 - Planes: calendario mensual en una tablilla; el recorte deja a la vista la grilla de días (la cara de quien lo sostiene queda fuera).
 - Proyectos: tablero kanban "To Do / Doing / Done" con notas adhesivas.
+
+## Panel Reportes
+
+Fotos de fondo de las tarjetas de `/reportes` (componente `TarjetaImagen`, misma grilla que `PanelModulo`). Están en el repo, en `public/reportes/` (WEBP, 1000 px de ancho, recortadas por `object-position`). Salen de Wikimedia Commons y de Flickr (encontradas con Openverse); todas permiten uso comercial. Las CC BY / CC BY-SA piden nombrar al autor y la licencia (esta tabla); las CC BY-SA, además, compartir igual si se modifica. El dueño puede reemplazar cualquiera por una propia (con un nombre de archivo nuevo).
+
+| Tarjeta | Archivo | Autor | Licencia | Origen |
+|---|---|---|---|---|
+| Reportes › Estado de cuenta | `public/reportes/estado-cuenta-planilla-calculadora.webp` | kenteegardin | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0) — pide atribución (y compartir igual si se modifica) | [Flickr: Balancing The Account By Hand](https://www.flickr.com/photos/26373139@N08/5913014568) |
+| Reportes › Cuentas por cobrar | `public/reportes/cuentas-cobrar-billetes-entrega.webp` | quaziefoto | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución | [Flickr: Day 4 - Paying off debt](https://www.flickr.com/photos/99879598@N00/578252290) |
+| Reportes › Cuentas por pagar | `public/reportes/cuentas-pagar-factura-firma.webp` | cybrgrl | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución | [Flickr: Invoices](https://www.flickr.com/photos/84387590@N00/2693815369) |
+| Reportes › Proveedores | `public/reportes/proveedores-camion-reparto.webp` | Andrew Kambel | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Delivery truck at sunrise (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Delivery_truck_at_sunrise_(Unsplash).jpg) |
+| Reportes › Cierre de caja por día | `public/reportes/cierre-caja-cajon-abierto.webp` | Sprinno | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Cash register.jpeg](https://commons.wikimedia.org/wiki/File:Cash_register.jpeg) |
+| Reportes › Ventas por mes | `public/reportes/ventas-mes-grafico-calendario.webp` | Semtrio (https://www.semtrio.com/) | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución ("Credit to semtrio.com") | [Flickr: Business plan](https://www.flickr.com/photos/163837264@N07/43291332124) |
+| Reportes › Ventas del período | `public/reportes/ventas-periodo-cobro-mostrador.webp` | kleuske | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0) — pide atribución (y compartir igual si se modifica) | [Flickr: Payment](https://www.flickr.com/photos/96798515@N00/8411140007) |
+| Reportes › Formas de pago | `public/reportes/formas-pago-tarjeta-lector.webp` | Hloom Templates | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución | [File:Paying with a Credit Card (28886645201).jpg](https://commons.wikimedia.org/wiki/File:Paying_with_a_Credit_Card_(28886645201).jpg) |
+| Reportes › Productos vendidos | `public/reportes/productos-vendidos-canasta-verduras.webp` | leonie wise | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Healthy Grocery Shopping (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Healthy_Grocery_Shopping_(Unsplash).jpg) |
+| Reportes › Pérdidas de producto | `public/reportes/perdidas-caja-danada.webp` | Glory Cycles | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución | [Flickr: 525 Damaged in Shipping](https://www.flickr.com/photos/29558127@N06/15206873741) |
+| Reportes › Stock mínimo | `public/reportes/stock-minimo-estante-vacio.webp` | GhostInTheMachine | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) — pide atribución (y compartir igual si se modifica) | [File:Pasta shelf is empty.jpg](https://commons.wikimedia.org/wiki/File:Pasta_shelf_is_empty.jpg) |
+
+Notas:
+- Cuentas por cobrar: una mano entrega billetes (dólares) a otra; no se ven caras.
+- Cuentas por pagar: alguien firma una factura impresa; los datos de la factura no se leen en la tarjeta.
+- Cierre de caja: terminal de punto de venta con el cajón de billetes abierto; en la pantalla se lee chico "halo" (no es un respaldo de marca).
+- Ventas por mes: escritorio con un gráfico de evolución impreso y un calendario mensual; el recorte deja a la vista el gráfico.
+- Pérdidas de producto: caja de cartón golpeada en el envío ("rotura").
+- Stock mínimo: góndola de pastas vacía en un supermercado; el cartel "INFO" es un aviso de límite de compra.

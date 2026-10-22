@@ -56,7 +56,9 @@ export function hslDeMarca(hex: string, maxL = 28): string {
   return `${h} ${Math.round(s * 100)}% ${Math.min(Math.round(l * 100), maxL)}%`;
 }
 
-const GRILLA = "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4";
+/** Grilla de las tarjetas de los paneles (también la usa /reportes, que arma sus secciones a mano). */
+export const GRILLA_PANEL = "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4";
+const GRILLA = GRILLA_PANEL;
 
 export function PanelModulo({
   kicker, titulo, subtitulo, tarjetas, vacio = "No tenés pantallas habilitadas en este módulo.", volver, cargando = false,
