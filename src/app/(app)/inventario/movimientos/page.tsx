@@ -293,7 +293,7 @@ function Movimientos() {
   return (
     <div className="space-y-5 pb-10 sm:space-y-6">
       <EncabezadoPagina
-        volver={{ href: "/inventario", label: "Inventario" }}
+        volver={{ href: "/inventario/panel", label: "Inventario" }}
         kicker="Inventario · Kardex"
         titulo="Movimientos de inventario"
         subtitulo="Cada entrada y salida, con su documento, depósito y usuario"

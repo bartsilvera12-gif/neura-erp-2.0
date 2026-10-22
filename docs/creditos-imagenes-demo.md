@@ -38,6 +38,25 @@ Fotos de fondo de las tarjetas de `/configuracion` (componente `TarjetaImagen`).
 |---|---|---|---|---|
 | Datos de la empresa | `public/configuracion/empresa.webp` | Justin Main (photified) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Modern_skyscraper_facades_(Unsplash).jpg (original: https://unsplash.com/photos/srDN5nHM35g) |
 | Facturación | `public/configuracion/facturacion.webp` | Autor no indicado en Commons | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Desktop_with_laptop_and_calculator_(Unsplash).jpg (original: https://unsplash.com/photos/U_5BNLNfPn4) |
-| Usuarios | `public/configuracion/usuarios.webp` | Tim Gouw (punttim) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Busy_people_at_a_coffee_shop_(Unsplash).jpg (original: https://unsplash.com/photos/NSFG5sJYZgQ) |
+| Usuarios | `public/configuracion/usuarios-equipo.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 
-Nota: en la foto de Usuarios se lee chico el cartel "COFFEEBAR GASTOWN" del local; las personas se ven desde arriba, sin caras en primer plano.
+Nota: la foto anterior de Usuarios (Tim Gouw, CC0, Busy people at a coffee shop) se reemplazó por la que eligió el dueño.
+
+## Panel de Inventario
+
+Fotos de fondo de las tarjetas de `/inventario/panel` (componente `PanelModulo` → `TarjetaImagen`). Están en el repo, en `public/inventario/`. Salen de Wikimedia Commons y son de dominio público o CC0 1.0: uso comercial libre y sin obligación de atribución (igual se deja el crédito). Se recortaron para que el tema quede en la parte de arriba de la tarjeta (la de abajo la tapa el degradé), se redimensionaron a 1000 px de ancho y se pasaron a WEBP (< 150 KB).
+
+| Tarjeta | Archivo | Autor | Licencia | Origen |
+|---|---|---|---|---|
+| Productos | `public/inventario/productos.webp` | Kanesue | Dominio público | https://commons.wikimedia.org/wiki/File:Spice_Supermarket_Japan.JPG |
+| Movimientos | `public/inventario/movimientos.webp` | Departamento de Agricultura de EE. UU. (USDA) | Dominio público | https://commons.wikimedia.org/wiki/File:Packages_on_UPS_conveyor_belt.jpg |
+| Traslados | `public/inventario/traslados.webp` | Alan Gragg (Marina de EE. UU.) | Dominio público | https://commons.wikimedia.org/wiki/File:US_Navy_080811-N-2821G-062_Storekeeper_1st_Class_A.S._Giulioli_and_Ship%27s_Serviceman_2nd_Class_Frank_Medina,_right,_assigned_to_Commander,_Task_Force_(CTF)_43,_unload_pallets_of_Project_Handclasp_humanitarian_aid_from_a_semi-tr.jpg |
+| Ajustes y pérdidas | `public/inventario/ajustes.webp` | Liz Roll (FEMA) | Dominio público | https://commons.wikimedia.org/wiki/File:FEMA_-_24316_-_Photograph_by_Liz_Roll_taken_on_05-11-2006_in_Texas.jpg |
+| Vencimientos | `public/inventario/vencimientos.webp` | ProjectManhattan | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Milk_at_supermarket.jpg |
+| Categorías | `public/inventario/categorias.webp` | Wilfredor | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Collection_of_piano_rolls_in_their_original_boxes_in_Collections_of_the_Deutsches_Museum.jpg |
+| Depósitos | `public/inventario/depositos.webp` | Barry Bahler (FEMA) | Dominio público | https://commons.wikimedia.org/wiki/File:FEMA_-_37526_-_Florida_Logisitics_Response_center.jpg |
+
+Notas:
+- Ajustes y pérdidas: el recorte deja solo el lector de códigos y los pallets etiquetados (la persona que cuenta queda fuera de cuadro).
+- Traslados: en las cajas se ve chico el sello "Project Handclasp" (programa de ayuda de la Marina de EE. UU.); es parte de la foto, no un respaldo.
+- Categorías: son cajas de rollos de pianola de un museo, con etiquetas por título; se usa como imagen de "cajas etiquetadas y ordenadas en estantes".

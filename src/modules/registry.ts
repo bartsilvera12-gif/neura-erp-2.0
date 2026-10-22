@@ -123,6 +123,16 @@ export function pantallaDeRuta(pathname: string, catalogo: Pantalla[] = pantalla
   return mejor;
 }
 
+/**
+ * El módulo con panel propio cuyo panel es exactamente esta ruta (ej. /inventario/panel), o null.
+ * El panel no es una pantalla de los perfiles: se puede abrir si el perfil ve el módulo (alguna
+ * de sus sub-pantallas). El guard lo usa antes de `pantallaDeRuta`, porque /inventario/panel
+ * cae bajo el prefijo de Productos (/inventario).
+ */
+export function panelDeRuta(pathname: string): Modulo | null {
+  return TODOS.find((m) => m.panel && m.href === pathname && clienteConfig.modulos.includes(m.id)) ?? null;
+}
+
 /** ¿El perfil puede abrir esta pantalla? (nivel base + pantallas del perfil + permiso) */
 export function perfilVePantalla(p: Pantalla, rol: string | undefined, perfil: PerfilSesion | null | undefined): boolean {
   if (p.niveles?.length && (!rol || !p.niveles.includes(rol))) return false;

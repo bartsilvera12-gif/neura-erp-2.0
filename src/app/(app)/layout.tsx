@@ -7,7 +7,7 @@ import { ShieldAlert } from "lucide-react";
 import { browserClient } from "@/lib/supabase/browser";
 import { apiFetchCache, limpiarCache } from "@/lib/api/cache-cliente";
 import { ProveedorUsuario, type Usuario } from "@/lib/sesion/ContextoUsuario";
-import { modulosDelPerfil, pantallaDeRuta, perfilVePantalla } from "@/modules/registry";
+import { modulosDelPerfil, panelDeRuta, pantallaDeRuta, perfilVePantalla } from "@/modules/registry";
 import { NotificacionesBell } from "@/modules/notificaciones/NotificacionesBell";
 import { MarcoApp } from "@/components/shell/MarcoApp";
 
@@ -61,10 +61,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // (Las APIs y la base lo vuelven a validar; esto es para no mostrar una pantalla rota.)
   const pantallaBloqueada = useMemo(() => {
     if (!me || !perfil) return null;
+    // Panel de un módulo (ej. /inventario/panel): entra quien ve el módulo en el menú, o sea,
+    // alguna de sus sub-pantallas (aunque no tenga la del prefijo, ej. Productos = /inventario).
+    const panel = panelDeRuta(pathname);
+    // Si no lo ve, sigue la regla de siempre (el panel muestra solo las tarjetas permitidas).
+    if (panel && modulos.some((m) => m.id === panel.id)) return null;
     const p = pantallaDeRuta(pathname);
     if (!p || p.accesoPropio) return null;
     return perfilVePantalla(p, rol, perfil) ? null : p;
-  }, [me, perfil, rol, pathname]);
+  }, [me, perfil, rol, pathname, modulos]);
 
   if (!ready) {
     return (

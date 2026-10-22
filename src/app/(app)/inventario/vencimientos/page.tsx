@@ -167,7 +167,7 @@ export default function VencimientosPage() {
   return (
     <div className="space-y-5 pb-10 sm:space-y-6">
       <EncabezadoPagina
-        volver={{ href: "/inventario", label: "Inventario" }}
+        volver={{ href: "/inventario/panel", label: "Inventario" }}
         kicker="Inventario · Lotes"
         titulo="Vencimientos"
         subtitulo="Lotes vencidos y los que vencen pronto, por depósito, para venderlos o darlos de baja a tiempo"

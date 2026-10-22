@@ -189,7 +189,7 @@ export default function CategoriasPage() {
   return (
     <div className="space-y-5 pb-10 sm:space-y-6">
       <EncabezadoPagina
-        volver={{ href: "/inventario", label: "Inventario" }}
+        volver={{ href: "/inventario/panel", label: "Inventario" }}
         kicker="Operaciones · Stock"
         titulo="Categorías de productos"
         subtitulo={<>Ordená tus productos en categorías y, si querés, en subcategorías. Ej: <strong className="font-semibold text-slate-700">Bebidas › Gaseosas</strong>.</>}
