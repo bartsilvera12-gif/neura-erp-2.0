@@ -48,13 +48,13 @@ Fotos de fondo de las tarjetas de `/inventario/panel` (componente `PanelModulo` 
 
 | Tarjeta | Archivo | Autor | Licencia | Origen |
 |---|---|---|---|---|
-| Productos | `public/inventario/productos.webp` | Kanesue | Dominio público | https://commons.wikimedia.org/wiki/File:Spice_Supermarket_Japan.JPG |
-| Movimientos | `public/inventario/movimientos.webp` | Departamento de Agricultura de EE. UU. (USDA) | Dominio público | https://commons.wikimedia.org/wiki/File:Packages_on_UPS_conveyor_belt.jpg |
-| Traslados | `public/inventario/traslados.webp` | Alan Gragg (Marina de EE. UU.) | Dominio público | https://commons.wikimedia.org/wiki/File:US_Navy_080811-N-2821G-062_Storekeeper_1st_Class_A.S._Giulioli_and_Ship%27s_Serviceman_2nd_Class_Frank_Medina,_right,_assigned_to_Commander,_Task_Force_(CTF)_43,_unload_pallets_of_Project_Handclasp_humanitarian_aid_from_a_semi-tr.jpg |
+| Productos | `public/inventario/productos-gondola.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
+| Movimientos | `public/inventario/movimientos-escaner.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
+| Traslados | `public/inventario/traslados-autoelevador.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 | Ajustes y pérdidas | `public/inventario/ajustes.webp` | Liz Roll (FEMA) | Dominio público | https://commons.wikimedia.org/wiki/File:FEMA_-_24316_-_Photograph_by_Liz_Roll_taken_on_05-11-2006_in_Texas.jpg |
-| Vencimientos | `public/inventario/vencimientos.webp` | ProjectManhattan | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Milk_at_supermarket.jpg |
+| Vencimientos | `public/inventario/vencimientos-fecha.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 | Categorías | `public/inventario/categorias.webp` | Wilfredor | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Collection_of_piano_rolls_in_their_original_boxes_in_Collections_of_the_Deutsches_Museum.jpg |
-| Depósitos | `public/inventario/depositos.webp` | Barry Bahler (FEMA) | Dominio público | https://commons.wikimedia.org/wiki/File:FEMA_-_37526_-_Florida_Logisitics_Response_center.jpg |
+| Depósitos | `public/inventario/depositos-racks.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 
 Notas:
 - Ajustes y pérdidas: el recorte deja solo el lector de códigos y los pallets etiquetados (la persona que cuenta queda fuera de cuadro).

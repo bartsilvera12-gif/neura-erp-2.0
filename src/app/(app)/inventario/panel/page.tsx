@@ -11,13 +11,13 @@ import { PanelModulo, hslDeMarca, type TarjetaPanel } from "@/components/ui/Pane
 import { clienteConfig } from "@/cliente.config";
 
 const TARJETAS: TarjetaPanel[] = [
-  { href: "/inventario", titulo: "Productos", imagen: "/inventario/productos.webp", color: hslDeMarca(clienteConfig.color), posicion: "50% 30%" },
-  { href: "/inventario/movimientos", titulo: "Movimientos", imagen: "/inventario/movimientos.webp", color: "214 42% 26%", posicion: "50% 10%" },
-  { href: "/inventario/traslados", titulo: "Traslados", imagen: "/inventario/traslados.webp", color: "26 55% 24%", posicion: "50% 10%" },
+  { href: "/inventario", titulo: "Productos", imagen: "/inventario/productos-gondola.webp", color: hslDeMarca(clienteConfig.color), posicion: "50% 35%" },
+  { href: "/inventario/movimientos", titulo: "Movimientos", imagen: "/inventario/movimientos-escaner.webp", color: "214 42% 26%", posicion: "55% 45%" },
+  { href: "/inventario/traslados", titulo: "Traslados", imagen: "/inventario/traslados-autoelevador.webp", color: "26 55% 24%", posicion: "45% 60%" },
   { href: "/inventario/ajustes", titulo: "Ajustes y pérdidas", imagen: "/inventario/ajustes.webp", color: "352 42% 27%", posicion: "50% 0%" },
-  { href: "/inventario/vencimientos", titulo: "Vencimientos", imagen: "/inventario/vencimientos.webp", color: "150 38% 22%", posicion: "50% 30%" },
+  { href: "/inventario/vencimientos", titulo: "Vencimientos", imagen: "/inventario/vencimientos-fecha.webp", color: "150 38% 22%", posicion: "65% 45%" },
   { href: "/inventario/categorias", titulo: "Categorías", imagen: "/inventario/categorias.webp", color: "258 28% 30%", posicion: "50% 40%" },
-  { href: "/inventario/depositos", titulo: "Depósitos", imagen: "/inventario/depositos.webp", color: "205 32% 21%", posicion: "50% 35%" },
+  { href: "/inventario/depositos", titulo: "Depósitos", imagen: "/inventario/depositos-racks.webp", color: "205 32% 21%", posicion: "50% 40%" },
 ];
 
 export default function PanelInventarioPage() {
