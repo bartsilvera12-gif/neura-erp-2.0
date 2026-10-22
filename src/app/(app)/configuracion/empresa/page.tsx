@@ -15,7 +15,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
-  AlertTriangle, BadgeCheck, Building2, Eraser, Eye, FileText, ImageIcon, Info, Loader2, MapPin, ReceiptText, RotateCcw, Sparkles, Undo2, Upload, X,
+  AlertTriangle, BadgeCheck, Building2, Eraser, ImageIcon, Info, Loader2, MapPin, RotateCcw, Sparkles, Undo2, Upload,
 } from "lucide-react";
 import { apiFetch, apiForm } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
@@ -25,13 +25,12 @@ import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { Select } from "@/components/Select";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT } from "@/modules/inventario/ui";
 import {
-  CAMPOS_EMPRESA, DEPARTAMENTOS_PY, LOGO_INSTALACION, LOGO_MAX_MB, LOGO_TIPOS, membreteEmpresa, normalizarRuc, renglonesMembrete, validarRuc,
-  type DatosEmpresa, type FormEmpresa, type Membrete,
+  CAMPOS_EMPRESA, DEPARTAMENTOS_PY, LOGO_INSTALACION, LOGO_MAX_MB, LOGO_TIPOS, normalizarRuc, validarRuc,
+  type DatosEmpresa, type FormEmpresa,
 } from "@/modules/empresa/tipos";
 
 const URL = "/api/configuracion/empresa";
 const TEAL = clienteConfig.color;
-const RESPALDO = { nombre: clienteConfig.nombre, web: clienteConfig.dominio };
 
 const vacio: FormEmpresa = {
   razon_social: "", nombre_fantasia: "", ruc: "", actividad_economica: "", direccion: "", ciudad: "", departamento: "", telefono: "", email: "", web: "",
@@ -50,7 +49,6 @@ export default function DatosEmpresaPage() {
   const [guardando, setGuardando] = useState(false);
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
   const [okGuardar, setOkGuardar] = useState<string | null>(null);
-  const [previaMovil, setPreviaMovil] = useState(false);
   const [confirmarDescarte, setConfirmarDescarte] = useState(false);
   // Logo (se guarda solo, aparte del formulario)
   const [subiendoLogo, setSubiendoLogo] = useState(false);
@@ -174,21 +172,12 @@ export default function DatosEmpresaPage() {
     }
   };
 
-  // Lo que se ve en los documentos con lo que está escrito ahora (con el mismo respaldo que el PDF).
-  const membrete = useMemo(
-    () => membreteEmpresa({ ...f, nombre: datos?.nombre ?? RESPALDO.nombre, actividad_economica: f.actividad_economica, sucursal_principal: datos?.sucursal_principal ?? null }, RESPALDO),
-    [f, datos],
-  );
-
   if (cargando && !datos) {
     return (
       <div className="space-y-5 pb-10">
         <EncabezadoPagina kicker="Configuración" titulo="Datos de la empresa" />
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
-          <div className="space-y-4">
-            {[0, 1].map((i) => <div key={i} className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white" />)}
-          </div>
-          <div className="hidden h-80 animate-pulse rounded-2xl border border-slate-200 bg-white sm:block" />
+        <div className="space-y-4">
+          {[0, 1].map((i) => <div key={i} className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white" />)}
         </div>
       </div>
     );
@@ -212,7 +201,7 @@ export default function DatosEmpresaPage() {
       <EncabezadoPagina
         kicker="Configuración"
         titulo="Datos de la empresa"
-        subtitulo="Así te identificás en presupuestos, recibos, remisiones, órdenes y reportes. Cambiá algo y mirá cómo queda."
+        subtitulo="Así te identificás en presupuestos, recibos, remisiones, órdenes y reportes."
       />
 
       {soloLectura ? (
@@ -221,7 +210,7 @@ export default function DatosEmpresaPage() {
         </div>
       ) : null}
 
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_380px] xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="min-w-0">
         <div className="min-w-0 space-y-4">
           {/* ── Identificación fiscal ─────────────────────────────────────── */}
           <Tarjeta icono={<BadgeCheck className="h-4 w-4" />} titulo="Identificación fiscal" detalle="Como figura en tu constancia de RUC de la SET.">
@@ -302,7 +291,6 @@ export default function DatosEmpresaPage() {
             datos={datos}
             src={logoSrc}
             soloLectura={soloLectura}
-            nombre={membrete.nombre}
             subiendo={subiendoLogo}
             quitando={quitandoLogo}
             cambiandoFondo={cambiandoFondo}
@@ -318,11 +306,6 @@ export default function DatosEmpresaPage() {
             </p>
           ) : null}
         </div>
-
-        {/* ── Vista previa (≥ 640 px; en celular, en una hoja) ─────────────── */}
-        <aside className="hidden min-w-0 sm:block lg:sticky lg:top-2 lg:self-start">
-          <VistaPrevia m={membrete} logo={logoSrc} />
-        </aside>
       </div>
 
       {/* ── Barra fija de guardar ─────────────────────────────────────────── */}
@@ -334,9 +317,6 @@ export default function DatosEmpresaPage() {
             : sucio ? <span className="flex items-center gap-1.5 text-slate-600"><Info className="h-4 w-4 shrink-0 text-[var(--brand)]" /> Tenés cambios sin guardar.</span>
             : <span className="text-slate-400">{soloLectura ? "Solo lectura." : "Sin cambios."}</span>}
         </div>
-        <button type="button" onClick={() => setPreviaMovil(true)} className={`${BOTON_SECUNDARIO} sm:hidden`}>
-          <Eye className="h-4 w-4" /> Vista previa
-        </button>
         {!soloLectura && sucio ? (
           <button type="button" onClick={() => setConfirmarDescarte(true)} disabled={guardando} className={BOTON_SECUNDARIO}>Descartar</button>
         ) : null}
@@ -346,25 +326,6 @@ export default function DatosEmpresaPage() {
           </button>
         ) : null}
       </div>
-
-      {previaMovil ? (
-        <CapaModal onClose={() => setPreviaMovil(false)}>
-          <div role="dialog" aria-modal="true" aria-label="Vista previa" className={`flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${ALTO_MAX_MODAL}`}>
-            <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
-              <p className="flex items-center gap-2 text-base font-semibold text-slate-900"><Eye className="h-4 w-4 text-[var(--brand)]" /> Vista previa</p>
-              <button type="button" aria-label="Cerrar" onClick={() => setPreviaMovil(false)} className="rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="min-h-0 flex-1 overflow-y-auto p-3">
-              <VistaPrevia m={membrete} logo={logoSrc} sinMarco />
-            </div>
-            <div className="shrink-0 border-t border-slate-100 p-3">
-              <button type="button" onClick={() => setPreviaMovil(false)} className={`${BOTON_SECUNDARIO} w-full`}>Volver a editar</button>
-            </div>
-          </div>
-        </CapaModal>
-      ) : null}
 
       {confirmarQuitar ? (
         <CapaModal onClose={() => setConfirmarQuitar(false)} z="z-[120]">
@@ -445,9 +406,9 @@ function Logo({ src, className }: { src: string; className?: string }) {
   return <img src={src} alt="Logo de los documentos" className={className} onError={() => setFalla(true)} />;
 }
 
-/** Tarjeta "Logo de los documentos": vista previa, cambiar / quitar y un mini-membrete de ejemplo. */
-function TarjetaLogo({ datos, src, soloLectura, nombre, subiendo, quitando, cambiandoFondo, error, exito, onElegir, onQuitar, onFondo }: {
-  datos: DatosEmpresa | null; src: string; soloLectura: boolean; nombre: string;
+/** Tarjeta "Logo de los documentos": el logo sobre blanco (como en el PDF), cambiar / quitar fondo / quitar. */
+function TarjetaLogo({ datos, src, soloLectura, subiendo, quitando, cambiandoFondo, error, exito, onElegir, onQuitar, onFondo }: {
+  datos: DatosEmpresa | null; src: string; soloLectura: boolean;
   subiendo: boolean; quitando: boolean; cambiandoFondo: boolean; error: string | null; exito: string | null;
   onElegir: (f: File) => void; onQuitar: () => void; onFondo: (sinFondo: boolean) => void;
 }) {
@@ -466,13 +427,10 @@ function TarjetaLogo({ datos, src, soloLectura, nombre, subiendo, quitando, camb
   return (
     <Tarjeta icono={<ImageIcon className="h-4 w-4" />} titulo="Logo de los documentos" detalle="Sale arriba a la izquierda en todos los PDF: presupuestos, recibos, remisiones, órdenes, cierres de caja y reportes.">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start">
-        {/* Cuadriculado (deja ver la transparencia) y franja oscura (deja ver halos del fondo) */}
-        <div className="relative w-full shrink-0 overflow-hidden rounded-xl border border-slate-200 sm:w-52">
-          <div className="flex h-24 items-center justify-center bg-white bg-[conic-gradient(#e2e8f0_25%,transparent_0_50%,#e2e8f0_0_75%,transparent_0)] bg-[length:14px_14px] p-3">
-            <Logo key={src} src={src} className="max-h-16 w-auto max-w-full object-contain" />
-          </div>
-          <div className="flex h-14 items-center justify-center bg-slate-900 px-3 py-2" title="Así se ve sobre un fondo oscuro">
-            <Logo key={`${src}#oscuro`} src={src} className="max-h-10 w-auto max-w-full object-contain" />
+        {/* Sobre blanco, como sale en la hoja del PDF */}
+        <div className="relative w-full shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white sm:w-52">
+          <div className="flex h-28 items-center justify-center p-4">
+            <Logo key={src} src={src} className="max-h-20 w-auto max-w-full object-contain" />
           </div>
           {ocupado ? (
             <span className="absolute inset-0 grid place-items-center bg-white/70" aria-live="polite">
@@ -542,96 +500,6 @@ function TarjetaLogo({ datos, src, soloLectura, nombre, subiendo, quitando, camb
           {exito && !error ? <p className="flex items-start gap-1.5 text-xs text-emerald-700" aria-live="polite"><Sparkles className="mt-px h-3.5 w-3.5 shrink-0" /> {exito}</p> : null}
         </div>
       </div>
-
-      {/* Mini-membrete de ejemplo */}
-      <div className="mt-4 rounded-lg bg-white p-3 ring-1 ring-slate-200" aria-label="Ejemplo de membrete">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex h-10 w-24 shrink-0 items-center sm:w-28"><Logo key={src} src={src} className="max-h-10 w-auto max-w-full object-contain" /></div>
-          <p className="min-w-0 truncate text-right text-[12px] font-bold text-slate-800">{nombre}</p>
-        </div>
-        <div className="mt-2 h-[2px]" style={{ backgroundColor: TEAL }} />
-        <div className="mt-2 space-y-1" aria-hidden>
-          <div className="h-1.5 w-2/3 rounded-sm bg-slate-100" />
-          <div className="h-1.5 w-1/2 rounded-sm bg-slate-100" />
-        </div>
-      </div>
     </Tarjeta>
-  );
-}
-
-/** Encabezado del documento como sale en el PDF (escala reducida). */
-function VistaPrevia({ m, logo, sinMarco = false }: { m: Membrete; logo: string; sinMarco?: boolean }) {
-  const [tipo, setTipo] = useState<"presupuesto" | "general">("presupuesto");
-  const renglones = renglonesMembrete(m);
-  const contacto = [m.telefono ? `Tel. ${m.telefono}` : null, m.email].filter(Boolean).join("  ·  ");
-  return (
-    <div className={sinMarco ? "" : "rounded-2xl border border-slate-200 bg-slate-50/70 p-3 sm:p-4"}>
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-slate-500"><Eye className="h-3.5 w-3.5" /> Así sale</p>
-        <div role="tablist" className="inline-flex rounded-lg bg-slate-200/70 p-0.5 text-xs font-semibold">
-          {([["presupuesto", "Presupuesto", FileText], ["general", "Recibos y reportes", ReceiptText]] as const).map(([id, label, Icono]) => (
-            <button key={id} type="button" role="tab" aria-selected={tipo === id} onClick={() => setTipo(id)}
-              className={`inline-flex min-h-8 items-center gap-1 rounded-md px-2.5 transition max-sm:min-h-10 ${tipo === id ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-              <Icono className="h-3.5 w-3.5" /> {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Hoja A4 (recorte superior) */}
-      <div className="overflow-hidden rounded-lg bg-white p-3 shadow-[0_1px_3px_rgba(15,23,42,0.12),0_8px_24px_-12px_rgba(15,23,42,0.18)] ring-1 ring-slate-200 sm:p-4">
-        {tipo === "presupuesto" ? (
-          <div className="flex gap-1.5">
-            <div className="flex min-w-0 flex-[1.65] items-center gap-2.5 border border-slate-300 p-2.5">
-              <div className="flex w-14 shrink-0 items-center justify-center sm:w-16"><Logo key={logo} src={logo} className="max-h-11 w-auto max-w-full object-contain" /></div>
-              <div className="min-w-0 text-[9px] leading-[1.35] text-slate-600">
-                <p className="text-[12px] font-bold leading-tight text-slate-800 [overflow-wrap:anywhere]">{m.nombre}</p>
-                {m.razonSocial ? <p className="mt-0.5 font-semibold text-slate-600 [overflow-wrap:anywhere]">{m.razonSocial}</p> : null}
-                {m.actividad ? <p className="text-slate-400 [overflow-wrap:anywhere]">{m.actividad}</p> : null}
-                {m.ruc ? <p className="font-bold text-slate-800">RUC {m.ruc}</p> : null}
-                {m.ubicacion ? <p className="[overflow-wrap:anywhere]">{m.ubicacion}</p> : null}
-                {contacto ? <p className="[overflow-wrap:anywhere]">{contacto}</p> : null}
-                {m.web ? <p className="[overflow-wrap:anywhere]">{m.web}</p> : null}
-              </div>
-            </div>
-            <div className="flex min-w-0 flex-1 flex-col border border-slate-300">
-              <div className="h-[3px]" style={{ backgroundColor: TEAL }} />
-              <div className="flex flex-1 flex-col items-center justify-center px-1.5 py-2 text-center">
-                <p className="text-[8.5px] font-bold tracking-[0.25em] text-slate-800">PRESUPUESTO</p>
-                <p className="mt-1 text-[11px] font-bold tabular-nums" style={{ color: TEAL }}>N° PRE-000123</p>
-                <div className="my-1.5 h-px w-4/5 bg-slate-200" />
-                <p className="text-[8px] text-slate-400">Fecha de emisión</p>
-                <p className="text-[8.5px] font-semibold text-slate-700">16/10/2026</p>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div>
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex w-16 shrink-0 items-start pt-0.5 sm:w-20"><Logo key={logo} src={logo} className="max-h-9 w-auto max-w-full object-contain" /></div>
-              <div className="min-w-0 text-right text-[9px] leading-[1.4] text-slate-500">
-                <p className="text-[12px] font-bold leading-tight text-slate-800 [overflow-wrap:anywhere]">{m.nombre}</p>
-                {renglones.map((r) => <p key={r} className="[overflow-wrap:anywhere]">{r}</p>)}
-                {!m.ruc && !m.ubicacion && !m.razonSocial ? <p>Paraguay</p> : null}
-              </div>
-            </div>
-            <div className="mt-2 h-[2px]" style={{ backgroundColor: TEAL }} />
-            <div className="mt-2.5 border-[1.5px] border-slate-900 py-1 text-center text-[10px] font-bold tracking-[0.15em] text-slate-900">RECIBO R-000123</div>
-            <p className="mt-1.5 text-center text-[8.5px] text-slate-500">16/10/2026 10:30</p>
-          </div>
-        )}
-        {/* Insinúa el resto de la hoja */}
-        <div className="mt-3 space-y-1.5" aria-hidden>
-          <div className="h-2 w-full rounded-sm bg-slate-100" />
-          <div className="h-2 w-5/6 rounded-sm bg-slate-100" />
-          <div className="h-2 w-2/3 rounded-sm bg-slate-100" />
-        </div>
-      </div>
-      <p className="mt-2.5 text-[11px] leading-snug text-slate-400">
-        {tipo === "presupuesto"
-          ? "Recuadro del emisor del presupuesto (diseño de factura A4). Si atiende otra sucursal, sale su dirección y teléfono."
-          : "Encabezado de recibos, estados de cuenta, remisiones, órdenes de compra y de pago, cierres de caja y reportes. El pie lleva nombre y RUC."}
-      </p>
-    </div>
   );
 }
