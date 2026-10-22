@@ -22,7 +22,10 @@ const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 
 const ET = "mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500";
 const OPC = <span className="font-normal text-slate-400">(opcional)</span>;
 
-export type ClienteFicha = Cliente & { plazo_dias?: number | null; notas?: string | null; activo?: boolean; categoria_id?: string | null; nombre_contacto?: string | null };
+export type ClienteFicha = Cliente & {
+  plazo_dias?: number | null; notas?: string | null; activo?: boolean; categoria_id?: string | null; nombre_contacto?: string | null;
+  telefono_secundario?: string | null; email_secundario?: string | null;
+};
 
 export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFicha | null; onClose: () => void; onSaved: (id: string) => void }) {
   const editando = !!cliente;
@@ -37,6 +40,8 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
     ciudad: cliente?.ciudad ?? "",
     categoria_id: cliente?.categoria_id ?? "",
     nombre_contacto: cliente?.nombre_contacto ?? "",
+    telefono_secundario: cliente?.telefono_secundario ?? "",
+    email_secundario: cliente?.email_secundario ?? "",
     condicion_pago: (cliente?.condicion_pago === "CREDITO" ? "CREDITO" : "CONTADO") as "CONTADO" | "CREDITO",
     plazo_dias: cliente?.plazo_dias ? String(cliente.plazo_dias) : "30",
     limite_credito: Number(cliente?.limite_credito ?? 0),
@@ -49,16 +54,6 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
   useEffect(() => {
     apiFetchCache<Categoria[]>("/api/clientes/categorias").then(setCategorias).catch(() => {});
   }, []);
-  // Cliente nuevo: el plazo arranca con los "días de vencimiento por defecto" (Configuración › Facturación).
-  useEffect(() => {
-    if (editando) return;
-    apiFetchCache<{ dias_vencimiento_default?: number }>("/api/configuracion/facturacion", { ttlMs: 60_000 })
-      .then((c) => {
-        const n = Number(c?.dias_vencimiento_default);
-        if (n >= 1) setF((p) => (p.plazo_dias === "30" ? { ...p, plazo_dias: String(n) } : p));
-      })
-      .catch(() => {});
-  }, [editando]);
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
@@ -77,6 +72,9 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
         ruc: esRuc ? doc : editando ? undefined : null,
         categoria_id: f.categoria_id || null,
         nombre_contacto: empresa ? f.nombre_contacto.trim() || null : undefined,
+        // Empresa: teléfono y email de la persona de contacto (los principales son de la empresa).
+        telefono_secundario: empresa ? f.telefono_secundario.trim() || null : undefined,
+        email_secundario: empresa ? f.email_secundario.trim() || null : undefined,
         telefono: f.telefono.trim() || null,
         email: f.email.trim() || null,
         direccion: f.direccion.trim() || null,
@@ -152,24 +150,36 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
             </label>
           ) : null}
           </div>
-        </Bloque>
-
-        <Bloque titulo="Contacto">
           <div className="grid gap-4 sm:grid-cols-2">
-            {empresa ? (
-              <label className="block sm:col-span-2">
-                <span className={ET}>Persona de contacto {OPC}</span>
-                <input value={f.nombre_contacto} onChange={(e) => set("nombre_contacto", e.target.value)} maxLength={200} placeholder="Ej: Juan Pérez, encargado de compras" className={INPUT} />
-              </label>
-            ) : null}
             <label className="block">
               <span className={ET}>Teléfono {OPC}</span>
-              <input value={f.telefono} onChange={(e) => set("telefono", e.target.value)} maxLength={40} placeholder="Ej: 0981 123 456" className={INPUT} />
+              <input type="tel" inputMode="tel" value={f.telefono} onChange={(e) => set("telefono", e.target.value)} maxLength={40} placeholder={empresa ? "Ej: 021 600 000" : "Ej: 0981 123 456"} className={INPUT} />
             </label>
             <label className="block">
               <span className={ET}>Email {OPC}</span>
-              <input type="email" value={f.email} onChange={(e) => set("email", e.target.value)} maxLength={120} placeholder="cliente@correo.com" className={INPUT} />
+              <input type="email" inputMode="email" value={f.email} onChange={(e) => set("email", e.target.value)} maxLength={120} placeholder={empresa ? "ventas@empresa.com.py" : "cliente@correo.com"} className={INPUT} />
             </label>
+          </div>
+        </Bloque>
+
+        <Bloque titulo={empresa ? "Contacto y dirección" : "Dirección"}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {empresa ? (
+              <>
+                <label className="block sm:col-span-2">
+                  <span className={ET}>Persona de contacto {OPC}</span>
+                  <input value={f.nombre_contacto} onChange={(e) => set("nombre_contacto", e.target.value)} maxLength={200} placeholder="Ej: Juan Pérez, encargado de compras" className={INPUT} />
+                </label>
+                <label className="block">
+                  <span className={ET}>Teléfono del contacto {OPC}</span>
+                  <input type="tel" inputMode="tel" value={f.telefono_secundario} onChange={(e) => set("telefono_secundario", e.target.value)} maxLength={40} placeholder="Ej: 0981 123 456" className={INPUT} />
+                </label>
+                <label className="block">
+                  <span className={ET}>Email del contacto {OPC}</span>
+                  <input type="email" inputMode="email" value={f.email_secundario} onChange={(e) => set("email_secundario", e.target.value)} maxLength={120} placeholder="juan@empresa.com.py" className={INPUT} />
+                </label>
+              </>
+            ) : null}
             <label className="block">
               <span className={ET}>Dirección {OPC}</span>
               <input value={f.direccion} onChange={(e) => set("direccion", e.target.value)} maxLength={200} className={INPUT} />
@@ -179,26 +189,6 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
               <input value={f.ciudad} onChange={(e) => set("ciudad", e.target.value)} maxLength={80} placeholder="Ej: Luque" className={INPUT} />
             </label>
           </div>
-        </Bloque>
-
-        <Bloque titulo="Cómo te paga">
-          <Segmentado valor={f.condicion_pago} onChange={(v) => set("condicion_pago", v as "CONTADO" | "CREDITO")} opciones={[["CONTADO", "Contado"], ["CREDITO", "A crédito (cuenta corriente)"]]} />
-          {f.condicion_pago === "CREDITO" ? (
-            <div className="grid gap-4">
-              <label className="block">
-                <span className={ET}>Plazo para pagar</span>
-                <div className="flex items-center gap-2">
-                  <input inputMode="numeric" value={f.plazo_dias} onChange={(e) => set("plazo_dias", e.target.value.replace(/\D/g, "").slice(0, 4))} className={`${INPUT} w-20 text-right tabular-nums`} />
-                  <span className="text-sm text-slate-500">días</span>
-                </div>
-                <div className="mt-1.5 flex gap-1">
-                  {["15", "30", "60"].map((d) => (
-                    <button key={d} type="button" onClick={() => set("plazo_dias", d)} className={`min-h-11 min-w-11 rounded-lg px-2 py-1 text-xs sm:min-h-0 sm:min-w-0 font-semibold transition ${f.plazo_dias === d ? "bg-[var(--brand-50)] text-[var(--brand)]" : "text-slate-500 hover:bg-slate-100"}`}>{d}</button>
-                  ))}
-                </div>
-              </label>
-            </div>
-          ) : null}
         </Bloque>
 
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
