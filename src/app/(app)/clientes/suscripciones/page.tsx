@@ -209,6 +209,7 @@ export default function SuscripcionesPage() {
   return (
     <div className="space-y-4 pb-10">
       <EncabezadoPagina
+        volver={{ href: "/comercial", label: "Comercial" }}
         kicker="Cobros recurrentes"
         titulo="Suscripciones"
         subtitulo="Cuotas, abonos y todo lo que tus clientes pagan cada mes"

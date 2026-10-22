@@ -184,7 +184,7 @@ function Lista() {
 
   return (
     <div className="space-y-4 pb-10 sm:space-y-5">
-      <EncabezadoPagina kicker="Comercial" titulo="Presupuestos"
+      <EncabezadoPagina volver={{ href: "/comercial", label: "Comercial" }} kicker="Comercial" titulo="Presupuestos"
         subtitulo={
           // Cifras en una línea: lo abierto, cuánto hay en juego y cuánto se convierte.
           <span className="flex flex-wrap items-center gap-x-2 gap-y-1">

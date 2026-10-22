@@ -114,3 +114,24 @@ Fotos de fondo de las tarjetas de `/soporte/panel` (componente `PanelModulo` →
 Notas:
 - Tickets: auriculares sobre el teclado de una laptop; en el auricular se ve chico el logo del fabricante. No es un respaldo de marca.
 - Configuración: engranajes de una grúa; el recorte deja a la vista el piñón engranado con la corona.
+
+## Panel Comercial
+
+Fotos de fondo de las tarjetas de `/comercial` (componente `PanelModulo` → `TarjetaImagen`). Están en el repo, en `public/comercial/` (WEBP, 1000 px de ancho, recortadas por `object-position`). Todas de Wikimedia Commons; las CC BY / CC BY-SA piden nombrar al autor y la licencia (esta tabla). Ningún módulo de Comercial tiene sub-panel (no hay más fotos). El dueño puede reemplazar cualquiera por una propia (con un nombre de archivo nuevo).
+
+| Tarjeta | Archivo | Autor | Licencia | Origen |
+|---|---|---|---|---|
+| Comercial › Clientes | `public/comercial/clientes-fichero-contactos.webp` | liz west (Boxborough, MA) | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución | [File:Contacts.jpg](https://commons.wikimedia.org/wiki/File:Contacts.jpg) |
+| Comercial › CRM Funnel | `public/comercial/crm-pizarra-notas-reunion.webp` | Joshua Tree National Park (NPS) | Dominio público | [File:Sticky Notes on a Whiteboard at a Climate Change Training for Joshua Tree Interpretive Rangers (16520442071).jpg](https://commons.wikimedia.org/wiki/File:Sticky_Notes_on_a_Whiteboard_at_a_Climate_Change_Training_for_Joshua_Tree_Interpretive_Rangers_(16520442071).jpg) |
+| Comercial › Presupuestos | `public/comercial/presupuestos-calculadora-notas.webp` | Autor desconocido (Unsplash) | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Desktop with laptop and calculator (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Desktop_with_laptop_and_calculator_(Unsplash).jpg) |
+| Comercial › Gestión Clientes | `public/comercial/gestion-lista-llamadas-libreta.webp` | Alan Levine | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución | [File:Reading Between The Phone Numbers (14923462855).jpg](https://commons.wikimedia.org/wiki/File:Reading_Between_The_Phone_Numbers_(14923462855).jpg) |
+| Comercial › Planes | `public/comercial/planes-calendario-mensual.webp` | Brooke Lark | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Calendar Year (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Calendar_Year_(Unsplash).jpg) |
+| Comercial › Agenda | `public/comercial/agenda-planificador-escribiendo.webp` | Cathryn Lavery | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Writing in a journal (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Writing_in_a_journal_(Unsplash).jpg) |
+| Comercial › Proyectos | `public/comercial/proyectos-tablero-kanban.webp` | Jeff.lasovski | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) — pide atribución (y compartir igual si se modifica) | [File:Simple-kanban-board-.jpg](https://commons.wikimedia.org/wiki/File:Simple-kanban-board-.jpg) |
+
+Notas:
+- Clientes: fichero de tarjetas con pestañas A–Z (la "cartera de clientes").
+- CRM Funnel: reunión frente a una pizarra con notas; la persona de primer plano está de espaldas.
+- Gestión Clientes: libreta con una lista de llamadas tildadas; se leen a mano nombres de empresas de servicios de EE. UU. y sus teléfonos comerciales (no son datos personales).
+- Planes: calendario mensual en una tablilla; el recorte deja a la vista la grilla de días (la cara de quien lo sostiene queda fuera).
+- Proyectos: tablero kanban "To Do / Doing / Done" con notas adhesivas.

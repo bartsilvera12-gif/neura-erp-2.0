@@ -362,6 +362,7 @@ export default function ClientesPage() {
 
       {/* Encabezado (en celular: "Nuevo cliente" a la vista y "Exportar" en el menú ⋯) */}
       <EncabezadoPagina
+        volver={{ href: "/comercial", label: "Comercial" }}
         kicker="Base"
         titulo="Clientes"
         subtitulo="Base de clientes activos de la empresa"

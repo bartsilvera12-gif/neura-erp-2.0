@@ -5,9 +5,10 @@ export const moduloClientes: Modulo = {
   id: "clientes",
   label: "Clientes",
   href: "/clientes",
+  grupo: "comercial",
   icon: "users",
   familia: "Comercial",
-  // Sin submenú, como en el sistema actual: Gestión Clientes, Planes, Agenda y Cobranzas
-  // son ítems propios del menú (modulos-comerciales.ts); Tipificaciones se configura
-  // desde Soporte › Configuración.
+  // Sin submenú, como en el sistema actual: Gestión Clientes, Planes y Agenda son módulos
+  // propios (modulos-comerciales.ts); Tipificaciones se configura desde Soporte › Configuración.
+  // En el menú va dentro del ítem "Comercial" (grupo "comercial" → panel /comercial).
 };

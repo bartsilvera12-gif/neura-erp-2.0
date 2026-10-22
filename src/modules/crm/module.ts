@@ -5,6 +5,7 @@ export const moduloCrm: Modulo = {
   id: "crm",
   label: "CRM Funnel",
   href: "/crm",
+  grupo: "comercial",
   icon: "sparkles",
   familia: "Comercial",
 };

@@ -14,7 +14,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, ChevronRight, Plus, Settings2 } from "lucide-react";
-import { BarraFiltros } from "@/components/EncabezadoPagina";
+import { BarraFiltros, VolverIcono } from "@/components/EncabezadoPagina";
 import { HojaInferior } from "@/components/HojaInferior";
 import { Select } from "@/components/Select";
 import { ScrollHorizontal } from "@/components/ScrollHorizontal";
@@ -245,7 +245,11 @@ export default function AgendaClient() {
       {/* Encabezado + métricas compactas (en celular las métricas van en una fila con scroll) */}
       <div className="mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex w-full items-center justify-between gap-3 sm:w-auto">
-          <h1 className="text-xl font-semibold text-slate-800">Agenda</h1>
+          <div className="flex min-w-0 items-center gap-1">
+            {/* Volver al panel Comercial: discreto, en la línea del título (no le quita alto al calendario). */}
+            <VolverIcono href="/comercial" label="Comercial" />
+            <h1 className="text-xl font-semibold text-slate-800">Agenda</h1>
+          </div>
           <button
             type="button"
             onClick={() => openCrear()}

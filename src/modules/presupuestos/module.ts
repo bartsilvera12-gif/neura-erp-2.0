@@ -9,6 +9,7 @@ export const moduloPresupuestos: Modulo = {
   id: "presupuestos",
   label: "Presupuestos",
   href: "/presupuestos",
+  grupo: "comercial",
   icon: "file-signature",
   familia: "Comercial",
   roles: ["ADMIN", "SUPERVISOR", "VENDEDOR", "CAJERO"],

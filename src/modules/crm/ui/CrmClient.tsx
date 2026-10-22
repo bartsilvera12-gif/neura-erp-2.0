@@ -377,6 +377,8 @@ export default function CrmClient() {
     <div className="flex h-full min-w-0 flex-col gap-4 sm:gap-5">
       {/* Encabezado (en celular: Kanban/Lista + "Nuevo prospecto" a la vista; "Configurar etapas" en ⋯) */}
       <EncabezadoPagina
+        volver={{ href: "/comercial", label: "Comercial" }}
+        volverDiscreto
         kicker="Pipeline"
         titulo="CRM Funnel"
         subtitulo={`Pipeline comercial · ${totalOportunidades.toLocaleString("es-PY")} oportunidades`}

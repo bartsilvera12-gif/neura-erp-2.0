@@ -28,18 +28,20 @@ import { MenuAcciones } from "@/components/MenuAcciones";
 import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import { useMediaQuery } from "@/lib/ui/responsive";
 
-export function EncabezadoPagina({ kicker, titulo, subtitulo, acciones, volver, className = "" }: {
+export function EncabezadoPagina({ kicker, titulo, subtitulo, acciones, volver, volverDiscreto = false, className = "" }: {
   kicker?: ReactNode;
   titulo: ReactNode;
   subtitulo?: ReactNode;
   acciones?: ReactNode;
   volver?: { href: string; label: string };
+  /** `volver` como flecha sola al lado del título (pantallas de uso intensivo: no suma alto). */
+  volverDiscreto?: boolean;
   className?: string;
 }) {
   return (
     <header className={`flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 ${className}`}>
       <div className="min-w-0">
-        {volver ? (
+        {volver && !volverDiscreto ? (
           <Link href={volver.href} className="-ml-1 mb-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800">
             <ArrowLeft className="h-3.5 w-3.5" /> {volver.label}
           </Link>
@@ -50,11 +52,31 @@ export function EncabezadoPagina({ kicker, titulo, subtitulo, acciones, volver, 
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand)]">{kicker}</p>
           </div>
         ) : null}
-        <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{titulo}</h1>
+        {volver && volverDiscreto ? (
+          <div className="mt-1 flex min-w-0 items-center gap-1">
+            <VolverIcono href={volver.href} label={volver.label} />
+            <h1 className="min-w-0 text-xl font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{titulo}</h1>
+          </div>
+        ) : (
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{titulo}</h1>
+        )}
         {subtitulo ? <p className="mt-1 max-w-3xl text-[13px] text-slate-500 sm:text-sm">{subtitulo}</p> : null}
       </div>
       {acciones ? <div className="min-w-0 sm:shrink-0">{acciones}</div> : null}
     </header>
+  );
+}
+
+/**
+ * "Volver" discreto: solo la flecha, en la línea del título (ej. CRM, Agenda → Comercial). Área
+ * táctil de 44 px en celular sin agrandar la línea (márgenes negativos).
+ */
+export function VolverIcono({ href, label }: { href: string; label: string }) {
+  return (
+    <Link href={href} aria-label={`Volver a ${label}`} title={`Volver a ${label}`}
+      className="-my-2 -ml-2 inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 lg:my-0 lg:h-8 lg:w-8">
+      <ArrowLeft className="h-4 w-4" />
+    </Link>
   );
 }
 

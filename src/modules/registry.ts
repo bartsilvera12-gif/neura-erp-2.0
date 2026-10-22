@@ -22,7 +22,8 @@ import { moduloConfiguracion } from "@/modules/configuracion/module";
 import type { PerfilSesion } from "@/modules/usuarios/permisos";
 
 // El orden de acá es el orden dentro de cada familia del menú (igual que sistemas-propio):
-// Comercial: Clientes, CRM Funnel, Presupuestos, Gestión Clientes, Planes, Agenda, Proyectos · Finanzas: Caja, Cobranzas, Conciliación, Pagos,
+// Comercial: Clientes, CRM Funnel, Presupuestos, Gestión Clientes, Planes, Agenda, Proyectos — en el menú son UN ítem
+// "Comercial" (grupo, panel /comercial; todos van directo a su pantalla) · Finanzas: Caja, Cobranzas, Conciliación, Pagos,
 // Gastos empresariales (compras + gastos operativos), Reportes — en el menú son UN ítem "Finanzas" (grupo, panel /finanzas;
 // Caja y Gastos con panel propio) · Operaciones: Inventario · Omnicanal: Omnicanal (panel: Conversaciones, Finalizadas, Monitoreo, Historial omnicanal) ·
 // Soporte: Soporte · Configuración: Configuración (panel: Datos de la empresa, Facturación, Usuarios).
@@ -129,6 +130,8 @@ export function pantallaDeRuta(pathname: string, catalogo: Pantalla[] = pantalla
 export type GrupoMenu = { id: string; label: string; href: string; icon: string; familia: string };
 
 export const GRUPOS_MENU: GrupoMenu[] = [
+  // Clientes · CRM Funnel · Presupuestos · Gestión Clientes · Planes · Agenda · Proyectos
+  { id: "comercial", label: "Comercial", href: "/comercial", icon: "briefcase", familia: "Comercial" },
   // Caja · Cobranzas · Conciliación · Pagos · Gastos empresariales · Reportes
   { id: "finanzas", label: "Finanzas", href: "/finanzas", icon: "landmark", familia: "Finanzas" },
 ];

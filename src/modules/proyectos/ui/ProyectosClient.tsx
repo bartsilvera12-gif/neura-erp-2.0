@@ -483,6 +483,8 @@ export default function ProyectosClient() {
       {/* Encabezado + pestañas (en celular: acción principal a la vista, el resto en ⋯; pestañas con scroll) */}
       <div className="flex flex-col gap-3">
         <EncabezadoPagina
+          volver={{ href: "/comercial", label: "Comercial" }}
+          volverDiscreto
           kicker={cab.ojo}
           titulo={cab.titulo}
           subtitulo={cab.sub}

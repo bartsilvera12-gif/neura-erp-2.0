@@ -230,6 +230,8 @@ function GestionClientes() {
     <div className="flex min-h-0 flex-1 flex-col gap-2">
       <EncabezadoPagina
         className="shrink-0 border-b border-slate-200/80 pb-2"
+        volver={{ href: "/comercial", label: "Comercial" }}
+        volverDiscreto
         kicker="Gestión"
         titulo="Gestión del Cliente"
         subtitulo="Panel operativo · consultas y tipificaciones"

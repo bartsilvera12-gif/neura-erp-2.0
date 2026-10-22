@@ -5,7 +5,8 @@
  * una TarjetaImagen por sub-pantalla (foto + degradé de color + título + flecha). Muestra solo las
  * tarjetas que el perfil puede abrir (mismas reglas que el menú y el guard: `pantallasCatalogo`
  * + `perfilVePantalla`; las de acceso propio, además, según `acceso`). Lo usan /configuracion,
- * /inventario/panel, /omnicanal, /finanzas, /caja/panel, /gastos-empresariales/panel y /soporte/panel.
+ * /inventario/panel, /omnicanal, /finanzas, /caja/panel, /gastos-empresariales/panel, /soporte/panel
+ * y /comercial.
  *
  *   <PanelModulo kicker="Operaciones" titulo="Inventario" subtitulo="…" tarjetas={TARJETAS}
  *     vacio="No tenés pantallas de inventario habilitadas." />
