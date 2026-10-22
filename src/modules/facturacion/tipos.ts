@@ -55,6 +55,11 @@ export type ConfigFacturacion = {
   dias_vencimiento_default: number;
   interes_moratorio: number;
   gestion_tributaria_clientes: boolean;
+  /** Receta 67: cómo figura el "Cliente ocasional" en la factura (default "X" / "X"). */
+  ocasional_nombre: string;
+  ocasional_ruc: string;
+  /** Tope (Gs.) para facturar a cliente ocasional; null = sin tope. Por encima, solo ticket. */
+  ocasional_tope: number | null;
   updated_at: string | null;
   updated_by_nombre: string | null;
   proximo_numero: string;
@@ -63,6 +68,21 @@ export type ConfigFacturacion = {
   autoimpresor: Autoimpresor;
   puede_editar: boolean;
 };
+
+/**
+ * Receptor "Cliente ocasional (X)" en el Documento Electrónico (SIFEN, Manual Técnico v150):
+ * todavía no se arma el XML; cuando se arme, una venta con `receptor_ocasional` va como
+ * receptor innominado B2C (no se informa el "X" de la factura impresa).
+ */
+export const RECEPTOR_INNOMINADO_SIFEN = {
+  iNatRec: 2, // no contribuyente
+  iTiOpe: 2, // B2C
+  iTiDocRec: 5, // Innominado
+  iTipIDRec: 5,
+  dDTipIDRec: "Innominado",
+  dNumIDRec: "0",
+  dNomRec: "Sin Nombre",
+} as const;
 
 export type AmbienteSifen = "test" | "produccion";
 

@@ -162,6 +162,8 @@ function CajaPageContenido() {
   const [plazoDias, setPlazoDias] = useState("");
   const [tipoDocumento, setTipoDocumento] = useState<"factura" | "ticket">("ticket");
   const [clienteId, setClienteId] = useState("");
+  // Receta 67: "Cliente ocasional (X)" — consumidor final sin datos; sin cliente, solo contado, se puede facturar.
+  const [ocasional, setOcasional] = useState(false);
   const [clienteQuery, setClienteQuery] = useState("");
   const [clienteOpen, setClienteOpen] = useState(false);
   const [modalNuevoCliente, setModalNuevoCliente] = useState(false);
@@ -428,7 +430,26 @@ function CajaPageContenido() {
   // Receta 66: sin RUC no hay factura. RUC = el de Datos para facturación o el documento si es un
   // RUC con dígito verificador (una CI sola no alcanza). Sin cliente o sin RUC → solo ticket.
   const rucFactura = rucParaFactura(clienteSel);
-  const puedeFacturar = !!rucFactura;
+  // Receta 67: cliente ocasional (X): factura sin RUC, salvo que la venta pase el tope configurado.
+  const nombreOcasional = cfgFact?.ocasional_nombre?.trim() || "X";
+  const rucOcasional = cfgFact?.ocasional_ruc?.trim() || "X";
+  const topeOcasional = cfgFact?.ocasional_tope ?? null;
+  const superaTopeOcasional = ocasional && topeOcasional != null && total > topeOcasional;
+  const puedeFacturar = ocasional ? !superaTopeOcasional : !!rucFactura;
+  // Elegir un cliente de verdad saca el "ocasional".
+  useEffect(() => {
+    if (clienteId && ocasional) setOcasional(false);
+  }, [clienteId, ocasional]);
+  function elegirOcasional(facturar = false) {
+    setClienteId("");
+    setClienteQuery("");
+    setClienteOpen(false);
+    setOcasional(true);
+    // El crédito necesita un cliente real: el ocasional es solo al contado.
+    if (tipoVenta === "CREDITO") { setTipoVenta("CONTADO"); setPlazoDias(""); }
+    if (facturar) setTipoDocumento("factura");
+    if (cobroError) setCobroError(null);
+  }
   useEffect(() => {
     if (!puedeFacturar && tipoDocumento === "factura") setTipoDocumento("ticket");
   }, [puedeFacturar, tipoDocumento]);
@@ -447,7 +468,7 @@ function CajaPageContenido() {
     return () => { window.removeEventListener("focus", alVolver); document.removeEventListener("visibilitychange", alVolver); };
   }, [clienteSinRuc, recargarCliente]);
 
-  const clienteObligatorio = tipoDocumento === "factura" || tipoVenta === "CREDITO";
+  const clienteObligatorio = !ocasional && (tipoDocumento === "factura" || tipoVenta === "CREDITO");
   const plazoDiasNum = parseInt(plazoDias) || 0;
 
   // Presupuesto: se liga a la venta solo si en el carrito queda alguna de sus líneas.
@@ -543,7 +564,7 @@ function CajaPageContenido() {
       return;
     }
     // Configuración › Facturación › "Pedir datos del comprador al confirmar venta".
-    if (cfgFact?.preguntar_datos_al_confirmar && !clienteId && !consumidorFinalRef.current) {
+    if (cfgFact?.preguntar_datos_al_confirmar && !clienteId && !ocasional && !consumidorFinalRef.current) {
       setPedirComprador(true);
       return;
     }
@@ -580,7 +601,8 @@ function CajaPageContenido() {
         method: "POST",
         body: JSON.stringify({
           caja_id: caja.id,
-          cliente_id: clienteId || null,
+          cliente_id: ocasional ? null : clienteId || null,
+          cliente_ocasional: ocasional,
           tipo_venta: tipoVenta,
           tipo_documento: tipoDocumento,
           moneda: "GS",
@@ -615,6 +637,7 @@ function CajaPageContenido() {
       vaciarCarrito();
       setClienteId("");
       setClienteQuery("");
+      setOcasional(false);
       setTipoVenta("CONTADO");
       setPlazoDias("");
       enfocarBuscador();
@@ -654,20 +677,21 @@ function CajaPageContenido() {
         <div className="flex gap-2">
           <input
             type="text"
-            value={clienteSel ? clienteSel.nombre : clienteQuery}
-            onChange={(e) => { setClienteId(""); setClienteQuery(e.target.value); setClienteOpen(true); }}
-            onFocus={() => setClienteOpen(true)}
+            value={ocasional ? `Cliente ocasional — ${nombreOcasional}` : clienteSel ? clienteSel.nombre : clienteQuery}
+            onChange={(e) => { if (ocasional) return; setClienteId(""); setClienteQuery(e.target.value); setClienteOpen(true); }}
+            onFocus={() => { if (!ocasional) setClienteOpen(true); }}
+            readOnly={ocasional}
             placeholder="Buscar por nombre o RUC…"
             autoComplete="off"
             enterKeyHint="search"
-            className={`min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 lg:min-h-0 ${clienteSel ? "font-medium" : ""}`}
+            className={`min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 lg:min-h-0 ${clienteSel || ocasional ? "font-medium" : ""} ${ocasional ? "bg-slate-50" : ""}`}
             style={{ ["--tw-ring-color" as string]: TEAL }}
           />
-          {clienteSel && (
-            <button type="button" onClick={() => { setClienteId(""); setClienteQuery(""); }} className="min-h-11 shrink-0 rounded-lg border border-slate-200 px-3 text-xs text-slate-500 hover:bg-slate-50 lg:min-h-0">
+          {clienteSel || ocasional ? (
+            <button type="button" onClick={() => { setClienteId(""); setClienteQuery(""); setOcasional(false); }} className="min-h-11 shrink-0 rounded-lg border border-slate-200 px-3 text-xs text-slate-500 hover:bg-slate-50 lg:min-h-0">
               Quitar
             </button>
-          )}
+          ) : null}
         </div>
         {/* Cliente elegido: RUC (o documento) y teléfono, para confirmar que es el correcto. */}
         {clienteSel ? (
@@ -675,9 +699,19 @@ function CajaPageContenido() {
             <span>CI o RUC <b className="font-mono font-semibold text-slate-700">{rucFactura || clienteSel.documento || "—"}</b></span>
             <span>Tel. <b className="font-semibold text-slate-700">{clienteSel.telefono || "—"}</b></span>
           </p>
+        ) : ocasional ? (
+          <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
+            <span>En la factura: <b className="font-semibold text-slate-700">{nombreOcasional}</b></span>
+            <span>RUC <b className="font-mono font-semibold text-slate-700">{rucOcasional}</b></span>
+            <span>Solo contado</span>
+          </p>
         ) : null}
-        {clienteOpen && !clienteSel && (
+        {clienteOpen && !clienteSel && !ocasional && (
           <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto overscroll-contain rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
+            <button type="button" onClick={() => elegirOcasional()} className="flex min-h-11 w-full flex-col items-start border-b border-slate-100 px-3 py-2 text-left hover:bg-slate-50 lg:min-h-0">
+              <span className="text-sm font-semibold text-slate-800">Cliente ocasional ({nombreOcasional})</span>
+              <span className="text-[11px] text-slate-500">Consumidor final que no da sus datos · se puede facturar · solo contado</span>
+            </button>
             <button type="button" onClick={() => { setClienteOpen(false); setHojaOpciones(false); setModalNuevoCliente(true); }} className="flex min-h-11 w-full items-center gap-1.5 border-b border-slate-100 px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50 lg:min-h-0" style={{ color: TEAL, backgroundColor: `${TEAL}0f` }}>
               <span className="text-base leading-none">＋</span> Cargar nuevo cliente
               {clienteQuery.trim() && <span className="ml-1 truncate text-slate-500">«{clienteQuery.trim()}»</span>}
@@ -699,7 +733,13 @@ function CajaPageContenido() {
       {/* Condición */}
       <div>
         <label className="mb-1.5 block text-sm font-medium text-slate-700">Condición</label>
-        <Segmented value={tipoVenta} onChange={(v) => { setTipoVenta(v); if (v === "CONTADO") setPlazoDias(""); else if (!plazoDias) setPlazoDias(plazoSugerido(clienteSel)); }} options={[{ value: "CONTADO", label: "Contado" }, { value: "CREDITO", label: "Crédito", disabled: !!me && !puedeCredito, title: "Tu perfil no permite vender a crédito" }]} />
+        <Segmented value={tipoVenta} onChange={(v) => { setTipoVenta(v); if (v === "CONTADO") setPlazoDias(""); else if (!plazoDias) setPlazoDias(plazoSugerido(clienteSel)); }} options={[{ value: "CONTADO", label: "Contado" }, {
+          value: "CREDITO", label: "Crédito", disabled: (!!me && !puedeCredito) || ocasional,
+          title: ocasional ? "El cliente ocasional es solo al contado: para vender a crédito elegí un cliente" : "Tu perfil no permite vender a crédito",
+        }]} />
+        {ocasional ? (
+          <p className="mt-1 text-[11px] text-slate-500">Cliente ocasional: solo contado. Para vender a crédito elegí un cliente.</p>
+        ) : null}
         {tipoVenta === "CREDITO" && (
           <div className="mt-2">
             <input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" min={1} value={plazoDias} onChange={(e) => setPlazoDias(e.target.value)} placeholder="Plazo (días)"
@@ -712,11 +752,18 @@ function CajaPageContenido() {
       <div>
         <label className="mb-1.5 block text-sm font-medium text-slate-700">Documento</label>
         <Segmented value={tipoDocumento} onChange={setTipoDocumento} options={[
-          { value: "factura", label: "Factura", disabled: !puedeFacturar, title: clienteSel ? AVISO_SIN_RUC : "Para emitir factura elegí un cliente con RUC" },
+          {
+            value: "factura", label: "Factura", disabled: !puedeFacturar,
+            title: superaTopeOcasional ? "La venta supera el tope para facturar a cliente ocasional" : clienteSel ? AVISO_SIN_RUC : "Para emitir factura elegí un cliente con RUC o Cliente ocasional (X)",
+          },
           { value: "ticket", label: "Solo ticket" },
         ]} />
         {!puedeFacturar ? (
-          clienteSel ? (
+          superaTopeOcasional ? (
+            <p className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
+              La venta supera el tope para facturar a cliente ocasional ({formatGs(topeOcasional ?? 0)}): solo ticket. Para facturar elegí un cliente con RUC.
+            </p>
+          ) : clienteSel ? (
             <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
               <p>{AVISO_SIN_RUC}</p>
               <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
@@ -728,10 +775,24 @@ function CajaPageContenido() {
                   className="inline-flex min-h-11 items-center font-semibold text-amber-900 underline underline-offset-2 lg:min-h-0">
                   Ya lo cargué
                 </button>
+                {tipoVenta === "CONTADO" ? (
+                  <button type="button" onClick={() => elegirOcasional(true)}
+                    className="inline-flex min-h-11 items-center font-semibold text-amber-900 underline underline-offset-2 lg:min-h-0">
+                    Facturar como cliente ocasional ({nombreOcasional})
+                  </button>
+                ) : null}
               </p>
             </div>
           ) : (
-            <p className="mt-1 text-[11px] text-slate-500">Para emitir factura elegí un cliente con RUC. Sin cliente, solo ticket.</p>
+            <div className="mt-1 text-[11px] text-slate-500">
+              <p>Para emitir factura elegí un cliente con RUC. Sin cliente, solo ticket.</p>
+              {tipoVenta === "CONTADO" ? (
+                <button type="button" onClick={() => elegirOcasional(true)}
+                  className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2 lg:min-h-0" style={{ color: TEAL }}>
+                  Facturar como cliente ocasional ({nombreOcasional})
+                </button>
+              ) : null}
+            </div>
           )
         ) : null}
         <p className="mt-1 text-[11px] text-slate-500">
@@ -922,7 +983,7 @@ function CajaPageContenido() {
               </span>
               <span className="min-w-0 flex-1">
                 <span className={`block truncate text-sm font-semibold ${faltaCliente ? "text-rose-700" : "text-slate-900"}`}>
-                  {clienteSel ? clienteSel.nombre : faltaCliente ? "Elegí el cliente *" : "Sin cliente (consumidor final)"}
+                  {clienteSel ? clienteSel.nombre : ocasional ? `Cliente ocasional — ${nombreOcasional}` : faltaCliente ? "Elegí el cliente *" : "Sin cliente (consumidor final)"}
                 </span>
                 <span className="block truncate text-xs text-slate-500">
                   {tipoVenta === "CREDITO" ? `Crédito${plazoDiasNum > 0 ? ` · ${plazoDiasNum} día${plazoDiasNum === 1 ? "" : "s"}` : " · sin plazo"}` : "Contado"} · {tipoDocumento === "factura" ? "Factura" : "Solo ticket"}
@@ -1190,6 +1251,11 @@ function CajaPageContenido() {
               <button type="button" onClick={() => elegirCompradorAhora(true)} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
                 <UserRoundPlus className="h-4 w-4" /> Cargar nuevo cliente
               </button>
+              {tipoVenta === "CONTADO" ? (
+                <button type="button" onClick={() => { elegirOcasional(); setPedirComprador(false); setCobroOpen(true); }} className="inline-flex min-h-11 items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
+                  Cliente ocasional ({nombreOcasional})
+                </button>
+              ) : null}
               <button type="button" onClick={() => { consumidorFinalRef.current = true; setPedirComprador(false); setCobroOpen(true); }} className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-slate-500 transition hover:bg-slate-50 hover:text-slate-800">
                 Seguir como consumidor final
               </button>

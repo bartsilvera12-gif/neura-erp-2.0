@@ -16,7 +16,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  AlertTriangle, ClipboardList, Hash, Landmark, Loader2, Percent, Printer, ReceiptText, Sparkles, Stamp, Users,
+  AlertTriangle, ClipboardList, Hash, Landmark, Loader2, Percent, Printer, ReceiptText, Sparkles, Stamp, UserRound, Users,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
@@ -34,12 +34,19 @@ import {
 const URL = "/api/configuracion/facturacion";
 const TEAL = clienteConfig.color;
 
-type FormNum = { prefijo_factura: string; numeracion_inicial: string; dias_vencimiento_default: string; interes_moratorio: string };
+type FormNum = {
+  prefijo_factura: string; numeracion_inicial: string; dias_vencimiento_default: string; interes_moratorio: string;
+  // Receta 67: cliente ocasional (X)
+  ocasional_nombre: string; ocasional_ruc: string; ocasional_tope: string;
+};
 const deConfig = (c: ConfigFacturacion): FormNum => ({
   prefijo_factura: c.prefijo_factura,
   numeracion_inicial: String(c.numeracion_inicial),
   dias_vencimiento_default: String(c.dias_vencimiento_default),
   interes_moratorio: String(c.interes_moratorio).replace(".", ","),
+  ocasional_nombre: c.ocasional_nombre ?? "X",
+  ocasional_ruc: c.ocasional_ruc ?? "X",
+  ocasional_tope: c.ocasional_tope != null ? Number(c.ocasional_tope).toLocaleString("es-PY") : "",
 });
 const aNumero = (s: string) => Number(s.replace(/\./g, "").replace(",", "."));
 const pct = (n: number) => n.toLocaleString("es-PY", { maximumFractionDigits: 2 });
@@ -57,7 +64,10 @@ export default function FacturacionPage() {
   const [errTrib, setErrTrib] = useState<string | null>(null);
 
   // Formulario de numeración y condiciones
-  const [f, setF] = useState<FormNum>({ prefijo_factura: "", numeracion_inicial: "1", dias_vencimiento_default: "30", interes_moratorio: "0" });
+  const [f, setF] = useState<FormNum>({
+    prefijo_factura: "", numeracion_inicial: "1", dias_vencimiento_default: "30", interes_moratorio: "0",
+    ocasional_nombre: "X", ocasional_ruc: "X", ocasional_tope: "",
+  });
   const [guardando, setGuardando] = useState(false);
   const [errGuardar, setErrGuardar] = useState<string | null>(null);
   const [okGuardar, setOkGuardar] = useState<string | null>(null);
@@ -119,12 +129,17 @@ export default function FacturacionPage() {
   const nIni = aNumero(f.numeracion_inicial);
   const dias = aNumero(f.dias_vencimiento_default);
   const interes = aNumero(f.interes_moratorio);
+  const topeTxt = f.ocasional_tope.replace(/\D/g, "");
+  const tope = topeTxt ? Number(topeTxt) : null;
   const bloqueo =
     !prefijo ? "Escribí el prefijo de factura."
     : !/^[A-Z0-9][A-Z0-9/_.-]{0,11}$/.test(prefijo) ? "Prefijo: hasta 12 letras o números y - / _ ."
     : !Number.isInteger(nIni) || nIni < 1 ? "La numeración inicial es un entero desde 1."
     : !Number.isInteger(dias) || dias < 0 || dias > 365 ? "Los días de vencimiento van de 0 a 365."
     : !Number.isFinite(interes) || interes < 0 || interes > 100 ? "El interés moratorio va de 0 a 100 %."
+    : f.ocasional_nombre.trim().length > 160 ? "El nombre del cliente ocasional: hasta 160 caracteres."
+    : f.ocasional_ruc.replace(/\s+/g, "").length > 20 ? "El RUC del cliente ocasional: hasta 20 caracteres."
+    : tope !== null && tope <= 0 ? "El tope para cliente ocasional tiene que ser mayor a 0 (o vacío: sin tope)."
     : null;
 
   async function guardar() {
@@ -133,7 +148,10 @@ export default function FacturacionPage() {
     try {
       const d = await apiFetch<ConfigFacturacion>(URL, {
         method: "PUT",
-        body: JSON.stringify({ prefijo_factura: prefijo, numeracion_inicial: nIni, dias_vencimiento_default: dias, interes_moratorio: interes }),
+        body: JSON.stringify({
+          prefijo_factura: prefijo, numeracion_inicial: nIni, dias_vencimiento_default: dias, interes_moratorio: interes,
+          ocasional_nombre: f.ocasional_nombre.trim() || "X", ocasional_ruc: f.ocasional_ruc.replace(/\s+/g, "").toUpperCase() || "X", ocasional_tope: tope,
+        }),
       });
       setCfg(d);
       setF(deConfig(d));
@@ -364,6 +382,32 @@ export default function FacturacionPage() {
             </div>
           </Campo>
         </div>
+      </Tarjeta>
+
+      {/* ── Cliente ocasional (receta 67) ─────────────────────────────────── */}
+      <Tarjeta
+        icono={<UserRound className="h-4 w-4" />}
+        titulo="Cliente ocasional"
+        detalle="Para consumidores finales que no dan sus datos. En la factura electrónica (SIFEN) se informa como receptor innominado."
+      >
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <Campo etiqueta="Nombre en la factura" ayuda='Cómo figura el cliente en la factura impresa y el ticket (por defecto "X").'>
+            <input value={f.ocasional_nombre} onChange={(e) => set("ocasional_nombre", e.target.value)} maxLength={160} placeholder="X"
+              disabled={soloLectura} className={INPUT} autoComplete="off" />
+          </Campo>
+          <Campo etiqueta="RUC en la factura" ayuda='Por defecto "X".'>
+            <input value={f.ocasional_ruc} onChange={(e) => set("ocasional_ruc", e.target.value.toUpperCase())} maxLength={20} placeholder="X"
+              disabled={soloLectura} className={`${INPUT} font-mono uppercase`} autoComplete="off" />
+          </Campo>
+          <Campo etiqueta="Tope para cliente ocasional (Gs.)" ayuda="Opcional. Una venta por encima del tope no se puede facturar a cliente ocasional (ticket sí). Vacío: sin tope.">
+            <input value={f.ocasional_tope} inputMode="numeric" placeholder="Sin tope"
+              onChange={(e) => { const d = e.target.value.replace(/\D/g, "").slice(0, 12); set("ocasional_tope", d ? Number(d).toLocaleString("es-PY") : ""); }}
+              disabled={soloLectura} className={`${INPUT} tabular-nums`} autoComplete="off" />
+          </Campo>
+        </div>
+        <p className="mt-2 text-[11px] leading-snug text-slate-400">
+          En la caja: «Cliente ocasional ({cfg.ocasional_nombre || "X"})» en el buscador de cliente. Solo al contado: el crédito necesita un cliente.
+        </p>
       </Tarjeta>
 
       {/* ── Resumen actual ───────────────────────────────────────────────── */}

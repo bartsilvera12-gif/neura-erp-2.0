@@ -54,7 +54,7 @@ export const GET = withTenant(async (ctx, req) => {
     .select(
       "ventas",
       "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, metodo_pago, cliente_id, usuario_nombre, " +
-        "tipo_documento, receptor_nombre, receptor_ruc, " +
+        "tipo_documento, receptor_nombre, receptor_ruc, receptor_ocasional, " +
         "ventas_items(producto_nombre, sku, cantidad, precio_venta, tipo_iva, monto_iva, total_linea), " +
         "pagos:ventas_pagos_detalle(metodo_pago, monto, referencia, recibido, vuelto, created_at), " +
         "punto:puntos_venta(nombre), sucursal:sucursales(nombre), " +
@@ -69,9 +69,11 @@ export const GET = withTenant(async (ctx, req) => {
   // Receptor (receta 66): lo guardado en la venta (razón social → nombre; RUC → documento con
   // formato de RUC). Ventas viejas sin snapshot: la misma regla sobre el cliente actual.
   const cli = v.cliente as { nombre?: string | null; razon_social?: string | null; ruc?: string | null; documento?: string | null } | null;
-  const clienteNombre = (v.receptor_nombre as string | null) || (cli ? nombreParaFactura(cli) : "") || "Consumidor final";
-  const clienteRuc = (v.receptor_ruc as string | null) || rucParaFactura(cli);
-  const clienteDoc = clienteRuc ? `RUC ${clienteRuc}` : cli?.documento ? `CI ${cli.documento}` : "";
+  // Receta 67: cliente ocasional → lo guardado en la venta ("X" / "X" o lo configurado).
+  const ocasional = v.receptor_ocasional === true;
+  const clienteNombre = (v.receptor_nombre as string | null) || (cli ? nombreParaFactura(cli) : "") || (ocasional ? "X" : "Consumidor final");
+  const clienteRuc = (v.receptor_ruc as string | null) || (ocasional ? "X" : rucParaFactura(cli));
+  const clienteDoc = clienteRuc ? `RUC: ${clienteRuc}` : cli?.documento ? `CI: ${cli.documento}` : "";
 
   const fecha = v.fecha ? new Date(v.fecha as string).toLocaleString("es-PY", { timeZone: TZ_PY, dateStyle: "short", timeStyle: "short" }) : "";
   const metodo = v.tipo_venta === "CREDITO" ? `Crédito${v.plazo_dias ? ` (${v.plazo_dias} días)` : ""}` : metodoLabel(String(v.metodo_pago ?? "efectivo"));

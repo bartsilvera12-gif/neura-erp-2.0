@@ -23,6 +23,9 @@ const ventaSchema = z.object({
   tipo_venta: z.enum(["CONTADO", "CREDITO"]).default("CONTADO"),
   // Receta 66: "factura" solo con cliente con RUC (la base lo rechaza si no); "ticket" siempre.
   tipo_documento: z.enum(["factura", "ticket"]).default("ticket"),
+  // Receta 67: "Cliente ocasional (X)" — sin cliente, solo contado; se puede facturar (receptor X/X
+  // o lo configurado; por encima del tope configurado, solo ticket). La base lo vuelve a validar.
+  cliente_ocasional: z.boolean().default(false),
   metodo_pago: z.string().trim().max(30).nullish(),
   moneda: z.enum(["GS", "USD"]).default("GS"),
   observaciones: z.string().trim().max(500).nullish(),
@@ -75,6 +78,10 @@ export const POST = withTenant(
     // Perfil: a crédito y con descuento hacen falta sus permisos (la base los vuelve a exigir,
     // con el tope % del perfil, también para el precio manual de cada línea).
     if (input.tipo_venta === "CREDITO" && !ctx.puede("vender_credito")) return ERR.sinPermiso("vender_credito");
+    if (input.cliente_ocasional && input.cliente_id) return fail('Elegí un cliente o "Cliente ocasional (X)", no los dos.', 400);
+    if (input.cliente_ocasional && input.tipo_venta === "CREDITO") {
+      return fail('La venta a crédito necesita un cliente: el "Cliente ocasional (X)" es solo al contado.', 400);
+    }
     if ((input.descuento_pct ?? 0) > 0 && !ctx.puede("descuentos_precio")) return ERR.sinPermiso("descuentos_precio");
 
     // Presupuesto: se valida ANTES de cobrar (ya convertido o rechazado → no se cobra).
@@ -104,6 +111,7 @@ export const POST = withTenant(
       p_deposito_id: null,
       p_caja_id: input.caja_id ?? null,
       p_tipo_documento: input.tipo_documento,
+      p_cliente_ocasional: input.cliente_ocasional,
     });
 
     if (error) {

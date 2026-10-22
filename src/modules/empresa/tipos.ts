@@ -123,6 +123,10 @@ export function nombreParaFactura(c: { razon_social?: string | null; nombre?: st
 /** Aviso que ve el usuario cuando el cliente no tiene RUC. */
 export const AVISO_SIN_RUC = "Este cliente no tiene RUC: solo se puede emitir ticket. Cargá su RUC en Datos para facturación.";
 
+// ── Cliente ocasional (receta 67) ────────────────────────────────────────────
+/** Consumidor final que no da sus datos: se le factura como "X" (o lo de Configuración › Facturación). */
+export const etiquetaOcasional = (nombre?: string | null) => `Cliente ocasional (${(nombre ?? "").trim() || "X"})`;
+
 // ── Logo ─────────────────────────────────────────────────────────────────────
 /** Logo de la instalación (lo pone Neura): el que se usa si la empresa no cargó uno. */
 export const LOGO_INSTALACION = "/brand/logo-doc.png";

@@ -4,7 +4,7 @@
  *       la lee para el tipo de impresión, "pedir datos del comprador" y el plazo por defecto).
  *   PUT /api/configuracion/facturacion { modo?, impresion_tipo_default?, preguntar_datos_al_confirmar?,
  *       prefijo_factura?, numeracion_inicial?, dias_vencimiento_default?, interes_moratorio?,
- *       gestion_tributaria_clientes? } → config_facturacion(). Solo ADMIN con "Configuración del
+ *       gestion_tributaria_clientes?, ocasional_nombre?, ocasional_ruc?, ocasional_tope? } → config_facturacion(). Solo ADMIN con "Configuración del
  *       sistema". La única vía de escritura es guardar_config_facturacion (SECURITY DEFINER),
  *       que vuelve a validar todo.
  */
@@ -30,6 +30,10 @@ const esquema = z
     numeracion_inicial: z.coerce.number().int("La numeración inicial debe ser un número entero").min(1, "La numeración inicial debe ser desde 1").max(999999999),
     dias_vencimiento_default: z.coerce.number().int("Los días de vencimiento deben ser un número entero").min(0).max(365, "Máximo 365 días"),
     interes_moratorio: z.coerce.number().min(0, "El interés no puede ser negativo").max(100, "Máximo 100 % mensual"),
+    // Receta 67: cliente ocasional (X). Vacío = "X"; tope null = sin tope.
+    ocasional_nombre: z.string().trim().max(160, "El nombre del cliente ocasional no puede pasar de 160 caracteres"),
+    ocasional_ruc: z.string().transform((v) => v.replace(/\s+/g, "").toUpperCase()).refine((v) => v.length <= 20, "El RUC del cliente ocasional no puede pasar de 20 caracteres"),
+    ocasional_tope: z.coerce.number().int("El tope es un monto en guaraníes sin decimales").positive("El tope tiene que ser mayor a 0 (o vacío: sin tope)").max(999999999999).nullable(),
   })
   .partial()
   .refine((o) => Object.keys(o).length > 0, "No se envió ningún cambio");
