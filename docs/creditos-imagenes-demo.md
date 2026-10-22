@@ -144,7 +144,7 @@ Fotos de fondo de las tarjetas de `/reportes` (componente `TarjetaImagen`, misma
 |---|---|---|---|---|
 | Reportes › Estado de cuenta | `public/reportes/estado-cuenta-informes-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Cuentas por cobrar | `public/reportes/cuentas-cobrar-deudas-laptop-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
-| Reportes › Cuentas por pagar | `public/reportes/cuentas-pagar-factura-firma.webp` | cybrgrl | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución | [Flickr: Invoices](https://www.flickr.com/photos/84387590@N00/2693815369) |
+| Reportes › Cuentas por pagar | `public/reportes/cuentas-pagar-facturas-calculadora-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Proveedores | `public/reportes/proveedores-camion-reparto.webp` | Andrew Kambel | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Delivery truck at sunrise (Unsplash).jpg](https://commons.wikimedia.org/wiki/File:Delivery_truck_at_sunrise_(Unsplash).jpg) |
 | Reportes › Cierre de caja por día | `public/reportes/cierre-caja-cajon-abierto.webp` | Sprinno | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | [File:Cash register.jpeg](https://commons.wikimedia.org/wiki/File:Cash_register.jpeg) |
 | Reportes › Ventas por mes | `public/reportes/ventas-mes-grafico-calendario.webp` | Semtrio (https://www.semtrio.com/) | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución ("Credit to semtrio.com") | [Flickr: Business plan](https://www.flickr.com/photos/163837264@N07/43291332124) |
