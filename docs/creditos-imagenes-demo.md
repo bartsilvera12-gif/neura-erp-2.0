@@ -152,7 +152,7 @@ Fotos de fondo de las tarjetas de `/reportes` (componente `TarjetaImagen`, misma
 | Reportes › Formas de pago | `public/reportes/formas-pago-posnet-tarjeta-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Productos vendidos | `public/reportes/productos-vendidos-graficos-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Pérdidas de producto | `public/reportes/perdidas-caja-danada.webp` | Glory Cycles | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) — pide atribución | [Flickr: 525 Damaged in Shipping](https://www.flickr.com/photos/29558127@N06/15206873741) |
-| Reportes › Stock mínimo | `public/reportes/stock-minimo-estante-vacio.webp` | GhostInTheMachine | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) — pide atribución (y compartir igual si se modifica) | [File:Pasta shelf is empty.jpg](https://commons.wikimedia.org/wiki/File:Pasta_shelf_is_empty.jpg) |
+| Reportes › Stock mínimo | `public/reportes/stock-minimo-estanterias-vacias-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 
 Notas:
 - Cuentas por cobrar: una mano entrega billetes (dólares) a otra; no se ven caras.
