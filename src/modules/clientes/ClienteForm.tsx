@@ -4,7 +4,7 @@
  * Modal para crear o editar un cliente (mismo diseño que el del sistema actual: franja de
  * color, encabezado grande y bloques en tarjetas sobre fondo gris). Bloques: Datos (persona o empresa,
  * nombre, razón social, RUC o CI, categoría), Contacto (persona de contacto si es empresa)
- * y Condiciones (contado / crédito con plazo y límite). Solo el nombre es obligatorio. El
+ * y Condiciones (contado / crédito con plazo y límite). Obligatorios: nombre y RUC o CI (de ahí salen los datos para facturar). El
  * RUC o CI no se puede repetir. El resto de la ficha se completa en la pestaña Información.
  */
 import { useEffect, useState } from "react";
@@ -61,6 +61,8 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
     if (!f.nombre.trim()) return;
+    // El RUC o CI es obligatorio: de ahí salen los datos para facturar.
+    if (!f.documento.trim()) { setError(empresa ? "Cargá el RUC de la empresa: se usa para facturar." : "Cargá el RUC o la CI del cliente: se usa para facturar."); return; }
     setBusy(true);
     setError(null);
     try {
@@ -117,7 +119,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
               {editando ? cliente!.nombre : "Crear cliente"}
             </h2>
             <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">
-              {editando ? "Actualizá los datos principales. El resto del perfil está en la pestaña Información." : "Registrá un cliente. Solo el nombre es obligatorio; el resto del perfil lo podés completar después."}
+              {editando ? "Actualizá los datos principales. El resto del perfil está en la pestaña Información." : "Registrá un cliente. El nombre y el RUC o CI son obligatorios; el resto del perfil lo podés completar después."}
             </p>
           </div>
           <button type="button" onClick={onClose} aria-label="Cerrar"
@@ -135,7 +137,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
             <input autoFocus value={f.nombre} onChange={(e) => set("nombre", e.target.value)} maxLength={200} placeholder={empresa ? "Ej: Kiosco El Sol" : "Ej: María González"} className={INPUT} />
           </label>
             <label className="block">
-              <span className={ET}>{empresa ? "RUC" : "RUC o CI"} {OPC}</span>
+              <span className={ET}>{empresa ? "RUC *" : "RUC o CI *"}</span>
               <input value={f.documento} onChange={(e) => set("documento", e.target.value)} maxLength={30} placeholder={empresa ? "Ej: 80011222-7" : "Ej: 3456789 o 3456789-0"} className={`${INPUT} font-mono`} />
             </label>
           </div>
@@ -211,7 +213,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
 
         <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-white px-4 py-3 sm:px-6 sm:py-4 max-sm:[&>button]:flex-1 max-sm:[&>button]:justify-center">
           <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2]">Cancelar</button>
-          <button type="submit" form="cli-form" disabled={busy || !f.nombre.trim()} className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none" style={busy || !f.nombre.trim() ? undefined : { backgroundColor: BRAND }}>
+          <button type="submit" form="cli-form" disabled={busy || !f.nombre.trim() || !f.documento.trim()} className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none" style={busy || !f.nombre.trim() || !f.documento.trim() ? undefined : { backgroundColor: BRAND }}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {busy ? "Guardando…" : editando ? "Guardar cambios" : "Guardar cliente"}
           </button>
