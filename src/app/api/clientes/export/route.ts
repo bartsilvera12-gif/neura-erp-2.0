@@ -26,7 +26,7 @@ export const GET = withTenant(async (ctx, req) => {
     p_q: sp.get("q")?.trim().slice(0, 200) || null,
     p_tipo: tipo === "empresa" || tipo === "persona" ? tipo : null,
     p_condicion: condicion === "CONTADO" || condicion === "CREDITO" ? condicion : null,
-    p_deuda: deuda === "con_deuda" || deuda === "vencidos" ? deuda : null,
+    p_deuda: deuda === "con_deuda" || deuda === "vencidos" || deuda === "sin_deuda" ? deuda : null,
     p_estado: estado === "inactivos" || estado === "baja" || estado === "todos" ? estado : sp.get("inactivos") === "1" ? "todos" : "activos",
     p_origen: origen === "MANUAL" || origen === "VENTA" || origen === "CRM" ? origen : null,
     p_categoria: categoria && /^[0-9a-f-]{36}$/i.test(categoria) ? categoria : null,

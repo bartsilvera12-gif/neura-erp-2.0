@@ -6,7 +6,9 @@
  * CL-…, RUC/CI con o sin puntos, contacto, teléfono, email, ciudad) y filtros por estado
  * (activos por defecto / inactivos / de baja / todos), tipo, origen, categoría y deuda.
  * Contador "N de M clientes · activos · empresas" y columnas configurables (se recuerdan
- * en este navegador). Tocar una fila abre la ficha del cliente. La columna "Suscripción activa"
+ * en este navegador). Tocar una fila abre los datos del cliente (modal de solo lectura con Editar y
+ * Dar de baja / Reactivar; la ficha completa sigue en /clientes/<id>). Con "Todos los estados" los
+ * activos van primero (lo ordena listar_clientes) y los inactivos se ven atenuados. La columna "Suscripción activa"
  * muestra el/los plan(es) activo(s) de cada cliente.
  */
 import Link from "next/link";
@@ -19,7 +21,7 @@ import { Select } from "@/components/Select";
 import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla, type RolMovil } from "@/components/TablaResponsive";
 import { ClienteForm } from "@/modules/clientes/ClienteForm";
-import { FichaClienteModal } from "@/modules/clientes/ficha/FichaClienteModal";
+import { ClienteDatosModal } from "@/modules/clientes/ClienteDatosModal";
 import { urlFicha } from "@/modules/clientes/ficha/url";
 import type { Categoria } from "@/modules/clientes/esquema";
 import {
@@ -125,6 +127,8 @@ const COLUMNAS: Col[] = [
 ];
 
 const claveCliente = (c: Fila) => c.id;
+// Inactivos / de baja: fila atenuada (el chip de Estado dice cuál es).
+const claseCliente = (c: Fila) => (c.activo && !c.baja_at ? "" : "bg-slate-50/70 opacity-60 hover:opacity-100");
 
 function normalizarCols(raw: unknown): ColKey[] {
   const validas = new Set(COLUMNAS.map((c) => c.key));
@@ -183,7 +187,6 @@ export default function ClientesPage() {
   const [nuevo, setNuevo] = useState(false);
   const [ficha, setFicha] = useState<string | null>(null);
   const [recarga, setRecarga] = useState(0);
-  const cambioEnFicha = useRef(false);
   const [exportando, setExportando] = useState(false);
   const [bajaOk, setBajaOk] = useState(false);
   const [colsOpen, setColsOpen] = useState(false);
@@ -239,28 +242,27 @@ export default function ClientesPage() {
     return () => { document.removeEventListener("mousedown", fuera); document.removeEventListener("keydown", esc); };
   }, [colsOpen]);
 
-  // La ficha se abre en un modal sobre la lista (como el sistema actual); ?cliente=<id> la reabre.
+  // Los datos del cliente se abren en un modal sobre la lista; ?cliente=<id> lo reabre.
   useEffect(() => {
     const id = new URLSearchParams(window.location.search).get("cliente");
     if (id) setFicha(id);
   }, []);
   // Estables (useCallback) para que las filas memorizadas no se re-rendericen.
   const abrirFicha = useCallback((id: string) => {
-    cambioEnFicha.current = false;
     setFicha(id);
     window.history.replaceState({}, "", `/clientes?cliente=${encodeURIComponent(id)}`);
   }, []);
-  // Cerrar sin cambios no toca la lista (ni re-pide nada). Si se guardó algo en la ficha,
-  // se descartan las páginas guardadas y se recarga la actual.
+  // Cerrar no toca la lista (ni re-pide nada).
   function cerrarFicha() {
     setFicha(null);
     window.history.replaceState({}, "", "/clientes");
-    if (cambioEnFicha.current) {
-      cambioEnFicha.current = false;
-      invalidar("/api/clientes");
-      setRecarga((k) => k + 1);
-    }
   }
+  // Se editó / dio de baja / reactivó desde el modal: se descartan las páginas guardadas y
+  // se recarga la actual en el momento (atrás del modal).
+  const cambioEnDatos = useCallback(() => {
+    invalidar("/api/clientes");
+    setRecarga((k) => k + 1);
+  }, []);
 
   // Prefetch de la ficha: con el mouse ~150 ms sobre la fila (o al apretar) se pide en
   // segundo plano, así el modal abre con los datos ya en memoria.
@@ -393,7 +395,8 @@ export default function ClientesPage() {
         <Select value={origen} onChange={fil(setOrigen)} minWidth={150} etiqueta="Origen" options={[["", "Todos los orígenes"], ["CRM", "CRM"], ["VENTA", "Venta"], ["MANUAL", "Manual"]]} />
         <Select value={categoria} onChange={fil(setCategoria)} minWidth={160} etiqueta="Categoría"
           options={[["", "Todas las categorías"], ...categorias.map((c) => [c.id, c.nombre] as [string, string])]} />
-        <Select value={deuda} onChange={fil(setDeuda)} minWidth={150} etiqueta="Deuda" options={[["", "Con y sin deuda"], ["con_deuda", "Con deuda"], ["vencidos", "Con deuda vencida"]]} />
+        <Select value={deuda} onChange={fil(setDeuda)} minWidth={200} etiqueta="Deuda"
+          options={[["", "Con y sin deuda"], ["con_deuda", "Con deuda"], ["vencidos", "Con deuda vencida"], ["sin_deuda", "Sin deuda"]]} />
       </BarraFiltros>
 
       {/* Contador + columnas */}
@@ -490,6 +493,7 @@ export default function ClientesPage() {
             filas={rows}
             columnas={columnas}
             claveFila={claveCliente}
+            claseFila={claseCliente}
             onFila={abrirFila}
             onIntencion={intencionFila}
             onSinIntencion={onSinIntencion}
@@ -511,7 +515,7 @@ export default function ClientesPage() {
       </div>
 
       {nuevo ? <ClienteForm onClose={() => setNuevo(false)} onSaved={(id) => { setNuevo(false); setRecarga((k) => k + 1); if (id) abrirFicha(id); }} /> : null}
-      {ficha ? <FichaClienteModal id={ficha} onCerrar={cerrarFicha} onCambio={() => { cambioEnFicha.current = true; }} /> : null}
+      {ficha ? <ClienteDatosModal id={ficha} onCerrar={cerrarFicha} onCambio={cambioEnDatos} /> : null}
     </div>
   );
 }

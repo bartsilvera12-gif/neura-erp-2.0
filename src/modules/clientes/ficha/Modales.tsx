@@ -10,10 +10,19 @@ import { apiFetch } from "@/lib/api/client-fetch";
 import { Modal } from "@/components/Modal";
 import { PIE_MODAL, gs } from "@/modules/clientes/ui";
 
-export function PanelBaja({ clienteId, onCancel, onHecho }: { clienteId: string; onCancel: () => void; onHecho: () => void }) {
-  const [motivo, setMotivo] = useState("");
+/** Texto de la baja: deja claro que NO se borra nada. */
+const TEXTO_BAJA = "El cliente pasa a inactivo. No se borra nada: se conserva su historial (ventas, cobros y deuda) y lo podés reactivar cuando quieras.";
+
+/**
+ * Lógica de la baja (la comparten el panel de la ficha y el modal de la lista): motivo
+ * obligatorio y POST /api/clientes/[id]/baja (activo=false + baja_at/baja_por/baja_motivo).
+ * Nunca llama al DELETE (eliminar).
+ */
+function useBaja(clienteId: string, onHecho: () => void) {
+  const [motivo, setMotivoBase] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const setMotivo = (v: string) => { setMotivoBase(v); setError(null); };
 
   async function confirmar() {
     if (motivo.trim().length < 3) { setError("El motivo es obligatorio"); return; }
@@ -27,16 +36,48 @@ export function PanelBaja({ clienteId, onCancel, onHecho }: { clienteId: string;
       setBusy(false);
     }
   }
+  return { motivo, setMotivo, busy, error, confirmar };
+}
+
+/** Confirmación de baja como modal (capa encima de otro modal; Escape cierra solo esta). */
+export function ModalBaja({ clienteId, nombre, onCancel, onHecho }: { clienteId: string; nombre: string; onCancel: () => void; onHecho: () => void }) {
+  const { motivo, setMotivo, busy, error, confirmar } = useBaja(clienteId, onHecho);
+  return (
+    <Modal titulo={`Dar de baja a ${nombre}`} onClose={busy ? () => {} : onCancel}>
+      <div className="space-y-4">
+        <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">{TEXTO_BAJA}</p>
+        <div>
+          <label htmlFor="baja-motivo-modal" className="mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500">Motivo *</label>
+          <textarea id="baja-motivo-modal" autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={3} maxLength={500}
+            placeholder="Ej: dejó de comprar, cerró el negocio, pidió la baja…"
+            className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm outline-none placeholder:text-slate-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" />
+          {error ? <p className="mt-1 text-xs text-rose-600">{error}</p> : null}
+        </div>
+        <div className={PIE_MODAL}>
+          <button type="button" onClick={onCancel} disabled={busy}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50">
+            Cancelar
+          </button>
+          <button type="button" onClick={confirmar} disabled={busy || motivo.trim().length < 3}
+            className="inline-flex items-center gap-2 rounded-xl bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-amber-700 disabled:opacity-50">
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {busy ? "Procesando…" : "Confirmar baja"}
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+export function PanelBaja({ clienteId, onCancel, onHecho }: { clienteId: string; onCancel: () => void; onHecho: () => void }) {
+  const { motivo, setMotivo, busy, error, confirmar } = useBaja(clienteId, onHecho);
 
   return (
     <div className="space-y-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-      <p className="text-sm font-medium text-amber-800">
-        Dar de baja: el cliente pasa a inactivo y deja de aparecer en la lista de activos. Se conserva con todo su historial
-        (ventas, cobros y deuda) y se puede reactivar cuando quieras.
-      </p>
+      <p className="text-sm font-medium text-amber-800">Dar de baja: {TEXTO_BAJA}</p>
       <div>
         <label htmlFor="baja-motivo" className="mb-1 block text-xs font-medium text-amber-800">Motivo obligatorio</label>
-        <textarea id="baja-motivo" autoFocus value={motivo} onChange={(e) => { setMotivo(e.target.value); setError(null); }} rows={2} maxLength={500}
+        <textarea id="baja-motivo" autoFocus value={motivo} onChange={(e) => setMotivo(e.target.value)} rows={2} maxLength={500}
           placeholder="Ej: dejó de comprar, cerró el negocio, pidió la baja…"
           className="min-h-[60px] w-full rounded-lg border border-amber-200 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-amber-400" />
         {error ? <p className="mt-1 text-xs text-rose-600">{error}</p> : null}

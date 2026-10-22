@@ -6,6 +6,7 @@
  * nombre, razón social, RUC o CI, categoría), Contacto (persona de contacto si es empresa)
  * y Condiciones (contado / crédito con plazo y límite). Obligatorios: nombre, RUC o CI (de ahí salen los datos para facturar) y teléfono. El
  * RUC o CI no se puede repetir. El resto de la ficha se completa en la pestaña Información.
+ * MarcoCliente / Bloque / ET los usa también la vista de solo lectura (ClienteDatosModal).
  */
 import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
@@ -19,7 +20,7 @@ import type { Cliente } from "@/modules/caja/lib";
 
 const BRAND = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]";
-const ET = "mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500";
+export const ET = "mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500";
 const OPC = <span className="font-normal text-slate-400">(opcional)</span>;
 
 export type ClienteFicha = Cliente & {
@@ -101,35 +102,22 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
   }
 
   return (
-    <CapaModal onClose={onClose} fondo="bg-slate-900/55 backdrop-blur-sm">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="cli-form-titulo"
-        className={`relative flex w-full max-w-4xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15`}
-        style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
-      >
-        <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2">
-              <span aria-hidden="true" className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4FAEB2]">{editando ? "Editar" : "Nuevo"}</p>
-            </div>
-            <h2 id="cli-form-titulo" className="mt-1 truncate text-xl font-semibold sm:text-2xl tracking-tight text-slate-900">
-              {editando ? cliente!.nombre : "Crear cliente"}
-            </h2>
-            <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">
-              {editando ? "Actualizá los datos principales. El resto del perfil está en la pestaña Información." : "Registrá un cliente. El nombre, el RUC o CI y el teléfono son obligatorios; el resto lo podés completar después."}
-            </p>
-          </div>
-          <button type="button" onClick={onClose} aria-label="Cerrar"
-            className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2]">
-            <X className="h-4 w-4" />
+    <MarcoCliente
+      onClose={onClose}
+      kicker={editando ? "Editar" : "Nuevo"}
+      titulo={editando ? cliente!.nombre : "Crear cliente"}
+      subtitulo={editando ? "Actualizá los datos del cliente y guardá los cambios." : "Registrá un cliente. El nombre, el RUC o CI y el teléfono son obligatorios; el resto lo podés completar después."}
+      pie={
+        <>
+          <button type="button" onClick={onClose} className={BTN_SECUNDARIO}>Cancelar</button>
+          <button type="submit" form="cli-form" disabled={busy || !f.nombre.trim() || !f.documento.trim() || !f.telefono.trim()} className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none" style={busy || !f.nombre.trim() || !f.documento.trim() || !f.telefono.trim() ? undefined : { backgroundColor: BRAND }}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+            {busy ? "Guardando…" : editando ? "Guardar cambios" : "Guardar cliente"}
           </button>
-        </div>
-
-      <form id="cli-form" onSubmit={guardar} className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-slate-50/50 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-5">
+        </>
+      }
+    >
+      <form id="cli-form" onSubmit={guardar} className={CUERPO}>
         <Bloque titulo="Datos">
           <Segmentado valor={f.tipo_cliente} onChange={(v) => set("tipo_cliente", v as "persona" | "empresa")} opciones={[["persona", "Persona"], ["empresa", "Empresa"]]} />
           <div className="grid gap-4 sm:grid-cols-2">
@@ -211,20 +199,60 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
 
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
       </form>
+    </MarcoCliente>
+  );
+}
 
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-white px-4 py-3 sm:px-6 sm:py-4 max-sm:[&>button]:flex-1 max-sm:[&>button]:justify-center">
-          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2]">Cancelar</button>
-          <button type="submit" form="cli-form" disabled={busy || !f.nombre.trim() || !f.documento.trim() || !f.telefono.trim()} className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none" style={busy || !f.nombre.trim() || !f.documento.trim() || !f.telefono.trim() ? undefined : { backgroundColor: BRAND }}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-            {busy ? "Guardando…" : editando ? "Guardar cambios" : "Guardar cliente"}
+/** Cuerpo scrolleable del marco (fondo gris con los bloques en tarjetas). */
+export const CUERPO = "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-slate-50/50 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-5";
+export const BTN_SECUNDARIO = "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50";
+
+/**
+ * Marco del modal de cliente (lo comparten el formulario y la vista de datos): panel con
+ * franja de color, encabezado grande (rótulo, nombre, bajada y ✕), el cuerpo (children, que
+ * debe usar CUERPO) y el pie fijo con las acciones. En celular, CapaModal lo pasa a hoja.
+ */
+export function MarcoCliente({ onClose, kicker, titulo, subtitulo, extra, pie, children }: {
+  onClose?: () => void; kicker: string; titulo: string; subtitulo?: React.ReactNode; extra?: React.ReactNode;
+  pie: React.ReactNode; children: React.ReactNode;
+}) {
+  return (
+    <CapaModal onClose={onClose} fondo="bg-slate-900/55 backdrop-blur-sm">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cli-form-titulo"
+        className={`relative flex w-full max-w-4xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15`}
+        style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
+      >
+        <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2">
+              <span aria-hidden="true" className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4FAEB2]">{kicker}</p>
+            </div>
+            <h2 id="cli-form-titulo" className="mt-1 truncate text-xl font-semibold sm:text-2xl tracking-tight text-slate-900">{titulo}</h2>
+            {subtitulo ? <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">{subtitulo}</p> : null}
+            {extra}
+          </div>
+          <button type="button" onClick={onClose} disabled={!onClose} aria-label="Cerrar"
+            className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
+            <X className="h-4 w-4" />
           </button>
+        </div>
+
+        {children}
+
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 bg-white px-4 py-3 sm:px-6 sm:py-4 max-sm:[&>button]:flex-1 max-sm:[&>button]:justify-center">
+          {pie}
         </div>
       </div>
     </CapaModal>
   );
 }
 
-function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
+export function Bloque({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex items-center gap-2">
