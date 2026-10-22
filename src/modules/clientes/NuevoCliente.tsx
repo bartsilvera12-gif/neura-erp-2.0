@@ -28,7 +28,6 @@ export function NuevoCliente({
   const [documento, setDocumento] = useState("");
   const [telefono, setTelefono] = useState(inicial?.telefono ?? "");
   const [condicion, setCondicion] = useState<"CONTADO" | "CREDITO">("CONTADO");
-  const [limite, setLimite] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -46,7 +45,6 @@ export function NuevoCliente({
           documento: documento.trim() || undefined,
           telefono: telefono.trim() || undefined,
           condicion_pago: condicion,
-          limite_credito: condicion === "CREDITO" ? Number(limite) || 0 : 0,
         }),
       });
       onCreado(c);
@@ -94,12 +92,6 @@ export function NuevoCliente({
             <span className="mb-1 block text-xs font-medium text-slate-600">Condición</span>
             <Select value={condicion} onChange={(v) => setCondicion(v as "CONTADO" | "CREDITO")} block options={[["CONTADO", "Contado"], ["CREDITO", "Crédito"]]} etiqueta="Condición" />
           </div>
-          {condicion === "CREDITO" ? (
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-slate-600">Límite de crédito</span>
-              <input inputMode="numeric" value={limite} onChange={(e) => setLimite(e.target.value.replace(/\D/g, ""))} className={`${INPUT} text-right tabular-nums`} placeholder="0" />
-            </label>
-          ) : null}
         </div>
 
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}

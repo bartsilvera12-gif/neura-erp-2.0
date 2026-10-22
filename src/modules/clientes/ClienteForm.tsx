@@ -15,7 +15,6 @@ import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { Select } from "@/components/Select";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
 import type { Categoria } from "@/modules/clientes/esquema";
-import MontoInput from "@/components/ui/MontoInput";
 import type { Cliente } from "@/modules/caja/lib";
 
 const BRAND = clienteConfig.color;
@@ -185,7 +184,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
         <Bloque titulo="Cómo te paga">
           <Segmentado valor={f.condicion_pago} onChange={(v) => set("condicion_pago", v as "CONTADO" | "CREDITO")} opciones={[["CONTADO", "Contado"], ["CREDITO", "A crédito (cuenta corriente)"]]} />
           {f.condicion_pago === "CREDITO" ? (
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4">
               <label className="block">
                 <span className={ET}>Plazo para pagar</span>
                 <div className="flex items-center gap-2">
@@ -197,11 +196,6 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
                     <button key={d} type="button" onClick={() => set("plazo_dias", d)} className={`min-h-11 min-w-11 rounded-lg px-2 py-1 text-xs sm:min-h-0 sm:min-w-0 font-semibold transition ${f.plazo_dias === d ? "bg-[var(--brand-50)] text-[var(--brand)]" : "text-slate-500 hover:bg-slate-100"}`}>{d}</button>
                   ))}
                 </div>
-              </label>
-              <label className="block">
-                <span className={ET}>Límite de crédito {OPC}</span>
-                <MontoInput value={f.limite_credito || ""} onChange={(v) => set("limite_credito", v)} decimals={false} placeholder="Sin límite" className={`${INPUT} text-right tabular-nums`} />
-                <span className="mt-1 block text-[11px] text-slate-400">La caja no deja vender a crédito por encima de esto.</span>
               </label>
             </div>
           ) : null}

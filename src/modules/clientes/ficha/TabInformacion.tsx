@@ -242,7 +242,6 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
 
         <Tarjeta titulo="Datos comerciales" icono={Briefcase}>
           <Dato label="Condición de pago">{credito ? `Crédito · ${cliente.plazo_dias ?? 30} días` : "Contado"}</Dato>
-          {credito ? <Dato label="Límite de crédito">{Number(cliente.limite_credito ?? 0) > 0 ? `Gs. ${Number(cliente.limite_credito).toLocaleString("es-PY")}` : "Sin límite"}</Dato> : null}
           <Dato label="Moneda">{usd ? "Dólares (US$)" : "Guaraníes (Gs.)"}</Dato>
           <Dato label="Valor anual estimado">{Number(cliente.valor_anual ?? 0) > 0 ? `${usd ? "US$" : "Gs."} ${Number(cliente.valor_anual).toLocaleString("es-PY")}` : null}</Dato>
           <Dato label="Vendedor">{cliente.vendedor_nombre ?? null}</Dato>
@@ -430,10 +429,6 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Campo label="Plazo para pagar (días)">
               <input inputMode="numeric" value={f.plazo_dias} onChange={(e) => set("plazo_dias", e.target.value.replace(/\D/g, "").slice(0, 4))} className={`${INPUT} text-right tabular-nums`} />
-            </Campo>
-            <Campo label="Límite de crédito (Gs.)">
-              <MontoInput value={f.limite_credito || ""} onChange={(n) => set("limite_credito", n)} decimals={false} placeholder="Sin límite" className={`${INPUT} text-right tabular-nums`} />
-              <span className="mt-1 block text-[11px] text-slate-400">La caja no deja vender a crédito por encima de esto.</span>
             </Campo>
           </div>
         ) : null}
