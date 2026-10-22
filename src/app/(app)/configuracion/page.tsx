@@ -10,7 +10,7 @@ import { clienteConfig } from "@/cliente.config";
 
 const TARJETAS: TarjetaPanel[] = [
   { href: "/configuracion/empresa", titulo: "Datos de la empresa", imagen: "/configuracion/empresa.webp", color: hslDeMarca(clienteConfig.color), posicion: "50% 40%" },
-  { href: "/configuracion/facturacion", titulo: "Facturación", imagen: "/configuracion/facturacion.webp", color: "222 47% 27%", posicion: "45% 50%" },
+  { href: "/configuracion/facturacion", titulo: "Facturación", imagen: "/configuracion/facturacion-calculadora.webp", color: "222 47% 27%", posicion: "60% 40%" },
   { href: "/configuracion/usuarios", titulo: "Usuarios", imagen: "/configuracion/usuarios-equipo.webp", color: "28 62% 24%", posicion: "45% 45%" },
 ];
 

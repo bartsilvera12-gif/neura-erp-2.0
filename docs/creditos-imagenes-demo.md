@@ -37,7 +37,7 @@ Fotos de fondo de las tarjetas de `/configuracion` (componente `TarjetaImagen`).
 | Tarjeta | Archivo | Autor | Licencia | Origen |
 |---|---|---|---|---|
 | Datos de la empresa | `public/configuracion/empresa.webp` | Justin Main (photified) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Modern_skyscraper_facades_(Unsplash).jpg (original: https://unsplash.com/photos/srDN5nHM35g) |
-| Facturación | `public/configuracion/facturacion.webp` | Autor no indicado en Commons | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Desktop_with_laptop_and_calculator_(Unsplash).jpg (original: https://unsplash.com/photos/U_5BNLNfPn4) |
+| Facturación | `public/configuracion/facturacion-calculadora.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 | Usuarios | `public/configuracion/usuarios-equipo.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 
 Nota: la foto anterior de Usuarios (Tim Gouw, CC0, Busy people at a coffee shop) se reemplazó por la que eligió el dueño.
