@@ -60,3 +60,14 @@ Notas:
 - Ajustes y pérdidas: el recorte deja solo el lector de códigos y los pallets etiquetados (la persona que cuenta queda fuera de cuadro).
 - Traslados: en las cajas se ve chico el sello "Project Handclasp" (programa de ayuda de la Marina de EE. UU.); es parte de la foto, no un respaldo.
 - Categorías: son cajas de rollos de pianola de un museo, con etiquetas por título; se usa como imagen de "cajas etiquetadas y ordenadas en estantes".
+
+## Panel Omnicanal
+
+Fotos de fondo de las tarjetas de `/omnicanal` (componente `PanelModulo` → `TarjetaImagen`). Están en el repo, en `public/omnicanal/`. Las 4 las eligió el dueño (WEBP, 1000 px de ancho).
+
+| Tarjeta | Archivo | Autor | Licencia | Origen |
+|---|---|---|---|---|
+| Conversaciones | `public/omnicanal/conversaciones-chat-dueno.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
+| Finalizadas | `public/omnicanal/finalizadas-checklist-dueno.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
+| Monitoreo | `public/omnicanal/monitoreo-pantallas-dueno.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
+| Historial omnicanal | `public/omnicanal/historial-archivo-dueno.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |

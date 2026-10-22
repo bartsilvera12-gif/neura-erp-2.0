@@ -12,8 +12,7 @@ import { moduloReportes } from "@/modules/reportes/module";
 import { moduloGastosEmpresariales } from "@/modules/compras/module";
 import { moduloSoporte } from "@/modules/soporte/module";
 import { moduloCrm } from "@/modules/crm/module";
-import { moduloConversaciones } from "@/modules/conversaciones/module";
-import { moduloFinalizadas, moduloMonitoreo, moduloHistorialOmnicanal } from "@/modules/conversaciones/modulos-omnicanal";
+import { moduloOmnicanal } from "@/modules/conversaciones/module";
 import { moduloGestionClientes, moduloPlanes, moduloAgenda } from "@/modules/clientes/modulos-comerciales";
 import { moduloCobranzas, moduloConciliacion } from "@/modules/cobranzas/module";
 import { moduloPagos } from "@/modules/compras/modulos-finanzas";
@@ -24,7 +23,7 @@ import type { PerfilSesion } from "@/modules/usuarios/permisos";
 
 // El orden de acá es el orden dentro de cada familia del menú (igual que sistemas-propio):
 // Comercial: Clientes, CRM Funnel, Presupuestos, Gestión Clientes, Planes, Agenda, Proyectos · Finanzas: Caja, Cobranzas, Conciliación, Pagos,
-// Gastos empresariales (compras + gastos operativos), Reportes · Operaciones: Inventario · Omnicanal: Conversaciones, Finalizadas, Monitoreo, Historial omnicanal ·
+// Gastos empresariales (compras + gastos operativos), Reportes · Operaciones: Inventario · Omnicanal: Omnicanal (panel: Conversaciones, Finalizadas, Monitoreo, Historial omnicanal) ·
 // Soporte: Soporte · Configuración: Configuración (panel: Datos de la empresa, Facturación, Usuarios).
 const TODOS: Modulo[] = [
   moduloClientes,
@@ -41,10 +40,7 @@ const TODOS: Modulo[] = [
   moduloGastosEmpresariales,
   moduloReportes,
   moduloInventario,
-  moduloConversaciones,
-  moduloFinalizadas,
-  moduloMonitoreo,
-  moduloHistorialOmnicanal,
+  moduloOmnicanal,
   moduloSoporte,
   moduloConfiguracion,
   // moduloChat,
@@ -102,7 +98,9 @@ export function pantallasCatalogo(): Pantalla[] {
   for (const m of activos) {
     const base = { moduloId: m.id, moduloLabel: m.label, familia: m.familia ?? "General", icon: m.icon, permiso: m.permiso, accesoPropio: m.accesoPropio };
     if (m.children?.length) {
-      for (const c of m.children) out.push({ ...base, href: c.href, label: c.label, niveles: interseccion(m.roles, c.roles), permiso: c.permiso ?? m.permiso });
+      for (const c of m.children) {
+        out.push({ ...base, href: c.href, label: c.label, niveles: interseccion(m.roles, c.roles), permiso: c.permiso ?? m.permiso, accesoPropio: c.accesoPropio ?? m.accesoPropio });
+      }
     } else {
       out.push({ ...base, href: m.href, label: m.label, niveles: m.roles?.length ? m.roles : undefined });
     }

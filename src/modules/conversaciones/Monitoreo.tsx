@@ -34,7 +34,7 @@ import {
 } from "@/modules/conversaciones/supervision";
 import {
   AvatarTono, Cargando, Desde, Encabezado, Metrica, PillEstado, PuntoOnline, Seccion, SelectorEstado, SlaBadge, Vacio,
-  btnIcono, btnPrimario, btnSecundario, thClase,
+  VOLVER_OMNICANAL, btnIcono, btnPrimario, btnSecundario, thClase,
 } from "@/modules/conversaciones/ui-supervision";
 import { Girando } from "@/modules/conversaciones/ui";
 import { SelectorFecha } from "@/components/SelectorFecha";
@@ -192,7 +192,7 @@ export function Monitoreo() {
   if (sinPermiso) {
     return (
       <div className="flex flex-col gap-6 pb-10">
-        <Encabezado eyebrow="Centro de control" titulo="Monitoreo" />
+        <Encabezado volver={VOLVER_OMNICANAL} eyebrow="Centro de control" titulo="Monitoreo" />
         <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
           El Monitoreo es para administradores y supervisores de una cola. Pedile a un administrador que te marque como supervisor en la configuración de colas.
         </div>
@@ -202,7 +202,7 @@ export function Monitoreo() {
 
   return (
     <div className="flex flex-col gap-6 pb-10">
-      <Encabezado eyebrow="Centro de control" titulo="Monitoreo" detalle="Colas, canales, carga de agentes y conversaciones que requieren atención.">
+      <Encabezado volver={VOLVER_OMNICANAL} eyebrow="Centro de control" titulo="Monitoreo" detalle="Colas, canales, carga de agentes y conversaciones que requieren atención.">
         <span
           className={`inline-flex items-center gap-1 text-[11px] font-medium ${suscripto ? "text-emerald-600" : "text-amber-600"}`}
           title={suscripto ? "Recibiendo cambios en vivo (y refresco cada 20 s)" : "Sin conexión en vivo: se actualiza cada 20 s"}

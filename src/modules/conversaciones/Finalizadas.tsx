@@ -17,7 +17,7 @@ import { accionConversacion, pedirCatalogoCierre, pedirOpciones, type CatalogoCi
 import { pedirFinalizadas, type FiltrosFinalizadas } from "@/modules/conversaciones/api-supervision";
 import { nombreContacto, telefonoLegible } from "@/modules/conversaciones/dominio";
 import { duracionCorta, segundosEntre, type Finalizada } from "@/modules/conversaciones/supervision";
-import { Encabezado, btnPrimario } from "@/modules/conversaciones/ui-supervision";
+import { Encabezado, VOLVER_OMNICANAL, btnPrimario } from "@/modules/conversaciones/ui-supervision";
 import { Girando } from "@/modules/conversaciones/ui";
 
 const VisorChat = dynamic(() => import("@/modules/conversaciones/VisorChat").then((m) => m.VisorChat), { ssr: false });
@@ -160,6 +160,7 @@ export function Finalizadas() {
   return (
     <div className="flex flex-col gap-6 pb-12">
       <Encabezado
+        volver={VOLVER_OMNICANAL}
         eyebrow="Omnicanal"
         titulo="Conversaciones finalizadas"
         detalle={

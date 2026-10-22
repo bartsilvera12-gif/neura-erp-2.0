@@ -16,7 +16,7 @@ import { TZ_PY } from "@/lib/fecha/paraguay";
 import { buscarContactos, pedirHistorial } from "@/modules/conversaciones/api-supervision";
 import { ESTADO_CLASE, ESTADO_LABEL, horaLista, nombreContacto, telefonoLegible } from "@/modules/conversaciones/dominio";
 import { eventoRuteo, type ContactoBuscado, type ConversacionHistorial, type Historial as DatosHistorial } from "@/modules/conversaciones/supervision";
-import { AvatarTono, Cargando, Encabezado } from "@/modules/conversaciones/ui-supervision";
+import { AvatarTono, Cargando, Encabezado, VOLVER_OMNICANAL } from "@/modules/conversaciones/ui-supervision";
 import { Girando } from "@/modules/conversaciones/ui";
 
 const VisorChat = dynamic(() => import("@/modules/conversaciones/VisorChat").then((m) => m.VisorChat), { ssr: false });
@@ -144,7 +144,7 @@ export function Historial() {
 
   return (
     <div className="flex flex-col gap-4 pb-10">
-      <Encabezado eyebrow="Omnicanal" titulo="Historial omnicanal" detalle="Auditoría por contacto: todas sus conversaciones en cualquier canal, con asignaciones, transferencias y cierres." />
+      <Encabezado volver={VOLVER_OMNICANAL} eyebrow="Omnicanal" titulo="Historial omnicanal" detalle="Auditoría por contacto: todas sus conversaciones en cualquier canal, con asignaciones, transferencias y cierres." />
 
       <div className="flex min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" style={{ height: "max(520px, calc(100dvh - 15rem))" }}>
         {/* Búsqueda */}

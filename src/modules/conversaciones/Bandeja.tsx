@@ -31,7 +31,7 @@ import { ListaConversaciones } from "@/modules/conversaciones/ListaConversacione
 import { PanelChat } from "@/modules/conversaciones/PanelChat";
 import { Girando, tabClass } from "@/modules/conversaciones/ui";
 import { usePresencia } from "@/modules/conversaciones/presencia";
-import { SelectorEstado } from "@/modules/conversaciones/ui-supervision";
+import { SelectorEstado, VolverOmnicanal } from "@/modules/conversaciones/ui-supervision";
 
 const ModalRespuestas = dynamic(() => import("@/modules/conversaciones/ModalRespuestas").then((m) => m.ModalRespuestas), { ssr: false });
 const ModalSimular = dynamic(() => import("@/modules/conversaciones/ModalSimular").then((m) => m.ModalSimular), { ssr: false });
@@ -176,6 +176,8 @@ export function Bandeja() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+      {/* Vuelve al panel de tarjetas de Omnicanal (la bandeja no tiene título propio). */}
+      <VolverOmnicanal className="-mb-1 shrink-0 self-start lg:min-h-7" />
       {/* Barra superior: pestañas, búsqueda y filtros (en celular: pestañas con scroll,
           búsqueda a lo ancho y canal/asesor en "Filtros"; el estado y el resto a la derecha). */}
       <div className="flex min-w-0 shrink-0 flex-col gap-2 md:flex-row md:flex-wrap md:items-center">

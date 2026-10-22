@@ -6,7 +6,8 @@
  * métrica, sección con filete turquesa y avatar con color estable.
  */
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Check, ChevronDown, Timer } from "lucide-react";
+import Link from "next/link";
+import { ArrowLeft, Check, ChevronDown, Timer } from "lucide-react";
 import { inicial } from "@/modules/conversaciones/dominio";
 import {
   ESTADOS_ELEGIBLES, ESTADO_AGENTE_CLASE, ESTADO_AGENTE_LABEL, esperaLegible, tonoAvatar, type EstadoAgente,
@@ -166,10 +167,30 @@ export function SelectorEstado({
 }
 
 // ── Estructura de pantalla (look del Monitoreo actual) ───────────────────────
-export function Encabezado({ eyebrow, titulo, detalle, children }: { eyebrow: string; titulo: string; detalle?: ReactNode; children?: ReactNode }) {
+/** Destino del "← Omnicanal" de las pantallas del módulo (el panel de tarjetas). */
+export const VOLVER_OMNICANAL = { href: "/omnicanal", label: "Omnicanal" } as const;
+
+/** "← Omnicanal": mismo look que el `volver` de EncabezadoPagina. */
+export function VolverOmnicanal({ href = VOLVER_OMNICANAL.href, label = VOLVER_OMNICANAL.label, className = "" }: { href?: string; label?: string; className?: string }) {
+  return (
+    <Link href={href} className={`-ml-1 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800 ${className}`}>
+      <ArrowLeft className="h-3.5 w-3.5" aria-hidden /> {label}
+    </Link>
+  );
+}
+
+export function Encabezado({ eyebrow, titulo, detalle, children, volver }: {
+  eyebrow: string;
+  titulo: string;
+  detalle?: ReactNode;
+  children?: ReactNode;
+  /** link "← …" arriba del título (ej. al panel Omnicanal) */
+  volver?: { href: string; label: string };
+}) {
   return (
     <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0">
+        {volver ? <VolverOmnicanal href={volver.href} label={volver.label} className="mb-1.5" /> : null}
         <div className="flex items-center gap-2">
           <span aria-hidden className="h-2 w-2 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4FAEB2]">{eyebrow}</p>

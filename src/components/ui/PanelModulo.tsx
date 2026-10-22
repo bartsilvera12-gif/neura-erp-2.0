@@ -4,13 +4,15 @@
  * PanelModulo — panel de un módulo con panel propio (`panel: true` en su module.ts): encabezado +
  * una TarjetaImagen por sub-pantalla (foto + degradé de color + título + flecha). Muestra solo las
  * tarjetas que el perfil puede abrir (mismas reglas que el menú y el guard: `pantallasCatalogo`
- * + `perfilVePantalla`). Lo usan /configuracion e /inventario/panel.
+ * + `perfilVePantalla`; las de acceso propio, además, según `acceso`). Lo usan /configuracion,
+ * /inventario/panel y /omnicanal.
  *
  *   <PanelModulo kicker="Operaciones" titulo="Inventario" subtitulo="…" tarjetas={TARJETAS}
  *     vacio="No tenés pantallas de inventario habilitadas." />
  */
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { pantallasCatalogo, perfilVePantalla } from "@/modules/registry";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { TarjetaImagen } from "@/components/ui/tarjeta-imagen";
@@ -25,6 +27,12 @@ export type TarjetaPanel = {
   color: string;
   /** encuadre de la foto (object-position), p. ej. "50% 60%". */
   posicion?: string;
+  /**
+   * Sub-pantalla con acceso propio (`accesoPropio` en el module.ts): si el perfil no la ve por su
+   * nivel, el panel pregunta a esta URL (GET → { puede }) y muestra la tarjeta si responde que sí
+   * (ej. Monitoreo para un supervisor de cola que no es ADMIN).
+   */
+  acceso?: string;
 };
 
 /** "#3F8E91" → "182 39% 28%": el color de la marca, oscurecido lo justo para texto blanco. */
@@ -54,20 +62,46 @@ export function PanelModulo({
   vacio?: string;
 }) {
   const me = useUsuario();
+  // Tarjetas con acceso propio que el nivel del usuario no alcanza: se pregunta a su `acceso`.
+  const aConsultar = useMemo(() => {
+    if (!me) return [];
+    const catalogo = pantallasCatalogo();
+    return tarjetas.filter((t) => {
+      const p = catalogo.find((x) => x.href === t.href);
+      return !!p && !!t.acceso && !!p.accesoPropio && !perfilVePantalla(p, me.rol, me.perfil) && !!p.niveles?.length && !p.niveles.includes(me.rol);
+    });
+  }, [me, tarjetas]);
+  const [permitidas, setPermitidas] = useState<Set<string>>(() => new Set());
+  const [consultado, setConsultado] = useState(false);
+  useEffect(() => {
+    if (!aConsultar.length) return;
+    let vivo = true;
+    void Promise.all(
+      aConsultar.map((t) => apiFetchCache<{ puede: boolean }>(t.acceso!).then((r) => (r.puede ? t.href : null)).catch(() => null)),
+    ).then((hrefs) => {
+      if (!vivo) return;
+      setPermitidas(new Set(hrefs.filter((h): h is string => !!h)));
+      setConsultado(true);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [aConsultar]);
+
   const visibles = useMemo(() => {
     if (!me) return [];
     const catalogo = pantallasCatalogo();
     return tarjetas.filter((t) => {
       const p = catalogo.find((x) => x.href === t.href);
-      return !!p && perfilVePantalla(p, me.rol, me.perfil);
+      return !!p && (perfilVePantalla(p, me.rol, me.perfil) || permitidas.has(t.href));
     });
-  }, [me, tarjetas]);
+  }, [me, tarjetas, permitidas]);
 
   return (
     <div className="space-y-6 pb-10">
       <EncabezadoPagina kicker={kicker} titulo={titulo} subtitulo={subtitulo} />
 
-      {!me ? (
+      {!me || (!visibles.length && aConsultar.length > 0 && !consultado) ? (
         <div className={GRILLA} aria-busy="true">
           {tarjetas.slice(0, 3).map((t) => <div key={t.href} className="h-[150px] animate-pulse rounded-2xl bg-slate-200/80" />)}
         </div>

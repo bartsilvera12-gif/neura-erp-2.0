@@ -22,6 +22,8 @@ export type Modulo = {
     roles?: string[];
     /** permiso propio de esta sub-pantalla (si no, el del módulo) */
     permiso?: string;
+    /** como `accesoPropio` del módulo, pero solo para esta sub-pantalla (ej. Omnicanal › Monitoreo) */
+    accesoPropio?: boolean;
   }[];
   /**
    * El ítem del menú abre su propio panel (`href`, con tarjetas de las sub-pantallas) y las
