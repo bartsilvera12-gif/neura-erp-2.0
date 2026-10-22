@@ -645,6 +645,13 @@ function CajaPageContenido() {
             </button>
           )}
         </div>
+        {/* Cliente elegido: RUC (o documento) y teléfono, para confirmar que es el correcto. */}
+        {clienteSel ? (
+          <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
+            <span>CI o RUC <b className="font-mono font-semibold text-slate-700">{clienteSel.ruc || clienteSel.documento || "—"}</b></span>
+            <span>Tel. <b className="font-semibold text-slate-700">{clienteSel.telefono || "—"}</b></span>
+          </p>
+        ) : null}
         {clienteOpen && !clienteSel && (
           <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto overscroll-contain rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
             <button type="button" onClick={() => { setClienteOpen(false); setHojaOpciones(false); setModalNuevoCliente(true); }} className="flex min-h-11 w-full items-center gap-1.5 border-b border-slate-100 px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50 lg:min-h-0" style={{ color: TEAL, backgroundColor: `${TEAL}0f` }}>
@@ -658,6 +665,7 @@ function CajaPageContenido() {
                 <span className="font-medium text-slate-800">{c.nombre}</span>
                 {c.ruc && <span className="ml-2 text-xs text-slate-400">RUC {c.ruc}</span>}
                 {c.documento && !c.ruc && <span className="ml-2 text-xs text-slate-400">{c.documento}</span>}
+                {c.telefono && <span className="ml-2 text-xs text-slate-400">· {c.telefono}</span>}
               </button>
             ))}
           </div>
