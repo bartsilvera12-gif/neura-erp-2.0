@@ -7,13 +7,14 @@
  *     si nunca tuvo pedidos (si no, desactivarla).
  *   · QR de cada mesa (se genera en el navegador con `qrcode`): ver, copiar el link, abrir el menú,
  *     imprimir, y regenerar el token (el QR impreso viejo deja de andar).
- *   · "Imprimir QR": una hoja con el QR + nombre de cada mesa (de la sucursal elegida).
+ *   · "Imprimir QR": se eligen todas o solo algunas mesas (de la sucursal elegida) y sale una hoja
+ *     con el QR + nombre de cada una. Cada tarjeta tiene además su botón para imprimir solo esa.
  *   · Pestaña "Estaciones de cocina" (receta 70): Plancha, Pizzería, Barra… y la estación fija de
  *     cada usuario (src/modules/mesas/EstacionesConfig.tsx).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
-import { Copy, ExternalLink, Loader2, Pencil, Plus, Printer, QrCode, RefreshCw, Trash2, X } from "lucide-react";
+import { Check, Copy, ExternalLink, Loader2, Pencil, Plus, Printer, QrCode, RefreshCw, Trash2, X } from "lucide-react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { Select } from "@/components/Select";
@@ -50,6 +51,8 @@ export default function MesasConfigPage() {
   const [verQr, setVerQr] = useState<Mesa | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [imprimiendo, setImprimiendo] = useState(false);
+  // "Imprimir QR": elegir todas o solo algunas mesas.
+  const [elegir, setElegir] = useState(false);
   // Receta 70: pestaña "Estaciones de cocina".
   const [tab, setTab] = useState<"mesas" | "estaciones">("mesas");
   const [nuevaEstacion, setNuevaEstacion] = useState(false);
@@ -87,7 +90,7 @@ export default function MesasConfigPage() {
           </button>
         ) : (
           <div className="flex flex-wrap items-center gap-2">
-            <button type="button" onClick={() => void imprimir(mesas)} disabled={imprimiendo || !mesas.length} className={`${BOTON_SECUNDARIO} min-h-11 lg:min-h-0`}>
+            <button type="button" onClick={() => setElegir(true)} disabled={imprimiendo || !mesas.length} className={`${BOTON_SECUNDARIO} min-h-11 lg:min-h-0`}>
               {imprimiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" aria-hidden />} Imprimir QR
             </button>
             <button type="button" onClick={() => setEditar("nueva")} disabled={!sucursales.length} className={`${BOTON_PRIMARIO} min-h-11 lg:min-h-0`} style={{ backgroundColor: COLOR }}>
@@ -138,6 +141,9 @@ export default function MesasConfigPage() {
               </div>
               <div className="flex shrink-0 flex-col gap-1">
                 <button type="button" onClick={() => setVerQr(m)} className="grid h-10 w-10 place-items-center rounded-lg text-slate-500 hover:bg-slate-100" aria-label="Ver QR"><QrCode className="h-4 w-4" /></button>
+                {m.activa ? (
+                  <button type="button" onClick={() => void imprimir([m])} disabled={imprimiendo} className="grid h-10 w-10 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 disabled:opacity-50" aria-label={`Imprimir el QR de ${m.nombre}`} title="Imprimir este QR"><Printer className="h-4 w-4" /></button>
+                ) : null}
                 <button type="button" onClick={() => setEditar(m)} className="grid h-10 w-10 place-items-center rounded-lg text-slate-500 hover:bg-slate-100" aria-label="Editar mesa"><Pencil className="h-4 w-4" /></button>
               </div>
             </li>
@@ -164,7 +170,76 @@ export default function MesasConfigPage() {
           onCambio={refrescar}
         />
       ) : null}
+      {elegir ? (
+        <ElegirMesas
+          mesas={mesas.filter((m) => m.activa)}
+          variasSucursales={variasSucursales}
+          onClose={() => setElegir(false)}
+          onImprimir={(lista) => { setElegir(false); void imprimir(lista); }}
+        />
+      ) : null}
     </div>
+  );
+}
+
+/** "Imprimir QR": todas las mesas activas (de la sucursal elegida) o solo las que se marquen. */
+function ElegirMesas({ mesas, variasSucursales, onClose, onImprimir }: {
+  mesas: Mesa[]; variasSucursales: boolean; onClose: () => void; onImprimir: (lista: Mesa[]) => void;
+}) {
+  const [marcadas, setMarcadas] = useState<Set<string>>(() => new Set(mesas.map((m) => m.id)));
+  const todas = marcadas.size === mesas.length;
+  const alternar = (id: string) => setMarcadas((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const elegidas = mesas.filter((m) => marcadas.has(m.id));
+
+  return (
+    <CapaModal onClose={onClose}>
+      <div className={`flex w-full max-w-sm flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${ALTO_MAX_MODAL}`}>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-100 px-5 py-4">
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-slate-900">Imprimir QR</h3>
+            <p className="text-xs text-slate-500">Elegí qué mesas imprimir.</p>
+          </div>
+          <button type="button" aria-label="Cerrar" onClick={onClose} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+          {mesas.length === 0 ? (
+            <p className="px-2 py-6 text-center text-sm text-slate-500">No hay mesas activas para imprimir.</p>
+          ) : (
+            <>
+              <FilaMarca marcada={todas} onClick={() => setMarcadas(todas ? new Set() : new Set(mesas.map((m) => m.id)))} fuerte>
+                Todas las mesas <span className="font-normal text-slate-500">({mesas.length})</span>
+              </FilaMarca>
+              <div className="my-1 border-t border-slate-100" />
+              {mesas.map((m) => (
+                <FilaMarca key={m.id} marcada={marcadas.has(m.id)} onClick={() => alternar(m.id)}>
+                  {m.nombre}
+                  <span className="block truncate text-xs font-normal text-slate-500">{[m.zona, variasSucursales ? m.sucursal_nombre : null].filter(Boolean).join(" · ") || "Sin zona"}</span>
+                </FilaMarca>
+              ))}
+            </>
+          )}
+        </div>
+        <div className="flex shrink-0 gap-2 border-t border-slate-100 px-5 py-3">
+          <button type="button" onClick={onClose} className={`${BOTON_SECUNDARIO} min-h-11 flex-1 lg:min-h-0`}>Cancelar</button>
+          <button type="button" onClick={() => onImprimir(elegidas)} disabled={!elegidas.length} className={`${BOTON_PRIMARIO} min-h-11 flex-1 lg:min-h-0`} style={{ backgroundColor: COLOR }}>
+            <Printer className="h-4 w-4" aria-hidden /> Imprimir{elegidas.length ? ` (${elegidas.length})` : ""}
+          </button>
+        </div>
+      </div>
+    </CapaModal>
+  );
+}
+
+function FilaMarca({ marcada, onClick, fuerte = false, children }: { marcada: boolean; onClick: () => void; fuerte?: boolean; children: React.ReactNode }) {
+  return (
+    <button type="button" role="checkbox" aria-checked={marcada} onClick={onClick}
+      className="flex min-h-11 w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-slate-50">
+      <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-md border transition ${marcada ? "border-transparent text-white" : "border-slate-300 bg-white"}`}
+        style={marcada ? { backgroundColor: COLOR } : undefined}>
+        {marcada ? <Check className="h-3.5 w-3.5" strokeWidth={3} aria-hidden /> : null}
+      </span>
+      <span className={`min-w-0 flex-1 text-sm text-slate-900 ${fuerte ? "font-semibold" : "font-medium"}`}>{children}</span>
+    </button>
   );
 }
 
