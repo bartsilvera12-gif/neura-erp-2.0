@@ -25,10 +25,41 @@ Todas salen de Wikimedia Commons y tienen licencias que permiten uso comercial. 
 | Pepsi 2 L | `demo/pepsi-2l.jpg` | Chris Woodrich | Dominio público (marca registrada) | https://commons.wikimedia.org/wiki/File:Pepsi_591_ml,_Canada_(reverse),_2026-03-03.jpg |
 | Té en saquitos x25 | `demo/te-saquitos-x25.jpg` | Jan Mesaros | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Teabag_with_green_tag.jpg |
 | Yogur bebible frutilla 1 L | `demo/yogur-bebible-frutilla-1l.jpg` | Renee Comet (fotógrafa) | Dominio público | https://commons.wikimedia.org/wiki/File:Strawberry_milk_shake_(cropped).jpg |
+| Hamburguesa clásica (menú) | `demo/hamburguesa-clasica-menu.jpg` | Pink Sherbet Photography | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) | https://commons.wikimedia.org/wiki/File:Cheeseburger_With_Lettuce,_Tomato_and_Onion_free_creative_commons_(4006382370).jpg |
+| Lomito árabe (menú) | `demo/lomito-arabe-menu.jpg` | Vera Yu y David Li | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) | https://commons.wikimedia.org/wiki/File:Shawarma-sandwich-01.jpg |
+| Pizza muzzarella (menú) | `demo/pizza-muzzarella-menu.jpg` | Horacio Cambeiro | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) | https://commons.wikimedia.org/wiki/File:Pizza_argentina_de_muzzarella_con_or%C3%A9gano_y_aceitunas_verdes.jpg |
+| Empanada de carne (menú) | `demo/empanada-carne-menu.jpg` | Eruperti | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Empanada_de_carne_de_res.jpg |
+| Milanesa con puré (menú) | `demo/milanesa-con-pure-menu.jpg` | Horacio Cambeiro | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | https://commons.wikimedia.org/wiki/File:Milanesa_con_pur%C3%A9_de_papas.jpg |
+| Papas fritas (menú) | `demo/papas-fritas-menu.jpg` | Horacio Cambeiro | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) | https://commons.wikimedia.org/wiki/File:Papas_fritas_caseras.jpg |
+| Flan con dulce de leche (menú) | `demo/flan-dulce-de-leche-menu.jpg` | Ganímedes | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | https://commons.wikimedia.org/wiki/File:Flan_casero_con_dulce_de_leche.JPG |
+| Aceite de girasol (cocina) | `demo/mp-aceite-cocina-botella.jpg` | Dejan Krsmanovic | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) | https://commons.wikimedia.org/wiki/File:Bottle_of_Oil_and_Half_of_Lemon_(51920214012).jpg |
+| Ajo | `demo/mp-ajo.jpg` | Ivar Leidus | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | https://commons.wikimedia.org/wiki/File:Garlic_bulbs_and_cloves.jpg |
+| Azúcar (cocina) | `demo/mp-azucar-cocina.jpg` | Douglas P Perkins | [CC BY 3.0](https://creativecommons.org/licenses/by/3.0) | https://commons.wikimedia.org/wiki/File:Bowl_of_white_sugar_without_background.jpg |
+| Carne para milanesa | `demo/mp-carne-milanesa-fetas.jpg` | Horacio Cambeiro | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | https://commons.wikimedia.org/wiki/File:Carne_cruda_vacuna_cortada_en_fetas_utilizada_en_la_preparaci%C3%B3n_de_s%C3%A1ndwiches_de_lomito_argentino.jpg |
+| Carne molida | `demo/mp-carne-molida-cruda.jpg` | Rainer Zenz (según Commons) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) | https://commons.wikimedia.org/wiki/File:Hackfleisch-1.jpg |
+| Cebolla | `demo/mp-cebolla.jpg` | Anja | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | https://commons.wikimedia.org/wiki/File:Three_whole_red_onions.jpg |
+| Dulce de leche | `demo/mp-dulce-de-leche-frasco.jpg` | audinou (París) | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) | https://commons.wikimedia.org/wiki/File:DulceDeLeche.jpg |
+| Harina 000 (cocina) | `demo/mp-harina-bolsa-cocina.jpg` | Denis kasozi | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0) | https://commons.wikimedia.org/wiki/File:Wheat_flour_(Obusera).jpg |
+| Huevo | `demo/mp-huevos-maple.jpg` | Evan-Amos | Dominio público | https://commons.wikimedia.org/wiki/File:6-Pack-Chicken-Eggs.jpg |
+| Leche (cocina) | `demo/mp-leche-vaso-cocina.jpg` | Santeri Viinamäki | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | https://commons.wikimedia.org/wiki/File:Glass_of_milk.jpg |
+| Lechuga | `demo/mp-lechuga.jpg` | Jeffery Martin | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Lettuce_in_a_stack.jpg |
+| Lomito de res | `demo/mp-lomito-res-crudo.jpg` | stu_spivack | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0) | https://commons.wikimedia.org/wiki/File:Beef_tenderloin_picture.jpg |
+| Mayonesa | `demo/mp-mayonesa-frasco.jpg` | jules | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) | https://commons.wikimedia.org/wiki/File:Mayonnaise_(1).jpg |
+| Muzzarella | `demo/mp-muzzarella.jpg` | Jon Sullivan | Dominio público | https://commons.wikimedia.org/wiki/File:Mozzarella_cheese.jpg |
+| Pan árabe | `demo/mp-pan-arabe.jpg` | fugzu | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) | https://commons.wikimedia.org/wiki/File:Pita_Flatbread.jpg |
+| Pan de hamburguesa | `demo/mp-pan-hamburguesa.jpg` | jeffreyw | [CC BY 2.0](https://creativecommons.org/licenses/by/2.0) | https://commons.wikimedia.org/wiki/File:Sesame_seed_hamburger_buns.jpg |
+| Pan rallado | `demo/mp-pan-rallado.jpg` | Tiia Monto | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) | https://commons.wikimedia.org/wiki/File:Bread_crumbs.jpg |
+| Papa | `demo/mp-papa-cruda.jpg` | Tiia Monto | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) | https://commons.wikimedia.org/wiki/File:Potatoes_2.jpg |
+| Perejil | `demo/mp-perejil.jpg` | Garitzko | Dominio público | https://commons.wikimedia.org/wiki/File:Petersilie.jpg |
+| Queso en fetas | `demo/mp-queso-fetas.jpg` | CNEcija12345 | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | https://commons.wikimedia.org/wiki/File:White_cheddar_cheese_sliced_CNE.jpg |
+| Salsa de la casa | `demo/mp-salsa-de-la-casa.jpg` | dana robinson | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0) | https://commons.wikimedia.org/wiki/File:Salsa_golf.jpg |
+| Salsa de tomate | `demo/mp-salsa-tomate.jpg` | Dennis Klein (Unsplash) | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | https://commons.wikimedia.org/wiki/File:Fresh_Tomato_Sauce_(Unsplash).jpg |
+| Tomate | `demo/mp-tomate.jpg` | Softeis | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) | https://commons.wikimedia.org/wiki/File:Tomato_je.jpg |
 
 Notas:
 - En Commons, las fotos de Fanta y Pepsi tienen la marca "trademarked": la foto es libre, pero el logo es una marca registrada. Sirve para mostrar el producto en la demo; no se puede usar como logo propio ni para insinuar respaldo de la marca.
 - Varias fotos muestran un producto genérico del mismo tipo, no el de la marca o el envase exactos: la cerveza (copa de pils), los fideos (paquete de spaghetti de otra marca), el yogur bebible (batido de frutilla en copa) y el mate cocido (mate en saquito dentro de una taza).
+- Productos de menú y materias primas (2026-10-23): a diferencia de los primeros, estos tienen además `imagen_path` = `demo/<archivo>`. Son fotos genéricas: el lomito árabe es un sándwich de carne en pan pita (shawarma); la carne para milanesa son fetas de carne vacuna cruda (Commons las describe como carne para lomitos); el aceite es una aceitera de vidrio con medio limón (sin marca); la salsa de la casa es salsa golf en vasitos; el maple de huevos tiene impresa chica la tabla nutricional del envase.
 
 ## Panel de Configuración
 
