@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { History, ImagePlus, Loader2, Wand2, X } from "lucide-react";
+import { ChefHat, History, ImagePlus, Loader2, Wand2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Drawer } from "@/components/Drawer";
@@ -12,7 +12,7 @@ import { Select } from "@/components/Select";
 import MontoInput from "@/components/ui/MontoInput";
 import { subirImagenProducto } from "@/modules/caja/upload-imagen";
 import type { TipoIva } from "@/modules/caja/lib";
-import type { ProductoInventario } from "@/modules/inventario/tipos";
+import { TIPOS_PRODUCTO, UNIDADES_MP, type ProductoInventario, type TipoProducto } from "@/modules/inventario/tipos";
 import { partesCategoria, type Categoria } from "@/modules/inventario/categorias";
 import { HistorialCostos } from "@/modules/inventario/HistorialCostos";
 import { StockDepositosProducto } from "@/modules/inventario/LotesProducto";
@@ -33,6 +33,15 @@ const ET = "mb-1 block text-xs font-medium text-slate-600";
 const IVAS: [TipoIva, string][] = [["10%", "10%"], ["5%", "5%"], ["EXENTA", "Exenta"]];
 const UNIDADES = ["Unidad", "Kilogramo", "Gramo", "Litro", "Metro", "Caja", "Paquete", "Docena"];
 const gs = (v: number) => `Gs. ${Math.round(v || 0).toLocaleString("es-PY")}`;
+/** Unidad de una materia prima a partir de la que tenía (Kilogramo → kg, …). */
+function unidadMP(u: string): string {
+  const x = u.trim().toLowerCase();
+  if (["kg", "kilo", "kilos", "kilogramo", "kilogramos"].includes(x)) return "kg";
+  if (["g", "gr", "gramo", "gramos"].includes(x)) return "g";
+  if (["l", "lt", "litro", "litros"].includes(x)) return "l";
+  if (["ml", "mililitro", "mililitros", "cc"].includes(x)) return "ml";
+  return "Unidad";
+}
 
 /**
  * Alta y edición de producto (inventario), en el panel lateral, ordenado en bloques:
@@ -82,6 +91,15 @@ export function ProductoForm({
     controla_lotes: producto?.controla_lotes ?? false,
     es_vendible: producto?.es_vendible ?? true,
   });
+  // Receta 72: tipo de producto. Menú = sin stock (descuenta su receta); Materia prima = no se vende.
+  const [tipo, setTipo] = useState<TipoProducto>(producto?.tipo_producto ?? "reventa");
+  const esMenu = tipo === "menu";
+  const esMP = tipo === "materia_prima";
+  function cambiarTipo(t: TipoProducto) {
+    setTipo(t);
+    if (t === "materia_prima") setF((p) => ({ ...p, unidad_medida: unidadMP(p.unidad_medida) }));
+    if (t !== "menu" && tipo === "menu") setF((p) => ({ ...p, controla_stock: true }));
+  }
   // Alta: stock con el que arranca → ajuste de inventario inicial (AJ-) en un depósito.
   const deps = useDepositos();
   const [stockIni, setStockIni] = useState({ cantidad: "", deposito: "", lote: loteAutomatico(hoyPY()), vencimiento: "" });
@@ -146,7 +164,8 @@ export function ProductoForm({
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const num = (v: string) => (v === "" ? undefined : Number(v));
-  const cantInicial = !editando && f.controla_stock ? Number(stockIni.cantidad) || 0 : 0;
+  const conStock = !esMenu && f.controla_stock;
+  const cantInicial = !editando && conStock ? Number(stockIni.cantidad) || 0 : 0;
   const faltaInicial = cantInicial > 0 && (!depositoInicial || (f.controla_lotes && !stockIni.vencimiento));
   const puede = !soloLectura && f.nombre.trim() !== "" && f.sku.trim() !== "" && !faltaInicial;
 
@@ -155,7 +174,7 @@ export function ProductoForm({
   const desc = Math.min(100, Math.max(0, Number(f.descuento_pct) || 0));
   const precioFinal = Math.round(f.precio_venta * (1 - desc / 100));
   const margenFinal = precioFinal ? ((precioFinal - f.costo_promedio) / precioFinal) * 100 : null;
-  const conLotes = f.controla_stock && f.controla_lotes;
+  const conLotes = conStock && f.controla_lotes;
 
   async function onFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -182,7 +201,8 @@ export function ProductoForm({
       codigo_barras: f.codigo_barras.trim() || null,
       categoria_principal_id: f.categoria_principal_id || null,
       proveedor_principal_id: f.proveedor_principal_id || null,
-      unidad_medida: f.unidad_medida.trim() || "Unidad",
+      unidad_medida: esMP ? unidadMP(f.unidad_medida) : f.unidad_medida.trim() || "Unidad",
+      tipo_producto: tipo,
       tipo_iva: f.tipo_iva,
       costo_promedio: f.costo_promedio || 0,
       precio_venta: f.precio_venta || 0,
@@ -194,11 +214,11 @@ export function ProductoForm({
         ? { cantidad: cantInicial, deposito_id: depositoInicial, lote: conLotes ? stockIni.lote.trim() || null : null, vencimiento: conLotes ? stockIni.vencimiento : null }
         : undefined,
       stock_minimo: num(f.stock_minimo) ?? 0,
-      controla_stock: f.controla_stock,
-      controla_lotes: f.controla_stock && f.controla_lotes,
-      es_vendible: f.es_vendible,
-      en_menu_qr: enMenu ?? undefined,
-      estacion_id: estacion === null ? undefined : estacion || null,
+      controla_stock: conStock,
+      controla_lotes: conLotes,
+      es_vendible: esMP ? false : f.es_vendible,
+      en_menu_qr: esMP ? false : enMenu ?? undefined,
+      estacion_id: esMP ? null : estacion === null ? undefined : estacion || null,
       imagen_url: imagenUrl ?? undefined,
     };
     try {
@@ -238,6 +258,29 @@ export function ProductoForm({
         ) : null}
 
         <fieldset disabled={soloLectura} className="space-y-6 disabled:opacity-70">
+          {/* ── Tipo de producto (receta 72) ─────────────────────────────── */}
+          <Bloque titulo="Tipo de producto">
+            <div role="radiogroup" aria-label="Tipo de producto" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+              {TIPOS_PRODUCTO.map((t) => {
+                const sel = tipo === t.id;
+                return (
+                  <button key={t.id} type="button" role="radio" aria-checked={sel} onClick={() => cambiarTipo(t.id)}
+                    className={`flex min-h-11 flex-col items-start rounded-xl border px-3 py-2.5 text-left transition ${sel ? "border-[var(--brand)] bg-[var(--brand-50)] ring-2 ring-[var(--brand-100)]" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"}`}>
+                    <span className={`text-sm font-semibold ${sel ? "text-[var(--brand)]" : "text-slate-800"}`}>{t.label}</span>
+                    <span className="mt-0.5 text-[11px] leading-snug text-slate-500">{t.ayuda}</span>
+                  </button>
+                );
+              })}
+            </div>
+            {editando && (esMenu || esMP) ? (
+              <Link href={`/inventario/recetas?producto=${producto!.id}`} className="mt-2 inline-flex min-h-9 items-center gap-1.5 text-xs font-semibold text-[var(--brand)] hover:underline">
+                <ChefHat className="h-3.5 w-3.5" /> {esMenu ? "Ver / cargar su receta" : "Cargarle receta (preparación)"}
+              </Link>
+            ) : !editando && esMenu ? (
+              <p className="mt-2 text-[11px] text-slate-500">Después de crearlo, cargá su receta en Inventario › Recetas: sin receta no se puede vender.</p>
+            ) : null}
+          </Bloque>
+
           {/* ── Producto ─────────────────────────────────────────────────── */}
           <Bloque titulo="Producto" extra={editando ? (
             <Link href={`/inventario/movimientos?producto=${producto!.id}`} className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--brand)] hover:underline">
@@ -334,15 +377,20 @@ export function ProductoForm({
           <Bloque titulo="Precios" extra={<span className="text-[11px] text-slate-400">IVA incluido</span>}>
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
-                <span className={ET}>Costo promedio</span>
+                <span className={ET}>{esMP ? `Costo promedio (por ${f.unidad_medida === "Unidad" ? "unidad" : f.unidad_medida})` : "Costo promedio"}</span>
                 <MontoInput decimals={false} value={f.costo_promedio} onChange={(v) => set("costo_promedio", v)} className={NUM} placeholder="0" />
+                {esMenu ? <span className="mt-1 block text-[11px] text-slate-400">Se recalcula con su receta (al guardarla y en cada venta).</span> : null}
               </label>
-              <label className="block">
-                <span className={ET}>Precio de venta</span>
-                <MontoInput decimals={false} value={f.precio_venta} onChange={(v) => set("precio_venta", v)} className={NUM} placeholder="0" />
-              </label>
+              {!esMP ? (
+                <label className="block">
+                  <span className={ET}>Precio de venta</span>
+                  <MontoInput decimals={false} value={f.precio_venta} onChange={(v) => set("precio_venta", v)} className={NUM} placeholder="0" />
+                </label>
+              ) : (
+                <p className="self-end pb-2.5 text-[11px] text-slate-500">Una materia prima no se vende: no lleva precio de venta. Su costo es el que usan las recetas.</p>
+              )}
             </div>
-            {margen != null ? (
+            {margen != null && !esMP ? (
               <p className="mt-1.5 text-right text-xs text-slate-500">
                 Ganancia por unidad <strong className="tabular-nums text-slate-700">{gs(f.precio_venta - f.costo_promedio)}</strong> ·{" "}
                 <span className={`font-semibold ${margen >= 40 ? "text-emerald-600" : margen >= 20 ? "text-amber-600" : "text-red-600"}`}>margen {margen.toFixed(1)}%</span>
@@ -362,6 +410,7 @@ export function ProductoForm({
               </div>
             </div>
 
+            {!esMP ? (<>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">
                 <span className={ET}>Precio mayorista <span className="font-normal text-slate-400">(opcional)</span></span>
@@ -392,6 +441,7 @@ export function ProductoForm({
                 )}
               </p>
             </div>
+            </>) : null}
           </Bloque>
 
           {/* ── Historial de costos (solo al editar) ───────────────────────── */}
@@ -404,15 +454,30 @@ export function ProductoForm({
           {/* ── Stock ────────────────────────────────────────────────────── */}
           <Bloque titulo="Stock">
             <div className="space-y-2">
-              <Interruptor checked={f.controla_stock} onChange={(v) => setF((p) => ({ ...p, controla_stock: v, controla_lotes: v ? p.controla_lotes : false }))} label="Controla stock" detalle="Descuenta al vender y avisa cuando queda por debajo del mínimo." />
-              {f.controla_stock ? (
+              {esMenu ? (
+                <p className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-xs text-orange-800">
+                  <strong>Sin stock propio.</strong> Al venderse descuenta los ingredientes de su receta del depósito de la caja; si falta alguno, no se vende.
+                </p>
+              ) : (
+                <Interruptor checked={f.controla_stock} onChange={(v) => setF((p) => ({ ...p, controla_stock: v, controla_lotes: v ? p.controla_lotes : false }))} label="Controla stock"
+                  detalle={esMP ? "Descuenta al usarse en las recetas y avisa cuando queda por debajo del mínimo." : "Descuenta al vender y avisa cuando queda por debajo del mínimo."} />
+              )}
+              {conStock ? (
                 <Interruptor checked={f.controla_lotes} onChange={(v) => set("controla_lotes", v)} label="Controla lotes y vencimiento"
-                  detalle="Perecibles: cada compra pide lote y vencimiento; la caja vende primero el que vence antes y no vende los vencidos." />
+                  detalle="Perecibles: cada compra pide lote y vencimiento; se usa primero el que vence antes y no se usan los vencidos." />
               ) : null}
-              <Interruptor checked={f.es_vendible} onChange={(v) => set("es_vendible", v)} label="Se vende en caja" detalle="Aparece en el buscador de la caja." />
-              <Interruptor checked={!!enMenu} onChange={(v) => setEnMenu(v)} label="En el menú QR"
-                detalle={enMenu === null ? "Cargando…" : "Sale en el menú que abren los clientes con el QR de las mesas (con su foto y precio)."} />
-              {enMenu && estaciones?.length ? (
+              {!esMP ? (
+                <>
+                  <Interruptor checked={f.es_vendible} onChange={(v) => set("es_vendible", v)} label="Se vende en caja" detalle="Aparece en el buscador de la caja." />
+                  <Interruptor checked={!!enMenu} onChange={(v) => setEnMenu(v)} label="En el menú QR"
+                    detalle={enMenu === null ? "Cargando…" : "Sale en el menú que abren los clientes con el QR de las mesas (con su foto y precio)."} />
+                </>
+              ) : (
+                <p className="rounded-xl border border-lime-200 bg-lime-50 px-3 py-2.5 text-xs text-lime-900">
+                  <strong>No se vende:</strong> no aparece en la caja, en presupuestos ni en el menú QR. Se compra y se usa en las recetas.
+                </p>
+              )}
+              {!esMP && enMenu && estaciones?.length ? (
                 <div className="rounded-xl border border-slate-200 px-3 py-2.5">
                   <span className={ET}>Estación de cocina</span>
                   <Select
@@ -431,19 +496,37 @@ export function ProductoForm({
               ) : null}
             </div>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <label className="block">
-                <span className={ET}>Stock mínimo</span>
-                <input inputMode="numeric" enterKeyHint="next" disabled={!f.controla_stock} value={f.stock_minimo} onChange={(e) => set("stock_minimo", e.target.value.replace(/\D/g, ""))} className={NUM} placeholder="0" />
-              </label>
-              <label className="block">
-                <span className={ET}>Unidad</span>
-                <input list="unidades-medida" enterKeyHint="next" value={f.unidad_medida} onChange={(e) => set("unidad_medida", e.target.value)} className={INPUT} placeholder="Unidad" />
-                <datalist id="unidades-medida">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
-              </label>
+              {!esMenu ? (
+                <label className="block">
+                  <span className={ET}>Stock mínimo</span>
+                  <input inputMode="decimal" enterKeyHint="next" disabled={!conStock} value={f.stock_minimo} onChange={(e) => set("stock_minimo", e.target.value.replace(/[^\d.]/g, ""))} className={NUM} placeholder="0" />
+                </label>
+              ) : null}
+              {esMP ? (
+                <div className="block">
+                  <span className={ET}>Unidad</span>
+                  <div role="radiogroup" aria-label="Unidad de medida" className="grid grid-cols-5 gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+                    {UNIDADES_MP.map((u) => (
+                      <button key={u} type="button" role="radio" aria-checked={f.unidad_medida === u} onClick={() => set("unidad_medida", u)}
+                        className="rounded-lg py-2 text-sm font-semibold transition max-sm:min-h-10"
+                        style={f.unidad_medida === u ? { backgroundColor: "#fff", color: BRAND, boxShadow: "0 1px 2px rgba(15,23,42,.08)" } : { color: "#64748b" }}>
+                        {u === "Unidad" ? "Unid." : u}
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-1 text-[11px] text-slate-400">El stock y el costo van en esta unidad; la receta convierte g↔kg y ml↔l.</p>
+                </div>
+              ) : (
+                <label className="block">
+                  <span className={ET}>Unidad</span>
+                  <input list="unidades-medida" enterKeyHint="next" value={f.unidad_medida} onChange={(e) => set("unidad_medida", e.target.value)} className={INPUT} placeholder="Unidad" />
+                  <datalist id="unidades-medida">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
+                </label>
+              )}
             </div>
 
             {/* Alta: stock inicial documentado (ajuste de inventario inicial en un depósito). */}
-            {!editando && f.controla_stock ? (
+            {!editando && conStock ? (
               <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50/50 p-3">
                 <p className="text-xs font-semibold text-slate-700">Stock inicial <span className="font-normal text-slate-400">(opcional)</span></p>
                 <div className="mt-2 grid grid-cols-[110px_1fr] gap-3">
@@ -484,7 +567,7 @@ export function ProductoForm({
           </Bloque>
 
           {/* ── Stock por depósito (al editar): solo lectura; se mueve con documentos ── */}
-          {editando && producto && producto.controla_stock && f.controla_stock ? (
+          {editando && producto && producto.controla_stock && conStock ? (
             <Bloque titulo="Stock por depósito" extra={producto.controla_lotes ? <Link href="/inventario/vencimientos" className="text-xs font-semibold text-[var(--brand)] hover:underline">Ver vencimientos</Link> : null}>
               <StockDepositosProducto productoId={producto.id} unidad={producto.unidad_medida ?? "Unidad"} puedeEditar={esAdmin && !soloLectura} />
             </Bloque>

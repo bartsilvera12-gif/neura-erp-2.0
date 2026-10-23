@@ -21,13 +21,19 @@ export function sumarDias(fecha: string, dias: number) {
 }
 
 /** Buscador de productos con búsqueda inteligente; Enter agrega el primero (lector de códigos). */
-export function BuscadorProductos({ onElegir, onCrear, mostrarPrecio = false }: {
+export function BuscadorProductos({ onElegir, onCrear, mostrarPrecio = false, tipo }: {
   onElegir: (p: ProductoInventario) => void;
   /** Si viene, ofrece "+ Crear producto" con lo que se buscó (alta rápida en un modal). */
   onCrear?: (texto: string) => void;
   /** Muestra el precio de venta en vez del costo (ej. Presupuestos). */
   mostrarPrecio?: boolean;
+  /**
+   * Receta 72: qué tipos busca. Por defecto, con precio (Presupuestos) "vendible" (sin materias
+   * primas) y si no "stock" (compras, traslados, ajustes: sin productos Menú, que no llevan stock).
+   */
+  tipo?: "reventa" | "menu" | "materia_prima" | "stock" | "vendible";
 }) {
+  const filtroTipo = tipo ?? (mostrarPrecio ? "vendible" : "stock");
   const [q, setQ] = useState("");
   const [res, setRes] = useState<ProductoInventario[]>([]);
   const [hi, setHi] = useState(0);
@@ -36,7 +42,7 @@ export function BuscadorProductos({ onElegir, onCrear, mostrarPrecio = false }: 
   const ref = useRef<HTMLInputElement>(null);
 
   const consultar = (t: string) =>
-    apiFetch<{ rows: ProductoInventario[] }>(`/api/productos?paginado=1&por_pagina=8&q=${encodeURIComponent(t)}`).then((r) => r.rows);
+    apiFetch<{ rows: ProductoInventario[] }>(`/api/productos?paginado=1&por_pagina=8&tipo=${filtroTipo}&q=${encodeURIComponent(t)}`).then((r) => r.rows);
 
   // El lector de códigos tipea y manda Enter enseguida: si los resultados todavía no
   // son de lo escrito, se busca en el momento y se agrega el primero.

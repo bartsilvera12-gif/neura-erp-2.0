@@ -27,6 +27,10 @@ export type Producto = {
   descuento_pct?: number;
   /** Productos con lotes: unidades en lotes VENCIDOS (la caja no las vende; avisa sin bloquear). */
   stock_vencido?: number;
+  /** Receta 72: "menu" = plato (stock_actual = porciones posibles según su receta). */
+  tipo_producto?: string;
+  /** Receta 72: plato sin receta (no se puede vender hasta cargarla). */
+  sin_receta?: boolean;
 };
 
 export type Cliente = {

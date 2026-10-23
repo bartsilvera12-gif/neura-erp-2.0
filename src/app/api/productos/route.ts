@@ -67,6 +67,9 @@ export const GET = withTenant(async (ctx, req) => {
     const q = (sp.get("q") ?? "").trim().slice(0, 200);
     const categoria = sp.get("categoria") ?? "";
     const desde = (pagina - 1) * porPagina;
+    // Receta 72: &tipo=reventa|menu|materia_prima|stock (todo menos Menú)|vendible (todo menos Materia prima).
+    const tipoSp = sp.get("tipo") ?? "";
+    const tipo = ["reventa", "menu", "materia_prima", "stock", "vendible"].includes(tipoSp) ? tipoSp : null;
 
     if (q) {
       const { data, error } = await ctx.db.rpc<{ rows: unknown[]; total: number }>("buscar_productos", {
@@ -76,6 +79,7 @@ export const GET = withTenant(async (ctx, req) => {
         p_solo_vendibles: sp.get("vendibles") === "1",
         p_limit: porPagina,
         p_offset: desde,
+        p_tipo: tipo,
       });
       if (error || !data) return ERR.server();
       return ok({ rows: sinCostos(ctx.puede, await conStockPorDeposito(ctx.db, (data.rows ?? []) as Record<string, unknown>[])), total: data.total ?? 0 });
@@ -91,6 +95,7 @@ export const GET = withTenant(async (ctx, req) => {
       p_inactivos: sp.get("inactivos") === "1",
       p_limit: porPagina,
       p_offset: desde,
+      p_tipo: tipo,
     });
     if (!rpc.error && rpc.data) {
       return ok({ rows: sinCostos(ctx.puede, await conStockPorDeposito(ctx.db, (rpc.data.rows ?? []) as Record<string, unknown>[])), total: Number(rpc.data.total) || 0 });
@@ -99,6 +104,9 @@ export const GET = withTenant(async (ctx, req) => {
 
     let query = ctx.db.select("productos", COLS, { count: "exact" });
     if (sp.get("inactivos") !== "1") query = query.eq("activo", true);
+    if (tipo === "stock") query = query.neq("tipo_producto", "menu");
+    else if (tipo === "vendible") query = query.neq("tipo_producto", "materia_prima");
+    else if (tipo) query = query.eq("tipo_producto", tipo);
     if (categoria === "__sin__") query = query.is("categoria_principal_id", null);
     else if (/^[0-9a-f-]{36}$/i.test(categoria)) {
       // Una categoría incluye a los productos de sus subcategorías.
@@ -209,6 +217,8 @@ const crearProducto = z.object({
   stock_minimo: z.coerce.number().min(0).default(0),
   unidad_medida: z.string().trim().default("Unidad"),
   tipo_iva: z.enum(["EXENTA", "5%", "10%"]).default("10%"),
+  /** receta 72: reventa · menu (sin stock, descuenta su receta) · materia_prima (no se vende) */
+  tipo_producto: z.enum(["reventa", "menu", "materia_prima"]).default("reventa"),
   controla_stock: z.boolean().default(true),
   controla_lotes: z.boolean().default(false),
   es_vendible: z.boolean().default(true),
@@ -222,6 +232,9 @@ const crearProducto = z.object({
 export const POST = withTenant(
   async (ctx, _req, input) => {
     const { stock_inicial, ...campos } = input;
+    // Menú: sin stock propio (descuenta su receta). Materia prima: no se vende (la base lo asegura igual).
+    if (campos.tipo_producto === "menu") { campos.controla_stock = false; campos.controla_lotes = false; }
+    if (campos.tipo_producto === "materia_prima") { campos.es_vendible = false; campos.en_menu_qr = false; campos.estacion_id = null; }
     if (stock_inicial && !campos.controla_stock) return fail("Un producto que no controla stock no lleva stock inicial.", 400);
     // Lotes solo tiene sentido si controla stock.
     const { data, error } = await ctx.db.insert("productos", {
@@ -231,6 +244,8 @@ export const POST = withTenant(
     });
     if (error || !data?.[0]) {
       if (error && /duplicate|unique/i.test(error.message)) return fail("Ya existe un producto con ese SKU o código.", 409);
+      // Reglas del tipo de producto (receta 72): el mensaje de la base es para el usuario.
+      if (error && (error as { code?: string }).code === "P0001") return falloRpc(error);
       return ERR.server();
     }
     const p = data[0] as { id: string; nombre: string; sku: string };

@@ -27,7 +27,7 @@ import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components
 import { colorCategoria, coloresPorCategoria, opcionesFiltroCategoria, partesCategoria, rutaCategoria, type Categoria, type ColorCategoria } from "@/modules/inventario/categorias";
 import { invalidarLista, precargarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { precargarFichaProducto } from "@/modules/inventario/ficha-cache";
-import type { ProductoInventario } from "@/modules/inventario/tipos";
+import { TIPOS_PRODUCTO, tipoProducto, type ProductoInventario } from "@/modules/inventario/tipos";
 
 // El panel del producto y el asistente de Excel se bajan recién cuando se usan (la
 // pantalla carga menos JS); al pasar el mouse por "editar"/"nuevo" ya se precargan.
@@ -40,11 +40,12 @@ const POR_PAGINA = [25, 50, 100, 200] as const;
 type Pagina = { rows: ProductoInventario[]; total: number };
 
 /** URL de una página del listado (misma forma siempre: es la clave del cache). */
-function urlPagina(f: { pagina: number; porPagina: number; busqueda: string; categoriaId: string; verInactivos: boolean }) {
+function urlPagina(f: { pagina: number; porPagina: number; busqueda: string; categoriaId: string; verInactivos: boolean; tipo: string }) {
   const sp = new URLSearchParams({ paginado: "1", pagina: String(f.pagina), por_pagina: String(f.porPagina) });
   if (f.busqueda) sp.set("q", f.busqueda);
   if (f.categoriaId) sp.set("categoria", f.categoriaId);
   if (f.verInactivos) sp.set("inactivos", "1");
+  if (f.tipo) sp.set("tipo", f.tipo);
   return `/api/productos?${sp}`;
 }
 
@@ -79,6 +80,8 @@ export default function InventarioPage() {
   const [busqueda, setBusqueda] = useState("");
   const [categoriaId, setCategoriaId] = useState("");
   const [verInactivos, setVerInactivos] = useState(false);
+  // Receta 72: filtro por tipo de producto (Reventa / Menú / Materia prima).
+  const [tipo, setTipo] = useState("");
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState<number>(25);
 
@@ -139,7 +142,7 @@ export default function InventarioPage() {
 
   // Un solo request por combinación de filtros + página, cacheado: volver a una página ya
   // vista pinta al instante; mientras llega una nueva quedan las filas anteriores.
-  const filtros = { busqueda, categoriaId, verInactivos, porPagina };
+  const filtros = { busqueda, categoriaId, verInactivos, porPagina, tipo };
   const url = urlPagina({ ...filtros, pagina });
   const { datos, cargando, error } = useListaCacheada<Pagina>(url, recarga);
   const productos = useMemo(() => (error ? [] : datos?.rows ?? []), [datos, error]);
@@ -166,7 +169,7 @@ export default function InventarioPage() {
   const hastaIdx = Math.min(paginaSegura * porPagina, total);
   const categoriaPorId = useMemo(() => new Map(categorias.map((c) => [c.id, c])), [categorias]);
   const colores = useMemo(() => coloresPorCategoria(categorias), [categorias]);
-  const hayFiltros = !!busqueda || !!categoriaId;
+  const hayFiltros = !!busqueda || !!categoriaId || !!tipo;
 
   // Callbacks estables para las filas memorizadas (FilaProducto).
   const toggleEnCurso = useRef(false);
@@ -206,6 +209,7 @@ export default function InventarioPage() {
     setBusquedaBorrador("");
     setBusqueda("");
     setCategoriaId("");
+    setTipo("");
     setPagina(1);
   }
 
@@ -233,11 +237,13 @@ export default function InventarioPage() {
           </div>
         ),
       },
-      { key: "precio", titulo: "Precio", movil: "valor", celda: (p) => gs(Number(p.precio_venta)) },
+      { key: "precio", titulo: "Precio", movil: "valor", celda: (p) => (p.tipo_producto === "materia_prima" ? <span className="text-xs font-medium text-slate-400">No se vende</span> : gs(Number(p.precio_venta))) },
+      { key: "tipo", titulo: "Tipo", movil: "chip", celda: (p) => <ChipTipo tipo={p.tipo_producto} /> },
       {
         key: "stock", titulo: "Stock", movil: "chip",
         celda: (p) => {
-          if (p.controla_stock === false) return <span className="text-xs font-medium text-slate-500">Stock: sin control</span>;
+          if (p.tipo_producto === "menu") return <span className="text-xs font-medium text-slate-500">Stock: por receta</span>;
+          if (p.controla_stock === false) return <span className="text-xs font-medium text-slate-500">{p.tipo_producto === "materia_prima" ? "Stock: preparación" : "Stock: sin control"}</span>;
           const stock = stockMostrado(p, alcanceSel.deposito, alcanceSel.sucursal, depPorId);
           const bajo = !alcanceSel.deposito && !alcanceSel.sucursal && Number(p.stock_minimo) > 0 && Number(p.stock_actual) < Number(p.stock_minimo);
           return (
@@ -381,7 +387,7 @@ export default function InventarioPage() {
           {/* Filtros: en celular, búsqueda + "Filtros (n)" (hoja inferior con el resto). */}
           <BarraFiltros
             plano
-            activos={(categoriaId ? 1 : 0) + (alcance ? 1 : 0) + (verInactivos ? 1 : 0)}
+            activos={(categoriaId ? 1 : 0) + (tipo ? 1 : 0) + (alcance ? 1 : 0) + (verInactivos ? 1 : 0)}
             onLimpiar={() => { limpiarFiltros(); setAlcance(""); setVerInactivos(false); }}
             busqueda={
             <div className="relative lg:min-w-[240px] lg:flex-1">
@@ -404,6 +410,7 @@ export default function InventarioPage() {
             }
           >
               <Select value={categoriaId} onChange={(v) => { setCategoriaId(v); setPagina(1); }} options={opcionesCategoria} minWidth={190} etiqueta="Categoría" />
+              <Select value={tipo} onChange={(v) => { setTipo(v); setPagina(1); }} options={[["", "Todos los tipos"], ...TIPOS_PRODUCTO.map((t): [string, string] => [t.id, t.label])]} minWidth={170} etiqueta="Tipo de producto" />
               {variosDepositos ? (
                 <Select value={alcance} onChange={setAlcance} options={opcionesAlcance(deps.datos, "Stock: todos los depósitos")} minWidth={220} etiqueta="Ver stock de" />
               ) : null}
@@ -418,6 +425,7 @@ export default function InventarioPage() {
             <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
               <span>Filtros activos:</span>
               {busqueda ? <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>Búsqueda: &quot;{busqueda}&quot;</span> : null}
+              {tipo ? <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>Tipo: {tipoProducto(tipo).label}</span> : null}
               {categoriaId ? (
                 <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>
                   {categoriaId === "__sin__" ? "Sin categoría" : rutaCategoria(categoriaId, categoriaPorId) ?? "Categoría"}
@@ -611,7 +619,10 @@ const FilaProducto = memo(function FilaProducto({
               {p.nombre}
               {inactivo ? <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-700">Inactivo</span> : null}
             </p>
-            <p className="mt-0.5 font-mono text-[11px] text-slate-600 lg:hidden">{p.sku}</p>
+            <p className="mt-0.5 flex flex-wrap items-center gap-1.5">
+              <span className="font-mono text-[11px] text-slate-600 lg:hidden">{p.sku}</span>
+              {p.tipo_producto && p.tipo_producto !== "reventa" ? <ChipTipo tipo={p.tipo_producto} /> : null}
+            </p>
           </div>
         </div>
       </td>
@@ -636,10 +647,10 @@ const FilaProducto = memo(function FilaProducto({
         )}
       </td>
       <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums text-slate-700">{conCosto ? gs(costo) : <span className="text-slate-300">—</span>}</td>
-      <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums text-slate-900">{gs(Number(p.precio_venta))}</td>
+      <td className="whitespace-nowrap px-3 py-3 text-right font-semibold tabular-nums text-slate-900">{p.tipo_producto === "materia_prima" ? <span className="text-xs font-medium text-slate-400">No se vende</span> : gs(Number(p.precio_venta))}</td>
       <td className="px-3 py-3 text-center">
         {sinControl ? (
-          <span className="text-xs font-medium text-slate-500">— sin control</span>
+          <span className="text-xs font-medium text-slate-500">{p.tipo_producto === "menu" ? "— por receta" : p.tipo_producto === "materia_prima" ? "— preparación" : "— sin control"}</span>
         ) : (
           <button type="button" disabled={!expandible} onClick={() => onExpandir(p.id)}
             title={expandible ? (expandido ? "Ocultar el stock por depósito" : "Ver el stock por depósito") : undefined}
@@ -651,7 +662,7 @@ const FilaProducto = memo(function FilaProducto({
           </button>
         )}
       </td>
-      <td className={`hidden px-3 py-3 text-right font-semibold tabular-nums lg:table-cell ${conCosto ? margenColor(margen) : "text-slate-300"}`}>{conCosto ? `${margen.toFixed(1)}%` : "—"}</td>
+      <td className={`hidden px-3 py-3 text-right font-semibold tabular-nums lg:table-cell ${conCosto && p.tipo_producto !== "materia_prima" ? margenColor(margen) : "text-slate-300"}`}>{conCosto && p.tipo_producto !== "materia_prima" ? `${margen.toFixed(1)}%` : "—"}</td>
       <td className="px-5 py-3">
         <div className="flex items-center justify-center gap-1">
           <button onClick={() => onEditar(p)} onMouseEnter={() => onPrecargar(p)} onFocus={() => onPrecargar(p)} title={inactivo ? "Ver producto (inactivo)" : "Editar producto"} aria-label={`${inactivo ? "Ver" : "Editar"} ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)]">
@@ -697,6 +708,12 @@ const FilaProducto = memo(function FilaProducto({
 });
 
 const claveProducto = (p: ProductoInventario) => p.id;
+
+/** Chip del tipo de producto (receta 72). */
+function ChipTipo({ tipo }: { tipo?: string | null }) {
+  const t = tipoProducto(tipo);
+  return <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${t.chip}`}>{t.corto}</span>;
+}
 
 function BotonPag({ children, onClick, disabled, title }: { children: React.ReactNode; onClick: () => void; disabled?: boolean; title?: string }) {
   return (

@@ -13,6 +13,7 @@ import { withTenant } from "@/lib/api/with-tenant";
 import { ok, fail, ERR } from "@/lib/api/responses";
 import { COLS_PRODUCTO_DETALLE } from "@/modules/inventario/server/productos-lote";
 import { UUID_RE, idDeRuta, idInvalido } from "@/modules/inventario/server/ids";
+import { falloRpc } from "@/modules/inventario/server/rpc";
 
 function prodId(req: { url: string }): string | null {
   return idDeRuta(req.url, "productos");
@@ -46,6 +47,8 @@ const editar = z.object({
   stock_minimo: z.coerce.number().optional(),
   unidad_medida: z.string().trim().optional(),
   tipo_iva: z.enum(["EXENTA", "5%", "10%"]).optional(),
+  /** receta 72: reventa · menu · materia_prima (la base ajusta stock / vendible según el tipo) */
+  tipo_producto: z.enum(["reventa", "menu", "materia_prima"]).optional(),
   controla_stock: z.boolean().optional(),
   controla_lotes: z.boolean().optional(),
   es_vendible: z.boolean().optional(),
@@ -68,6 +71,8 @@ export const PATCH = withTenant(
     const { error } = await ctx.db.update("productos", patch).eq("id", id);
     if (error) {
       if (/duplicate key|unique/i.test(error.message)) return fail("Ya existe un producto con ese SKU.", 409);
+      // Reglas del tipo de producto (receta 72: stock al pasar a Menú, receta al pasar a Reventa…).
+      if ((error as { code?: string }).code === "P0001") return falloRpc(error);
       return ERR.server();
     }
     return ok({ id });

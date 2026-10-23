@@ -55,6 +55,7 @@ Fotos de fondo de las tarjetas de `/inventario/panel` (componente `PanelModulo` 
 | Vencimientos | `public/inventario/vencimientos-fecha.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 | Categorías | `public/inventario/categorias-cajas.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
 | Depósitos | `public/inventario/depositos-racks.webp` | La proporcionó el dueño (2026-10-22) | Sin verificar: confirmar la licencia antes de usarla en producción | Origen desconocido (descargada por el dueño) |
+| Recetas (receta 72) | `public/finanzas/compras-canasto-supermercado.webp` (REUSADA de Gastos › Compras) | safaritravelplus | [CC0](http://creativecommons.org/publicdomain/zero/1.0/deed.en) | **FALTA FOTO PROPIA** (cocina / ingredientes): cuando el dueño la pase, guardarla en `public/inventario/recetas-*.webp` y cambiarla en el panel |
 
 Notas:
 - Ajustes y pérdidas: el recorte deja solo el lector de códigos y los pallets etiquetados (la persona que cuenta queda fuera de cuadro).

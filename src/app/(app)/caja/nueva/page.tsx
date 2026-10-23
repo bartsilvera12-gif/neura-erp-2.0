@@ -698,6 +698,11 @@ function CajaPageContenido() {
       const vendido = new Map<string, number>();
       for (const l of cart) if (l.producto.controla_stock) vendido.set(l.producto.id, (vendido.get(l.producto.id) ?? 0) + l.cantidad);
       if (vendido.size) setProductos((prev) => prev.map((p) => (vendido.has(p.id) ? { ...p, stock_actual: Number(p.stock_actual) - (vendido.get(p.id) ?? 0) } : p)));
+      // Receta 72: un plato consume ingredientes que comparten otros platos: se refrescan las
+      // porciones de todo el catálogo (en segundo plano).
+      if (depositoCaja && cart.some((l) => l.producto.tipo_producto === "menu")) {
+        apiFetch<Producto[]>(`/api/productos?pos=1&deposito=${depositoCaja}`).then(setProductos).catch(() => {});
+      }
       // Ticket imprimible (SIFEN inactivo → por ahora siempre ticket). La auth del
       // 2.0 es por Bearer, así que una pestaña nueva no lleva el token: traemos el
       // HTML con el token y lo abrimos como blob (el auto-print corre igual).
@@ -1075,7 +1080,7 @@ function CajaPageContenido() {
                     </div>
                     <div className="shrink-0 text-right">
                       <p className={`text-[11px] font-medium ${p.controla_stock && p.stock_actual <= 0 ? "text-rose-600" : "text-emerald-700"}`}>
-                        {p.controla_stock ? (p.stock_actual <= 0 ? "Sin stock" : `${p.stock_actual} u`) : "—"}
+                        {p.sin_receta ? "Sin receta" : p.controla_stock ? (p.stock_actual <= 0 ? "Sin stock" : p.tipo_producto === "menu" ? `${p.stock_actual} porc.` : `${p.stock_actual} u`) : "—"}
                       </p>
                       <p className="text-sm font-semibold tabular-nums text-slate-900">{formatGs(p.precio_venta)}</p>
                     </div>
@@ -1136,7 +1141,14 @@ function CajaPageContenido() {
                 <p className="text-sm font-semibold text-rose-800">❌ No podés cobrar — hay productos sin stock suficiente</p>
                 <ul className="mt-2 space-y-1 text-xs text-rose-900">
                   {sinStock.map((l) => (
-                    <li key={l.cart_line_id} className="tabular-nums"><strong>{l.producto.nombre}</strong> · Disponible: {l.producto.stock_actual} / Solicitado: {l.cantidad}</li>
+                    <li key={l.cart_line_id} className="tabular-nums">
+                      <strong>{l.producto.nombre}</strong> ·{" "}
+                      {l.producto.sin_receta
+                        ? "No tiene receta: cargala en Inventario › Recetas para poder venderlo"
+                        : l.producto.tipo_producto === "menu"
+                          ? `Alcanzan los ingredientes para ${l.producto.stock_actual} / Solicitado: ${l.cantidad}`
+                          : `Disponible: ${l.producto.stock_actual} / Solicitado: ${l.cantidad}`}
+                    </li>
                   ))}
                 </ul>
               </div>
