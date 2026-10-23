@@ -22,6 +22,8 @@ import { opcionesDepositos, useDepositos } from "@/modules/inventario/depositos"
 import { loteAutomatico } from "@/modules/inventario/vencimientos";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { SelectorFecha } from "@/components/SelectorFecha";
+import { useEstaciones } from "@/modules/mesas/useEstaciones";
+import { nombreEstacion } from "@/modules/mesas/tipos";
 
 const BRAND = clienteConfig.color;
 const INPUT =
@@ -88,14 +90,17 @@ export function ProductoForm({
   // Receta 68: "En el menú QR". La lista de Inventario no lo trae: al editar se lee del detalle
   // (null = todavía no llegó; mientras tanto no se manda, así no se pisa lo guardado).
   const [enMenu, setEnMenu] = useState<boolean | null>(producto ? (producto.en_menu_qr ?? null) : false);
+  // Receta 70: estación de cocina propia ("" = la de su categoría). null = todavía no llegó del detalle.
+  const [estacion, setEstacion] = useState<string | null>(producto ? (producto.estacion_id === undefined ? null : producto.estacion_id ?? "") : "");
   useEffect(() => {
-    if (!producto?.id || producto.en_menu_qr !== undefined) return;
+    if (!producto?.id || (producto.en_menu_qr !== undefined && producto.estacion_id !== undefined)) return;
     let vivo = true;
-    apiFetch<{ en_menu_qr?: boolean }>(`/api/productos/${producto.id}`)
-      .then((d) => { if (vivo) setEnMenu(!!d.en_menu_qr); })
+    apiFetch<{ en_menu_qr?: boolean; estacion_id?: string | null }>(`/api/productos/${producto.id}`)
+      .then((d) => { if (vivo) { setEnMenu(!!d.en_menu_qr); setEstacion(d.estacion_id ?? ""); } })
       .catch(() => {});
     return () => { vivo = false; };
-  }, [producto?.id, producto?.en_menu_qr]);
+  }, [producto?.id, producto?.en_menu_qr, producto?.estacion_id]);
+  const estaciones = useEstaciones();
   const [subiendo, setSubiendo] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,6 +140,9 @@ export function ProductoForm({
   const visible = (c: Categoria) => c.activo || c.id === cat.madre?.id || c.id === cat.sub?.id;
   const madres = cats.filter((c) => !c.parent_id && visible(c));
   const subs = cat.madre ? cats.filter((c) => c.parent_id === cat.madre!.id && visible(c)) : [];
+  // Estación que le toca por la categoría (la de la subcategoría, si no la de la madre), solo activas.
+  const idEstCat = [cat.sub?.estacion_id, cat.madre?.estacion_id].find((id) => id && estaciones?.some((e) => e.id === id && e.activa));
+  const estacionCategoria = idEstCat ? estaciones?.find((e) => e.id === idEstCat) : undefined;
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const num = (v: string) => (v === "" ? undefined : Number(v));
@@ -190,6 +198,7 @@ export function ProductoForm({
       controla_lotes: f.controla_stock && f.controla_lotes,
       es_vendible: f.es_vendible,
       en_menu_qr: enMenu ?? undefined,
+      estacion_id: estacion === null ? undefined : estacion || null,
       imagen_url: imagenUrl ?? undefined,
     };
     try {
@@ -403,6 +412,23 @@ export function ProductoForm({
               <Interruptor checked={f.es_vendible} onChange={(v) => set("es_vendible", v)} label="Se vende en caja" detalle="Aparece en el buscador de la caja." />
               <Interruptor checked={!!enMenu} onChange={(v) => setEnMenu(v)} label="En el menú QR"
                 detalle={enMenu === null ? "Cargando…" : "Sale en el menú que abren los clientes con el QR de las mesas (con su foto y precio)."} />
+              {enMenu && estaciones?.length ? (
+                <div className="rounded-xl border border-slate-200 px-3 py-2.5">
+                  <span className={ET}>Estación de cocina</span>
+                  <Select
+                    value={estacion ?? ""}
+                    onChange={setEstacion}
+                    disabled={estacion === null}
+                    block
+                    etiqueta="Estación de cocina"
+                    options={[
+                      ["", estacion === null ? "Cargando…" : `La de su categoría (${estacionCategoria ? nombreEstacion(estacionCategoria) : "Cocina general"})`],
+                      ...estaciones.filter((e) => e.activa || e.id === estacion).map((e): [string, string] => [e.id, `${nombreEstacion(e)}${e.activa ? "" : " (inactiva)"}`]),
+                    ]}
+                  />
+                  <p className="mt-1 text-[11px] text-slate-400">Dónde se prepara cuando lo piden por el QR. Elegí una solo si es distinta a la de su categoría (ej. la pizza en Pizzería).</p>
+                </div>
+              ) : null}
             </div>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <label className="block">

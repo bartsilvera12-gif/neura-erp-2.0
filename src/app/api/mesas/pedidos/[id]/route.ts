@@ -2,7 +2,8 @@
  * Acción sobre un pedido de mesa (receta 68).
  *   POST /api/mesas/pedidos/<id> { accion, motivo? }
  *     aceptar / rechazar (con motivo)       → "Atender pedidos de mesas"
- *     preparar / listo / entregar           → "Pantalla de cocina" (o la caja)
+ *     preparar / listo / entregar           → "Pantalla de cocina" (o la caja): todas las partes
+ *     entregar_listos                       → receta 70: entrega solo las comandas listas
  * La base valida el permiso, la sucursal y la transición de estado.
  */
 import { z } from "zod";
@@ -12,7 +13,7 @@ import { falloRpc } from "@/modules/inventario/server/rpc";
 import { UUID_RE, idDeRuta, idInvalido } from "@/modules/inventario/server/ids";
 
 const cuerpo = z.object({
-  accion: z.enum(["aceptar", "rechazar", "preparar", "listo", "entregar"]),
+  accion: z.enum(["aceptar", "rechazar", "preparar", "listo", "entregar", "entregar_listos"]),
   motivo: z.string().trim().max(500, "El motivo es muy largo").nullish(),
 });
 

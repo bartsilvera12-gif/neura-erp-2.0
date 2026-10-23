@@ -23,6 +23,8 @@ import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { MenuAcciones, type ItemMenu } from "@/components/MenuAcciones";
 import { ArbolCategoria } from "@/modules/inventario/ArbolCategoria";
 import { colorLibre, coloresPorCategoria, tonosDe, type Categoria } from "@/modules/inventario/categorias";
+import { useEstaciones } from "@/modules/mesas/useEstaciones";
+import { nombreEstacion, type Estacion } from "@/modules/mesas/tipos";
 
 const TEAL = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
@@ -65,6 +67,9 @@ export default function CategoriasPage() {
   const [agregandoEn, setAgregandoEn] = useState<string | null>(null);
   const [abiertas, setAbiertas] = useState<Set<string>>(new Set());
   const relleno = useRef<HTMLDivElement>(null);
+  // Receta 70: estación de cocina de cada categoría (para las comandas de las mesas).
+  const estaciones = useEstaciones() ?? [];
+  const estacionPorId = useMemo(() => new Map(estaciones.map((e) => [e.id, e])), [estaciones]);
 
   // "+ Subcategoría": abre el árbol de la categoría y suma una rama para escribir la nueva.
   function agregarSub(id: string) {
@@ -299,7 +304,12 @@ export default function CategoriasPage() {
                         <Resaltado texto={cat.nombre} q={q} />
                         {!cat.activo ? <EtiquetaInactiva /> : null}
                       </p>
-                      <p className="text-xs text-slate-500">{nProductos(total)}</p>
+                      <p className="text-xs text-slate-500">
+                        {nProductos(total)}
+                        {cat.estacion_id && estacionPorId.get(cat.estacion_id) ? (
+                          <span className="ml-1.5 whitespace-nowrap text-slate-400" title="Estación de cocina">· {nombreEstacion(estacionPorId.get(cat.estacion_id)!)}</span>
+                        ) : null}
+                      </p>
                     </div>
                   </button>
                   {esAdmin ? (
@@ -395,6 +405,7 @@ export default function CategoriasPage() {
         <EditarCategoria
           categoria={editando}
           categorias={categorias}
+          estaciones={estaciones}
           colorActual={colores.get(editando.id)?.dot}
           onClose={() => setEditando(null)}
           onGuardado={() => { setEditando(null); void cargar(); }}
@@ -506,9 +517,10 @@ function NuevaSub({ madre, onCrear, onCancelar }: { madre: string; onCrear: (nom
   );
 }
 
-function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuardado }: {
+function EditarCategoria({ categoria, categorias, estaciones, colorActual, onClose, onGuardado }: {
   categoria: Categoria;
   categorias: Categoria[];
+  estaciones: Estacion[];
   colorActual?: string;
   onClose: () => void;
   onGuardado: () => void;
@@ -517,7 +529,15 @@ function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuarda
   const [codigo, setCodigo] = useState(categoria.codigo ?? "");
   const [padre, setPadre] = useState(categoria.parent_id ?? "");
   const [color, setColor] = useState(categoria.color ?? colorActual ?? "#3b82f6");
+  const [estacion, setEstacion] = useState(categoria.estacion_id ?? "");
   const [busy, setBusy] = useState(false);
+  // Sin estación propia: una subcategoría usa la de su madre; una principal va a Cocina general.
+  const madre = padre ? categorias.find((c) => c.id === padre) : undefined;
+  const deMadre = madre?.estacion_id ? estaciones.find((e) => e.id === madre.estacion_id) : undefined;
+  const opcionesEstacion: [string, string][] = [
+    ["", madre ? `La de ${madre.nombre} (${deMadre ? nombreEstacion(deMadre) : "Cocina general"})` : "Sin estación (Cocina general)"],
+    ...estaciones.filter((e) => e.activa || e.id === estacion).map((e): [string, string] => [e.id, `${nombreEstacion(e)}${e.activa ? "" : " (inactiva)"}`]),
+  ];
   const [error, setError] = useState<string | null>(null);
   // Dos niveles: una categoría con subcategorías no puede quedar dentro de otra.
   const tieneHijas = categorias.some((c) => c.parent_id === categoria.id);
@@ -529,7 +549,7 @@ function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuarda
     try {
       await apiFetch(`/api/inventario/categorias/${categoria.id}`, {
         method: "PATCH",
-        body: JSON.stringify({ nombre: nombre.trim(), codigo: codigo.trim() || null, parent_id: padre || null, color: padre ? null : color }),
+        body: JSON.stringify({ nombre: nombre.trim(), codigo: codigo.trim() || null, parent_id: padre || null, color: padre ? null : color, estacion_id: estacion || null }),
       });
       onGuardado();
     } catch (err) {
@@ -573,6 +593,13 @@ function EditarCategoria({ categoria, categorias, colorActual, onClose, onGuarda
               <span className={ET}>Código <span className="font-normal text-slate-400">(opcional)</span></span>
               <input value={codigo} onChange={(e) => setCodigo(e.target.value)} placeholder="Ej: BEB" className={INPUT} />
             </label>
+            {estaciones.length ? (
+              <div>
+                <span className={ET}>Estación de cocina</span>
+                <Select value={estacion} onChange={setEstacion} block etiqueta="Estación de cocina" options={opcionesEstacion} />
+                <p className="mt-1 text-[11px] text-slate-400">Dónde se preparan los pedidos de las mesas con productos de esta categoría. Un producto puede tener su propia estación.</p>
+              </div>
+            ) : null}
           </div>
           {error ? <p className="mt-3 rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
           </div>

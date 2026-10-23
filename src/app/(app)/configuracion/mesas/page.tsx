@@ -8,6 +8,8 @@
  *   · QR de cada mesa (se genera en el navegador con `qrcode`): ver, copiar el link, abrir el menú,
  *     imprimir, y regenerar el token (el QR impreso viejo deja de andar).
  *   · "Imprimir QR": una hoja con el QR + nombre de cada mesa (de la sucursal elegida).
+ *   · Pestaña "Estaciones de cocina" (receta 70): Plancha, Pizzería, Barra… y la estación fija de
+ *     cada usuario (src/modules/mesas/EstacionesConfig.tsx).
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
@@ -18,7 +20,8 @@ import { Select } from "@/components/Select";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchSWR, guardadoAlInstante, invalidar } from "@/lib/api/cache-cliente";
 import { clienteConfig } from "@/cliente.config";
-import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT } from "@/modules/inventario/ui";
+import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT, Pestanas } from "@/modules/inventario/ui";
+import { EstacionesConfig } from "@/modules/mesas/EstacionesConfig";
 import { linkMesa, type Mesa, type MesasConfig } from "@/modules/mesas/tipos";
 
 const URL_MESAS = "/api/mesas";
@@ -47,6 +50,9 @@ export default function MesasConfigPage() {
   const [verQr, setVerQr] = useState<Mesa | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [imprimiendo, setImprimiendo] = useState(false);
+  // Receta 70: pestaña "Estaciones de cocina".
+  const [tab, setTab] = useState<"mesas" | "estaciones">("mesas");
+  const [nuevaEstacion, setNuevaEstacion] = useState(false);
 
   async function imprimir(lista: Mesa[]) {
     const activas = lista.filter((m) => m.activa);
@@ -75,7 +81,11 @@ export default function MesasConfigPage() {
         kicker="Configuración"
         titulo="Mesas y QR"
         subtitulo="Cada mesa tiene un QR que abre el menú en el celular del cliente. Los pedidos llegan a Caja › Pedidos de mesas."
-        acciones={
+        acciones={tab === "estaciones" ? (
+          <button type="button" onClick={() => setNuevaEstacion(true)} className={`${BOTON_PRIMARIO} min-h-11 lg:min-h-0`} style={{ backgroundColor: COLOR }}>
+            <Plus className="h-4 w-4" aria-hidden /> Nueva estación
+          </button>
+        ) : (
           <div className="flex flex-wrap items-center gap-2">
             <button type="button" onClick={() => void imprimir(mesas)} disabled={imprimiendo || !mesas.length} className={`${BOTON_SECUNDARIO} min-h-11 lg:min-h-0`}>
               {imprimiendo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" aria-hidden />} Imprimir QR
@@ -84,9 +94,17 @@ export default function MesasConfigPage() {
               <Plus className="h-4 w-4" aria-hidden /> Nueva mesa
             </button>
           </div>
-        }
+        )}
       />
 
+      <Pestanas valor={tab} onChange={(v) => setTab(v as "mesas" | "estaciones")} opciones={[
+        { id: "mesas", label: "Mesas" },
+        { id: "estaciones", label: "Estaciones de cocina" },
+      ]} />
+
+      {tab === "estaciones" ? (
+        <EstacionesConfig nueva={nuevaEstacion} onNuevaCerrada={() => setNuevaEstacion(false)} />
+      ) : (<>
       {variasSucursales ? (
         <div className="max-w-xs">
           <Select block etiqueta="Sucursal" value={suc} onChange={setSuc} options={[["", "Todas las sucursales"], ...sucursales.map((s) => [s.id, s.nombre] as [string, string])]} />
@@ -126,6 +144,7 @@ export default function MesasConfigPage() {
           ))}
         </ul>
       )}
+      </>)}
 
       {editar ? (
         <EditarMesa

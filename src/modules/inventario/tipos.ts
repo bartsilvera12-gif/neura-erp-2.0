@@ -23,6 +23,8 @@ export type ProductoInventario = {
   es_vendible: boolean;
   /** receta 68: sale en el menú QR de las mesas (viene en el detalle, no en la lista) */
   en_menu_qr?: boolean;
+  /** receta 70: estación de cocina propia (excepción; null = la de su categoría). Viene en el detalle. */
+  estacion_id?: string | null;
   activo: boolean;
   imagen_url: string | null;
   /** lista paginada de Inventario: unidades por depósito (solo los que tienen) */

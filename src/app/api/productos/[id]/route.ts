@@ -50,6 +50,8 @@ const editar = z.object({
   controla_lotes: z.boolean().optional(),
   es_vendible: z.boolean().optional(),
   en_menu_qr: z.boolean().optional(),
+  /** receta 70: estación de cocina propia (null = la de su categoría) */
+  estacion_id: z.string().uuid().nullish(),
   imagen_url: z.string().url().max(500).nullish(),
   activo: z.boolean().optional(),
 });

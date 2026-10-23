@@ -1,6 +1,6 @@
 /**
  * Categoría — edición parcial (ADMIN). No hay borrado: se activa/desactiva (como Ferretería).
- *   PATCH /api/inventario/categorias/[id]  { nombre?, codigo?, descripcion?, parent_id?, activo? }
+ *   PATCH /api/inventario/categorias/[id]  { nombre?, codigo?, descripcion?, parent_id?, activo?, estacion_id? }
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
@@ -20,6 +20,8 @@ const editar = z.object({
   parent_id: z.string().uuid().nullish(),
   color: z.string().regex(/^#[0-9a-fA-F]{6}$/, "Color inválido").nullish(),
   activo: z.boolean().optional(),
+  /** receta 70: estación de cocina (null = la de su categoría madre / Cocina general) */
+  estacion_id: z.string().uuid().nullish(),
 });
 
 export const PATCH = withTenant(
@@ -47,6 +49,7 @@ export const PATCH = withTenant(
     if (input.parent_id !== undefined) patch.parent_id = input.parent_id ?? null;
     if (input.color !== undefined) patch.color = input.color ?? null;
     if (input.activo !== undefined) patch.activo = input.activo;
+    if (input.estacion_id !== undefined) patch.estacion_id = input.estacion_id ?? null;
     const { data, error } = await ctx.db.update("categorias_productos", patch).eq("id", id).select("id");
     if (error) {
       if (/duplicate|unique/i.test(error.message)) return fail("Ya existe una categoría con ese nombre o código.", 409);

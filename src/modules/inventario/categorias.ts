@@ -8,10 +8,12 @@ export type Categoria = {
   activo: boolean;
   /** color elegido (#rrggbb) — solo categorías principales; null = automático */
   color?: string | null;
+  /** receta 70: estación de cocina (null = la de su categoría madre, o Cocina general) */
+  estacion_id?: string | null;
   created_at?: string;
 };
 
-export const COLS_CATEGORIA = "id, nombre, codigo, descripcion, parent_id, activo, color, created_at, updated_at";
+export const COLS_CATEGORIA = "id, nombre, codigo, descripcion, parent_id, activo, color, estacion_id, created_at, updated_at";
 
 /** Código a partir del nombre: minúsculas, sin acentos, _ como separador (máx. 60). */
 export function slugCodigo(nombre: string): string {

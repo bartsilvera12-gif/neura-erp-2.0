@@ -5,7 +5,8 @@
  *   · Cola en tiempo casi real (cada 4 s), el más viejo primero: de dónde viene (mesa · zona ·
  *     sucursal), hace cuánto, ítems, notas y nombre. Aceptar / Rechazar (con motivo, lo ve el
  *     cliente). Aviso sonoro y contador en la pestaña cuando llega uno nuevo.
- *   · En curso: los aceptados con su estado de cocina; se pueden marcar entregados.
+ *   · En curso: los aceptados con su avance POR ESTACIÓN (receta 70: Plancha listo · Pizzería en
+ *     preparación…); cada parte lista se entrega por separado ("Entregar" / "Entregar todo lo listo").
  *   · Cuentas abiertas por mesa con el total acumulado: "Enviar a caja" (receta 69: la cobra la
  *     caja desde Nueva venta › Mesas por cobrar; "Volver a abrir" si se envió por error) o
  *     Liberar (si todo se rechazó). El cobro ya no se hace acá: un solo camino, por la caja.
@@ -23,7 +24,8 @@ import { clienteConfig } from "@/cliente.config";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, PedirMotivo, Pestanas } from "@/modules/inventario/ui";
 import { useTablero } from "@/modules/mesas/useTablero";
 import {
-  cant, ESTADOS_PEDIDO, gs, haceCuanto, horaCorta, origenPedido, pitido, URL_TABLERO, type CuentaMesa, type PedidoMesa,
+  cant, ESTADOS_COMANDA, ESTADOS_PEDIDO, gs, haceCuanto, horaCorta, nombreEstacion, origenPedido, pitido, URL_TABLERO,
+  type Comanda, type CuentaMesa, type PedidoMesa,
 } from "@/modules/mesas/tipos";
 
 const COLOR = clienteConfig.color;
@@ -64,7 +66,22 @@ export default function PedidosMesasPage() {
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [aviso, setAviso] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
 
-  const accion = useCallback(async (p: PedidoMesa, a: "aceptar" | "rechazar" | "entregar", motivo?: string) => {
+  // Receta 70: entregar UNA parte lista (la comanda de una estación).
+  const entregarParte = useCallback(async (p: PedidoMesa, k: Comanda) => {
+    setOcupado(k.id);
+    setAviso(null);
+    try {
+      await apiFetch(`/api/mesas/comandas/${k.id}`, { method: "POST", body: JSON.stringify({ accion: "entregar" }) });
+      invalidar(URL_TABLERO);
+      await recargar();
+    } catch (e) {
+      setAviso({ tipo: "error", texto: `${p.mesa.nombre} · ${k.estacion_nombre}: ${(e as Error).message}` });
+    } finally {
+      setOcupado(null);
+    }
+  }, [recargar]);
+
+  const accion = useCallback(async (p: PedidoMesa, a: "aceptar" | "rechazar" | "entregar" | "entregar_listos", motivo?: string) => {
     setOcupado(p.id);
     setAviso(null);
     try {
@@ -143,7 +160,9 @@ export default function PedidosMesasPage() {
           <ul className="space-y-2">
             {enCurso.map((p) => (
               <TarjetaPedido key={p.id} p={p} ahora={ahora()} conSucursal={variasSucursales} compacta>
-                {p.estado === "listo" ? (
+                {p.comandas?.length ? (
+                  <AvanceEstaciones p={p} ocupado={ocupado} onEntregar={(k) => void entregarParte(p, k)} onEntregarListos={() => void accion(p, "entregar_listos")} />
+                ) : p.estado === "listo" ? (
                   <button type="button" disabled={ocupado === p.id} onClick={() => void accion(p, "entregar")} className={`${BOTON_SECUNDARIO} min-h-10 w-full lg:min-h-0`}>
                     <CheckCircle2 className="h-4 w-4" aria-hidden /> Marcar entregado
                   </button>
@@ -322,6 +341,41 @@ function TarjetaPedido({ p, ahora, conSucursal, resaltar, compacta, children }: 
       {p.nota ? <p className="mx-4 mb-2.5 rounded-lg bg-slate-50 px-2.5 py-1.5 text-xs text-slate-600">Nota: {p.nota}</p> : null}
       {children ? <div className="border-t border-slate-100 px-4 py-2.5">{children}</div> : null}
     </li>
+  );
+}
+
+/**
+ * Receta 70: avance del pedido por estación ("🔥 Plancha: listo · 🍕 Pizzería: en preparación") con
+ * "Entregar" en cada parte lista y "Entregar todo lo listo" si hay más de una. Solo lo ve la caja:
+ * el cliente en su celular ve el estado general.
+ */
+function AvanceEstaciones({ p, ocupado, onEntregar, onEntregarListos }: {
+  p: PedidoMesa; ocupado: string | null; onEntregar: (k: Comanda) => void; onEntregarListos: () => void;
+}) {
+  const comandas = p.comandas ?? [];
+  const listas = comandas.filter((k) => k.estado === "listo");
+  return (
+    <div className="space-y-2">
+      <ul className="space-y-1.5">
+        {comandas.map((k) => (
+          <li key={k.id} className="flex min-h-10 flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+            <span className="min-w-0 flex-1 font-medium text-slate-800">{nombreEstacion(k)}</span>
+            <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${ESTADOS_COMANDA[k.estado].clase}`}>{ESTADOS_COMANDA[k.estado].texto}</span>
+            {k.estado === "listo" ? (
+              <button type="button" disabled={ocupado === k.id || ocupado === p.id} onClick={() => onEntregar(k)}
+                className="inline-flex min-h-10 items-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50 px-3 text-xs font-semibold text-emerald-800 transition hover:bg-emerald-100 disabled:opacity-50 lg:min-h-8">
+                {ocupado === k.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" aria-hidden />} Entregar
+              </button>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+      {listas.length > 1 ? (
+        <button type="button" disabled={ocupado === p.id} onClick={onEntregarListos} className={`${BOTON_SECUNDARIO} min-h-10 w-full lg:min-h-0`}>
+          {ocupado === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" aria-hidden />} Entregar todo lo listo ({listas.length})
+        </button>
+      ) : null}
+    </div>
   );
 }
 

@@ -35,7 +35,42 @@ export type MesasConfig = {
   empresa: string | null;
 };
 
-export type ItemPedido = { nombre: string; cantidad: number; precio_unitario: number; total: number; nota: string | null };
+/** Receta 70: `estacion_id` = estación resuelta al aceptar (null = Cocina general). */
+export type ItemPedido = { nombre: string; cantidad: number; precio_unitario: number; total: number; nota: string | null; estacion_id?: string | null };
+
+/** Estación de cocina (receta 70): Plancha, Pizzería, Barra… */
+export type Estacion = { id: string; nombre: string; color: string | null; icono: string | null; orden: number; activa: boolean };
+
+export type EstadoComanda = "aceptado" | "en_preparacion" | "listo" | "entregado";
+
+export const ESTADOS_COMANDA: Record<EstadoComanda, { texto: string; clase: string }> = {
+  aceptado: { texto: "para preparar", clase: "bg-sky-100 text-sky-800" },
+  en_preparacion: { texto: "en preparación", clase: "bg-violet-100 text-violet-800" },
+  listo: { texto: "listo", clase: "bg-emerald-100 text-emerald-800" },
+  entregado: { texto: "entregado", clase: "bg-slate-100 text-slate-500" },
+};
+
+/** La parte de un pedido que hace UNA estación (receta 70). */
+export type Comanda = {
+  id: string;
+  estacion_id: string | null;
+  estacion_nombre: string;
+  color: string | null;
+  icono: string | null;
+  estado: EstadoComanda;
+  creado_at: string;
+  preparando_at: string | null;
+  listo_at: string | null;
+  entregado_at: string | null;
+  impresa_at: string | null;
+};
+
+/** Nombre de la estación con su ícono: "🔥 Plancha" · "Cocina general". */
+export const nombreEstacion = (c: { icono: string | null; estacion_nombre?: string; nombre?: string }) =>
+  [c.icono, c.estacion_nombre ?? c.nombre].filter(Boolean).join(" ");
+
+/** Ítems de un pedido que le tocan a una comanda. */
+export const itemsDeComanda = (p: PedidoMesa, k: Comanda) => p.items.filter((i) => (i.estacion_id ?? null) === k.estacion_id);
 
 export type PedidoMesa = {
   id: string;
@@ -56,6 +91,8 @@ export type PedidoMesa = {
   listo_at: string | null;
   entregado_at: string | null;
   items: ItemPedido[];
+  /** Receta 70: una por estación (vacío mientras el pedido es nuevo o si se rechazó). */
+  comandas?: Comanda[];
 };
 
 export type CuentaMesa = {
@@ -77,6 +114,9 @@ export type TableroMesas = {
   ahora: string;
   pedidos: PedidoMesa[];
   cuentas: CuentaMesa[];
+  /** Receta 70: estaciones de la empresa (activas e inactivas) y la estación fija del usuario. */
+  estaciones?: Estacion[];
+  mi_estacion_id?: string | null;
   puede_atender: boolean;
   puede_cocina: boolean;
 };

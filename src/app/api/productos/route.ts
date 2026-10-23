@@ -214,6 +214,8 @@ const crearProducto = z.object({
   es_vendible: z.boolean().default(true),
   /** receta 68: sale en el menú QR de las mesas */
   en_menu_qr: z.boolean().default(false),
+  /** receta 70: estación de cocina propia (null = la de su categoría) */
+  estacion_id: z.string().uuid().nullish(),
   imagen_url: z.string().url().max(500).nullish(),
 });
 
