@@ -8,12 +8,17 @@
  * Caja por sucursal (receta 51): se vende en la caja abierta elegida (caja · sucursal ·
  * turno); el stock que se ve y se descuenta es el del depósito de ESA caja. Cobro con una
  * o varias formas de pago (efectivo con vuelto, débito, crédito, transferencia, QR…).
+ * Mesas por cobrar (receta 69): las cuentas que Pedidos de mesas envió a caja (de la sucursal
+ * de la caja). Se cargan en el carrito (no se pueden quitar ni bajar sus ítems; agregar otros sí)
+ * y al cobrar la venta cierra la cuenta en la misma transacción.
  */
 
 import Link from "next/link";
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ChevronRight, FileSignature, Package, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronRight, FileSignature, Lock, Package, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
+import { usePorCobrar } from "@/modules/mesas/usePorCobrar";
+import { haceCuanto, origenPedido, pitido, type CuentaPorCobrar } from "@/modules/mesas/tipos";
 import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
@@ -76,6 +81,8 @@ type CartLine = {
   tipo_precio: TipoPrecio;
   /** Descuento de la línea (%), 0..100. En súper el descuento es por producto. */
   descuento_pct: number;
+  /** Línea de la cuenta de una mesa (receta 69): lo pedido; no se quita ni se baja de acá. */
+  mesa_min?: number;
 };
 
 /** Abre el ticket imprimible en una pestaña nueva, adjuntando el Bearer. Ancho: el de Configuración › Facturación. */
@@ -485,6 +492,60 @@ function CajaPageContenido() {
     router.replace("/caja/nueva", { scroll: false });
   }
 
+  // ── Mesas por cobrar (receta 69) ────────────────────────────────────────────
+  // Cuentas que Pedidos de mesas envió a caja, de la sucursal de la caja en uso (cada 4 s, con
+  // un pitido cuando entra una nueva). Se carga UNA en el carrito: sus líneas quedan fijas (no se
+  // quitan ni se bajan) y al cobrar la base cierra la cuenta con la venta en la misma transacción.
+  const { cuentas: porCobrar, fresco: porCobrarFresco, recargar: recargarPorCobrar, ahora: ahoraMesas } = usePorCobrar(caja?.id ?? null, () => pitido());
+  const [bandejaMesas, setBandejaMesas] = useState(false);
+  const [cuentaMesa, setCuentaMesa] = useState<CuentaPorCobrar | null>(null);
+  const [errorMesa, setErrorMesa] = useState<string | null>(null);
+  const cuentaMesaAhora = cuentaMesa ? porCobrar.find((c) => c.id === cuentaMesa.id) ?? null : null;
+  const cuentaMesaCambio = !!cuentaMesa && !!cuentaMesaAhora && cuentaMesaAhora.version !== cuentaMesa.version;
+  const cuentaMesaSeFue = !!cuentaMesa && porCobrarFresco && !cuentaMesaAhora;
+
+  function lineasDeMesa(c: CuentaPorCobrar): CartLine[] | string {
+    const t = Date.now();
+    const out: CartLine[] = [];
+    for (const [i, it] of c.items.entries()) {
+      const prod = it.producto_id ? productos.find((p) => p.id === it.producto_id) : undefined;
+      if (!prod) return `"${it.nombre}" no está en el catálogo de esta caja: no se puede cargar la cuenta.`;
+      out.push({
+        cart_line_id: `mesa_${c.id}_${i}_${t}`,
+        producto: prod,
+        cantidad: Number(it.cantidad),
+        tipo_iva: prod.tipo_iva,
+        // Precio del pedido: si es el de hoy va con el descuento del producto (igual que la caja);
+        // si cambió desde que se pidió, se respeta el del pedido.
+        precio_override: it.precio_de_hoy ? null : Number(it.precio_unitario),
+        tier_manual: true,
+        tipo_precio: "minorista",
+        descuento_pct: it.precio_de_hoy ? Math.max(0, Math.min(Number(prod.descuento_pct) || 0, 100)) : 0,
+        mesa_min: Number(it.cantidad),
+      });
+    }
+    return out;
+  }
+
+  function cargarCuentaMesa(c: CuentaPorCobrar) {
+    setErrorMesa(null);
+    const lineas = lineasDeMesa(c);
+    if (typeof lineas === "string") { setErrorMesa(lineas); return; }
+    setCart((prev) => [...lineas, ...prev.filter((l) => !l.mesa_min)]);
+    setUltimo(lineas.length ? lineas[lineas.length - 1].producto : null);
+    setCuentaMesa(c);
+    setBandejaMesas(false);
+    idempotencyKeyRef.current = null;
+    if (cobroError) setCobroError(null);
+  }
+
+  function soltarCuentaMesa() {
+    setCart((prev) => prev.filter((l) => !l.mesa_min));
+    setCuentaMesa(null);
+    setErrorMesa(null);
+    idempotencyKeyRef.current = null;
+  }
+
   // ── Acciones carrito ───────────────────────────────────────────────────────
   const addToCart = useCallback((p: Producto, reenfocar?: boolean) => {
     setCart((prev) => {
@@ -515,7 +576,8 @@ function CajaPageContenido() {
 
   const updateCant = useCallback((id: string, n: number) => {
     if (!Number.isFinite(n) || n <= 0) return;
-    setCart((prev) => prev.map((l) => (l.cart_line_id === id ? { ...l, cantidad: n } : l)));
+    // Cuenta de mesa: no se baja de lo que pidió la mesa.
+    setCart((prev) => prev.map((l) => (l.cart_line_id === id ? { ...l, cantidad: l.mesa_min ? Math.max(n, l.mesa_min) : n } : l)));
   }, []);
 
   const setIvaLinea = useCallback((id: string, iva: TipoIva) => {
@@ -523,12 +585,14 @@ function CajaPageContenido() {
   }, []);
 
   const removeFromCart = useCallback((id: string) => {
-    setCart((prev) => prev.filter((l) => l.cart_line_id !== id));
+    // Las líneas de la cuenta de una mesa no se quitan (se suelta la cuenta entera).
+    setCart((prev) => prev.filter((l) => l.cart_line_id !== id || !!l.mesa_min));
   }, []);
 
   const vaciarCarrito = useCallback(() => {
     setCart([]);
     setUltimo(null);
+    setCuentaMesa(null);
   }, []);
 
   function onKeyDownBuscar(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -553,6 +617,9 @@ function CajaPageContenido() {
       setCobroError("Abrí (o elegí) la caja en la que vas a vender.");
       return;
     }
+    if (cuentaMesaSeFue) { setCobroError("La cuenta de la mesa ya no está en caja: soltala para seguir."); return; }
+    if (cuentaMesaCambio) { setCobroError("La cuenta de la mesa cambió: recargala antes de cobrar."); return; }
+    if (cuentaMesaAhora && cuentaMesaAhora.pendientes > 0) { setCobroError("La mesa tiene un pedido nuevo sin atender: aceptalo o rechazalo en Pedidos de mesas."); return; }
     if (clienteObligatorio && !clienteId) {
       setCobroError(tipoDocumento === "factura" ? "Para emitir factura elegí un cliente." : "La venta a crédito requiere un cliente.");
       if (!esEscritorio) setHojaOpciones(true); // celular / tablet: el cliente está en la hoja
@@ -612,15 +679,19 @@ function CajaPageContenido() {
           // Formas de pago (solo contado). La base valida que sumen el total.
           pagos: tipoVenta === "CREDITO" ? undefined : pagos,
           presupuesto_id: presuActivo?.id,
+          // Receta 69: la venta cierra la cuenta de la mesa (misma transacción en la base).
+          mesa_cuenta_id: cuentaMesa?.id,
+          mesa_version: cuentaMesa?.version,
         }),
       });
       idempotencyKeyRef.current = null;
+      if (cuentaMesa) void recargarPorCobrar();
       if (presuActivo) {
         setVentaPresu(venta.aviso_presupuesto ?? `Presupuesto ${presuActivo.etiqueta} convertido en venta.`);
         setPresu(null);
         router.replace("/caja/nueva", { scroll: false });
       } else {
-        setVentaPresu(null);
+        setVentaPresu(cuentaMesa ? `Cuenta de ${cuentaMesa.mesa.nombre} cerrada.` : null);
       }
       // Stock: se descuenta en pantalla lo recién vendido (antes se volvía a bajar TODO el
       // catálogo después de cada venta). La base igual valida el stock al vender.
@@ -654,7 +725,7 @@ function CajaPageContenido() {
 
   // Espejo del estado para los atajos de teclado (siempre el último valor).
   kbRef.current = {
-    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente || hojaOpciones || pedirComprador, cart, q, inputRef,
+    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente || hojaOpciones || pedirComprador || bandejaMesas, cart, q, inputRef,
     updateCant, removeFromCart, setCobroOpen, setQ, setClienteOpen,
   };
 
@@ -895,6 +966,55 @@ function CajaPageContenido() {
         )
       ) : null}
 
+      {/* Mesas por cobrar (receta 69): bandeja + la cuenta cargada en el carrito. */}
+      {caja && (porCobrar.length > 0 || cuentaMesa) ? (
+        <div className={`grid shrink-0 gap-2 ${cuentaMesa && porCobrar.length > 0 ? "md:grid-cols-2" : ""}`}>
+          {porCobrar.length > 0 ? (
+            <button type="button" onClick={() => { setErrorMesa(null); setBandejaMesas(true); }}
+              className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-left transition hover:bg-sky-100 active:scale-[0.99]">
+              <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-sky-700 ring-1 ring-sky-200">
+                <Receipt className="h-4 w-4" aria-hidden />
+                <span className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full bg-sky-600 px-1 text-[11px] font-bold text-white tabular-nums">{porCobrar.length}</span>
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-sky-900">Mesas por cobrar ({porCobrar.length})</span>
+                <span className="block truncate text-xs text-sky-800/80">{porCobrar.map((c) => c.mesa.nombre).join(" · ")}</span>
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-sky-800">Ver <ChevronRight className="h-4 w-4" aria-hidden /></span>
+            </button>
+          ) : null}
+          {cuentaMesa ? (
+            <div className="space-y-1.5 rounded-xl border px-3 py-2 text-sm" style={{ borderColor: `${TEAL}55`, backgroundColor: `${TEAL}10` }}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex min-w-0 items-center gap-2 text-slate-800">
+                  <Receipt className="h-4 w-4 shrink-0" style={{ color: TEAL }} aria-hidden />
+                  <span className="min-w-0">Cuenta de <b>{origenPedido(cuentaMesa)}</b> · <span className="whitespace-nowrap tabular-nums">{formatGs(cuentaMesa.total)}</span></span>
+                </p>
+                <button type="button" onClick={soltarCuentaMesa} className="min-h-11 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-white/70 hover:text-slate-800 lg:min-h-0">Soltar cuenta</button>
+              </div>
+              <p className="text-[11px] text-slate-500">Lo que pidió la mesa no se puede quitar ni bajar; podés agregar otros productos. Al cobrar, la cuenta queda cerrada.</p>
+              {cuentaMesaCambio && cuentaMesaAhora ? (
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-900" role="status">
+                  La cuenta cambió (ahora {formatGs(cuentaMesaAhora.total)}).
+                  <button type="button" onClick={() => cargarCuentaMesa(cuentaMesaAhora)} className="inline-flex min-h-11 items-center gap-1 font-semibold underline underline-offset-2 lg:min-h-0">
+                    <RotateCw className="h-3.5 w-3.5" aria-hidden /> Recargar
+                  </button>
+                </p>
+              ) : null}
+              {cuentaMesaSeFue ? (
+                <p className="rounded-lg bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700" role="alert">
+                  Esta cuenta ya no está en caja (la cobraron o la volvieron a abrir). Soltala para seguir.
+                </p>
+              ) : null}
+              {cuentaMesaAhora && cuentaMesaAhora.pendientes > 0 ? (
+                <p className="rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs text-amber-900">La mesa tiene un pedido nuevo sin atender: aceptalo o rechazalo en Pedidos de mesas antes de cobrar.</p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {errorMesa && !bandejaMesas ? <p className="shrink-0 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{errorMesa}</p> : null}
+
       {!caja ? (
         <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500 shadow-sm max-lg:min-h-[40vh]">
           {estadoCajas ? (estadoCajas.abiertas.length > 1 ? "Elegí arriba la caja en la que vas a vender." : "Abrí la caja para empezar a cobrar.") : "Cargando la caja…"}
@@ -1053,6 +1173,7 @@ function CajaPageContenido() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <p className="min-w-0 flex-1 text-sm font-medium leading-snug text-slate-900 [overflow-wrap:anywhere] @lg:truncate">{l.producto.nombre}</p>
+                            {l.mesa_min ? <span className="rounded-full border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">Mesa · {l.mesa_min}</span> : null}
                             {sinStockLinea && <span className="rounded-full border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-800">❌ Sin stock</span>}
                             {!sinStockLinea && idsVencidos.has(l.producto.id) && <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">⚠ Vencido</span>}
                             {tier !== "minorista" && (
@@ -1093,7 +1214,11 @@ function CajaPageContenido() {
                             </div>
                           </div>
                         </div>
-                        <button type="button" onClick={() => removeFromCart(l.cart_line_id)} className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 active:bg-rose-50 lg:@lg:m-0 lg:@lg:h-auto lg:@lg:w-auto" aria-label="Quitar"><Trash2 className="h-4 w-4" /></button>
+                        {l.mesa_min ? (
+                          <span className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center text-slate-300 lg:@lg:m-0 lg:@lg:h-auto lg:@lg:w-auto" title="Es de la cuenta de la mesa: no se quita (soltá la cuenta entera)" aria-label="De la cuenta de la mesa"><Lock className="h-4 w-4" /></span>
+                        ) : (
+                          <button type="button" onClick={() => removeFromCart(l.cart_line_id)} className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 active:bg-rose-50 lg:@lg:m-0 lg:@lg:h-auto lg:@lg:w-auto" aria-label="Quitar"><Trash2 className="h-4 w-4" /></button>
+                        )}
                       </div>
                       {/* Angosto: cantidad (± de 44 px) y total; debajo el IVA y el descuento. */}
                       <div className="mt-2 flex items-center justify-between gap-2 @lg:hidden">
@@ -1237,6 +1362,53 @@ function CajaPageContenido() {
         <CierreModal turnoId={caja.id} onClose={() => setModalCaja(null)} onCerrada={refrescarCajas} />
       ) : null}
 
+      {/* Mesas por cobrar: elegir la cuenta que se carga en el carrito */}
+      {bandejaMesas ? (
+        <CapaModal onClose={() => setBandejaMesas(false)} z="z-[70]">
+          <div role="dialog" aria-modal="true" aria-labelledby="mesas-titulo" className={`flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${ALTO_MAX_MODAL}`}>
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Caja</p>
+                <h3 id="mesas-titulo" className="text-base font-semibold text-slate-900">Mesas por cobrar ({porCobrar.length})</h3>
+              </div>
+              <button type="button" aria-label="Cerrar" onClick={() => setBandejaMesas(false)} className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:h-9 lg:w-9"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-5">
+              {porCobrar.length === 0 ? (
+                <p className="py-10 text-center text-sm text-slate-400">No hay mesas esperando cobro.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {porCobrar.map((c) => {
+                    const cargada = cuentaMesa?.id === c.id;
+                    return (
+                      <li key={c.id}>
+                        <button type="button" disabled={!productos.length} onClick={() => cargarCuentaMesa(c)}
+                          className={`flex min-h-14 w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-50 ${cargada ? "border-[var(--brand)]" : "border-slate-200"}`}>
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-semibold text-slate-900 [overflow-wrap:anywhere]">{origenPedido(c)}</span>
+                            <span className="block text-xs text-slate-500">
+                              {haceCuanto(c.en_caja_at, ahoraMesas())}{c.en_caja_por_nombre ? ` · la envió ${c.en_caja_por_nombre}` : ""}
+                              {cargada ? <b className="ml-1 font-semibold" style={{ color: TEAL }}>· en el carrito</b> : null}
+                            </span>
+                            {c.pendientes > 0 ? <span className="mt-1 block text-[11px] font-medium text-amber-700">Tiene un pedido nuevo sin atender</span> : null}
+                          </span>
+                          <span className="shrink-0 text-right">
+                            <span className="block text-base font-bold tabular-nums text-slate-900">{formatGs(c.total)}</span>
+                            <span className="text-xs font-semibold" style={{ color: TEAL }}>{cargada ? "Recargar" : "Cargar"}</span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {errorMesa ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{errorMesa}</p> : null}
+              {cart.some((l) => !l.mesa_min) ? <p className="mt-3 text-[11px] text-slate-500">Lo que ya está en el carrito se mantiene: la cuenta se suma.</p> : null}
+            </div>
+          </div>
+        </CapaModal>
+      ) : null}
+
       {/* Configuración › Facturación › "Pedir datos del comprador al confirmar venta" */}
       {pedirComprador ? (
         <CapaModal onClose={() => setPedirComprador(false)} z="z-[70]">
@@ -1306,11 +1478,11 @@ function Segmented<T extends string>({ value, options, onChange }: { value: T; o
 function Stepper({ l, updateCant, grande = false }: { l: CartLine; updateCant: (id: string, n: number) => void; grande?: boolean }) {
   const btn = grande
     ? "flex h-11 w-11 items-center justify-center text-xl font-medium leading-none text-slate-500 transition-colors active:bg-[var(--brand-100)] disabled:opacity-30"
-    : "flex h-8 w-9 items-center justify-center text-lg font-medium leading-none text-slate-400 transition-colors hover:bg-[var(--brand-50)] hover:text-[var(--brand)] active:bg-[var(--brand-100)]";
+    : "flex h-8 w-9 items-center justify-center text-lg font-medium leading-none text-slate-400 transition-colors hover:bg-[var(--brand-50)] hover:text-[var(--brand)] active:bg-[var(--brand-100)] disabled:opacity-30 disabled:hover:bg-transparent";
   return (
     // Stepper unificado: un solo borde, divisores internos y hover turquesa.
     <div className={`inline-flex shrink-0 items-center overflow-hidden border border-slate-200 bg-white shadow-sm ${grande ? "rounded-xl" : "rounded-lg"}`}>
-      <button type="button" onClick={() => updateCant(l.cart_line_id, l.cantidad - 1)} disabled={grande && l.cantidad <= 1} className={btn} aria-label="Quitar una unidad">−</button>
+      <button type="button" onClick={() => updateCant(l.cart_line_id, l.cantidad - 1)} disabled={(grande && l.cantidad <= 1) || (!!l.mesa_min && l.cantidad <= l.mesa_min)} className={btn} aria-label="Quitar una unidad">−</button>
       <QtyInput value={l.cantidad} onChange={(n) => updateCant(l.cart_line_id, n)} decimals={0}
         className={`border-x border-slate-200 bg-white text-center font-semibold tabular-nums text-slate-900 outline-none focus:bg-slate-50 ${grande ? "h-11 w-12 text-base" : "h-8 w-10 text-sm"}`} />
       <button type="button" onClick={() => updateCant(l.cart_line_id, l.cantidad + 1)} className={btn} aria-label="Agregar una unidad">+</button>

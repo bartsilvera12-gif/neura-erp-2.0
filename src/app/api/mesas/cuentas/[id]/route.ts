@@ -1,35 +1,18 @@
 /**
- * Cuenta abierta de una mesa (receta 68). "Atender pedidos de mesas".
- *   POST /api/mesas/cuentas/<id> { accion: "cobrar", caja_id?, cliente_id?, cliente_ocasional, tipo_documento, pagos[] }
- *        → arma la venta (crear_venta: contado, caja abierta de la sucursal de la mesa) y cierra la cuenta.
- *   POST /api/mesas/cuentas/<id> { accion: "liberar" } → cierra sin cobrar (todo rechazado).
- * Precios y total salen de la base (lo pedido por la mesa); el cliente solo dice cómo paga.
+ * Cuenta abierta de una mesa (recetas 68 y 69). "Atender pedidos de mesas".
+ *   POST /api/mesas/cuentas/<id> { accion: "enviar_caja" } → la mesa pidió la cuenta: queda "en caja · por cobrar"
+ *        y la ve la caja (Caja › Nueva venta › Mesas por cobrar), que la cobra como una venta normal.
+ *   POST /api/mesas/cuentas/<id> { accion: "reabrir" }     → la saca de la caja (se envió por error).
+ *   POST /api/mesas/cuentas/<id> { accion: "liberar" }     → cierra sin cobrar (todo rechazado).
+ * El cobro ya no se hace acá: un solo camino, por la caja (POST /api/caja/venta con mesa_cuenta_id).
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
-import { created, ok, fail, ERR } from "@/lib/api/responses";
+import { ok, ERR } from "@/lib/api/responses";
 import { falloRpc } from "@/modules/inventario/server/rpc";
 import { UUID_RE, idDeRuta, idInvalido } from "@/modules/inventario/server/ids";
 
-const pago = z.object({
-  metodo_pago: z.enum(["efectivo", "transferencia", "cheque", "tarjeta_debito", "tarjeta_credito", "qr", "billetera", "otro"]),
-  monto: z.coerce.number().positive("Hay una forma de pago con monto en cero"),
-  recibido: z.coerce.number().positive().nullish(),
-  referencia: z.string().trim().max(120).nullish(),
-  banco: z.string().trim().max(80).nullish(),
-});
-
-const cuerpo = z.discriminatedUnion("accion", [
-  z.object({
-    accion: z.literal("cobrar"),
-    caja_id: z.string().uuid().nullish(),
-    cliente_id: z.string().uuid().nullish(),
-    cliente_ocasional: z.boolean().default(false),
-    tipo_documento: z.enum(["factura", "ticket"]).default("ticket"),
-    pagos: z.array(pago).min(1, "Cargá cómo paga").max(10, "Demasiadas formas de pago"),
-  }),
-  z.object({ accion: z.literal("liberar") }),
-]);
+const cuerpo = z.object({ accion: z.enum(["enviar_caja", "reabrir", "liberar"]) });
 
 export const POST = withTenant(
   async (ctx, req, input) => {
@@ -43,18 +26,9 @@ export const POST = withTenant(
       return ok({ id });
     }
 
-    if (input.cliente_ocasional && input.cliente_id) return fail('Elegí un cliente o "Cliente ocasional (X)", no los dos.', 400);
-    const { data, error } = await ctx.db.rpc("mesa_cuenta_cobrar", {
-      p_cuenta_id: id,
-      p_cliente_id: input.cliente_ocasional ? null : (input.cliente_id ?? null),
-      p_cliente_ocasional: input.cliente_ocasional,
-      p_tipo_documento: input.tipo_documento,
-      p_pagos: input.pagos,
-      p_caja_id: input.caja_id ?? null,
-    });
+    const { data, error } = await ctx.db.rpc("mesa_cuenta_enviar_caja", { p_cuenta_id: id, p_enviar: input.accion === "enviar_caja" });
     if (error) return falloRpc(error);
-    if (!data) return ERR.server();
-    return created(data);
+    return ok(data ?? { id });
   },
   { body: cuerpo },
 );

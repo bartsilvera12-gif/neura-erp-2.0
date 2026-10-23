@@ -61,6 +61,10 @@ export type PedidoMesa = {
 export type CuentaMesa = {
   id: string;
   abierta_at: string;
+  /** Receta 69: "en_caja" = se envió a caja y espera que la cobren (sigue sumando pedidos aceptados). */
+  estado: "abierta" | "en_caja";
+  en_caja_at: string | null;
+  en_caja_por_nombre: string | null;
   mesa: { id: string; nombre: string; zona: string | null };
   sucursal: { id: string; nombre: string };
   total: number;
@@ -78,6 +82,24 @@ export type TableroMesas = {
 };
 
 export const URL_TABLERO = "/api/mesas/tablero";
+
+/** Cuenta enviada a caja, como la ve Caja › Nueva venta (receta 69). */
+export type CuentaPorCobrar = {
+  id: string;
+  abierta_at: string;
+  en_caja_at: string;
+  en_caja_por_nombre: string | null;
+  /** Cambia si se acepta / rechaza un pedido: la caja cobra la versión que cargó. */
+  version: string;
+  mesa: { id: string; nombre: string; zona: string | null };
+  total: number;
+  pendientes: number;
+  items: { producto_id: string | null; nombre: string; cantidad: number; precio_unitario: number; total: number; precio_de_hoy: boolean }[];
+};
+
+export type MesasPorCobrar = { ahora: string; caja_id?: string; cuentas: CuentaPorCobrar[] };
+
+export const urlPorCobrar = (cajaId: string) => `/api/mesas/por-cobrar?caja=${cajaId}`;
 
 /** "Mesa 4 · Patio · Casa central" */
 export function origenPedido(p: { mesa: { nombre: string; zona: string | null }; sucursal?: { nombre: string } }, conSucursal = true): string {

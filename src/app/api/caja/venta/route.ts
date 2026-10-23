@@ -37,6 +37,11 @@ const ventaSchema = z.object({
   // Venta que sale de un presupuesto (Presupuestos → "Convertir a venta"): al registrarse,
   // el presupuesto queda "convertido" y la venta guarda presupuesto_id.
   presupuesto_id: z.string().uuid().nullish(),
+  // Receta 69: cobro de la cuenta de una mesa (Mesas por cobrar). La venta y el cierre de la
+  // cuenta van en una sola transacción (mesa_cuenta_cobrar_caja); `mesa_version` es la versión
+  // de la cuenta que se cargó en el carrito (si cambió, la base no cobra y pide recargar).
+  mesa_cuenta_id: z.string().uuid().nullish(),
+  mesa_version: z.string().trim().max(64).nullish(),
   items: z
     .array(
       z.object({
@@ -90,6 +95,10 @@ export const POST = withTenant(
       if (pre.error) return fail(pre.error.message.replace(/^.*?ERROR:\s*/, ""), 409);
     }
 
+    if (input.mesa_cuenta_id && input.presupuesto_id) return fail("Una venta no puede ser de una mesa y de un presupuesto a la vez.", 400);
+    if (input.mesa_cuenta_id && !input.mesa_version) return fail("Falta la versión de la cuenta de la mesa: recargala.", 400);
+    const deMesa = input.mesa_cuenta_id ? { p_cuenta_id: input.mesa_cuenta_id, p_version: input.mesa_version } : null;
+
     const { data, error } = await ctx.db.rpc<{
       venta_id: string;
       numero_control: string;
@@ -97,7 +106,9 @@ export const POST = withTenant(
       reusada: boolean;
       vuelto?: number;
       caja_id?: string;
-    }>("crear_venta", {
+      mesa?: string;
+    }>(deMesa ? "mesa_cuenta_cobrar_caja" : "crear_venta", {
+      ...(deMesa ?? {}),
       p_cliente_id: input.cliente_id ?? null,
       p_tipo_venta: input.tipo_venta,
       p_metodo_pago: input.metodo_pago ?? null,
@@ -108,7 +119,7 @@ export const POST = withTenant(
       p_idempotency_key: input.idempotency_key ?? null,
       p_descuento_pct: input.descuento_pct ?? 0,
       p_plazo_dias: input.tipo_venta === "CREDITO" ? (input.plazo_dias ?? null) : null,
-      p_deposito_id: null,
+      ...(deMesa ? {} : { p_deposito_id: null }),
       p_caja_id: input.caja_id ?? null,
       p_tipo_documento: input.tipo_documento,
       p_cliente_ocasional: input.cliente_ocasional,

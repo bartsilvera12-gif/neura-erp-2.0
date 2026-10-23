@@ -6,13 +6,14 @@
  *     sucursal), hace cuánto, ítems, notas y nombre. Aceptar / Rechazar (con motivo, lo ve el
  *     cliente). Aviso sonoro y contador en la pestaña cuando llega uno nuevo.
  *   · En curso: los aceptados con su estado de cocina; se pueden marcar entregados.
- *   · Cuentas abiertas por mesa con el total acumulado: Cobrar (forma de pago, ticket/factura,
- *     cliente o cliente ocasional) o Liberar (si todo se rechazó).
+ *   · Cuentas abiertas por mesa con el total acumulado: "Enviar a caja" (receta 69: la cobra la
+ *     caja desde Nueva venta › Mesas por cobrar; "Volver a abrir" si se envió por error) o
+ *     Liberar (si todo se rechazó). El cobro ya no se hace acá: un solo camino, por la caja.
  * Escritorio: cola y cuentas lado a lado. Celular/tablet: pestañas.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { BellRing, Check, CheckCircle2, ChefHat, Loader2, Receipt, Volume2, VolumeX, X } from "lucide-react";
+import { BellRing, Check, CheckCircle2, ChefHat, Loader2, Receipt, RotateCcw, Send, Volume2, VolumeX, X } from "lucide-react";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
@@ -20,7 +21,6 @@ import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { useEsEscritorio } from "@/lib/ui/responsive";
 import { clienteConfig } from "@/cliente.config";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, PedirMotivo, Pestanas } from "@/modules/inventario/ui";
-import { CobrarCuenta } from "@/modules/mesas/CobrarCuenta";
 import { useTablero } from "@/modules/mesas/useTablero";
 import {
   cant, ESTADOS_PEDIDO, gs, haceCuanto, horaCorta, origenPedido, pitido, URL_TABLERO, type CuentaMesa, type PedidoMesa,
@@ -61,7 +61,6 @@ export default function PedidosMesasPage() {
   const escritorio = useEsEscritorio();
   const [tab, setTab] = useState<"cola" | "cuentas">("cola");
   const [rechazar, setRechazar] = useState<PedidoMesa | null>(null);
-  const [cobrar, setCobrar] = useState<CuentaMesa | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [aviso, setAviso] = useState<{ tipo: "ok" | "error"; texto: string } | null>(null);
 
@@ -80,13 +79,19 @@ export default function PedidosMesasPage() {
     }
   }, [recargar]);
 
-  async function liberar(c: CuentaMesa) {
+  async function accionCuenta(c: CuentaMesa, a: "liberar" | "enviar_caja" | "reabrir") {
     setOcupado(c.id);
     setAviso(null);
     try {
-      await apiFetch(`/api/mesas/cuentas/${c.id}`, { method: "POST", body: JSON.stringify({ accion: "liberar" }) });
+      await apiFetch(`/api/mesas/cuentas/${c.id}`, { method: "POST", body: JSON.stringify({ accion: a }) });
+      invalidar(URL_TABLERO);
       await recargar();
-      setAviso({ tipo: "ok", texto: `${c.mesa.nombre} quedó libre.` });
+      setAviso({
+        tipo: "ok",
+        texto: a === "liberar" ? `${c.mesa.nombre} quedó libre.`
+          : a === "enviar_caja" ? `Cuenta de ${c.mesa.nombre} enviada a caja (${gs(c.total)}): la cobran desde Nueva venta.`
+            : `La cuenta de ${c.mesa.nombre} volvió a quedar abierta.`,
+      });
     } catch (e) {
       setAviso({ tipo: "error", texto: (e as Error).message });
     } finally {
@@ -175,33 +180,54 @@ export default function PedidosMesasPage() {
         <p className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">No hay mesas con cuenta abierta.</p>
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
-          {cuentas.map((c) => (
-            <li key={c.id} className="flex flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-base font-semibold text-slate-900">{c.mesa.nombre}</p>
-                  <p className="truncate text-xs text-slate-500">{[c.mesa.zona, variasSucursales ? c.sucursal.nombre : null].filter(Boolean).join(" · ") || "Abierta"} · desde {horaCorta(c.abierta_at)}</p>
+          {cuentas.map((c) => {
+            const enCaja = c.estado === "en_caja";
+            const lugar = [c.mesa.zona, variasSucursales ? c.sucursal.nombre : null].filter(Boolean).join(" · ");
+            return (
+              <li key={c.id} className={`flex flex-col rounded-2xl border bg-white p-4 shadow-sm ${enCaja ? "border-sky-300" : "border-slate-200"}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-base font-semibold text-slate-900 [overflow-wrap:anywhere]">{c.mesa.nombre}</p>
+                    <p className="text-xs text-slate-500">
+                      {lugar ? <>{lugar} · </> : null}<span className="whitespace-nowrap">abierta {horaCorta(c.abierta_at)}</span>
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{gs(c.total)}</p>
                 </div>
-                <p className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{gs(c.total)}</p>
-              </div>
-              <p className="mt-2 line-clamp-2 text-xs text-slate-500">
-                {c.items.length ? c.items.map((i) => `${cant(i.cantidad)} × ${i.nombre}`).join(" · ") : "Sin pedidos aceptados"}
-              </p>
-              {c.pendientes ? <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800">{c.pendientes} pedido{c.pendientes === 1 ? "" : "s"} sin atender: aceptá o rechazá antes de cobrar.</p> : null}
-              {puedeAtender ? (
-                <div className="mt-3 flex gap-2">
-                  {c.total <= 0 && !c.pendientes ? (
-                    <button type="button" disabled={ocupado === c.id} onClick={() => void liberar(c)} className={`${BOTON_SECUNDARIO} min-h-11 flex-1 lg:min-h-0`}>Liberar mesa</button>
-                  ) : (
-                    <button type="button" disabled={c.pendientes > 0 || c.total <= 0} onClick={() => { setAviso(null); setCobrar(c); }}
-                      className={`${BOTON_PRIMARIO} min-h-11 flex-1 lg:min-h-0`} style={{ backgroundColor: COLOR }}>
-                      Cobrar {gs(c.total)}
-                    </button>
-                  )}
-                </div>
-              ) : null}
-            </li>
-          ))}
+                {enCaja ? (
+                  <p className="mt-2 inline-flex w-fit flex-wrap items-center gap-x-1.5 rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-semibold text-sky-800">
+                    <Receipt className="h-3.5 w-3.5" aria-hidden /> En caja · esperando cobro
+                    {c.en_caja_at ? <span className="font-normal text-sky-700">desde {horaCorta(c.en_caja_at)}</span> : null}
+                  </p>
+                ) : null}
+                <p className="mt-2 line-clamp-2 text-xs text-slate-500">
+                  {c.items.length ? c.items.map((i) => `${cant(i.cantidad)} × ${i.nombre}`).join(" · ") : "Sin pedidos aceptados"}
+                </p>
+                {c.pendientes ? (
+                  <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800">
+                    {c.pendientes} pedido{c.pendientes === 1 ? "" : "s"} sin atender: aceptá o rechazá {enCaja ? "para que la caja pueda cobrar." : "antes de enviar la cuenta a caja."}
+                  </p>
+                ) : null}
+                {puedeAtender ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {c.total <= 0 && !c.pendientes && !enCaja ? (
+                      <button type="button" disabled={ocupado === c.id} onClick={() => void accionCuenta(c, "liberar")} className={`${BOTON_SECUNDARIO} min-h-11 flex-1 lg:min-h-0`}>Liberar mesa</button>
+                    ) : enCaja ? (
+                      <button type="button" disabled={ocupado === c.id} onClick={() => void accionCuenta(c, "reabrir")}
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-slate-500 hover:bg-slate-100 hover:text-slate-800 lg:min-h-8">
+                        {ocupado === c.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RotateCcw className="h-3.5 w-3.5" aria-hidden />} Volver a abrir
+                      </button>
+                    ) : (
+                      <button type="button" disabled={ocupado === c.id || c.pendientes > 0 || c.total <= 0} onClick={() => void accionCuenta(c, "enviar_caja")}
+                        className={`${BOTON_PRIMARIO} min-h-11 flex-1 lg:min-h-0`} style={{ backgroundColor: COLOR }}>
+                        {ocupado === c.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" aria-hidden />} Enviar a caja
+                      </button>
+                    )}
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
         </ul>
       )}
     </section>
@@ -213,7 +239,7 @@ export default function PedidosMesasPage() {
         volver={{ href: "/caja/panel", label: "Caja" }}
         kicker="Caja"
         titulo="Pedidos de mesas"
-        subtitulo="Los pedidos que llegan por el QR de cada mesa. Aceptalos para que pasen a la cocina y cobrá la cuenta al final."
+        subtitulo="Los pedidos que llegan por el QR de cada mesa. Aceptalos para que pasen a la cocina y, cuando la mesa pida la cuenta, enviala a caja."
         acciones={
           <div className="flex items-center gap-2">
             <button type="button" onClick={cambiarSonido} className={`${BOTON_SECUNDARIO} min-h-11 lg:min-h-0`} aria-pressed={sonido} title={sonido ? "Silenciar el aviso" : "Activar el aviso sonoro"}>
@@ -259,17 +285,6 @@ export default function PedidosMesasPage() {
           confirmar="Rechazar pedido"
           onClose={() => setRechazar(null)}
           onConfirmar={async (m) => { await accion(rechazar, "rechazar", m); setRechazar(null); }}
-        />
-      ) : null}
-      {cobrar ? (
-        <CobrarCuenta
-          cuenta={cobrar}
-          onClose={() => setCobrar(null)}
-          onCobrada={(r) => {
-            setCobrar(null);
-            setAviso({ tipo: "ok", texto: `${r.mesa}: venta ${r.numero} registrada${r.vuelto > 0 ? ` · vuelto ${gs(r.vuelto)}` : ""}. Ticket enviado a imprimir.` });
-            void recargar();
-          }}
         />
       ) : null}
     </div>

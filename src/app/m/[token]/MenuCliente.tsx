@@ -1,14 +1,16 @@
 "use client";
 
 /**
- * Menú de la mesa en el celular del cliente (mobile-first): categorías, productos con foto y
- * precio, carrito (con nota por producto y nota general), nombre opcional y "Enviar pedido".
+ * Menú de la mesa en el celular del cliente (mobile-first): categorías desplegables (acordeón:
+ * nombre + cantidad de productos; con pocas categorías arranca abierta la primera, con muchas
+ * todas cerradas; "Otros" va al final; al buscar se abren las que tienen resultados), productos
+ * con foto y precio, carrito (con nota por producto y nota general), nombre opcional y "Enviar pedido".
  * Después de enviar, "Tus pedidos" muestra el estado de cada uno (consulta cada 5 s mientras
  * haya alguno en curso). Los códigos de seguimiento se guardan en este celular (localStorage).
  * Precios y total los pone el servidor: lo que se ve acá es solo una vista previa.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { CheckCircle2, ChefHat, Clock3, Loader2, MessageSquareText, Minus, Plus, Search, ShoppingBag, Trash2, X, XCircle } from "lucide-react";
+import { CheckCircle2, ChefHat, ChevronDown, Clock3, Loader2, MessageSquareText, Minus, Plus, Receipt, Search, ShoppingBag, Trash2, X, XCircle } from "lucide-react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import type { EstadoPedidoPublico, MenuMesa, ProductoMenu } from "@/modules/mesas/publico";
 import { ESTADOS_PEDIDO, gs, horaCorta } from "@/modules/mesas/tipos";
@@ -37,7 +39,6 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
   const [carrito, setCarrito] = useState<Record<string, Linea>>({});
   const [verCarrito, setVerCarrito] = useState(false);
   const [q, setQ] = useState("");
-  const [cat, setCat] = useState<string | null>(null);
   const [nota, setNota] = useState("");
   const [nombre, setNombre] = useState("");
   const [enviando, setEnviando] = useState(false);
@@ -48,20 +49,32 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
   const enviandoRef = useRef(false);
 
   const porId = useMemo(() => new Map(menu.productos.map((p) => [p.id, p])), [menu.productos]);
-  const categorias = useMemo(() => [...new Set(menu.productos.map((p) => p.categoria))], [menu.productos]);
+  const buscando = q.trim() !== "";
   const filtrados = useMemo(() => {
     const t = q.trim().toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
-    return menu.productos.filter((p) => {
-      if (cat && p.categoria !== cat) return false;
-      if (!t) return true;
-      return `${p.nombre} ${p.descripcion ?? ""} ${p.categoria}`.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(t);
-    });
-  }, [menu.productos, q, cat]);
+    if (!t) return menu.productos;
+    return menu.productos.filter((p) =>
+      `${p.nombre} ${p.descripcion ?? ""} ${p.categoria}`.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").includes(t));
+  }, [menu.productos, q]);
+  // Grupos por categoría en el orden del servidor; "Otros" (sin categoría) siempre al final.
   const grupos = useMemo(() => {
     const m = new Map<string, ProductoMenu[]>();
     for (const p of filtrados) m.set(p.categoria, [...(m.get(p.categoria) ?? []), p]);
-    return [...m.entries()];
+    return [...m.entries()].sort((a, b) => Number(a[0] === "Otros") - Number(b[0] === "Otros"));
   }, [filtrados]);
+  // Acordeón: con pocas categorías arranca abierta la primera; con muchas, todas cerradas (la
+  // lista de nombres sirve de índice y no hay que bajar tanto en el celular).
+  const totalCategorias = useMemo(() => new Set(menu.productos.map((p) => p.categoria)).size, [menu.productos]);
+  const [abiertas, setAbiertas] = useState<Set<string>>(() => {
+    if (totalCategorias > 6) return new Set();
+    const primera = [...new Set(menu.productos.map((p) => p.categoria))].sort((a, b) => Number(a === "Otros") - Number(b === "Otros"))[0];
+    return new Set(primera ? [primera] : []);
+  });
+  const alternar = (c: string) => setAbiertas((s) => {
+    const n = new Set(s);
+    if (n.has(c)) n.delete(c); else n.add(c);
+    return n;
+  });
 
   const lineas = Object.entries(carrito).filter(([id, l]) => l.cantidad > 0 && porId.has(id));
   const unidades = lineas.reduce((a, [, l]) => a + l.cantidad, 0);
@@ -104,7 +117,9 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
       }
     } catch { /* sin red: se reintenta en el próximo ciclo */ }
   }, [token]);
-  const enCurso = pedidos.some((p) => !FINALES.has(p.estado)) || (segs.length > 0 && pedidos.length === 0);
+  // Mientras la cuenta siga abierta se sigue consultando (para ver "Pediste la cuenta" y el cierre).
+  const enCurso = pedidos.some((p) => !FINALES.has(p.estado) || !p.cuenta_cerrada) || (segs.length > 0 && pedidos.length === 0);
+  const cuentaEnCaja = pedidos.some((p) => p.cuenta_en_caja);
   const segsRef = useRef(segs);
   segsRef.current = segs;
   const enCursoRef = useRef(enCurso);
@@ -188,47 +203,72 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
                 <button type="button" onClick={() => setEnviado(null)} aria-label="Cerrar aviso" className="-m-1 p-1 text-emerald-700"><X className="h-4 w-4" /></button>
               </div>
             ) : null}
+            {cuentaEnCaja ? (
+              <div className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2.5 text-sm text-sky-900">
+                <Receipt className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                <p className="min-w-0 flex-1"><b>Pediste la cuenta</b> — acercate a la caja o esperá al mozo.</p>
+              </div>
+            ) : null}
             {pedidos.length ? <h2 className="pt-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Tus pedidos</h2> : null}
             {pedidos.map((p) => <TarjetaEstado key={p.seguimiento} p={p} />)}
           </section>
         ) : null}
 
-        {/* Buscador + categorías */}
+        {/* Buscador chico */}
         <div className="sticky top-0 z-10 -mx-4 mt-3 bg-slate-50/95 px-4 pt-2 pb-2 backdrop-blur">
           <label className="relative block">
             <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar en el menú" enterKeyHint="search"
-              className="h-11 w-full rounded-xl border border-slate-200 bg-white pr-3 pl-9 text-base outline-none focus:border-[var(--brand)]" />
+              className="h-11 w-full rounded-xl border border-slate-200 bg-white pr-10 pl-9 text-base outline-none focus:border-[var(--brand)]" />
+            {q ? (
+              <button type="button" onClick={() => setQ("")} aria-label="Limpiar búsqueda"
+                className="absolute top-1/2 right-0.5 grid h-10 w-10 -translate-y-1/2 place-items-center text-slate-400"><X className="h-4 w-4" /></button>
+            ) : null}
           </label>
-          {categorias.length > 1 ? (
-            <div className="scroll-x-oculto -mx-4 mt-2 flex gap-2 px-4 pb-1">
-              {[null, ...categorias].map((c) => (
-                <button key={c ?? "_todas"} type="button" onClick={() => setCat(c)}
-                  className={`h-9 shrink-0 rounded-full border px-3.5 text-sm font-medium transition ${cat === c ? "border-transparent text-white" : "border-slate-200 bg-white text-slate-700"}`}
-                  style={cat === c ? { backgroundColor: color } : undefined}>
-                  {c ?? "Todo"}
-                </button>
-              ))}
-            </div>
-          ) : null}
         </div>
 
-        {/* Productos */}
+        {/* Productos por categoría (acordeón) */}
         {menu.productos.length === 0 ? (
           <p className="mt-8 rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center text-sm text-slate-500">Todavía no hay productos en el menú. Pedile a quien te atiende.</p>
         ) : grupos.length === 0 ? (
           <p className="mt-8 text-center text-sm text-slate-500">No encontramos “{q}” en el menú.</p>
         ) : (
-          grupos.map(([nombreCat, prods]) => (
-            <section key={nombreCat} className="mt-4">
-              <h2 className="mb-2 text-base font-bold text-slate-900">{nombreCat}</h2>
-              <ul className="grid grid-cols-1 gap-2.5 min-[480px]:grid-cols-2">
-                {prods.map((p) => (
-                  <TarjetaProducto key={p.id} p={p} cantidad={carrito[p.id]?.cantidad ?? 0} color={color} onCambiar={(d) => cambiar(p.id, d)} />
-                ))}
-              </ul>
-            </section>
-          ))
+          <div className="mt-2 space-y-2.5">
+            {grupos.map(([nombreCat, prods]) => {
+              // Al buscar se abren todas las que tienen resultados.
+              const abierta = buscando || abiertas.has(nombreCat);
+              const enPedido = prods.reduce((a, p) => a + (carrito[p.id]?.cantidad ?? 0), 0);
+              const idPanel = `cat-${nombreCat.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}`;
+              return (
+                <section key={nombreCat} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+                  <h2>
+                    <button type="button" onClick={() => alternar(nombreCat)} disabled={buscando} aria-expanded={abierta} aria-controls={idPanel}
+                      className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-slate-50 disabled:cursor-default">
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-base font-bold leading-snug text-slate-900 [overflow-wrap:anywhere]">{nombreCat}</span>
+                        <span className="block text-xs text-slate-500">{prods.length} producto{prods.length === 1 ? "" : "s"}</span>
+                      </span>
+                      {enPedido > 0 ? (
+                        <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold text-white tabular-nums" style={{ backgroundColor: color }}>{enPedido} en tu pedido</span>
+                      ) : null}
+                      <ChevronDown className={`h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 motion-reduce:transition-none ${abierta ? "rotate-180" : ""}`} aria-hidden />
+                    </button>
+                  </h2>
+                  {/* Despliegue suave (0fr → 1fr); sin animación con prefers-reduced-motion. */}
+                  <div id={idPanel} inert={!abierta}
+                    className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${abierta ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
+                    <div className="min-h-0 overflow-hidden">
+                      <ul className="grid grid-cols-1 gap-2.5 border-t border-slate-100 bg-slate-50/60 p-2.5 min-[480px]:grid-cols-2">
+                        {prods.map((p) => (
+                          <TarjetaProducto key={p.id} p={p} cantidad={carrito[p.id]?.cantidad ?? 0} color={color} onCambiar={(d) => cambiar(p.id, d)} />
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                </section>
+              );
+            })}
+          </div>
         )}
         <p className="mt-8 text-center text-[11px] text-slate-400">Precios con IVA incluido. Se paga en la caja al final.</p>
       </main>
