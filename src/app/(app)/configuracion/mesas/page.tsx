@@ -65,7 +65,7 @@ export default function MesasConfigPage() {
     if (!w) { setAviso("El navegador bloqueó la ventana de impresión: permití las ventanas emergentes para este sitio."); return; }
     setImprimiendo(true);
     try {
-      const qrs = await Promise.all(activas.map((m) => svgQr(linkMesa(m.token))));
+      const qrs = await Promise.all(activas.map((m) => svgQr(linkMesa(m.token, datos?.base_menu))));
       w.document.open();
       w.document.write(hojaQr(datos?.empresa ?? clienteConfig.nombre, activas, qrs));
       w.document.close();
@@ -129,7 +129,7 @@ export default function MesasConfigPage() {
           {mesas.map((m) => (
             <li key={m.id} className={`flex items-center gap-3 rounded-2xl border bg-white p-3 shadow-sm ${m.activa ? "border-slate-200" : "border-dashed border-slate-300 opacity-70"}`}>
               <button type="button" onClick={() => setVerQr(m)} aria-label={`Ver el QR de ${m.nombre}`} className="shrink-0 rounded-xl border border-slate-200 p-1 transition hover:border-[var(--brand)]">
-                <QrMini texto={linkMesa(m.token)} />
+                <QrMini texto={linkMesa(m.token, datos?.base_menu)} />
               </button>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-base font-semibold text-slate-900">{m.nombre}</p>
@@ -165,6 +165,7 @@ export default function MesasConfigPage() {
         <VerQr
           mesa={datos?.mesas.find((m) => m.id === verQr.id) ?? verQr}
           empresa={datos?.empresa ?? clienteConfig.nombre}
+          base={datos?.base_menu}
           onClose={() => setVerQr(null)}
           onImprimir={(m) => void imprimir([m])}
           onCambio={refrescar}
@@ -365,11 +366,11 @@ function EditarMesa({ mesa, sucursales, sucursalInicial, onClose, onGuardada }: 
   );
 }
 
-function VerQr({ mesa, empresa, onClose, onImprimir, onCambio }: {
-  mesa: Mesa; empresa: string; onClose: () => void; onImprimir: (m: Mesa) => void; onCambio: () => void;
+function VerQr({ mesa, empresa, base, onClose, onImprimir, onCambio }: {
+  mesa: Mesa; empresa: string; base?: string; onClose: () => void; onImprimir: (m: Mesa) => void; onCambio: () => void;
 }) {
   const [token, setToken] = useState(mesa.token);
-  const link = linkMesa(token);
+  const link = linkMesa(token, base);
   const [svg, setSvg] = useState("");
   useEffect(() => { let vivo = true; svgQr(link).then((s) => { if (vivo) setSvg(s); }).catch(() => {}); return () => { vivo = false; }; }, [link]);
   const [copiado, setCopiado] = useState(false);

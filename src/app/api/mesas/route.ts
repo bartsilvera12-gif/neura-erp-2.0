@@ -1,20 +1,22 @@
 /**
  * Configuración › Mesas y QR (receta 68). Nivel ADMIN + "Configuración del sistema" (la base lo
  * vuelve a exigir en mesas_listar / mesa_guardar).
- *   GET  /api/mesas  → { mesas, sucursales, empresa }
+ *   GET  /api/mesas  → { mesas, sucursales, empresa, base_menu }
  *   POST /api/mesas  { id?, sucursal_id, nombre, zona?, activa?, orden? } → { id, token }
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, ERR } from "@/lib/api/responses";
 import { falloRpc } from "@/modules/inventario/server/rpc";
+import { baseMenu } from "@/modules/mesas/base-menu";
 
 export const GET = withTenant(
-  async (ctx) => {
+  async (ctx, req) => {
     const { data, error } = await ctx.db.rpc("mesas_listar");
     if (error) return falloRpc(error);
     if (!data) return ERR.server();
-    return ok(data);
+    // base_menu: dirección que llevan los QR (nunca "localhost": ver base-menu.ts).
+    return ok({ ...data, base_menu: baseMenu(req) });
   },
   { permiso: "configuracion" },
 );

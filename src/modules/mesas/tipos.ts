@@ -33,6 +33,8 @@ export type MesasConfig = {
   mesas: Mesa[];
   sucursales: { id: string; nombre: string }[];
   empresa: string | null;
+  /** Dirección que llevan los QR (la arma el servidor; nunca "localhost"). */
+  base_menu?: string;
 };
 
 /** Receta 70: `estacion_id` = estación resuelta al aceptar (null = Cocina general). */
