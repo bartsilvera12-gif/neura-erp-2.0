@@ -7,7 +7,8 @@
  * más vieja primero, con letra grande. Cada estación marca SOLO su parte; el estado del pedido se
  * deriva de todas sus partes (la caja ve el avance por estación).
  *
- * Estación: chips "Todas · Plancha · Pizzería · Barra · General" (se recuerda en este equipo).
+ * Estación: chips "Todas · Plancha · Pizzería · Barra · General" (se recuerda en este equipo);
+ * "General" (comandas sin estación) solo se muestra cuando hay alguna.
  *   · /caja/cocina?estacion=<id>  (o ?estacion=general) fija la estación de esta pantalla.
  *   · Usuario con estación fija (Configuración › Mesas y QR › Estaciones): entra directo a la suya
  *     y no la puede cambiar.
@@ -214,7 +215,10 @@ export default function CocinaPage() {
             {activas.map((e) => (
               <Chip key={e.id} activo={filtro === e.id} onClick={() => elegir(e.id)} color={e.color} cuenta={pendientesDe(e.id)}>{nombreEstacion(e)}</Chip>
             ))}
-            <Chip activo={filtro === "general"} onClick={() => elegir("general")} cuenta={pendientesDe("general")}>General</Chip>
+            {/* "General" (productos sin estación) solo aparece cuando hay alguna comanda así (o si es la elegida). */}
+            {hayGeneral || filtro === "general" ? (
+              <Chip activo={filtro === "general"} onClick={() => elegir("general")} cuenta={pendientesDe("general")}>General</Chip>
+            ) : null}
           </div>
         )
       ) : null}
