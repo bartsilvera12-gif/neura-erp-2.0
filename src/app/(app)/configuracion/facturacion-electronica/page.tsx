@@ -302,7 +302,7 @@ export default function FacturacionElectronicaPage() {
 
   const encabezado = (
     <EncabezadoPagina
-      volver={{ href: "/configuracion/facturacion", label: "Facturación" }}
+      volver={{ href: "/configuracion/facturacion", label: "Tickets y facturación" }}
       kicker="Configuración"
       titulo="Facturación electrónica (SIFEN)"
       subtitulo="Datos del emisor y certificado digital. Las empresas sin SIFEN siguen usando facturas normales."

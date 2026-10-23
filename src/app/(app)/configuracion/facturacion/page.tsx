@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * /configuracion/facturacion — Configuración › Facturación (portada de sistemas-propio, mismo
+ * /configuracion/facturacion — Configuración › Tickets y facturación (portada de sistemas-propio, mismo
  * contenido y comportamiento, con los componentes del 2.0). Nivel ADMIN + "Configuración del sistema".
  *   · Modo de facturación (3 tarjetas) con aviso según el modo (a SIFEN se entra solo desde su tarjeta);
  *     tipo de impresión por defecto y "Pedir datos del comprador al confirmar venta": se guardan
@@ -10,6 +10,7 @@
  *   · Clientes — perfil tributario: interruptor (solo Administrador), se guarda al tocarlo.
  *   · Numeración de documentos y Condiciones de pago: formulario con "Guardar configuración".
  *   · Resumen actual con lo guardado.
+ *   · Receta 71: Ticket de venta y Comanda de cocina (TarjetasTickets: vista previa en vivo, guardan aparte).
  * Todo en la base (receta 61): la caja, la ficha del cliente y las suscripciones numeran con el
  * prefijo/numeración de acá; las ventas a crédito sin plazo usan los días por defecto.
  */
@@ -26,6 +27,7 @@ import { Select } from "@/components/Select";
 import { SelectorFecha } from "@/components/SelectorFecha";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, INPUT } from "@/modules/inventario/ui";
 import { Aviso, Campo, Chip, Cifra, Interruptor, Tarjeta, fechaHora } from "@/modules/facturacion/ui";
+import { TarjetaComanda, TarjetaTicketVenta } from "@/modules/facturacion/TarjetasTickets";
 import {
   IMPRESIONES, MODOS, esTicket, numeroFactura,
   type Autoimpresor, type ConfigFacturacion, type ModoFacturacion, type TipoImpresion,
@@ -170,7 +172,7 @@ export default function FacturacionPage() {
   if (cargando && !cfg) {
     return (
       <div className="space-y-5 pb-10">
-        <EncabezadoPagina kicker="Configuración" titulo="Facturación" />
+        <EncabezadoPagina kicker="Configuración" titulo="Tickets y facturación" />
         {[0, 1, 2].map((i) => <div key={i} className="h-40 animate-pulse rounded-2xl border border-slate-200 bg-white" />)}
       </div>
     );
@@ -178,7 +180,7 @@ export default function FacturacionPage() {
   if (error && !cfg) {
     return (
       <div className="space-y-5 pb-10">
-        <EncabezadoPagina kicker="Configuración" titulo="Facturación" />
+        <EncabezadoPagina kicker="Configuración" titulo="Tickets y facturación" />
         <div className="flex flex-col items-start gap-3 rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800 sm:flex-row sm:items-center">
           <AlertTriangle className="h-5 w-5 shrink-0" />
           <span className="min-w-0 flex-1">{error}</span>
@@ -197,8 +199,8 @@ export default function FacturacionPage() {
       <EncabezadoPagina
         volver={{ href: "/configuracion", label: "Configuración" }}
         kicker="Configuración"
-        titulo="Facturación"
-        subtitulo="SIFEN, numeración, condiciones de cobro, y (en tarjeta propia) la opción de gestión tributaria de clientes."
+        titulo="Tickets y facturación"
+        subtitulo="Ticket de venta y comanda de cocina, SIFEN, numeración, condiciones de cobro, y (en tarjeta propia) la opción de gestión tributaria de clientes."
       />
 
       {soloLectura ? (
@@ -291,6 +293,10 @@ export default function FacturacionPage() {
       {cfg.modo === "autoimpresor" ? (
         <AutoimpresorTarjeta valor={cfg.autoimpresor} soloLectura={soloLectura} onGuardado={(d) => setCfg(d)} />
       ) : null}
+
+      {/* ── Ticket de venta y comanda de cocina (receta 71) ─────────────── */}
+      <TarjetaTicketVenta cfg={cfg} soloLectura={soloLectura} onGuardado={setCfg} />
+      <TarjetaComanda cfg={cfg} soloLectura={soloLectura} onGuardado={setCfg} />
 
       {/* ── SIFEN ───────────────────────────────────────────────────────── */}
       <Tarjeta

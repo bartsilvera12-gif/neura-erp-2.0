@@ -3,6 +3,7 @@
  * pantallas (Configuración › Facturación / Facturación electrónica), la caja y las rutas.
  * Sin dependencias de servidor.
  */
+import type { ConfigComanda, ConfigTicketVenta } from "./tickets";
 
 export type ModoFacturacion = "sin_factura_fiscal" | "sifen" | "autoimpresor";
 export type TipoImpresion = "pdf_a4" | "pdf_media_hoja" | "ticket_80mm" | "ticket_58mm";
@@ -60,6 +61,9 @@ export type ConfigFacturacion = {
   ocasional_ruc: string;
   /** Tope (Gs.) para facturar a cliente ocasional; null = sin tope. Por encima, solo ticket. */
   ocasional_tope: number | null;
+  /** Receta 71: ticket de venta y comanda de cocina (lo guardado + defaults). */
+  ticket_venta: ConfigTicketVenta;
+  ticket_comanda: ConfigComanda;
   updated_at: string | null;
   updated_by_nombre: string | null;
   proximo_numero: string;

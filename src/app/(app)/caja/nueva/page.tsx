@@ -16,7 +16,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ChevronRight, FileSignature, Lock, Package, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronRight, FileSignature, Lock, Package, Printer, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
 import { usePorCobrar } from "@/modules/mesas/usePorCobrar";
 import { haceCuanto, origenPedido, pitido, type CuentaPorCobrar } from "@/modules/mesas/tipos";
 import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
@@ -195,7 +195,7 @@ function CajaPageContenido() {
   const [cobroOpen, setCobroOpen] = useState(false);
   const [cobrando, setCobrando] = useState(false);
   const [cobroError, setCobroError] = useState<string | null>(null);
-  const [ventaOk, setVentaOk] = useState<{ numero: string; vuelto: number } | null>(null);
+  const [ventaOk, setVentaOk] = useState<{ id: string; numero: string; vuelto: number; impreso: boolean; ancho: 58 | 80 } | null>(null);
   const isSubmittingRef = useRef(false);
   const idempotencyKeyRef = useRef<string | null>(null);
 
@@ -701,9 +701,12 @@ function CajaPageContenido() {
       // Ticket imprimible (SIFEN inactivo → por ahora siempre ticket). La auth del
       // 2.0 es por Bearer, así que una pestaña nueva no lleva el token: traemos el
       // HTML con el token y lo abrimos como blob (el auto-print corre igual).
-      void imprimirTicket(venta.venta_id, anchoTicket(cfgFact?.impresion_tipo_default));
+      // Receta 71: "Imprimir automáticamente al cobrar" (Configuración › Tickets y facturación; default sí).
+      const autoTicket = cfgFact?.ticket_venta?.imprimir_al_cobrar !== false;
+      const anchoCfg = cfgFact?.ticket_venta?.ancho_mm ?? anchoTicket(cfgFact?.impresion_tipo_default);
+      if (autoTicket) void imprimirTicket(venta.venta_id, anchoCfg);
       consumidorFinalRef.current = false;
-      setVentaOk({ numero: venta.numero_control, vuelto: Number(venta.vuelto) || 0 });
+      setVentaOk({ id: venta.venta_id, numero: venta.numero_control, vuelto: Number(venta.vuelto) || 0, impreso: autoTicket, ancho: anchoCfg });
       setCobroOpen(false);
       vaciarCarrito();
       setClienteId("");
@@ -922,7 +925,10 @@ function CajaPageContenido() {
         <div role="status" className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 shadow-sm max-lg:fixed max-lg:inset-x-3 max-lg:bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] max-lg:z-40 max-lg:py-3 max-lg:pr-1.5 max-lg:shadow-xl sm:max-lg:mx-auto sm:max-lg:max-w-xl"
           style={{ animation: "fade-in 0.2s ease-out" }}>
           <CheckCircle2 className="h-5 w-5 shrink-0" />
-          <span className="min-w-0 flex-1 lg:flex-none">Venta <strong>{ventaOk.numero}</strong> registrada. Ticket enviado a imprimir.</span>
+          <span className="min-w-0 flex-1 lg:flex-none">Venta <strong>{ventaOk.numero}</strong> registrada.{ventaOk.impreso ? " Ticket enviado a imprimir." : null}</span>
+          {!ventaOk.impreso ? (
+            <button type="button" onClick={() => void imprimirTicket(ventaOk.id, ventaOk.ancho)} className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-white px-3 py-1 text-sm font-semibold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 lg:min-h-0"><Printer className="h-4 w-4" /> Imprimir ticket</button>
+          ) : null}
           {ventaOk.vuelto > 0 ? (
             <span className="rounded-lg bg-white px-3 py-1 text-base font-extrabold tabular-nums text-emerald-700 ring-1 ring-emerald-200 max-lg:order-last max-lg:w-full max-lg:text-center max-lg:text-xl">Vuelto {formatGs(ventaOk.vuelto)}</span>
           ) : null}
