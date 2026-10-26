@@ -294,7 +294,7 @@ export default function PedidosMesasPage() {
       {error && !datos ? <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}
 
       {escritorio ? (
-        <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)] gap-6">
+        <div className="grid grid-cols-2 gap-6">
           {cola}
           {listaCuentas}
         </div>
