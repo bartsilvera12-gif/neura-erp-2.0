@@ -1,7 +1,8 @@
 /**
  * API PÚBLICA (sin sesión) del menú de una mesa: la usa /m/<token> desde el celular del cliente.
  *   GET  /api/publico/mesas/<token>  → el menú (solo productos "En el menú QR")
- *   POST /api/publico/mesas/<token>  { items: [{ producto_id, cantidad, nota? }], nota?, nombre? }
+ *   POST /api/publico/mesas/<token>  { items: [{ producto_id, cantidad, nota?, mods? }], nota?, nombre? }
+ *        mods (receta 73) = { quitar: [producto_id], extras: [{ extra_id, cantidad }], opciones: [opcion_id] }
  *        → { seguimiento, numero, estado, total }
  * Solo reenvía a funciones de la base habilitadas a `anon` (validan el token, la mesa activa, las
  * cantidades, el límite por minuto y ponen los precios). Además, un tope chico por IP en memoria.
@@ -41,6 +42,14 @@ const cuerpo = z.object({
         producto_id: z.string().uuid(),
         cantidad: z.coerce.number().int("La cantidad va en unidades enteras").min(1).max(50, "Hasta 50 unidades por producto"),
         nota: z.string().trim().max(200).nullish(),
+        // Receta 73: la base valida que sean del plato y pone los precios.
+        mods: z
+          .object({
+            quitar: z.array(z.string().uuid()).max(30).default([]),
+            extras: z.array(z.object({ extra_id: z.string().uuid(), cantidad: z.coerce.number().int().min(1).max(20) })).max(30).default([]),
+            opciones: z.array(z.string().uuid()).max(40).default([]),
+          })
+          .nullish(),
       }),
     )
     .min(1, "Agregá al menos un producto")
@@ -66,7 +75,7 @@ export async function POST(req: NextRequest) {
 
   const r = await crearPedido(
     token,
-    p.data.items.map((i) => ({ producto_id: i.producto_id, cantidad: i.cantidad, nota: i.nota || null })),
+    p.data.items.map((i) => ({ producto_id: i.producto_id, cantidad: i.cantidad, nota: i.nota || null, ...(i.mods ? { mods: i.mods } : {}) })),
     p.data.nota || null,
     p.data.nombre || null,
   );

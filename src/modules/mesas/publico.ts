@@ -6,6 +6,7 @@
  */
 import { clientePublico } from "@/lib/supabase/publico";
 import { SEGUIMIENTO_RE, TOKEN_MESA_RE, type EstadoPedido } from "@/modules/mesas/tipos";
+import type { ModsCatalogo, ModsSeleccion } from "@/modules/mesas/modificadores";
 
 export type ProductoMenu = {
   id: string;
@@ -15,6 +16,8 @@ export type ProductoMenu = {
   precio: number;
   precio_lista: number | null;
   categoria: string;
+  /** Receta 73: quitar / extras / opciones del plato (null = se agrega directo). */
+  mods?: ModsCatalogo | null;
 };
 
 export type MenuMesa =
@@ -39,7 +42,7 @@ export type EstadoPedidoPublico = {
   cuenta_cerrada: boolean;
   /** Receta 69: la cuenta se envió a caja (la mesa pidió la cuenta). */
   cuenta_en_caja?: boolean;
-  items: { nombre: string; cantidad: number; total: number }[];
+  items: { nombre: string; cantidad: number; total: number; modificadores_texto?: string | null }[];
 };
 
 const limpio = (m: string) => m.replace(/^.*?ERROR:\s*/, "");
@@ -56,7 +59,7 @@ export async function menuPorToken(token: string): Promise<MenuMesa | null> {
 
 export async function crearPedido(
   token: string,
-  items: { producto_id: string; cantidad: number; nota?: string | null }[],
+  items: { producto_id: string; cantidad: number; nota?: string | null; mods?: ModsSeleccion }[],
   nota: string | null,
   nombre: string | null,
 ) {

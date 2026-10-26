@@ -3,6 +3,7 @@
  * el precio y el IVA son los del CATÁLOGO (la base manda), así que acá se calculan
  * igual que en el servidor para que lo que el cajero ve sea lo que se cobra.
  */
+import type { ModsCatalogo } from "@/modules/mesas/modificadores";
 
 export type TipoIva = "EXENTA" | "5%" | "10%";
 export type Moneda = "GS" | "USD";
@@ -31,6 +32,8 @@ export type Producto = {
   tipo_producto?: string;
   /** Receta 72: plato sin receta (no se puede vender hasta cargarla). */
   sin_receta?: boolean;
+  /** Receta 73: quitar / extras / opciones del plato (null = se agrega directo). */
+  mods?: ModsCatalogo | null;
 };
 
 export type Cliente = {

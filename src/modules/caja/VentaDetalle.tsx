@@ -18,6 +18,7 @@ import { clienteConfig } from "@/cliente.config";
 import { formatGs } from "@/modules/caja/lib";
 import { metodoLabel, invalidarCajas } from "@/modules/caja/turno";
 import { SelectorCaja } from "@/modules/caja/SelectorCaja";
+import { textoConPrecios, type ModsSnapshot } from "@/modules/mesas/modificadores";
 
 const TEAL = clienteConfig.color;
 
@@ -31,6 +32,8 @@ type Item = {
   tipo_iva: string;
   monto_iva: number;
   total_linea: number;
+  modificadores?: ModsSnapshot | null;
+  modificadores_texto?: string | null;
 };
 type Venta = {
   id: string;
@@ -190,6 +193,10 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
                   <li key={i.id} className="flex items-start justify-between gap-3 px-3.5 py-2.5">
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-slate-800 [overflow-wrap:anywhere] sm:truncate">{i.producto_nombre}</p>
+                      {/* Receta 73: modificadores del plato (extras con su precio). */}
+                      {i.modificadores || i.modificadores_texto ? (
+                        <p className="mt-0.5 text-xs text-slate-500 [overflow-wrap:anywhere]">{textoConPrecios(i.modificadores) || i.modificadores_texto}</p>
+                      ) : null}
                       <p className="mt-0.5 text-xs text-slate-400">{i.cantidad} × {formatGs(i.precio_venta)}{i.sku ? ` · ${i.sku}` : ""}</p>
                     </div>
                     <div className="shrink-0 text-right">

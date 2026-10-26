@@ -24,6 +24,8 @@ export type FilaReceta = {
   porciones: number | null;
   faltan: string | null;
   estado: EstadoReceta;
+  /** Receta 73: quitables + extras + grupos de opciones. */
+  modificadores?: number;
 };
 
 export type ListaRecetas = { deposito_id: string | null; deposito: string | null; items: FilaReceta[] };
@@ -41,6 +43,27 @@ export type IngredienteReceta = {
   stock: number;
   controla_stock: boolean;
   activo: boolean;
+  /** Receta 73: el cliente lo puede pedir "sin …" (no se descuenta). */
+  se_puede_quitar?: boolean;
+};
+
+/** Extra activado en un plato (receta 73). `precio` null = el de la lista común. */
+export type ExtraPlato = {
+  extra_id: string; nombre: string; precio_lista: number; precio: number | null; maximo: number; activo: boolean;
+  insumo_nombre: string; cantidad: number; unidad: string; disponible?: number;
+};
+
+/** Grupo de opciones del plato (receta 73). */
+export type GrupoOpciones = {
+  id?: string; nombre: string; obligatorio: boolean; minimo: number; maximo: number;
+  opciones: { id?: string; nombre: string; precio: number; activo: boolean }[];
+};
+
+/** Extra de la lista común (Inventario › Recetas › Extras). */
+export type ExtraComun = {
+  id: string; nombre: string; insumo_id: string; insumo_nombre: string; insumo_sku: string; unidad_insumo: string;
+  es_preparacion: boolean; cantidad: number; unidad: string; precio: number; activo: boolean; insumo_activo: boolean;
+  costo: number; alcanza: number | null; platos: number;
 };
 
 export type DetalleReceta = {
@@ -55,6 +78,9 @@ export type DetalleReceta = {
   porciones: number | null;
   items: IngredienteReceta[];
   usado_en: { id: string; nombre: string }[];
+  /** Receta 73 (solo platos Menú). */
+  extras?: ExtraPlato[];
+  grupos?: GrupoOpciones[];
 };
 
 /** Magnitud de una unidad y su factor a la unidad base (g, ml, unidad). */

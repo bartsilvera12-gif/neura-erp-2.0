@@ -54,6 +54,15 @@ const ventaSchema = z.object({
         precio_unitario: z.coerce.number().positive().optional(),
         // Descuento del producto (%). En súper el descuento es por ítem.
         descuento_pct: z.coerce.number().min(0).max(100).optional(),
+        // Receta 73: modificadores del plato (quitar / extras / opciones). La base valida que sean
+        // del plato, las cantidades y las opciones obligatorias, y les pone el precio.
+        mods: z
+          .object({
+            quitar: z.array(z.string().uuid()).max(30).default([]),
+            extras: z.array(z.object({ extra_id: z.string().uuid(), cantidad: z.coerce.number().int().min(1).max(20) })).max(30).default([]),
+            opciones: z.array(z.string().uuid()).max(40).default([]),
+          })
+          .optional(),
       }),
     )
     .min(1, "La venta debe tener al menos un ítem"),

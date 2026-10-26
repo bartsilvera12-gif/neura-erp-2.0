@@ -17,8 +17,9 @@ import { AccionesPagina, BarraFiltros, EncabezadoPagina, GrillaKpis } from "@/co
 import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { invalidarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { BuscadorProductos } from "@/modules/compras/partes";
-import { ModalDocumento } from "@/modules/inventario/ui";
+import { ModalDocumento, Pestanas } from "@/modules/inventario/ui";
 import { RecetaEditor } from "@/modules/inventario/RecetaEditor";
+import { ExtrasComunes } from "@/modules/inventario/ExtrasComunes";
 import {
   ESTADOS_RECETA, cant, colorMargen, gs, margenPct, precioFinal, unidadCorta,
   type FilaReceta, type ListaRecetas,
@@ -36,11 +37,15 @@ export default function RecetasPage() {
   const [tipo, setTipo] = useState("");
   const [abierto, setAbierto] = useState<string | null>(null);
   const [eligiendo, setEligiendo] = useState(false);
+  // Receta 73: "Extras" = la lista común de extras de los platos.
+  const [vista, setVista] = useState<"recetas" | "extras">("recetas");
 
-  // ?producto=<id> (desde la ficha del producto): abre su receta.
+  // ?producto=<id> (desde la ficha del producto): abre su receta. ?vista=extras: la lista de extras.
   useEffect(() => {
-    const id = new URLSearchParams(window.location.search).get("producto");
+    const sp = new URLSearchParams(window.location.search);
+    const id = sp.get("producto");
     if (id && /^[0-9a-f-]{36}$/i.test(id)) setAbierto(id);
+    if (sp.get("vista") === "extras") setVista("extras");
   }, []);
 
   const todas = useMemo(() => datos?.items ?? [], [datos]);
@@ -73,7 +78,10 @@ export default function RecetasPage() {
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-slate-900">{f.nombre}</p>
-            <p className="font-mono text-[11px] font-normal text-slate-500">{f.sku}</p>
+            <p className="font-mono text-[11px] font-normal text-slate-500">
+              {f.sku}
+              {f.modificadores ? <span className="ml-1.5 rounded-full bg-violet-50 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-violet-700 ring-1 ring-violet-200">Con modificadores</span> : null}
+            </p>
           </div>
         </div>
       ),
@@ -154,11 +162,19 @@ export default function RecetasPage() {
         kicker="Inventario · Cocina"
         titulo="Recetas"
         subtitulo="Ingredientes, merma y costo de cada plato. Al vender se descuentan los ingredientes; si falta uno, no se vende."
-        acciones={puedeEditar ? (
+        acciones={puedeEditar && vista === "recetas" ? (
           <AccionesPagina acciones={[{ etiqueta: "Nueva preparación", icono: <Plus />, onClick: () => setEligiendo(true) }]} />
         ) : undefined}
       />
 
+      <Pestanas valor={vista} onChange={(v) => setVista(v as typeof vista)}
+        opciones={[{ id: "recetas", label: "Platos y preparaciones" }, { id: "extras", label: "Extras" }]} />
+
+      {vista === "extras" ? (
+        <section className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: `${TEAL}33` }}>
+          <ExtrasComunes puedeEditar={puedeEditar} />
+        </section>
+      ) : (
       <section className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: `${TEAL}33` }}>
         <div className="border-b px-3 py-3 sm:px-5" style={{ borderColor: `${TEAL}22`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
           <GrillaKpis columnas={3} className="lg:max-w-3xl">
@@ -211,10 +227,11 @@ export default function RecetasPage() {
         )}
         {filas.length ? (
           <p className="border-t border-slate-100 px-3 py-2.5 text-[11px] text-slate-500 sm:px-5">
-            {filas.length} {filas.length === 1 ? "receta" : "recetas"}. Tocá una para ver o editar sus ingredientes. Una preparación (ej. salsa) se usa como ingrediente y se descuenta en sus materias primas.
+            {filas.length} {filas.length === 1 ? "receta" : "recetas"}. Tocá una para ver o editar sus ingredientes, extras y opciones. Una preparación (ej. salsa) se usa como ingrediente y se descuenta en sus materias primas.
           </p>
         ) : null}
       </section>
+      )}
 
       {abierto ? (
         <RecetaEditor productoId={abierto} puedeEditar={puedeEditar} onClose={() => setAbierto(null)} onGuardado={guardado} />

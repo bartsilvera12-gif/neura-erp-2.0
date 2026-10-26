@@ -32,6 +32,7 @@ import { clienteConfig } from "@/cliente.config";
 import { BOTON_SECUNDARIO } from "@/modules/inventario/ui";
 import { useTablero } from "@/modules/mesas/useTablero";
 import { imprimirComanda } from "@/modules/mesas/imprimirComanda";
+import { ModsDetalle } from "@/modules/mesas/ModsDetalle";
 import {
   cant, ESTADOS_COMANDA, haceCuanto, horaCorta, itemsDeComanda, nombreEstacion, pitido, URL_TABLERO,
   type Comanda, type Estacion, type PedidoMesa,
@@ -301,6 +302,8 @@ function TarjetaComanda({ it, col, ahora, conEstacion, porId, variasSucursales, 
             <span className="w-10 shrink-0 font-extrabold tabular-nums text-slate-900">{cant(i.cantidad)}×</span>
             <span className="min-w-0 flex-1 font-medium text-slate-800">
               {i.nombre}
+              {/* Receta 73: SIN … en rojo, + EXTRA … en verde, opciones en negrita. */}
+              <ModsDetalle mods={i.modificadores} texto={i.modificadores_texto} variante="cocina" />
               {i.nota ? <span className="block text-base font-semibold text-amber-700">→ {i.nota}</span> : null}
             </span>
           </li>

@@ -18,18 +18,21 @@ export const GET = withTenant(async (ctx, req) => {
   if (!id) return ERR.invalid("Falta el id de la venta");
 
   // Venta + ítems + cliente en UNA consulta (embebidos de PostgREST), no tres seguidas.
-  const vq = await ctx.db
+  // Receta 73: modificadores de cada plato (si el schema todavía no los tiene, sin ellos).
+  const consulta = (mods: boolean) => ctx.db
     .select(
       "ventas",
       "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, metodo_pago, moneda, cliente_id, observaciones, " +
         "usuario_nombre, caja_id, anulada_at, anulada_motivo, tipo_documento, receptor_nombre, receptor_ruc, receptor_ocasional, " +
-        "ventas_items(id, producto_nombre, sku, cantidad, precio_venta, tipo_precio, tipo_iva, monto_iva, total_linea), " +
+        `ventas_items(id, producto_nombre, sku, cantidad, precio_venta, tipo_precio, tipo_iva, monto_iva, total_linea${mods ? ", modificadores, modificadores_texto, precio_mods" : ""}), ` +
         "pagos:ventas_pagos_detalle(id, metodo_pago, monto, referencia, banco, recibido, vuelto, created_at), " +
         "turno:cajas(numero_caja, estado), punto:puntos_venta(nombre), sucursal:sucursales(nombre), deposito:depositos(nombre), " +
         "cliente:clientes!cliente_id(nombre), cuenta:cuentas_por_cobrar(vencimiento, cobrado, saldo, estado)",
     )
     .eq("id", id)
     .limit(1);
+  let vq = await consulta(true);
+  if (vq.error && /modificadores/.test(vq.error.message ?? "")) vq = await consulta(false);
   if (vq.error) return ERR.server();
   const fila = (vq.data?.[0] ?? null) as unknown as
     | (Record<string, unknown> & {

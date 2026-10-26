@@ -158,6 +158,10 @@ export const ESTILOS_TICKET = `
   .cmd-item td { font-weight: bold; padding: 1mm 0; }
   .cmd-item td.qty { width: auto; padding-right: 2mm; white-space: nowrap; }
   .cmd-nota td { font-style: italic; padding: 0 0 1.5mm; }
+  .cmd-mods td { padding: 0 0 1.2mm; line-height: 1.3; }
+  .cmd-opc { font-weight: 900; }
+  .cmd-sin { font-weight: 900; color: #b91c1c; text-transform: uppercase; }
+  .cmd-extra { font-weight: 900; color: #047857; text-transform: uppercase; }
   .cmd-notas { border: 1px solid #000; padding: 1.5mm 2mm; margin: 1mm 0; }
   .actions { max-width: var(--w); margin: 8mm auto 0; text-align: center; }
   .actions button { padding: 8px 16px; font-size: 13px; cursor: pointer; border: 1px solid #333; background: #fff; border-radius: 6px; }
@@ -247,7 +251,8 @@ export type DatosTicketVenta = {
   caja?: string | null;
   cajero?: string | null;
   cliente: { nombre: string; documento?: string | null };
-  items: { nombre: string; cantidad: number; precio: number; total: number }[];
+  /** Receta 73: `detalle` = modificadores del plato en chico (extras con su precio). */
+  items: { nombre: string; cantidad: number; precio: number; total: number; detalle?: string | null }[];
   subtotal: number;
   iva: number;
   total: number;
@@ -275,7 +280,8 @@ export function papelTicketVenta(cfg: ConfigTicketVenta, d: DatosTicketVenta): s
 
   const filas = d.items
     .map((it) => `<tr><td class="qty"><strong>${it.cantidad}×</strong></td><td>${escHtml(it.nombre)}</td><td class="amt">${gs(it.total)}</td></tr>
-        <tr class="sub"><td></td><td colspan="2">${it.cantidad} × ${gs(it.precio)}</td></tr>`)
+        <tr class="sub"><td></td><td colspan="2">${it.cantidad} × ${gs(it.precio)}</td></tr>${(it.detalle ?? "").trim() ? `
+        <tr class="sub"><td></td><td colspan="2">${escHtml((it.detalle ?? "").trim())}</td></tr>` : ""}`)
     .join("");
 
   const filasPago = !cfg.mostrar_pago
@@ -344,11 +350,24 @@ export type DatosComanda = {
   /** Estación de cocina (Parrilla, Bar…), opcional. */
   estacion?: string | null;
   cliente?: string | null;
-  items: { nombre: string; cantidad: number; notas?: string | null; precio?: number | null; total?: number | null }[];
+  /** Receta 73: `mods` = modificadores del plato (SIN … en rojo, + EXTRA … en verde, opciones en negrita). */
+  items: { nombre: string; cantidad: number; notas?: string | null; precio?: number | null; total?: number | null; mods?: ModsComanda | null }[];
   /** Nota general del pedido. */
   notas?: string | null;
   total?: number | null;
 };
+
+/** Modificadores de una línea de la comanda (ya como texto). */
+export type ModsComanda = { opciones?: string[]; quitar?: string[]; extras?: string[] };
+
+function filaMods(m: ModsComanda | null | undefined, cols: number): string {
+  const partes = [
+    ...(m?.opciones ?? []).map((o) => `<span class="cmd-opc">${escHtml(o)}</span>`),
+    ...(m?.quitar ?? []).map((q) => `<span class="cmd-sin">SIN ${escHtml(q)}</span>`),
+    ...(m?.extras ?? []).map((e) => `<span class="cmd-extra">+ ${escHtml(e)}</span>`),
+  ];
+  return partes.length ? `<tr class="cmd-mods"><td></td><td colspan="${cols}">${partes.join("<br>")}</td></tr>` : "";
+}
 
 export function papelComanda(cfg: ConfigComanda, d: DatosComanda): string {
   const filas = d.items
@@ -357,7 +376,7 @@ export function papelComanda(cfg: ConfigComanda, d: DatosComanda): string {
       const nota = cfg.mostrar_notas && (it.notas ?? "").trim()
         ? `<tr class="cmd-nota"><td></td><td colspan="${precio ? 2 : 1}">→ ${multilinea((it.notas ?? "").trim())}</td></tr>`
         : "";
-      return `<tr class="cmd-item"><td class="qty">${it.cantidad}×</td><td>${escHtml(it.nombre)}</td>${precio}</tr>${nota}`;
+      return `<tr class="cmd-item"><td class="qty">${it.cantidad}×</td><td>${escHtml(it.nombre)}</td>${precio}</tr>${filaMods(it.mods, precio ? 2 : 1)}${nota}`;
     })
     .join("");
   const meta = [d.referencia, d.estacion].filter((x) => (x ?? "").trim()).map(escHtml).join(" · ");
@@ -399,7 +418,7 @@ export function ejemploTicketVenta(empresa: EmpresaTicket): DatosTicketVenta {
     cajero: "María González",
     cliente: { nombre: "Juan Pérez", documento: "RUC: 4567890-1" },
     items: [
-      { nombre: "Hamburguesa completa", cantidad: 2, precio: 35000, total: 70000 },
+      { nombre: "Hamburguesa completa", cantidad: 2, precio: 35000, total: 70000, detalle: "sin cebolla · + extra queso (Gs. 5.000) · a punto" },
       { nombre: "Gaseosa 500 ml", cantidad: 2, precio: 8000, total: 16000 },
       { nombre: "Papas fritas", cantidad: 1, precio: 15000, total: 15000 },
     ],
@@ -417,7 +436,7 @@ export const EJEMPLO_COMANDA: DatosComanda = {
   estacion: "Cocina",
   cliente: "Juan Pérez",
   items: [
-    { nombre: "Hamburguesa completa", cantidad: 2, notas: "Una sin cebolla", precio: 35000, total: 70000 },
+    { nombre: "Hamburguesa completa", cantidad: 2, notas: "Cortada al medio", precio: 35000, total: 70000, mods: { opciones: ["A punto"], quitar: ["cebolla"], extras: ["extra queso"] } },
     { nombre: "Papas fritas", cantidad: 1, precio: 15000, total: 15000 },
   ],
   notas: "Traer todo junto",

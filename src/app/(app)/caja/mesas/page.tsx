@@ -23,6 +23,7 @@ import { useEsEscritorio } from "@/lib/ui/responsive";
 import { clienteConfig } from "@/cliente.config";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, PedirMotivo, Pestanas } from "@/modules/inventario/ui";
 import { useTablero } from "@/modules/mesas/useTablero";
+import { ModsDetalle } from "@/modules/mesas/ModsDetalle";
 import {
   cant, ESTADOS_COMANDA, ESTADOS_PEDIDO, gs, haceCuanto, horaCorta, nombreEstacion, origenPedido, pitido, URL_TABLERO,
   type Comanda, type CuentaMesa, type PedidoMesa,
@@ -225,7 +226,10 @@ export default function PedidosMesasPage() {
                     {c.items.map((it, i) => (
                       <li key={i} className="flex gap-2 py-0.5 text-sm">
                         <span className="w-8 shrink-0 font-semibold tabular-nums text-slate-900">{cant(it.cantidad)}×</span>
-                        <span className="min-w-0 flex-1 text-slate-800">{it.nombre}</span>
+                        <span className="min-w-0 flex-1 text-slate-800">
+                          {it.nombre}
+                          {it.modificadores_texto ? <span className="block text-xs text-slate-500">{it.modificadores_texto}</span> : null}
+                        </span>
                         <span className="shrink-0 tabular-nums text-slate-500">{gs(it.total)}</span>
                       </li>
                     ))}
@@ -345,7 +349,11 @@ function TarjetaPedido({ p, ahora, conSucursal, resaltar, compacta, children }: 
         {p.items.map((it, i) => (
           <li key={i} className="flex gap-2 py-0.5 text-sm">
             <span className="w-8 shrink-0 font-semibold tabular-nums text-slate-900">{cant(it.cantidad)}×</span>
-            <span className="min-w-0 flex-1 text-slate-800">{it.nombre}{it.nota ? <span className="block text-xs text-amber-700">“{it.nota}”</span> : null}</span>
+            <span className="min-w-0 flex-1 text-slate-800">
+              {it.nombre}
+              <ModsDetalle mods={it.modificadores} texto={it.modificadores_texto} />
+              {it.nota ? <span className="block text-xs text-amber-700">“{it.nota}”</span> : null}
+            </span>
           </li>
         ))}
       </ul>

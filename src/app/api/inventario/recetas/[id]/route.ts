@@ -30,9 +30,39 @@ const guardar = z.object({
         cantidad: z.coerce.number().positive("Cargá la cantidad de cada ingrediente"),
         unidad: z.enum(["Unidad", "kg", "g", "l", "ml"]),
         merma_pct: z.coerce.number().min(0).max(90, "La merma va de 0 a 90 %").default(0),
+        // Receta 73: el cliente lo puede pedir "sin …" (no se descuenta).
+        se_puede_quitar: z.boolean().default(false),
       }),
     )
     .max(60, "Son demasiados ingredientes (hasta 60)"),
+  // Receta 73 (solo platos Menú): si no vienen, no se tocan.
+  extras: z
+    .array(z.object({
+      extra_id: z.string().uuid(),
+      precio: z.coerce.number().min(0).max(100000000).nullish(),
+      maximo: z.coerce.number().int().min(1, "El máximo de cada extra va de 1 a 20").max(20, "El máximo de cada extra va de 1 a 20").default(3),
+    }))
+    .max(40, "Son demasiados extras (hasta 40)")
+    .optional(),
+  grupos: z
+    .array(z.object({
+      id: z.string().uuid().nullish(),
+      nombre: z.string().trim().min(1, "Escribí el nombre de cada grupo de opciones").max(60),
+      obligatorio: z.boolean().default(false),
+      minimo: z.coerce.number().int().min(0).max(20).default(0),
+      maximo: z.coerce.number().int().min(1).max(20).default(1),
+      opciones: z
+        .array(z.object({
+          id: z.string().uuid().nullish(),
+          nombre: z.string().trim().min(1, "Escribí el nombre de cada opción").max(60),
+          precio: z.coerce.number().min(0).max(100000000).default(0),
+          activo: z.boolean().default(true),
+        }))
+        .min(1, "Cada grupo necesita al menos una opción")
+        .max(20, "Hasta 20 opciones por grupo"),
+    }))
+    .max(12, "Son demasiados grupos de opciones (hasta 12)")
+    .optional(),
 });
 
 export const PUT = withTenant(

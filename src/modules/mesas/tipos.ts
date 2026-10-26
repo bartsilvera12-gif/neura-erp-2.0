@@ -2,6 +2,7 @@
  * Mesas con QR y pedidos (receta 68). Tipos y helpers compartidos por Configuración › Mesas,
  * Caja › Pedidos de mesas, Cocina y el menú público /m/<token>.
  */
+import type { ModsSnapshot } from "@/modules/mesas/modificadores";
 
 export const TOKEN_MESA_RE = /^[0-9a-f]{64}$/;
 export const SEGUIMIENTO_RE = /^[0-9a-f]{32}$/;
@@ -37,8 +38,11 @@ export type MesasConfig = {
   base_menu?: string;
 };
 
-/** Receta 70: `estacion_id` = estación resuelta al aceptar (null = Cocina general). */
-export type ItemPedido = { nombre: string; cantidad: number; precio_unitario: number; total: number; nota: string | null; estacion_id?: string | null };
+/** Receta 70: `estacion_id` = estación resuelta al aceptar (null = Cocina general). Receta 73: modificadores de la línea. */
+export type ItemPedido = {
+  nombre: string; cantidad: number; precio_unitario: number; total: number; nota: string | null; estacion_id?: string | null;
+  modificadores?: ModsSnapshot | null; modificadores_texto?: string | null;
+};
 
 /** Estación de cocina (receta 70): Plancha, Pizzería, Barra… */
 export type Estacion = { id: string; nombre: string; color: string | null; icono: string | null; orden: number; activa: boolean };
@@ -109,7 +113,7 @@ export type CuentaMesa = {
   total: number;
   pedidos: number;
   pendientes: number;
-  items: { nombre: string; cantidad: number; precio_unitario: number; total: number }[];
+  items: { nombre: string; cantidad: number; precio_unitario: number; total: number; modificadores_texto?: string | null }[];
 };
 
 export type TableroMesas = {
@@ -136,7 +140,11 @@ export type CuentaPorCobrar = {
   mesa: { id: string; nombre: string; zona: string | null };
   total: number;
   pendientes: number;
-  items: { producto_id: string | null; nombre: string; cantidad: number; precio_unitario: number; total: number; precio_de_hoy: boolean }[];
+  items: {
+    producto_id: string | null; nombre: string; cantidad: number; precio_unitario: number; total: number; precio_de_hoy: boolean;
+    /** Receta 73: modificadores de la línea; precio_base = precio_unitario sin los modificadores. */
+    modificadores?: ModsSnapshot | null; modificadores_texto?: string | null; precio_mods?: number; precio_base?: number;
+  }[];
 };
 
 export type MesasPorCobrar = { ahora: string; caja_id?: string; cuentas: CuentaPorCobrar[] };

@@ -19,6 +19,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, ChevronRight, FileSignature, Lock, Package, Printer, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
 import { usePorCobrar } from "@/modules/mesas/usePorCobrar";
 import { haceCuanto, origenPedido, pitido, type CuentaPorCobrar } from "@/modules/mesas/tipos";
+import { HojaModificadores, type ResultadoMods } from "@/modules/mesas/HojaModificadores";
+import { ModsDetalle } from "@/modules/mesas/ModsDetalle";
+import {
+  claveMods, esVacia, modsParaEnviar, partesSel, precioMods, selDeSnapshot, tieneMods,
+  type ModsSeleccion, type ModsSnapshot,
+} from "@/modules/mesas/modificadores";
 import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
@@ -83,6 +89,11 @@ type CartLine = {
   descuento_pct: number;
   /** Línea de la cuenta de una mesa (receta 69): lo pedido; no se quita ni se baja de acá. */
   mesa_min?: number;
+  /** Receta 73: modificadores elegidos (se mandan como `mods`), cómo se ven y su precio por unidad
+   *  (vista previa: el servidor los valida y les pone el precio). Misma combinación = misma línea. */
+  mods?: ModsSeleccion;
+  mods_snap?: ModsSnapshot | null;
+  precio_mods?: number;
 };
 
 /** Abre el ticket imprimible en una pestaña nueva, adjuntando el Bearer. Ancho: el de Configuración › Facturación. */
@@ -390,7 +401,8 @@ function CajaPageContenido() {
   const precioActual = useCallback((l: CartLine) => (l.precio_override != null && l.precio_override > 0 ? l.precio_override : precioEfectivo(l)), [precioEfectivo]);
   // Precio unitario YA con el descuento de la línea (como lo guarda crear_venta).
   const precioConDesc = useCallback((l: CartLine) => Math.round(precioActual(l) * (1 - (l.descuento_pct || 0) / 100)), [precioActual]);
-  const totalLinea = useCallback((l: CartLine) => l.cantidad * precioConDesc(l), [precioConDesc]);
+  // Receta 73: + extras y opciones (sin el descuento del producto, como en crear_venta).
+  const totalLinea = useCallback((l: CartLine) => l.cantidad * (precioConDesc(l) + (l.precio_mods ?? 0)), [precioConDesc]);
 
   const cantTotal = useMemo(() => cart.reduce((s, l) => s + l.cantidad, 0), [cart]);
   const total = useMemo(() => cart.reduce((s, l) => s + totalLinea(l), 0), [cart, totalLinea]);
@@ -399,10 +411,12 @@ function CajaPageContenido() {
 
 
   // Stock insuficiente (bloquea el cobro).
-  const sinStock = useMemo(
-    () => cart.filter((l) => l.producto.controla_stock && l.cantidad > l.producto.stock_actual),
-    [cart],
-  );
+  // Por producto (un plato puede estar en varias líneas, una por combinación de modificadores).
+  const sinStock = useMemo(() => {
+    const porProd = new Map<string, number>();
+    for (const l of cart) porProd.set(l.producto.id, (porProd.get(l.producto.id) ?? 0) + l.cantidad);
+    return cart.filter((l) => l.producto.controla_stock && (porProd.get(l.producto.id) ?? 0) > l.producto.stock_actual);
+  }, [cart]);
   const haySinStock = sinStock.length > 0;
   const idsSinStock = useMemo(() => new Set(sinStock.map((l) => l.producto.id)), [sinStock]);
 
@@ -510,18 +524,24 @@ function CajaPageContenido() {
     for (const [i, it] of c.items.entries()) {
       const prod = it.producto_id ? productos.find((p) => p.id === it.producto_id) : undefined;
       if (!prod) return `"${it.nombre}" no está en el catálogo de esta caja: no se puede cargar la cuenta.`;
+      // Receta 73: la línea conserva sus modificadores (el servidor los vuelve a validar y cobrar).
+      const sel = it.modificadores ? selDeSnapshot(it.modificadores) : undefined;
+      const pMods = sel ? (tieneMods(prod.mods) ? precioMods(prod.mods, sel) : Number(it.precio_mods) || 0) : 0;
       out.push({
         cart_line_id: `mesa_${c.id}_${i}_${t}`,
         producto: prod,
         cantidad: Number(it.cantidad),
         tipo_iva: prod.tipo_iva,
         // Precio del pedido: si es el de hoy va con el descuento del producto (igual que la caja);
-        // si cambió desde que se pidió, se respeta el del pedido.
-        precio_override: it.precio_de_hoy ? null : Number(it.precio_unitario),
+        // si cambió desde que se pidió, se respeta el del pedido (sin los modificadores: se suman aparte).
+        precio_override: it.precio_de_hoy ? null : Number(it.precio_base ?? Number(it.precio_unitario) - (Number(it.precio_mods) || 0)),
         tier_manual: true,
         tipo_precio: "minorista",
         descuento_pct: it.precio_de_hoy ? Math.max(0, Math.min(Number(prod.descuento_pct) || 0, 100)) : 0,
         mesa_min: Number(it.cantidad),
+        mods: sel,
+        mods_snap: it.modificadores ?? null,
+        precio_mods: pMods,
       });
     }
     return out;
@@ -547,23 +567,35 @@ function CajaPageContenido() {
   }
 
   // ── Acciones carrito ───────────────────────────────────────────────────────
-  const addToCart = useCallback((p: Producto, reenfocar?: boolean) => {
+  // Receta 73: un plato con modificadores abre primero la hoja (quitar / extras / opciones).
+  const [hojaMods, setHojaMods] = useState<{ p: Producto; editar?: string; reenfocar?: boolean } | null>(null);
+  const addToCart = useCallback((p: Producto, reenfocar?: boolean, r?: ResultadoMods) => {
+    if (tieneMods(p.mods) && !r) {
+      setHojaMods({ p, reenfocar });
+      setQ("");
+      setHitsHighlight(-1);
+      return;
+    }
+    const sel = r && !esVacia(r.sel) ? r.sel : undefined;
+    const clave = claveMods(sel);
+    const cant = r?.cantidad ?? 1;
     setCart((prev) => {
-      const idx = prev.findIndex((l) => l.producto.id === p.id);
+      const idx = prev.findIndex((l) => l.producto.id === p.id && claveMods(l.mods) === clave);
       if (idx !== -1) {
         const copia = [...prev];
-        copia[idx] = { ...copia[idx], cantidad: copia[idx].cantidad + 1 };
+        copia[idx] = { ...copia[idx], cantidad: copia[idx].cantidad + cant };
         return copia;
       }
       const nuevo: CartLine = {
         cart_line_id: `${p.id}_${Date.now()}`,
         producto: p,
-        cantidad: 1,
+        cantidad: cant,
         tipo_iva: p.tipo_iva,
         precio_override: null,
         tier_manual: false,
         tipo_precio: "minorista",
         descuento_pct: Math.max(0, Math.min(Number(p.descuento_pct) || 0, 100)), // viene del producto (Inventario)
+        ...(sel && p.mods ? { mods: sel, mods_snap: partesSel(p.mods, sel), precio_mods: r?.precio_mods ?? 0 } : {}),
       };
       return [...prev, nuevo];
     });
@@ -573,6 +605,27 @@ function CajaPageContenido() {
     setHitsHighlight(-1);
     enfocarBuscador(reenfocar);
   }, [enfocarBuscador]);
+
+  /** Hoja de modificadores confirmada: agrega la línea o cambia la que se estaba editando. */
+  function confirmarHojaMods(r: ResultadoMods) {
+    const h = hojaMods;
+    if (!h) return;
+    setHojaMods(null);
+    if (!h.editar) { addToCart(h.p, h.reenfocar, r); return; }
+    const sel = esVacia(r.sel) ? undefined : r.sel;
+    setCart((prev) => {
+      const l = prev.find((x) => x.cart_line_id === h.editar);
+      if (!l) return prev;
+      const otra = prev.find((x) => x.cart_line_id !== h.editar && x.producto.id === l.producto.id && claveMods(x.mods) === r.clave);
+      if (otra) {
+        return prev.filter((x) => x.cart_line_id !== h.editar).map((x) => (x.cart_line_id === otra.cart_line_id ? { ...x, cantidad: x.cantidad + r.cantidad } : x));
+      }
+      return prev.map((x) => (x.cart_line_id === h.editar
+        ? { ...x, cantidad: r.cantidad, mods: sel, mods_snap: sel && l.producto.mods ? partesSel(l.producto.mods, sel) : null, precio_mods: sel ? r.precio_mods : 0 }
+        : x));
+    });
+    enfocarBuscador();
+  }
 
   const updateCant = useCallback((id: string, n: number) => {
     if (!Number.isFinite(n) || n <= 0) return;
@@ -662,6 +715,8 @@ function CajaPageContenido() {
           tipo_iva: l.tipo_iva,
           descuento_pct: l.descuento_pct || 0,
           ...(l.precio_override != null && l.precio_override > 0 ? { precio_unitario: l.precio_override } : {}),
+          // Receta 73: modificadores (la base los valida y les pone el precio).
+          ...(modsParaEnviar(l.mods) ? { mods: modsParaEnviar(l.mods) } : {}),
         };
       });
       const venta = await apiFetch<{ venta_id: string; numero_control: string; total: number; vuelto?: number; aviso_presupuesto?: string }>("/api/caja/venta", {
@@ -733,7 +788,7 @@ function CajaPageContenido() {
 
   // Espejo del estado para los atajos de teclado (siempre el último valor).
   kbRef.current = {
-    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente || hojaOpciones || pedirComprador || bandejaMesas, cart, q, inputRef,
+    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente || hojaOpciones || pedirComprador || bandejaMesas || !!hojaMods, cart, q, inputRef,
     updateCant, removeFromCart, setCobroOpen, setQ, setClienteOpen,
   };
 
@@ -1180,7 +1235,7 @@ function CajaPageContenido() {
                 {cart.map((l) => {
                   const sinStockLinea = idsSinStock.has(l.producto.id);
                   const tier = tierDe(l);
-                  const pAct = precioActual(l);
+                  const pAct = precioActual(l) + (l.precio_mods ?? 0);
                   const desc = l.descuento_pct || 0;
                   const brutoLinea = l.cantidad * pAct;
                   const netoLinea = totalLinea(l);
@@ -1206,6 +1261,18 @@ function CajaPageContenido() {
                             <span className="font-semibold text-slate-700">{formatGs(pAct)}</span>
                             <span>c/u</span>
                           </div>
+                          {/* Receta 73: modificadores de la línea (se cambian con la hoja; los de una mesa no). */}
+                          {l.mods_snap || tieneMods(l.producto.mods) ? (
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-2">
+                              <ModsDetalle mods={l.mods_snap} className="min-w-0" />
+                              {tieneMods(l.producto.mods) && !l.mesa_min ? (
+                                <button type="button" onClick={() => setHojaMods({ p: l.producto, editar: l.cart_line_id })}
+                                  className="inline-flex min-h-8 items-center text-xs font-semibold hover:underline lg:min-h-0" style={{ color: TEAL }}>
+                                  {l.mods_snap ? "Cambiar" : "Elegir opciones"}
+                                </button>
+                              ) : null}
+                            </div>
+                          ) : null}
                           {/* Fila de cantidad / IVA / total (ancho). En angosto, ver abajo. */}
                           <div className="mt-2 hidden items-center gap-2 @lg:flex">
                             {/* Tablet (táctil): botones de 44 px también en la fila ancha. */}
@@ -1379,6 +1446,31 @@ function CajaPageContenido() {
       {modalCaja === "cerrar" && caja ? (
         <CierreModal turnoId={caja.id} onClose={() => setModalCaja(null)} onCerrada={refrescarCajas} />
       ) : null}
+
+      {/* Receta 73: modificadores del plato (misma hoja que el menú QR) */}
+      {hojaMods && tieneMods(hojaMods.p.mods) ? (() => {
+        const p = hojaMods.p;
+        const l = hojaMods.editar ? cart.find((x) => x.cart_line_id === hojaMods.editar) : undefined;
+        const desc = Math.max(0, Math.min(Number(p.descuento_pct) || 0, 100));
+        return (
+          <HojaModificadores
+            producto={{
+              nombre: p.nombre,
+              precio: l ? precioConDesc(l) : Math.round(p.precio_venta * (1 - desc / 100)),
+              precio_lista: !l && desc > 0 ? p.precio_venta : null,
+              imagen_url: p.imagen_url,
+            }}
+            catalogo={p.mods!}
+            inicial={l ?{ sel: l.mods ?? { quitar: [], extras: [], opciones: [] }, cantidad: l.cantidad } : undefined}
+            color={TEAL}
+            textoBoton={l ? "Guardar" : "Agregar"}
+            maxCantidad={999}
+            z="z-[80]"
+            onConfirmar={confirmarHojaMods}
+            onClose={() => { setHojaMods(null); enfocarBuscador(); }}
+          />
+        );
+      })() : null}
 
       {/* Mesas por cobrar: elegir la cuenta que se carga en el carrito */}
       {bandejaMesas ? (

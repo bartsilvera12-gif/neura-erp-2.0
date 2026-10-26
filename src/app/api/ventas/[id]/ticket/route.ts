@@ -17,6 +17,7 @@ import {
   etiquetaMetodoPago, htmlTicketVenta, ticketVentaEfectivo,
   type ConfigTicketVenta, type DatosTicketVenta,
 } from "@/modules/facturacion/tickets";
+import { textoConPrecios, type ModsSnapshot } from "@/modules/mesas/modificadores";
 
 function ventaId(req: { url: string }): string | null {
   const segs = new URL(req.url).pathname.split("/").filter(Boolean);
@@ -40,18 +41,21 @@ export const GET = withTenant(async (ctx, req) => {
   const empresaP = datosEmpresa(ctx.db);
 
   // Venta + ítems + cliente en UNA consulta (embebidos): el ticket sale después de cada venta.
-  const vq = await ctx.db
+  // Receta 73: modificadores de cada plato (si el schema todavía no los tiene, sin ellos).
+  const consulta = (mods: boolean) => ctx.db
     .select(
       "ventas",
       "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, metodo_pago, cliente_id, usuario_nombre, " +
         "tipo_documento, receptor_nombre, receptor_ruc, receptor_ocasional, " +
-        "ventas_items(producto_nombre, sku, cantidad, precio_venta, tipo_iva, monto_iva, total_linea), " +
+        `ventas_items(producto_nombre, sku, cantidad, precio_venta, tipo_iva, monto_iva, total_linea${mods ? ", modificadores, modificadores_texto" : ""}), ` +
         "pagos:ventas_pagos_detalle(metodo_pago, monto, referencia, recibido, vuelto, created_at), " +
         "punto:puntos_venta(nombre), sucursal:sucursales(nombre), " +
         "cliente:clientes!cliente_id(nombre, razon_social, ruc, documento)",
     )
     .eq("id", id)
     .limit(1);
+  let vq = await consulta(true);
+  if (vq.error && /modificadores/.test(vq.error.message ?? "")) vq = await consulta(false);
   if (vq.error) return ERR.server();
   if (!vq.data?.length) return ERR.notFound();
   const v = vq.data[0] as unknown as Record<string, unknown>;
@@ -90,6 +94,8 @@ export const GET = withTenant(async (ctx, req) => {
       cantidad: Number(it.cantidad) || 0,
       precio: Number(it.precio_venta) || 0,
       total: Number(it.total_linea) || 0,
+      // Receta 73: modificadores del plato debajo, en chico (extras con su precio).
+      detalle: textoConPrecios(it.modificadores as ModsSnapshot | null) || (it.modificadores_texto as string | null) || null,
     })),
     subtotal: Number(v.subtotal) || 0,
     iva: Number(v.monto_iva) || 0,

@@ -16,8 +16,9 @@
  * impresión cada vez: es una decisión del navegador, no del sistema.
  */
 import { apiFetch } from "@/lib/api/client-fetch";
-import { comandaEfectiva, htmlComanda, type ConfigComanda } from "@/modules/facturacion/tickets";
-import { itemsDeComanda, type Comanda, type PedidoMesa } from "@/modules/mesas/tipos";
+import { comandaEfectiva, htmlComanda, type ConfigComanda, type ModsComanda } from "@/modules/facturacion/tickets";
+import { itemsDeComanda, type Comanda, type ItemPedido, type PedidoMesa } from "@/modules/mesas/tipos";
+import { partesParaMostrar } from "@/modules/mesas/modificadores";
 
 let config: Promise<ConfigComanda> | null = null;
 /** Config del ticket de comanda (con los defaults si no hay nada guardado o falla la consulta). */
@@ -32,6 +33,17 @@ const fechaCorta = (iso: string) =>
   new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })
     .format(new Date(iso)).replace(",", "");
 
+/** Receta 73: modificadores de la línea para la comanda (opciones, SIN …, + EXTRA …). */
+function modsComanda(i: ItemPedido): ModsComanda | null {
+  const p = partesParaMostrar(i.modificadores);
+  if (!p.quitar.length && !p.extras.length && !p.opciones.length) return null;
+  return {
+    opciones: p.opciones.map((o) => o.opcion),
+    quitar: p.quitar,
+    extras: p.extras.map((e) => `${e.nombre}${e.cantidad > 1 ? ` ×${e.cantidad}` : ""}`),
+  };
+}
+
 /** HTML de la comanda de una estación: mesa grande, pedido · estación, hora, ítems con sus notas. */
 export function htmlComandaMesa(cfg: ConfigComanda, p: PedidoMesa, k: Comanda): string {
   const otras = (p.comandas ?? []).filter((x) => x.id !== k.id).map((x) => x.estacion_nombre);
@@ -43,7 +55,7 @@ export function htmlComandaMesa(cfg: ConfigComanda, p: PedidoMesa, k: Comanda): 
     fecha: fechaCorta(p.aceptado_at ?? p.creado_at),
     estacion: k.estacion_nombre,
     cliente: p.nombre_cliente,
-    items: items.map((i) => ({ nombre: i.nombre, cantidad: Number(i.cantidad), notas: i.nota, precio: i.precio_unitario, total: i.total })),
+    items: items.map((i) => ({ nombre: i.nombre, cantidad: Number(i.cantidad), notas: i.nota, precio: i.precio_unitario, total: i.total, mods: modsComanda(i) })),
     notas: notas || null,
     total: items.reduce((a, i) => a + Number(i.total || 0), 0),
   }, { acciones: false });
