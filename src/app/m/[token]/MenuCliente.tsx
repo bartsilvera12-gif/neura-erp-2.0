@@ -479,11 +479,43 @@ function NotaLinea({ valor, onCambiar }: { valor: string; onCambiar: (v: string)
   );
 }
 
+/**
+ * Barra de progreso por segmentos (estilo apps de delivery): los pasos hechos y el actual quedan
+ * llenos y fijos (al avanzar, el segmento nuevo se llena con una transición suave). Los pasos que
+ * faltan tienen un brillo muy tenue y lento que los recorre en ola, para mostrar que se está
+ * esperando sin molestar. Con "reducir movimiento" no hay brillo.
+ */
+function BarraProgreso({ total, actual }: { total: number; actual: number }) {
+  return (
+    <div className="mt-2 grid gap-1" style={{ gridTemplateColumns: `repeat(${total}, minmax(0, 1fr))` }} aria-hidden>
+      <style>{"@keyframes neuraEsperaPaso{0%{transform:translateX(-100%)}60%,100%{transform:translateX(100%)}}"}</style>
+      {Array.from({ length: total }, (_, n) => {
+        const lleno = n <= actual;
+        return (
+          <span key={n} className="relative h-1.5 overflow-hidden rounded-full bg-slate-200">
+            <span className="absolute inset-y-0 left-0 rounded-full bg-[var(--brand)] transition-[width] duration-1000 ease-out motion-reduce:transition-none"
+              style={{ width: lleno ? "100%" : "0%" }} />
+            {!lleno ? (
+              <span className="absolute inset-0 motion-reduce:hidden"
+                style={{
+                  background: "linear-gradient(90deg, transparent, color-mix(in srgb, var(--brand) 22%, transparent), transparent)",
+                  animation: "neuraEsperaPaso 3.2s ease-in-out infinite",
+                  animationDelay: `${(n - actual - 1) * 0.35}s`,
+                }} />
+            ) : null}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
 function TarjetaEstado({ p }: { p: EstadoPedidoPublico }) {
   const e = ESTADOS_PEDIDO[p.estado];
   const Icono = p.estado === "rechazado" ? XCircle : p.estado === "listo" || p.estado === "entregado" ? CheckCircle2 : p.estado === "en_preparacion" ? ChefHat : Clock3;
   const pasos = ["nuevo", "aceptado", "en_preparacion", "listo"] as const;
-  const i = pasos.indexOf(p.estado as (typeof pasos)[number]);
+  // "entregado" = todos los segmentos completos; "rechazado" = barra roja.
+  const i = p.estado === "entregado" ? pasos.length : pasos.indexOf(p.estado as (typeof pasos)[number]);
   return (
     <div className="rounded-2xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm">
       <div className="flex items-center gap-2">
@@ -492,11 +524,9 @@ function TarjetaEstado({ p }: { p: EstadoPedidoPublico }) {
         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${e.clase}`}>{e.texto}</span>
       </div>
       <p className="mt-1 text-sm text-slate-600">{e.cliente}{p.estado === "rechazado" && p.motivo_rechazo ? `: ${p.motivo_rechazo}` : ""}</p>
-      {i >= 0 ? (
-        <div className="mt-2 grid grid-cols-4 gap-1" aria-hidden>
-          {pasos.map((_, n) => <span key={n} className={`h-1.5 rounded-full ${n <= i ? "bg-[var(--brand)]" : "bg-slate-200"}`} />)}
-        </div>
-      ) : null}
+      {p.estado === "rechazado" ? (
+        <div className="mt-2 h-1.5 rounded-full bg-rose-400" aria-hidden />
+      ) : i >= 0 ? <BarraProgreso total={pasos.length} actual={i} /> : null}
       <p className="mt-2 text-xs text-slate-500">
         {p.items.map((it) => `${Number(it.cantidad)} × ${it.nombre}${it.modificadores_texto ? ` (${it.modificadores_texto})` : ""}`).join(" · ")} — <span className="font-semibold text-slate-700">{gs(p.total)}</span>
       </p>
