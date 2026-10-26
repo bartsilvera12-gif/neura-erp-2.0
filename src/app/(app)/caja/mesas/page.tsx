@@ -198,37 +198,48 @@ export default function PedidosMesasPage() {
       ) : cuentas.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">No hay mesas con cuenta abierta.</p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
+        // Mismo diseño que las tarjetas de pedido (TarjetaPedido): encabezado, detalle por línea y pie con la acción.
+        <ul className="space-y-3">
           {cuentas.map((c) => {
             const enCaja = c.estado === "en_caja";
             const lugar = [c.mesa.zona, variasSucursales ? c.sucursal.nombre : null].filter(Boolean).join(" · ");
             return (
-              <li key={c.id} className={`flex flex-col rounded-2xl border bg-white p-4 shadow-sm ${enCaja ? "border-sky-300" : "border-slate-200"}`}>
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="text-base font-semibold text-slate-900 [overflow-wrap:anywhere]">{c.mesa.nombre}</p>
+              <li key={c.id} className={`rounded-2xl border bg-white shadow-sm ${enCaja ? "border-sky-300" : "border-slate-200"}`}>
+                <div className="flex items-start gap-3 px-4 pt-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-base font-bold text-slate-900">{c.mesa.nombre}{lugar ? ` · ${lugar}` : ""}</p>
                     <p className="text-xs text-slate-500">
-                      {lugar ? <>{lugar} · </> : null}<span className="whitespace-nowrap">abierta {horaCorta(c.abierta_at)}</span>
+                      abierta {horaCorta(c.abierta_at)} · {c.pedidos} pedido{c.pedidos === 1 ? "" : "s"}
+                      {enCaja && c.en_caja_at ? <> · en caja desde {horaCorta(c.en_caja_at)}</> : null}
                     </p>
                   </div>
-                  <p className="shrink-0 text-lg font-bold tabular-nums text-slate-900">{gs(c.total)}</p>
+                  <div className="shrink-0 text-right">
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${enCaja ? "bg-sky-100 text-sky-800" : "bg-amber-100 text-amber-800"}`}>
+                      {enCaja ? "En caja · esperando cobro" : "Abierta"}
+                    </span>
+                    <p className="mt-1 text-sm font-bold tabular-nums text-slate-900">{gs(c.total)}</p>
+                  </div>
                 </div>
-                {enCaja ? (
-                  <p className="mt-2 inline-flex w-fit flex-wrap items-center gap-x-1.5 rounded-full bg-sky-100 px-2.5 py-1 text-[11px] font-semibold text-sky-800">
-                    <Receipt className="h-3.5 w-3.5" aria-hidden /> En caja · esperando cobro
-                    {c.en_caja_at ? <span className="font-normal text-sky-700">desde {horaCorta(c.en_caja_at)}</span> : null}
-                  </p>
-                ) : null}
-                <p className="mt-2 line-clamp-2 text-xs text-slate-500">
-                  {c.items.length ? c.items.map((i) => `${cant(i.cantidad)} × ${i.nombre}`).join(" · ") : "Sin pedidos aceptados"}
-                </p>
+                {c.items.length ? (
+                  <ul className="px-4 pt-2 pb-2.5">
+                    {c.items.map((it, i) => (
+                      <li key={i} className="flex gap-2 py-0.5 text-sm">
+                        <span className="w-8 shrink-0 font-semibold tabular-nums text-slate-900">{cant(it.cantidad)}×</span>
+                        <span className="min-w-0 flex-1 text-slate-800">{it.nombre}</span>
+                        <span className="shrink-0 tabular-nums text-slate-500">{gs(it.total)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="px-4 pt-2 pb-2.5 text-sm text-slate-400">Sin pedidos aceptados</p>
+                )}
                 {c.pendientes ? (
-                  <p className="mt-2 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800">
+                  <p className="mx-4 mb-2.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800">
                     {c.pendientes} pedido{c.pendientes === 1 ? "" : "s"} sin atender: aceptá o rechazá {enCaja ? "para que la caja pueda cobrar." : "antes de enviar la cuenta a caja."}
                   </p>
                 ) : null}
                 {puedeAtender ? (
-                  <div className="mt-3 flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-2.5">
                     {c.total <= 0 && !c.pendientes && !enCaja ? (
                       <button type="button" disabled={ocupado === c.id} onClick={() => void accionCuenta(c, "liberar")} className={`${BOTON_SECUNDARIO} min-h-11 flex-1 lg:min-h-0`}>Liberar mesa</button>
                     ) : enCaja ? (
