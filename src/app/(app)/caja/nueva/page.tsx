@@ -20,7 +20,7 @@
 import Link from "next/link";
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ChevronRight, ClipboardList, FileSignature, Lock, Package, Printer, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronRight, ClipboardList, FileSignature, Info, Lock, Package, Printer, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
 import { usePorCobrar } from "@/modules/mesas/usePorCobrar";
 import { haceCuanto, origenPedido, pitido, type CuentaPorCobrar } from "@/modules/mesas/tipos";
 import { HojaModificadores, type ResultadoMods } from "@/modules/mesas/HojaModificadores";
@@ -939,11 +939,18 @@ function CajaPageContenido() {
 
   // ── Render ─────────────────────────────────────────────────────────────────
   // Cliente, condición y documento: en escritorio una fila arriba; en celular / tablet, en una hoja.
+  const ayudaDocumento = tipoDocumento === "ticket"
+    ? "Registra la venta e imprime un ticket. No toca SIFEN."
+    : cfgFact?.modo === "autoimpresor"
+      ? "Factura impresa (autoimpresor) — todavía no se emite: se imprime el ticket."
+      : cfgFact?.modo === "sin_factura_fiscal"
+        ? "La empresa está en modo sin factura fiscal (Configuración › Facturación): se imprime el ticket."
+        : "Factura electrónica (SIFEN) — por ahora inactivo: se imprime el ticket.";
   const datosVenta = (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-3">
       {/* Cliente */}
       <div ref={clienteContainerRef} className="relative">
-        <label className="mb-1.5 block text-sm font-medium text-slate-700">
+        <label className="mb-1.5 block text-sm font-medium text-slate-700 lg:mb-1 lg:text-xs">
           Cliente {clienteObligatorio ? <span className="text-rose-600">*</span> : <span className="font-normal text-slate-400">(opcional para ticket)</span>}
         </label>
         <div className="flex gap-2">
@@ -956,7 +963,7 @@ function CajaPageContenido() {
             placeholder="Buscar por nombre o RUC…"
             autoComplete="off"
             enterKeyHint="search"
-            className={`min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 lg:min-h-0 ${clienteSel || ocasional ? "font-medium" : ""} ${ocasional ? "bg-slate-50" : ""}`}
+            className={`min-h-11 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:ring-2 lg:min-h-0 lg:py-1.5 ${clienteSel || ocasional ? "font-medium" : ""} ${ocasional ? "bg-slate-50" : ""}`}
             style={{ ["--tw-ring-color" as string]: TEAL }}
           />
           {clienteSel || ocasional ? (
@@ -1004,7 +1011,7 @@ function CajaPageContenido() {
 
       {/* Condición */}
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-slate-700">Condición</label>
+        <label className="mb-1.5 block text-sm font-medium text-slate-700 lg:mb-1 lg:text-xs">Condición</label>
         <Segmented value={tipoVenta} onChange={(v) => { setTipoVenta(v); if (v === "CONTADO") setPlazoDias(""); else if (!plazoDias) setPlazoDias(plazoSugerido(clienteSel)); }} options={[{ value: "CONTADO", label: "Contado" }, {
           value: "CREDITO", label: "Crédito", disabled: (!!me && !puedeCredito) || ocasional,
           title: ocasional ? "El cliente ocasional es solo al contado: para vender a crédito elegí un cliente" : "Tu perfil no permite vender a crédito",
@@ -1022,7 +1029,10 @@ function CajaPageContenido() {
 
       {/* Documento */}
       <div>
-        <label className="mb-1.5 block text-sm font-medium text-slate-700">Documento</label>
+        <label className="mb-1.5 flex items-center gap-1 text-sm font-medium text-slate-700 lg:mb-1 lg:text-xs">
+          Documento
+          <span className="hidden cursor-help text-slate-400 lg:inline-flex" title={ayudaDocumento} aria-label={ayudaDocumento}><Info className="h-3.5 w-3.5" /></span>
+        </label>
         <Segmented value={tipoDocumento} onChange={setTipoDocumento} options={[
           {
             value: "factura", label: "Factura", disabled: !puedeFacturar,
@@ -1056,8 +1066,9 @@ function CajaPageContenido() {
               </p>
             </div>
           ) : (
-            <div className="mt-1 text-[11px] text-slate-500">
-              <p>Para emitir factura elegí un cliente con RUC. Sin cliente, solo ticket.</p>
+            <div className="mt-1 text-[11px] text-slate-500" title="Para emitir factura elegí un cliente con RUC. Sin cliente, solo ticket.">
+              {/* Escritorio: la explicación va en el tooltip (deja más alto para el carrito). */}
+              <p className="lg:hidden">Para emitir factura elegí un cliente con RUC. Sin cliente, solo ticket.</p>
               {tipoVenta === "CONTADO" ? (
                 <button type="button" onClick={() => elegirOcasional(true)}
                   className="inline-flex min-h-11 items-center font-semibold underline underline-offset-2 lg:min-h-0" style={{ color: TEAL }}>
@@ -1067,15 +1078,8 @@ function CajaPageContenido() {
             </div>
           )
         ) : null}
-        <p className="mt-1 text-[11px] text-slate-500">
-          {tipoDocumento === "ticket"
-            ? "Registra la venta e imprime un ticket. No toca SIFEN."
-            : cfgFact?.modo === "autoimpresor"
-              ? "Factura impresa (autoimpresor) — todavía no se emite: se imprime el ticket."
-              : cfgFact?.modo === "sin_factura_fiscal"
-                ? "La empresa está en modo sin factura fiscal (Configuración › Facturación): se imprime el ticket."
-                : "Factura electrónica (SIFEN) — por ahora inactivo: se imprime el ticket."}
-        </p>
+        {/* Escritorio: el detalle del documento va en el ícono (i) del título, no en un renglón. */}
+        <p className="mt-1 text-[11px] text-slate-500 lg:hidden">{ayudaDocumento}</p>
       </div>
     </div>
   );
@@ -1089,18 +1093,20 @@ function CajaPageContenido() {
       onFocusCapture={(e) => { if ((e.target as HTMLElement).tagName === "INPUT") setEscribiendo(true); }}
       onBlurCapture={(e) => { if ((e.target as HTMLElement).tagName === "INPUT") setEscribiendo(false); }}
     >
-      {/* Header compacto: todo en una línea para no gastar alto vertical. */}
-      <div className="flex shrink-0 items-center justify-between gap-3 sm:gap-4">
-        <div className="flex min-w-0 items-center gap-1.5">
+      {/* Header compacto: todo en una línea para no gastar alto vertical. En escritorio ancho
+          (xl) la barra de la caja va en la misma fila, entre el título y los accesos. */}
+      <div className="flex shrink-0 flex-col gap-3 xl:flex-row xl:items-center">
+      <div className="flex shrink-0 items-center justify-between gap-3 sm:gap-4 xl:contents">
+        <div className="flex min-w-0 items-center gap-1.5 xl:order-1 xl:shrink-0">
           {/* Volver al panel de Caja: discreto, en la misma línea (no le quita alto al POS). */}
           <Link href="/caja/panel" aria-label="Volver a Caja" title="Volver a Caja"
             className="-ml-1.5 inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 lg:h-8 lg:w-8">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <h1 className="text-lg font-semibold tracking-tight text-slate-900">Caja</h1>
-          <span className="hidden text-xs text-slate-400 sm:inline">· Escaneá y cobrá directo</span>
+          <span className="hidden text-xs text-slate-400 sm:inline xl:hidden">· Escaneá y cobrá directo</span>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2 xl:order-3">
           <Link href="/caja/turnos" className="inline-flex min-h-11 items-center rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 lg:min-h-0">
             <span className="sm:hidden">Turnos</span><span className="hidden sm:inline">Apertura y cierre</span>
           </Link>
@@ -1111,10 +1117,11 @@ function CajaPageContenido() {
       </div>
 
       {/* Caja en la que se vende: sin caja abierta no se puede cobrar. */}
-      <div className="shrink-0">
+      <div className="shrink-0 xl:order-2 xl:min-w-0 xl:flex-1">
         <CajaBarra estado={estadoCajas} caja={caja} onElegir={elegirCaja}
           onAbrir={() => setModalCaja("abrir")} onMov={() => setModalCaja("mov")}
           onVer={() => setModalCaja("ver")} onCerrar={() => setModalCaja("cerrar")} />
+      </div>
       </div>
 
       {/* Venta registrada: en escritorio una franja; en celular / tablet un aviso flotante
@@ -1175,14 +1182,14 @@ function CajaPageContenido() {
         <div className={`grid shrink-0 gap-2 ${cuentaMesa && porCobrar.length > 0 ? "md:grid-cols-2" : ""}`}>
           {porCobrar.length > 0 ? (
             <button type="button" onClick={() => { setErrorMesa(null); setBandejaMesas(true); }}
-              className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-left transition hover:bg-sky-100 active:scale-[0.99]">
-              <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-sky-700 ring-1 ring-sky-200">
+              className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-left transition hover:bg-sky-100 active:scale-[0.99] lg:min-h-0 lg:py-1.5">
+              <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-sky-700 ring-1 ring-sky-200 lg:h-7 lg:w-7">
                 <Receipt className="h-4 w-4" aria-hidden />
                 <span className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full bg-sky-600 px-1 text-[11px] font-bold text-white tabular-nums">{porCobrar.length}</span>
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-sky-900">Mesas por cobrar ({porCobrar.length})</span>
-                <span className="block truncate text-xs text-sky-800/80">{porCobrar.map((c) => c.mesa.nombre).join(" · ")}</span>
+              <span className="min-w-0 flex-1 lg:flex lg:items-baseline lg:gap-2">
+                <span className="block shrink-0 text-sm font-semibold text-sky-900">Mesas por cobrar ({porCobrar.length})</span>
+                <span className="block min-w-0 truncate text-xs text-sky-800/80">{porCobrar.map((c) => c.mesa.nombre).join(" · ")}</span>
               </span>
               <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-sky-800">Ver <ChevronRight className="h-4 w-4" aria-hidden /></span>
             </button>
@@ -1224,14 +1231,14 @@ function CajaPageContenido() {
         <div className={`grid shrink-0 gap-2 ${pedido && pedidosPorCobrar.length > 0 ? "md:grid-cols-2" : ""}`}>
           {pedidosPorCobrar.length > 0 ? (
             <button type="button" onClick={() => { setErrorPedido(null); setBandejaPedidos(true); }}
-              className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-left transition hover:bg-violet-100 active:scale-[0.99]">
-              <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-violet-700 ring-1 ring-violet-200">
+              className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-left transition hover:bg-violet-100 active:scale-[0.99] lg:min-h-0 lg:py-1.5">
+              <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-violet-700 ring-1 ring-violet-200 lg:h-7 lg:w-7">
                 <ClipboardList className="h-4 w-4" aria-hidden />
                 <span className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full bg-violet-600 px-1 text-[11px] font-bold text-white tabular-nums">{pedidosPorCobrar.length}</span>
               </span>
-              <span className="min-w-0 flex-1">
-                <span className="block text-sm font-semibold text-violet-900">Pedidos por cobrar ({pedidosPorCobrar.length})</span>
-                <span className="block truncate text-xs text-violet-800/80">{pedidosPorCobrar.map((x) => x.etiqueta).join(" · ")}</span>
+              <span className="min-w-0 flex-1 lg:flex lg:items-baseline lg:gap-2">
+                <span className="block shrink-0 text-sm font-semibold text-violet-900">Pedidos por cobrar ({pedidosPorCobrar.length})</span>
+                <span className="block min-w-0 truncate text-xs text-violet-800/80">{pedidosPorCobrar.map((x) => x.etiqueta).join(" · ")}</span>
               </span>
               <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-violet-800">Ver <ChevronRight className="h-4 w-4" aria-hidden /></span>
             </button>
@@ -1284,7 +1291,7 @@ function CajaPageContenido() {
       <>
       {/* Datos de la venta — compacto, una fila (escritorio). En celular / tablet van en una hoja. */}
       {esEscritorio ? (
-        <div className="shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">{datosVenta}</div>
+        <div className="shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-2.5 shadow-sm">{datosVenta}</div>
       ) : null}
 
       {/* Split POS (escritorio); una columna en celular / tablet */}
@@ -1836,7 +1843,7 @@ function Segmented<T extends string>({ value, options, onChange }: { value: T; o
         const sel = value === opt.value;
         return (
           <button key={opt.value} type="button" onClick={() => onChange(opt.value)} disabled={opt.disabled && !sel} title={opt.disabled ? opt.title : undefined}
-            className={`min-h-11 flex-1 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:text-slate-300 lg:min-h-0 ${sel ? "text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+            className={`min-h-11 flex-1 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:text-slate-300 lg:min-h-0 lg:py-1.5 ${sel ? "text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
             style={sel ? { backgroundColor: TEAL } : undefined}>
             {opt.label}
           </button>

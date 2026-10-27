@@ -335,7 +335,7 @@ export function ProductoForm({
               <div className="col-span-2 min-w-0 sm:col-span-1">
                 <span className={ET}>SKU *</span>
                 <div className="flex gap-2">
-                  <input enterKeyHint="next" autoCapitalize="characters" autoComplete="off" value={f.sku} onChange={(e) => set("sku", e.target.value)} className={`${INPUT} min-w-0 font-mono`} placeholder="Escribilo o tocá Generar" aria-label="SKU" />
+                  <input enterKeyHint="next" autoCapitalize="characters" autoComplete="off" value={f.sku} onChange={(e) => set("sku", e.target.value)} className={`${INPUT} min-w-0 tabular-nums`} placeholder="Escribilo o tocá Generar" aria-label="SKU" />
                   <BotonGenerar onClick={() => generar("sku")} cargando={generando === "sku"} />
                 </div>
               </div>
@@ -343,7 +343,7 @@ export function ProductoForm({
             <div className="mt-3">
               <span className={ET}>Código de barras <span className="font-normal text-slate-400">(opcional)</span></span>
               <div className="flex gap-2">
-                <input enterKeyHint="next" autoComplete="off" value={f.codigo_barras} onChange={(e) => set("codigo_barras", e.target.value)} className={`${INPUT} min-w-0 font-mono`} placeholder="Escaneá el código o tocá Generar" aria-label="Código de barras" />
+                <input enterKeyHint="next" autoComplete="off" value={f.codigo_barras} onChange={(e) => set("codigo_barras", e.target.value)} className={`${INPUT} min-w-0 tabular-nums`} placeholder="Escaneá el código o tocá Generar" aria-label="Código de barras" />
                 <BotonGenerar onClick={() => generar("barras")} cargando={generando === "barras"} />
               </div>
               <p className="mt-1 text-[11px] text-slate-400">
@@ -556,7 +556,7 @@ export function ProductoForm({
                   <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <label className="block">
                       <span className={ET}>N° de lote <span className="font-normal text-slate-400">(editable)</span></span>
-                      <input enterKeyHint="next" autoCapitalize="characters" autoComplete="off" value={stockIni.lote} onChange={(e) => setStockIni((p) => ({ ...p, lote: e.target.value.slice(0, 40) }))} className={`${INPUT} font-mono uppercase`} />
+                      <input enterKeyHint="next" autoCapitalize="characters" autoComplete="off" value={stockIni.lote} onChange={(e) => setStockIni((p) => ({ ...p, lote: e.target.value.slice(0, 40) }))} className={`${INPUT} uppercase tabular-nums`} />
                     </label>
                     <div className="block">
                       <span className={ET}>Vencimiento *</span>

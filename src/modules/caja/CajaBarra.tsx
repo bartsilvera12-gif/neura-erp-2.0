@@ -50,20 +50,21 @@ export function CajaBarra({ estado, caja, onElegir, onAbrir, onMov, onVer, onCer
 
   return (
     // Celular: datos de la caja a la izquierda (recortados) y las 3 acciones como íconos de 44 px.
-    <div className="flex items-center justify-between gap-2 rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50/70 to-white py-2 pl-3 pr-2 shadow-sm ring-1 ring-emerald-500/5 sm:flex-wrap sm:gap-3 sm:px-4 sm:py-2.5">
-      <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none sm:gap-3">
+    <div className="flex items-center justify-between gap-2 rounded-2xl border border-emerald-100 bg-gradient-to-r from-emerald-50/70 to-white py-2 pl-3 pr-2 shadow-sm ring-1 ring-emerald-500/5 sm:flex-wrap sm:gap-3 sm:px-4 sm:py-2.5 xl:flex-nowrap xl:py-1.5">
+      <div className="flex min-w-0 flex-1 items-center gap-2.5 sm:flex-none sm:gap-3 xl:flex-1">
         <span className="relative flex h-2.5 w-2.5 shrink-0">
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
           <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
         </span>
-        <div className="min-w-0">
+        {/* Escritorio ancho: el selector y los datos del turno en un solo renglón (menos alto). */}
+        <div className="min-w-0 xl:flex xl:items-center xl:gap-3">
           {abiertas.length > 1 ? (
             <Select value={caja.id} onChange={onElegir} compacto minWidth={250} etiqueta="Caja en la que vendés" className="max-sm:!min-w-0"
               options={abiertas.map((c): [string, string] => [c.id, `${etiquetaCaja(c)}${c.mia ? " (la tuya)" : ""}`])} />
           ) : (
             <p className="truncate text-sm font-semibold text-slate-900">{etiquetaCaja(caja)}</p>
           )}
-          <p className="mt-0.5 flex items-center gap-x-1.5 overflow-hidden whitespace-nowrap text-[11px] text-slate-500 sm:flex-wrap">
+          <p className="mt-0.5 flex min-w-0 items-center gap-x-1.5 overflow-hidden whitespace-nowrap text-[11px] text-slate-500 sm:flex-wrap xl:mt-0 xl:flex-nowrap" title={`Turno N° ${caja.numero_caja} · ${caja.abierta_por_nombre ?? "—"} desde ${hora(caja.fecha_apertura)} · ${caja.deposito_nombre}`}>
             <span>Turno N° {caja.numero_caja}</span><span className="text-slate-300">·</span>
             <span className="truncate">{caja.abierta_por_nombre ?? "—"} desde {hora(caja.fecha_apertura)}</span><span className="hidden text-slate-300 sm:inline">·</span>
             <span className="hidden items-center gap-1 sm:inline-flex"><Warehouse className="h-3 w-3" /> {caja.deposito_nombre}</span>

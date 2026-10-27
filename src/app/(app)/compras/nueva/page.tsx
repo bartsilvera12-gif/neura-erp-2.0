@@ -617,13 +617,13 @@ function NuevaCompra() {
                     </div>
                     <label className="block min-w-0">
                       <span className={ET}>Número *</span>
-                      <input value={factura} onChange={(e) => setFactura(e.target.value)} maxLength={40} placeholder="001-001-0000123" enterKeyHint="next" autoComplete="off" className={`${INPUT} font-mono`} />
+                      <input value={factura} onChange={(e) => setFactura(e.target.value)} maxLength={40} placeholder="001-001-0000123" enterKeyHint="next" autoComplete="off" className={`${INPUT} tabular-nums`} />
                     </label>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <label className="block min-w-0">
                       <span className={ET}>Timbrado <span className="font-normal text-slate-400">{requiereTimbrado(tipoComprobante) ? "(opcional)" : "(no lleva)"}</span></span>
-                      <input value={timbrado} onChange={(e) => setTimbrado(e.target.value.replace(/\D/g, "").slice(0, 12))} inputMode="numeric" enterKeyHint="next" placeholder="12345678" className={`${INPUT} font-mono`} />
+                      <input value={timbrado} onChange={(e) => setTimbrado(e.target.value.replace(/\D/g, "").slice(0, 12))} inputMode="numeric" enterKeyHint="next" placeholder="12345678" className={`${INPUT} tabular-nums`} />
                     </label>
                     <div className="block min-w-0">
                       <span className={ET}>Fecha</span>
@@ -1041,7 +1041,7 @@ function LineaCompra({ l, prod, moneda, factor, excede, conmutador, onCambiar, o
         <div className="mt-2 grid grid-cols-1 gap-2 rounded-lg bg-slate-50/70 p-2 min-[420px]:grid-cols-2 sm:grid-cols-3">
           <label className="flex flex-col justify-end">
             <span className={ET}>Lote <span className="font-normal text-slate-400">(editable)</span></span>
-            <input value={l.lote} enterKeyHint="next" autoComplete="off" autoCapitalize="characters" onChange={(e) => onCambiar({ lote: e.target.value.slice(0, 40) })} placeholder={loteAutomatico(hoyPY())} className={`${INPUT} bg-white py-2 font-mono uppercase`} />
+            <input value={l.lote} enterKeyHint="next" autoComplete="off" autoCapitalize="characters" onChange={(e) => onCambiar({ lote: e.target.value.slice(0, 40) })} placeholder={loteAutomatico(hoyPY())} className={`${INPUT} bg-white py-2 uppercase tabular-nums`} />
           </label>
           <div className="flex min-w-0 flex-col justify-end">
             <span className={ET}>Vencimiento *</span>

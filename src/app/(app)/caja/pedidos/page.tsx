@@ -33,6 +33,10 @@ import {
 
 const TEAL = clienteConfig.color;
 
+/** Interruptor con aspecto de chip de la barra de filtros (igual que en Inventario › Productos). */
+const CHIP_TOGGLE = (on: boolean) =>
+  `flex h-[38px] cursor-pointer select-none items-center gap-2 whitespace-nowrap rounded-xl border px-3 text-[13px] transition max-md:h-11 max-md:text-sm ${on ? "border-[color-mix(in_srgb,var(--brand)_38%,white)] bg-[var(--brand-50)] font-semibold text-[var(--brand)]" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`;
+
 type Linea = {
   key: string;
   producto: Producto;
@@ -272,8 +276,14 @@ export default function PedidosMostradorPage() {
     }
   }
 
-  const pedidos = lista?.pedidos ?? [];
-  const enCaja = pedidos.filter((x) => x.estado === "en_caja").length;
+  const todosPedidos = lista?.pedidos ?? [];
+  const enCaja = todosPedidos.filter((x) => x.estado === "en_caja").length;
+  // Los anulados quedan ocultos por defecto; el chip "Ver anulados (N)" los muestra (se recuerda en este equipo).
+  const [verAnulados, setVerAnulados] = useState(false);
+  useEffect(() => { try { setVerAnulados(localStorage.getItem("pedidos.verAnulados") === "1"); } catch { /* sin storage */ } }, []);
+  const cambiarVerAnulados = (v: boolean) => { setVerAnulados(v); try { localStorage.setItem("pedidos.verAnulados", v ? "1" : "0"); } catch { /* sin storage */ } };
+  const cantAnulados = todosPedidos.filter((x) => x.estado === "anulado").length;
+  const pedidos = verAnulados ? todosPedidos : todosPedidos.filter((x) => x.estado !== "anulado");
 
   // ── Render ─────────────────────────────────────────────────────────────────
   const panelArmar = (
@@ -448,7 +458,13 @@ export default function PedidosMostradorPage() {
           <h2 className="text-sm font-semibold text-slate-900">{lista?.puede_ver_todos && verTodos ? "Pedidos de hoy" : "Mis pedidos de hoy"}</h2>
           <p className="text-xs text-slate-500">{lista?.sucursal?.nombre ?? ""}{enCaja ? `${lista?.sucursal ? " · " : ""}${enCaja} en caja` : ""}</p>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {cantAnulados > 0 || verAnulados ? (
+            <label className={CHIP_TOGGLE(verAnulados)} title="Mostrar también los pedidos anulados de hoy">
+              <input type="checkbox" checked={verAnulados} onChange={(e) => cambiarVerAnulados(e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]" />
+              Ver anulados ({cantAnulados})
+            </label>
+          ) : null}
           {lista?.puede_ver_todos ? (
             <div className="flex overflow-hidden rounded-lg border border-slate-200" role="group" aria-label="Qué pedidos ver">
               {[{ v: false, t: "Míos" }, { v: true, t: "Todos" }].map((o) => (
@@ -466,7 +482,7 @@ export default function PedidosMostradorPage() {
       <div className="min-h-0 flex-1 overflow-auto p-2.5 sm:p-4">
         {errorLista && !lista ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{errorLista}</p> : null}
         {!lista && !errorLista ? [0, 1, 2].map((i) => <div key={i} className="mb-2 h-20 animate-pulse rounded-xl bg-slate-100" />) : null}
-        {lista && pedidos.length === 0 ? <p className="py-10 text-center text-sm text-slate-400">Todavía no hay pedidos hoy.</p> : null}
+        {lista && pedidos.length === 0 ? <p className="py-10 text-center text-sm text-slate-400">{cantAnulados && !verAnulados ? `No hay pedidos activos hoy (${cantAnulados === 1 ? "1 anulado oculto" : `${cantAnulados} anulados ocultos`}).` : "Todavía no hay pedidos hoy."}</p> : null}
         <ul className="space-y-2">
           {pedidos.map((pd) => {
             const est = ESTADOS_PEDIDO_MOSTRADOR[pd.estado];

@@ -21,7 +21,7 @@ import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Select } from "@/components/Select";
 import { EncabezadoPagina, GrillaKpis } from "@/components/EncabezadoPagina";
 import { useEsMovil } from "@/lib/ui/responsive";
-import { BarrasH, Columnas, Dona, Leyenda, SERIES, C_ANTERIOR, colorMetodo } from "@/components/graficos/Graficos";
+import { BarrasH, Columnas, DeltaTexto, Dona, Leyenda, SERIES, C_ANTERIOR, colorMetodo } from "@/components/graficos/Graficos";
 import { corto, diaLargo, mayuscula, diaSemana, gs, num, pct, variacion } from "@/components/graficos/formato";
 import { Kpi, Tarjeta, useReporte } from "@/modules/reportes/ui";
 import type { Dashboard } from "@/modules/reportes/tipos";
@@ -152,6 +152,7 @@ export default function Inicio() {
                     detalle: `${num(s.cantidad)} ventas · ticket ${gs(s.cantidad ? s.total / s.cantidad : 0)}`,
                     onClick: () => setSucursal(s.id),
                   }))} />
+                <ResumenSucursales d={d} series={series} onElegir={setSucursal} />
               </Tarjeta>
             ) : null}
           </div>
@@ -262,6 +263,73 @@ function DetalleCajas() {
         </Link>
       </div>
     </div>
+  );
+}
+
+/**
+ * Debajo de las barras de "Ventas por sucursal": cantidad y ticket del mes, hoy, últimos 7 días
+ * (contra los 7 anteriores) y la curva de los últimos 30 días de cada sucursal. Sale de `por_dia` (ya viene en la respuesta).
+ */
+function ResumenSucursales({ d, series, onElegir }: { d: Dashboard; series: { id: string; color: string }[]; onElegir: (id: string) => void }) {
+  const dias = d.por_dia;
+  if (!dias.length || !d.por_sucursal.length) return null;
+  const suma = (arr: typeof dias, id: string) => arr.reduce((a, x) => a + Number(x.por_sucursal[id] ?? 0), 0);
+  const ult7 = dias.slice(-7);
+  const prev7 = dias.slice(-14, -7);
+  const deHoy = dias.find((x) => x.dia === d.hoy);
+  return (
+    <ul className="mt-4 space-y-2.5 border-t border-slate-100 pt-4">
+      {d.por_sucursal.slice(0, 4).map((s) => {
+        const color = series.find((x) => x.id === s.id)?.color ?? SERIES[0];
+        const valores = dias.map((x) => Number(x.por_sucursal[s.id] ?? 0));
+        const siete = suma(ult7, s.id);
+        return (
+          <li key={s.id}>
+            <button type="button" onClick={() => onElegir(s.id)} title={`Ver solo ${s.nombre}`}
+              className="w-full rounded-xl border border-slate-100 bg-slate-50/50 px-3 py-2.5 text-left transition hover:border-slate-200 hover:bg-slate-50">
+              <span className="flex items-center justify-between gap-3">
+                <span className="flex min-w-0 items-center gap-2 text-xs font-semibold text-slate-700">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                  <span className="truncate">{s.nombre}</span>
+                </span>
+                <Curva valores={valores} color={color} />
+              </span>
+              <span className="mt-1.5 grid grid-cols-2 gap-x-3 sm:grid-cols-4 xl:grid-cols-2 gap-y-1.5 text-[11px] text-slate-500">
+                <Dato label="Ventas del mes" valor={num(s.cantidad)} />
+                <Dato label="Ticket promedio" valor={gs(s.cantidad ? s.total / s.cantidad : 0)} />
+                <Dato label="Hoy" valor={gs(deHoy ? Number(deHoy.por_sucursal[s.id] ?? 0) : 0)} />
+                <Dato label="Últimos 7 días" valor={gs(siete)}
+                  nota={prev7.length === 7 ? <><DeltaTexto actual={siete} anterior={suma(prev7, s.id)} /> <span className="text-slate-400">vs. 7 ant.</span></> : null} />
+              </span>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
+function Dato({ label, valor, nota }: { label: string; valor: string; nota?: React.ReactNode }) {
+  return (
+    <span className="min-w-0">
+      <span className="block truncate">{label}</span>
+      <b className="block truncate text-[13px] tabular-nums text-slate-900">{valor}</b>
+      {nota ? <span className="block truncate">{nota}</span> : null}
+    </span>
+  );
+}
+
+/** Curvita de los últimos 30 días (sin ejes: solo la forma). */
+function Curva({ valores, color }: { valores: number[]; color: string }) {
+  const W = 96, H = 24;
+  const max = Math.max(...valores, 1);
+  const paso = valores.length > 1 ? W / (valores.length - 1) : W;
+  const pts = valores.map((v, i) => `${(i * paso).toFixed(1)},${(H - 2 - (v / max) * (H - 4)).toFixed(1)}`).join(" ");
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} className="shrink-0" aria-hidden="true">
+      <polyline points={`0,${H} ${pts} ${W},${H}`} fill={color} fillOpacity={0.12} stroke="none" />
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+    </svg>
   );
 }
 
