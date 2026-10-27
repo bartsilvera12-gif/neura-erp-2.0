@@ -177,7 +177,7 @@ export function ModalCambioVencimiento({ suscripciones, onClose, onHecho }: {
 
 export function ModalHistorial({ clienteId, clienteNombre, onClose }: { clienteId: string; clienteNombre: string; onClose: () => void }) {
   return (
-    <Modal titulo={`Historial del cliente · ${clienteNombre}`} onClose={onClose} size="xl">
+    <Modal titulo={`Historial del Cliente · ${clienteNombre}`} onClose={onClose} size="xl">
       {/* El cuerpo del modal ya scrollea (sin scroll anidado). */}
       <TabHistorial clienteId={clienteId} recarga={0} />
     </Modal>

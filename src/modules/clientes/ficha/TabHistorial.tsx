@@ -9,7 +9,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetchSWR } from "@/lib/api/cache-cliente";
 import type { EventoHistorial } from "@/modules/clientes/ficha/tipos";
-import { fechaHora } from "@/modules/clientes/ui";
 import { monto } from "@/modules/clientes/suscripciones/ui";
 
 const ACCION: Record<string, { label: string; color: string }> = {
@@ -71,6 +70,18 @@ function textoTipificacion(d: NonNullable<EventoHistorial["detalle"]>): string {
   return partes.join(" · ");
 }
 
+const ZONA = "America/Asuncion";
+/** "22 de octubre de 2026" (día en hora de Paraguay). */
+const diaLargo = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZone: ZONA, day: "numeric", month: "long", year: "numeric" });
+/** "14:18". */
+const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-PY", { timeZone: ZONA, hour: "2-digit", minute: "2-digit", hour12: false });
+/** Eventos agrupados por día, en el orden que vienen (más nuevo primero). */
+function porDia(lista: EventoHistorial[]): [string, EventoHistorial[]][] {
+  const m = new Map<string, EventoHistorial[]>();
+  for (const h of lista) { const d = diaLargo(h.created_at); m.set(d, [...(m.get(d) ?? []), h]); }
+  return [...m.entries()];
+}
+
 const valor = (v: string | null | undefined) => (v == null || v === "" ? "—" : v === "true" ? "Sí" : v === "false" ? "No" : v);
 
 export function TabHistorial({ clienteId, recarga }: { clienteId: string; recarga: number }) {
@@ -114,48 +125,64 @@ export function TabHistorial({ clienteId, recarga }: { clienteId: string; recarg
       ) : historial.length === 0 ? (
         <p className="text-sm text-slate-400 italic">No hay cambios registrados aún para este cliente.</p>
       ) : (
-        <ol className="space-y-3">
-          {historial.map((h) => {
-            const esSusc = h.accion === "suscripcion" && !!h.detalle;
-            const meta = (esSusc ? EVENTO_SUSC[h.detalle!.evento ?? ""] : null) ?? ACCION[h.accion] ?? { label: h.accion, color: "bg-slate-100 text-slate-600" };
-            const cambios = Array.isArray(h.detalle?.cambios) ? h.detalle!.cambios! : [];
-            const motivo = typeof h.detalle?.motivo === "string" && h.detalle.motivo ? h.detalle.motivo : null;
-            return (
-              <li key={h.id} className="min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm [overflow-wrap:anywhere] sm:px-4">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${meta.color}`}>{meta.label}</span>
-                  <span className="text-xs text-slate-400">{fechaHora(h.created_at)}</span>
-                </div>
-                {esSusc ? <p className="mt-1.5 text-sm text-slate-700">{textoSuscripcion(h.detalle!)}</p> : null}
-                {h.accion === "tipificacion" && h.detalle ? (
-                  <>
-                    <p className="mt-1.5 text-sm text-slate-700">{textoTipificacion(h.detalle)}</p>
-                    {h.detalle.observacion ? <p className="mt-1 whitespace-pre-line text-xs text-slate-500">{h.detalle.observacion}</p> : null}
-                  </>
-                ) : null}
-                {h.usuario_nombre ? <p className="mt-1 text-xs text-slate-500">por {h.usuario_nombre}</p> : null}
-                {h.accion === "creado" && h.detalle?.origen && h.detalle.origen !== "MANUAL" ? (
-                  <p className="mt-1 text-xs text-slate-500">Origen: {h.detalle.origen === "VENTA" ? "desde una venta" : h.detalle.origen}</p>
-                ) : null}
-                {cambios.length > 0 ? (
-                  <ul className="mt-2 space-y-1">
-                    {cambios.map((c, i) => (
-                      <li key={i} className="text-xs text-slate-600">
-                        <span className="font-medium text-slate-700">{c.campo}:</span>{" "}
-                        <span className="text-rose-600 line-through">{valor(c.antes)}</span>{" "}
-                        <span aria-hidden>→</span>{" "}
-                        <span className="text-emerald-700">{valor(c.despues)}</span>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
-                {motivo ? (
-                  <p className="mt-2 text-xs text-slate-500"><span className="font-medium text-slate-600">Motivo:</span> {motivo}</p>
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
+        // Línea de tiempo agrupada por día: a la izquierda el punto de color del evento, a la derecha
+        // el título, la hora y los datos en renglones con su rótulo (Por, Origen, Motivo, cambios).
+        <div className="space-y-5">
+          {porDia(historial).map(([dia, eventos]) => (
+            <section key={dia}>
+              <h4 className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">{dia}</h4>
+              <ol className="relative space-y-3 border-l border-slate-200 pl-5">
+                {eventos.map((h) => {
+                  const esSusc = h.accion === "suscripcion" && !!h.detalle;
+                  const meta = (esSusc ? EVENTO_SUSC[h.detalle!.evento ?? ""] : null) ?? ACCION[h.accion] ?? { label: h.accion, color: "bg-slate-100 text-slate-600" };
+                  const cambios = Array.isArray(h.detalle?.cambios) ? h.detalle!.cambios! : [];
+                  const motivo = typeof h.detalle?.motivo === "string" && h.detalle.motivo ? h.detalle.motivo : null;
+                  const origen = h.accion === "creado" && h.detalle?.origen && h.detalle.origen !== "MANUAL"
+                    ? (h.detalle.origen === "VENTA" ? "Desde una venta" : h.detalle.origen) : null;
+                  return (
+                    <li key={h.id} className="relative min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 py-3 shadow-sm [overflow-wrap:anywhere] sm:px-4">
+                      <span aria-hidden className={`absolute -left-[27px] top-4 h-3 w-3 rounded-full ring-4 ring-white ${meta.color}`} />
+                      <div className="flex items-start justify-between gap-3">
+                        <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${meta.color}`}>{meta.label}</span>
+                        <span className="shrink-0 text-xs tabular-nums text-slate-400">{hora(h.created_at)}</span>
+                      </div>
+                      {esSusc ? <p className="mt-2 text-sm text-slate-800">{textoSuscripcion(h.detalle!)}</p> : null}
+                      {h.accion === "tipificacion" && h.detalle ? (
+                        <>
+                          <p className="mt-2 text-sm text-slate-800">{textoTipificacion(h.detalle)}</p>
+                          {h.detalle.observacion ? <p className="mt-1 whitespace-pre-line text-xs text-slate-500">{h.detalle.observacion}</p> : null}
+                        </>
+                      ) : null}
+                      {h.usuario_nombre || origen ? (
+                        <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-2 gap-y-0.5 text-xs">
+                          {h.usuario_nombre ? <><dt className="font-medium text-slate-500">Por:</dt><dd className="text-slate-700">{h.usuario_nombre}</dd></> : null}
+                          {origen ? <><dt className="font-medium text-slate-500">Origen:</dt><dd className="text-slate-700">{origen}</dd></> : null}
+                        </dl>
+                      ) : null}
+                      {cambios.length > 0 ? (
+                        <div className="mt-2.5 overflow-hidden rounded-lg border border-slate-100">
+                          <div className="grid grid-cols-3 gap-2 bg-slate-50 px-2.5 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">
+                            <span>Campo</span><span>Antes</span><span>Después</span>
+                          </div>
+                          {cambios.map((c, i) => (
+                            <div key={i} className="grid grid-cols-3 gap-2 border-t border-slate-100 px-2.5 py-1.5 text-xs">
+                              <span className="font-medium text-slate-700">{c.campo}</span>
+                              <span className="text-rose-600 line-through">{valor(c.antes)}</span>
+                              <span className="text-emerald-700">{valor(c.despues)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      ) : null}
+                      {motivo ? (
+                        <p className="mt-2.5 rounded-lg bg-slate-50 px-2.5 py-2 text-xs text-slate-600"><span className="font-semibold text-slate-700">Motivo:</span> {motivo}</p>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ol>
+            </section>
+          ))}
+        </div>
       )}
     </div>
   );
