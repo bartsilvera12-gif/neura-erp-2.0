@@ -27,6 +27,8 @@ const FOTOS: Record<string, { imagen: string; color: string; posicion?: string }
   "/reportes/productos-vendidos": { imagen: "/reportes/productos-vendidos-graficos-dueno.webp", color: "96 30% 22%", posicion: "40% 50%" },
   "/reportes/perdidas": { imagen: "/reportes/perdidas-inspeccion-danados-dueno.webp", color: "16 48% 24%", posicion: "55% 45%" },
   "/reportes/stock-minimo": { imagen: "/reportes/stock-minimo-estanterias-vacias-dueno.webp", color: "36 44% 22%", posicion: "50% 50%" },
+  // Reutiliza la foto de Depósitos (public/inventario/), ver docs/creditos-imagenes-demo.md.
+  "/reportes/existencias": { imagen: "/inventario/depositos-racks.webp", color: "210 36% 22%", posicion: "50% 50%" },
 };
 const FOTO_GENERICA = { imagen: "/finanzas/reportes-graficos-pantalla.webp", color: "196 45% 20%", posicion: "40% 30%" };
 

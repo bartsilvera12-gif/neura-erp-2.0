@@ -50,7 +50,9 @@ const gs = (v: number | null | undefined) => `Gs. ${Math.round(Number(v) || 0).t
 const num = (v: number) => Number(v || 0).toLocaleString("es-PY", { maximumFractionDigits: 3 });
 
 /** Qué entrada fue: "Compra COMP-000123", "Stock inicial", "Traslado TR-000004"… */
-function origenTexto(c: CapaCosto): { titulo: string; detalle: string | null } {
+export function origenTexto(
+  c: Pick<CapaCosto, "origen" | "compra_numero" | "documento_numero" | "proveedor" | "referencia" | "deposito_origen">,
+): { titulo: string; detalle: string | null } {
   switch (c.origen) {
     case "compra":
       return { titulo: `Compra ${c.compra_numero ?? c.documento_numero ?? ""}`.trim(), detalle: c.proveedor };

@@ -126,8 +126,11 @@ export function membreteDe(doc: jsPDF): Membrete {
 }
 
 /** Documento A4 nuevo. `empresa` = datos_empresa() (null → nombre y dominio del cliente, logo de la instalación). */
-export function nuevoDocumento(empresa?: DatosEmpresa | null) {
-  const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
+/** Ancho útil y alto de la página actual (A4 vertical: 180 × 297; apaisado: 267 × 210). */
+export const medidas = (doc: jsPDF) => ({ W: doc.internal.pageSize.getWidth() - M * 2, H: doc.internal.pageSize.getHeight() });
+
+export function nuevoDocumento(empresa?: DatosEmpresa | null, opciones?: { apaisado?: boolean }) {
+  const doc = new jsPDF({ unit: "mm", format: "a4", compress: true, orientation: opciones?.apaisado ? "landscape" : "portrait" });
   membretes.set(doc, membreteEmpresa(empresa ?? null, RESPALDO));
   fuentesLogo.set(doc, empresa ?? null);
   return doc;
@@ -135,6 +138,7 @@ export function nuevoDocumento(empresa?: DatosEmpresa | null) {
 
 /** Membrete (logo + empresa) y título en recuadro. Devuelve la Y siguiente. */
 export async function encabezado(doc: jsPDF, titulo: string, subtitulo?: string): Promise<number> {
+  const { W } = medidas(doc);
   const der = M + W;
   let y = M;
   const logo = await logoDoc(fuentesLogo.get(doc));
@@ -196,15 +200,16 @@ export function asegurarEspacio(doc: jsPDF, y: number, alto: number): number {
 
 /** Pie en todas las páginas: leyenda + "Página n de m". */
 export function pieDePagina(doc: jsPDF, leyenda: string) {
+  const { W, H } = medidas(doc);
   const paginas = doc.getNumberOfPages();
   const generado = fechaHoraPY(new Date().toISOString());
   for (let p = 1; p <= paginas; p++) {
     doc.setPage(p);
-    doc.setDrawColor(187, 187, 187).setLineWidth(0.2).setLineDashPattern([0.8, 0.8], 0).line(M, 297 - 12, M + W, 297 - 12).setLineDashPattern([], 0);
+    doc.setDrawColor(187, 187, 187).setLineWidth(0.2).setLineDashPattern([0.8, 0.8], 0).line(M, H - 12, M + W, H - 12).setLineDashPattern([], 0);
     doc.setFont("helvetica", "normal").setFontSize(7.5).setTextColor(...COLOR.gris);
     const m = membreteDe(doc);
-    doc.text(pdfTxt(`${leyenda} · ${m.nombre}${m.ruc ? ` · RUC ${m.ruc}` : ""} · ${generado}`), M, 297 - 8, { maxWidth: W - 26 });
-    doc.text(`Página ${p} de ${paginas}`, M + W, 297 - 8, { align: "right" });
+    doc.text(pdfTxt(`${leyenda} · ${m.nombre}${m.ruc ? ` · RUC ${m.ruc}` : ""} · ${generado}`), M, H - 8, { maxWidth: W - 26 });
+    doc.text(`Página ${p} de ${paginas}`, M + W, H - 8, { align: "right" });
   }
 }
 

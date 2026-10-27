@@ -186,6 +186,7 @@ Fotos de fondo de las tarjetas de `/reportes` (componente `TarjetaImagen`, misma
 | Reportes › Productos vendidos | `public/reportes/productos-vendidos-graficos-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Pérdidas de producto | `public/reportes/perdidas-inspeccion-danados-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
 | Reportes › Stock mínimo | `public/reportes/stock-minimo-estanterias-vacias-dueno.webp` | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar | — |
+| Reportes › Existencias por depósito | `public/inventario/depositos-racks.webp` (REUTILIZA la foto de Inventario › Depósitos, no es un archivo nuevo) | — | La proporcionó el dueño (2026-10-22) — licencia sin verificar (ver la fila de Depósitos) | Origen desconocido (descargada por el dueño) |
 
 Notas:
 - Cuentas por cobrar: una mano entrega billetes (dólares) a otra; no se ven caras.

@@ -1,4 +1,4 @@
-import { Boxes, CalendarClock, CalendarRange, CreditCard, HandCoins, Landmark, Lock, PackageMinus, PackageX, ShoppingCart, Truck, Wallet, type LucideIcon } from "lucide-react";
+import { Boxes, CalendarClock, CalendarRange, CreditCard, HandCoins, Landmark, Lock, PackageMinus, PackageX, ShoppingCart, Truck, Wallet, Warehouse, type LucideIcon } from "lucide-react";
 
 /**
  * Catálogo de reportes: alimenta la pantalla /reportes (tarjetas agrupadas por sección).
@@ -115,6 +115,14 @@ export const REPORTES: Reporte[] = [
     subtitulo: "Productos por reponer",
     descripcion: "Productos cuyo stock quedó por debajo del mínimo definido, con lo vendido en 30 días y el costo de reponer. Lista de reposición en PDF y Excel.",
     icono: PackageMinus,
+    seccion: "Inventario",
+  },
+  {
+    href: "/reportes/existencias",
+    titulo: "Existencias por depósito",
+    subtitulo: "Cuánto hay de cada producto y dónde",
+    descripcion: "Foto de hoy del stock: una columna por depósito de cada sucursal, total y valor según el costo de cada compra (PEPS). Tocá una celda para ver sus compras y lotes.",
+    icono: Warehouse,
     seccion: "Inventario",
   },
 ];
