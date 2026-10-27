@@ -49,7 +49,7 @@ export default function CajaDashboard() {
         acciones={<AccionesPagina acciones={[
           { etiqueta: "Nueva venta", icono: <Plus />, href: "/caja/nueva", primaria: true },
           { etiqueta: "Apertura y cierre", icono: <Wallet />, href: "/caja/turnos" },
-          { etiqueta: "Ventas a crédito", icono: <Clock />, href: "/caja/credito" },
+          { etiqueta: "Ventas a crédito", icono: <Clock />, href: "/reportes/ventas-credito" },
         ]} />} />
 
       <CajasAbiertas estado={datos} />

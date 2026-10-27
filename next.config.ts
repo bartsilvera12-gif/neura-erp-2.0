@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/caja/cierres", destination: "/reportes/cajas", permanent: true },
+      // Ventas a crédito se mudó de Caja a Reportes.
+      { source: "/caja/credito", destination: "/reportes/ventas-credito", permanent: true },
       { source: "/caja/cierres/:id", destination: "/reportes/cajas/:id", permanent: true },
       // Gastos y Servicios ahora es Gastos empresariales › Gastos operativos (se conserva ?ver=<id>).
       { source: "/gastos", destination: "/gastos-empresariales/operativos", permanent: false },

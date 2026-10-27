@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Caja › Ventas a crédito: lo que se vendió a crédito en las cajas — del día, de un turno
+ * Reportes › Ventas a crédito (antes en Caja; /caja/credito redirige acá): lo que se vendió a crédito en las cajas — del día, de un turno
  * abierto o de un rango — con cliente, vencimiento, cobrado, saldo y estado (pendiente,
  * parcial, pagada, vencida, anulada). Filtros por sucursal, caja y estado.
  * (Los reportes generales de cuentas por cobrar están en Cobranzas.)
@@ -110,7 +110,7 @@ export default function VentasCreditoPage() {
 
   return (
     <div className="space-y-4 pb-10 sm:space-y-6">
-      <Cabecera volver={{ href: "/caja/panel", label: "Caja" }} kicker="Caja" titulo="Ventas a crédito" subtitulo="Lo que se vendió a crédito en las cajas: cliente, vencimiento, cobrado y saldo" />
+      <Cabecera volver={{ href: "/reportes", label: "Reportes" }} kicker="Reportes" titulo="Ventas a crédito" subtitulo="Lo que se vendió a crédito en las cajas: cliente, vencimiento, cobrado y saldo" />
 
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Pestanas valor={periodo} onChange={cambiar(setPeriodo)} opciones={[

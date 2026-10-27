@@ -1,4 +1,4 @@
-import { Boxes, CalendarRange, CreditCard, HandCoins, Landmark, Lock, PackageMinus, PackageX, ShoppingCart, Truck, Wallet, type LucideIcon } from "lucide-react";
+import { Boxes, CalendarClock, CalendarRange, CreditCard, HandCoins, Landmark, Lock, PackageMinus, PackageX, ShoppingCart, Truck, Wallet, type LucideIcon } from "lucide-react";
 
 /**
  * Catálogo de reportes: alimenta la pantalla /reportes (tarjetas agrupadas por sección).
@@ -83,6 +83,15 @@ export const REPORTES: Reporte[] = [
     descripcion: "Ventas, ticket, costo, ganancia y margen por efectivo, tarjetas, transferencia, QR y demás (pagos mixtos repartidos), venta a crédito aparte, cobros de créditos por medio y evolución.",
     icono: CreditCard,
     seccion: "Ventas y caja",
+  },
+  {
+    href: "/reportes/ventas-credito",
+    titulo: "Ventas a crédito",
+    subtitulo: "Lo que se vendió a crédito en las cajas",
+    descripcion: "Del día, de un turno o de un rango: cliente, vencimiento, cobrado, saldo y estado (pendiente, parcial, pagada, vencida, anulada), por sucursal y caja.",
+    icono: CalendarClock,
+    seccion: "Ventas y caja",
+    roles: ["ADMIN", "SUPERVISOR"],
   },
   {
     href: "/reportes/productos-vendidos",

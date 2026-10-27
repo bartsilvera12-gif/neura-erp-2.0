@@ -23,6 +23,7 @@ const FOTOS: Record<string, { imagen: string; color: string; posicion?: string }
   "/reportes/ventas-mensuales": { imagen: "/reportes/ventas-mes-grafico-barras-dueno.webp", color: "190 42% 22%", posicion: "50% 30%" },
   "/reportes/ventas": { imagen: "/reportes/ventas-periodo-dashboard-dueno.webp", color: "168 36% 21%", posicion: "45% 50%" },
   "/reportes/formas-pago": { imagen: "/reportes/formas-pago-posnet-tarjeta-dueno.webp", color: "232 32% 28%", posicion: "55% 50%" },
+  "/reportes/ventas-credito": { imagen: "/finanzas/credito-libro-cuentas.webp", color: "352 38% 27%", posicion: "50% 40%" },
   "/reportes/productos-vendidos": { imagen: "/reportes/productos-vendidos-graficos-dueno.webp", color: "96 30% 22%", posicion: "40% 50%" },
   "/reportes/perdidas": { imagen: "/reportes/perdidas-inspeccion-danados-dueno.webp", color: "16 48% 24%", posicion: "55% 45%" },
   "/reportes/stock-minimo": { imagen: "/reportes/stock-minimo-estanterias-vacias-dueno.webp", color: "36 44% 22%", posicion: "50% 50%" },
