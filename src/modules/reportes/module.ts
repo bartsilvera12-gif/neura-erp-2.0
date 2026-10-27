@@ -1,4 +1,5 @@
 import type { Modulo } from "@/modules/types";
+import { REPORTES } from "@/modules/reportes/catalogo";
 
 /**
  * Manifiesto del módulo Reportes (familia Finanzas). Un solo ítem, sin submenú: abre
@@ -13,4 +14,12 @@ export const moduloReportes: Modulo = {
   icon: "chart",
   familia: "Finanzas",
   roles: ["ADMIN", "SUPERVISOR"],
+  // Cada reporte, para que el buscador del menú lo encuentre ("existencias", "ventas por mes").
+  // Mismos permisos que la lista de reportes (reportesPara).
+  atajos: REPORTES.map((r) => ({
+    label: r.titulo,
+    href: r.href,
+    seccion: `Reportes · ${r.seccion}`,
+    permisos: r.roles?.includes("SUPERVISOR") ? ["ver_reportes_financieros", "ver_cierres_caja"] : ["ver_reportes_financieros"],
+  })),
 };

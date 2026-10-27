@@ -32,6 +32,10 @@ export const moduloGastosEmpresariales: Modulo = {
     { label: "Pagos a proveedores", href: "/compras/pagos" },
     { label: "Recurrentes", href: "/gastos-empresariales/recurrentes" },
   ],
+  atajos: [
+    { label: "Nueva compra o gasto", href: "/compras/nueva" },
+    { label: "Nueva orden de compra", href: "/compras/ordenes/nueva" },
+  ],
 };
 
 /** Pestañas del módulo (mismas que el submenú). */

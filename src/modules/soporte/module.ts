@@ -23,4 +23,8 @@ export const moduloSoporte: Modulo = {
     { label: "Mis tickets", href: "/soporte/mis-tickets" },
     { label: "Configuración", href: "/soporte/configuracion" },
   ],
+  atajos: [
+    { label: "Indicadores de soporte", href: "/soporte/reportes" },
+    { label: "Soporte por cliente", href: "/soporte/clientes" },
+  ],
 };

@@ -21,7 +21,7 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft, ChevronDown, ChevronRight, ChevronsLeft, ChevronsRight, LayoutDashboard, LogOut, Menu, Search, X,
 } from "lucide-react";
-import { coincide, filtrar } from "@/lib/busqueda";
+import { coincide, puntajeBusqueda } from "@/lib/busqueda";
 import { MQ_ESCRITORIO, useEsEscritorio } from "@/lib/ui/responsive";
 import { ORDEN_FAMILIAS } from "@/modules/registry";
 import { iconoModulo } from "@/modules/icons";
@@ -138,7 +138,8 @@ export function MarcoApp({
     return mejor?.id ?? null;
   }, [modulos, pathname]);
 
-  const familias = useMemo(() => agruparPorFamilia(modulos, q), [modulos, q]);
+  const umbral = useMemo(() => umbralMenu(modulos, q), [modulos, q]);
+  const familias = useMemo(() => agruparPorFamilia(modulos, q, umbral), [modulos, q, umbral]);
   const toggle = useCallback((id: string, abierto: boolean) => setAbiertos((p) => ({ ...p, [id]: !abierto })), []);
   const tapado = menuMovil || buscador;
 
@@ -166,7 +167,7 @@ export function MarcoApp({
         {collapsed ? null : <BuscadorMenu q={q} setQ={setQ} inputRef={buscadorLateral} />}
         <NavMenu
           familias={familias} pathname={pathname} itemActivo={itemActivo} collapsed={collapsed} abiertos={abiertos}
-          q={q} onToggle={toggle} cargando={cargandoMenu} movil={false}
+          q={q} umbral={umbral} onToggle={toggle} cargando={cargandoMenu} movil={false}
         />
       </aside>
 
@@ -176,7 +177,7 @@ export function MarcoApp({
           <BuscadorMenu q={q} setQ={setQ} movil />
           <NavMenu
             familias={familias} pathname={pathname} itemActivo={itemActivo} collapsed={false} abiertos={abiertos}
-            q={q} onToggle={toggle} cargando={cargandoMenu} movil
+            q={q} umbral={umbral} onToggle={toggle} cargando={cargandoMenu} movil
           />
         </CajonMenu>
       ) : null}
@@ -204,10 +205,42 @@ export function MarcoApp({
   );
 }
 
-function agruparPorFamilia(modulos: Modulo[], q: string) {
+/**
+ * Puntaje mínimo del buscador del menú: si algo coincide tal cual (sin errores de tipeo), lo que
+ * solo "se parece" no se muestra ("ventas" no trae "Cuentas…"); si nada coincide tal cual, se
+ * aceptan los parecidos ("tipificasion" → Tipificaciones).
+ */
+/** Puntaje contando también el singular de lo escrito ("ventas" coincide tal cual con "Nueva venta"). */
+const singular = (q: string) => q.split(/\s+/).map((w) => (w.length > 3 && /s$/i.test(w) ? w.slice(0, -1) : w)).join(" ");
+const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+/** ¿Alguna palabra de lo escrito arranca una palabra del texto? ("venta" no arranca nada en "Inventario"). */
+const arrancaPalabra = (q: string, texto: string) => norm(q).split(/[^a-z0-9]+/).filter(Boolean)
+  .some((w) => new RegExp(`(^|[^a-z0-9])${w}`).test(norm(texto)));
+const puntajeMenu = (q: string, campos: { principal: string; otros?: (string | undefined)[] }) => {
+  const p = Math.max(puntajeBusqueda(q, campos), puntajeBusqueda(singular(q), campos));
+  // Metido en medio de otra palabra cuenta solo como parecido (no tapa los resultados buenos).
+  const texto = [campos.principal, ...(campos.otros ?? [])].join(" ");
+  return p >= 130 && !arrancaPalabra(q, texto) && !arrancaPalabra(singular(q), texto) ? 120 : p;
+};
+
+function umbralMenu(modulos: Modulo[], q: string): number {
+  if (!q.trim()) return 0;
+  // 130 = todas las palabras tal cual y al menos una como palabra (o comienzo) del NOMBRE; solo
+  // por la sección o metida dentro de otra palabra ("venta" en "inventario") no alcanza.
+  const real = puntajeMenu(q, { principal: "Inicio" }) >= 130 || modulos.some((m) => puntajeMenu(q, { principal: m.label, otros: [m.familia] }) >= 130
+    || (m.children ?? []).some((c) => puntajeMenu(q, { principal: c.label, otros: [c.seccion ?? ""] }) >= 130));
+  return real ? 130 : 1;
+}
+
+/** ¿Pasa el umbral del buscador del menú? */
+const pasa = (q: string, campos: { principal: string; otros?: (string | undefined)[] }, umbral: number) =>
+  !q.trim() || puntajeMenu(q, campos) >= umbral;
+
+function agruparPorFamilia(modulos: Modulo[], q: string, umbral = 1) {
   // Búsqueda inteligente: sin tildes, errores de tipeo; también por la familia ("finanzas").
-  // Busca en el módulo, su familia y sus sub-pantallas ("arqueo" → Caja › Arqueo / Cierre).
-  const visibles = filtrar(modulos, q, (m) => ({ principal: m.label, otros: [m.familia, ...(m.children ?? []).map((c) => c.label)] }));
+  // Busca en el módulo, su familia y sus sub-pantallas y atajos ("existencias" → Finanzas › Existencias por depósito).
+  const visibles = !q.trim() ? modulos : modulos.filter((m) => pasa(q, { principal: m.label, otros: [m.familia] }, umbral)
+    || (m.children ?? []).some((c) => pasa(q, { principal: c.label, otros: [c.seccion ?? ""] }, umbral)));
   const map = new Map<string, Modulo[]>();
   for (const m of visibles) {
     const fam = m.familia ?? "General";
@@ -262,9 +295,11 @@ function BuscadorMenu({ q, setQ, movil = false, inputRef }: { q: string; setQ: (
 }
 
 function NavMenu({
-  familias, pathname, itemActivo, collapsed, abiertos, q, onToggle, cargando, movil,
+  familias, pathname, itemActivo, collapsed, abiertos, q, umbral, onToggle, cargando, movil,
 }: {
   familias: [string, Modulo[]][];
+  /** umbral del buscador (umbralMenu) */
+  umbral: number;
   pathname: string;
   itemActivo: string | null;
   collapsed: boolean;
@@ -276,7 +311,10 @@ function NavMenu({
 }) {
   return (
     <nav aria-label="Menú principal" className={`min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-3 ${movil ? "pb-[calc(1rem+env(safe-area-inset-bottom))]" : ""}`}>
-      <NavItem href="/" label="Inicio" Icon={LayoutDashboard} active={pathname === "/"} collapsed={collapsed} movil={movil} />
+      {/* Buscando, "Inicio" solo aparece si coincide con lo buscado. */}
+      {pasa(q, { principal: "Inicio", otros: ["dashboard", "panel principal"] }, umbral) ? (
+        <NavItem href="/" label="Inicio" Icon={LayoutDashboard} active={pathname === "/"} collapsed={collapsed} movil={movil} />
+      ) : null}
       {cargando ? (
         <div className="mt-4 space-y-2 px-1" aria-hidden>
           {[0, 1, 2, 3].map((i) => (
@@ -302,7 +340,10 @@ function NavMenu({
             // Con panel propio (ej. Configuración, Finanzas) las sub-pantallas son tarjetas del
             // panel; buscando, se despliegan las que coinciden para ir directo a ellas
             // ("nueva venta" → Finanzas › Nueva venta).
-            const hijos = !m.children?.length ? [] : !m.panel ? m.children : q.trim() ? m.children.filter((c) => coincide(q, { principal: c.label })) : [];
+            // Los atajos (soloBusqueda: reportes, "nuevo…") aparecen solo buscando.
+            const hijos = !m.children?.length ? [] : q.trim()
+              ? (!m.panel ? m.children.filter((c) => !c.soloBusqueda || pasa(q, { principal: c.label, otros: [c.seccion ?? ""] }, umbral)) : m.children.filter((c) => pasa(q, { principal: c.label, otros: [c.seccion ?? ""] }, umbral)))
+              : !m.panel ? m.children.filter((c) => !c.soloBusqueda) : [];
             const tieneHijos = hijos.length > 0;
             // Buscando, se despliegan solos para que se vea la sub-pantalla encontrada.
             const abierto = (q.trim() ? true : (abiertos[m.id] ?? active)) && !collapsed;
@@ -591,16 +632,20 @@ function BuscadorPantallas({ modulos, onCerrar }: { modulos: Modulo[]; onCerrar:
     const add = (r: (typeof lista)[number]) => { if (!vistos.has(r.href)) { vistos.add(r.href); lista.push(r); } };
     const qq = q.trim();
     if (!qq) add({ href: "/", label: "Inicio", contexto: "General" });
-    for (const [fam, items] of agruparPorFamilia(modulos, qq)) {
+    const umbral = umbralMenu(modulos, qq);
+    for (const [fam, items] of agruparPorFamilia(modulos, qq, umbral)) {
       for (const m of items) {
-        const hijos = m.children ?? [];
+        // Sin búsqueda, los atajos (soloBusqueda) no se listan.
+        const todos = m.children ?? [];
+        const hijos = qq ? todos : todos.filter((c) => !c.soloBusqueda);
         // Con búsqueda: las sub-pantallas que coinciden (o todas, si coincide el módulo).
-        const coinciden = qq ? hijos.filter((c) => coincide(qq, { principal: c.label })) : hijos;
+        const coinciden = qq ? hijos.filter((c) => pasa(qq, { principal: c.label, otros: [c.seccion ?? ""] }, umbral)) : hijos;
+        const reales = hijos.filter((c) => !c.soloBusqueda);
         // El panel (ej. Finanzas) va primero solo si lo buscado es él (o no coincide ninguna
         // pantalla): "nueva venta" + Enter abre Nueva venta, no el panel de Finanzas.
-        if (!hijos.length || (m.panel && (!qq || !coinciden.length || coincide(qq, { principal: m.label })))) add({ href: m.href, label: m.label, contexto: fam, icon: m.icon });
+        if (!reales.length || (m.panel && (!qq || !coinciden.length || coincide(qq, { principal: m.label })))) add({ href: m.href, label: m.label, contexto: fam, icon: m.icon });
         if (!hijos.length) continue;
-        for (const c of coinciden.length ? coinciden : hijos) {
+        for (const c of coinciden.length ? coinciden : reales) {
           const contexto = c.label === m.label ? fam : c.seccion ? `${m.label} › ${c.seccion}` : m.label;
           add({ href: c.href, label: c.label, contexto, icon: m.icon });
         }

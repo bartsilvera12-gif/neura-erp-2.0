@@ -27,4 +27,5 @@ export const moduloConfiguracion: Modulo = {
     { label: "Rubro y funciones", href: "/configuracion/funciones", permiso: "configuracion", funcion: "rubro" },
     { label: "Usuarios", href: "/configuracion/usuarios", permiso: "administrar_usuarios" },
   ],
+  atajos: [{ label: "Facturación electrónica (SIFEN)", href: "/configuracion/facturacion-electronica" }],
 };

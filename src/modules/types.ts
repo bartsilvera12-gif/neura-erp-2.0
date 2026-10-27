@@ -37,7 +37,19 @@ export type Modulo = {
      * pantalla (ej. "Gastos empresariales" para "Resumen"), para el buscador del menú.
      */
     seccion?: string;
+    /**
+     * Solo para el buscador del menú: no se muestra en el submenú ni cuenta como pantalla de
+     * los perfiles (ej. cada reporte, Tipificaciones, "Nueva compra"). Ver `atajos`.
+     */
+    soloBusqueda?: boolean;
   }[];
+  /**
+   * Pantallas que el buscador del menú tiene que encontrar aunque no sean sub-pantallas del
+   * módulo (reportes, páginas de "nuevo…", configuraciones internas). No cambian el menú, el
+   * catálogo de perfiles ni el guard: se ven si el perfil puede abrir la pantalla dueña de la
+   * ruta y, si se indican, tiene alguno de `permisos`.
+   */
+  atajos?: { label: string; href: string; seccion?: string; permisos?: string[]; funcion?: FuncionPantalla }[];
   /**
    * El ítem del menú abre su propio panel (`href`, con tarjetas de las sub-pantallas) y las
    * sub-pantallas NO se despliegan en el menú. Igual cuentan como pantallas de los perfiles.

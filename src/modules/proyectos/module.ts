@@ -8,4 +8,5 @@ export const moduloProyectos: Modulo = {
   grupo: "comercial",
   icon: "folder",
   familia: "Comercial",
+  atajos: [{ label: "Nuevo proyecto", href: "/proyectos/nuevo" }],
 };

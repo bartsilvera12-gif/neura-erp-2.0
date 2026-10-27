@@ -156,13 +156,17 @@ function agruparEnMenu(mods: Modulo[]): Modulo[] {
       out.push(item);
     }
     // Hijos del ítem = todo lo que se puede abrir del módulo: su panel (si tiene) y sus
-    // pantallas. Sirven para marcar "Finanzas" activo y para el buscador del menú.
-    if (m.children?.length) {
+    // pantallas. Sirven para marcar "Finanzas" activo y para el buscador del menú. Los atajos
+    // (soloBusqueda) van al final, solo para el buscador.
+    const reales = (m.children ?? []).filter((c) => !c.soloBusqueda);
+    const atajos = (m.children ?? []).filter((c) => c.soloBusqueda);
+    if (reales.length) {
       if (m.panel) item.children!.push({ label: m.label, href: m.href });
-      item.children!.push(...m.children.map((c) => ({ ...c, seccion: m.label })));
+      item.children!.push(...reales.map((c) => ({ ...c, seccion: m.label })));
     } else {
       item.children!.push({ label: m.label, href: m.href });
     }
+    item.children!.push(...atajos.map((c) => ({ ...c, seccion: c.seccion ?? m.label })));
   }
   return out;
 }
@@ -209,7 +213,30 @@ export function perfilVePantalla(p: Pantalla, rol: string | undefined, perfil: P
  * `grupo` salen juntos en el ítem de su grupo (ej. "Finanzas"), solo con lo que el perfil ve.
  */
 export function modulosDelPerfil(rol: string | undefined, perfil: PerfilSesion | null | undefined, funciones?: Funciones | null): Modulo[] {
-  return agruparEnMenu(modulosVisibles(rol, perfil, funciones));
+  return agruparEnMenu(conAtajos(modulosVisibles(rol, perfil, funciones), rol, perfil, funciones));
+}
+
+/**
+ * Suma a cada módulo visible sus `atajos` (reportes, "nuevo…", etc.) como hijos `soloBusqueda`,
+ * para que el buscador del menú los encuentre. Un atajo se ve si el perfil puede abrir la
+ * pantalla dueña de su ruta (el prefijo más largo del catálogo), tiene alguno de sus `permisos`
+ * y su función está prendida.
+ */
+function conAtajos(mods: Modulo[], rol: string | undefined, perfil: PerfilSesion | null | undefined, funciones?: Funciones | null): Modulo[] {
+  const catalogo = pantallasCatalogo();
+  return mods.map((m) => {
+    const def = TODOS.find((x) => x.id === m.id);
+    if (!def?.atajos?.length) return m;
+    const atajos = def.atajos.filter((a) => {
+      if (!pantallaConFuncionVisible(a.funcion, funciones)) return false;
+      const duena = pantallaDeRuta(a.href, catalogo);
+      if (duena && !perfilVePantalla(duena, rol, perfil, funciones)) return false;
+      if (a.permisos?.length && perfil && !perfil.todo && !a.permisos.some((p) => perfil.permisos.includes(p))) return false;
+      return true;
+    });
+    if (!atajos.length) return m;
+    return { ...m, children: [...(m.children ?? []), ...atajos.map((a) => ({ label: a.label, href: a.href, seccion: a.seccion, soloBusqueda: true }))] };
+  });
 }
 
 function modulosVisibles(rol: string | undefined, perfil: PerfilSesion | null | undefined, funciones?: Funciones | null): Modulo[] {

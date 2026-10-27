@@ -13,4 +13,5 @@ export const moduloPresupuestos: Modulo = {
   icon: "file-signature",
   familia: "Comercial",
   roles: ["ADMIN", "SUPERVISOR", "VENDEDOR", "CAJERO"],
+  atajos: [{ label: "Nuevo presupuesto", href: "/presupuestos/nuevo" }],
 };

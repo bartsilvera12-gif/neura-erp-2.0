@@ -8,4 +8,5 @@ export const moduloCrm: Modulo = {
   grupo: "comercial",
   icon: "sparkles",
   familia: "Comercial",
+  atajos: [{ label: "Nuevo prospecto", href: "/crm/nuevo" }],
 };

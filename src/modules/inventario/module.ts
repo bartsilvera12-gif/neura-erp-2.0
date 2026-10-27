@@ -30,4 +30,10 @@ export const moduloInventario: Modulo = {
     // Sucursales y depósitos (configuración): solo ADMIN.
     { label: "Depósitos", href: "/inventario/depositos", roles: ["ADMIN"] },
   ],
+  // Solo para el buscador del menú.
+  atajos: [
+    { label: "Nuevo ajuste o pérdida", href: "/inventario/ajustes/nuevo" },
+    { label: "Nuevo traslado", href: "/inventario/traslados/nuevo" },
+    { label: "Importación inicial de productos", href: "/inventario/import-inicial" },
+  ],
 };
