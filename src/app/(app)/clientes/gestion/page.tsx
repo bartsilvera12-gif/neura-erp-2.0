@@ -39,6 +39,8 @@ import {
   FILTROS_VACIOS, type ClienteBuscado, type DocumentoCliente, type Documentos, type EstadoDocumento, type FiltrosDocumentos,
 } from "@/modules/clientes/gestion/tipos";
 import { SelectorFecha } from "@/components/SelectorFecha";
+import { ModalTipificacion, useAvisoTipificacion } from "@/modules/tipificacion/ModalTipificacion";
+import { precargarTipificacion } from "@/modules/tipificacion/datos";
 
 const F_INPUT = "min-h-11 w-full min-w-0 rounded-lg md:min-h-0 border border-slate-200 bg-white px-2.5 py-1.5 text-sm shadow-sm outline-none transition-colors placeholder:text-slate-400 hover:border-slate-300 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]";
 const F_LABEL = "mb-0.5 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400";
@@ -86,6 +88,8 @@ function GestionClientes() {
   const [modalContactos, setModalContactos] = useState(false);
   const [modalHistorial, setModalHistorial] = useState(false);
   const [modalServicios, setModalServicios] = useState(false);
+  const [modalTipificacion, setModalTipificacion] = useState(false);
+  const avisoTip = useAvisoTipificacion();
   const [accionSusc, setAccionSusc] = useState<AccionSusc | null>(null);
   const [cobrando, setCobrando] = useState<{ cxc: string | null } | null>(null);
   const [viendoVenta, setViendoVenta] = useState<string | null>(null);
@@ -106,6 +110,7 @@ function GestionClientes() {
     setViendoVenta(null);
     setModalContactos(false);
     setModalHistorial(false);
+    setModalTipificacion(false);
   }, []);
 
   // URL → estado (entrar con ?cliente=, atrás / adelante del navegador).
@@ -138,6 +143,8 @@ function GestionClientes() {
     if (!selId) return;
     let vivo = true;
     setCargandoCli(true);
+    // La tipificación es lo más usado: el contexto y el historial quedan listos de antemano.
+    precargarTipificacion(selId);
     Promise.all([
       apiFetch<Detalle>(`/api/clientes/${encodeURIComponent(selId)}`),
       apiFetch<SuscripcionCliente[]>(`/api/clientes/${encodeURIComponent(selId)}/facturacion`).catch(() => null),
@@ -384,7 +391,7 @@ function GestionClientes() {
 
                     {/* Botones operativos: en celular, grilla de 2 columnas con objetivos de 44 px. */}
                     <div className="mt-3 grid grid-cols-2 gap-1.5 border-t border-slate-100 pt-3 sm:flex sm:flex-wrap">
-                      <BotonOperativo label="Tipificación" icon={<ClipboardList className="h-3.5 w-3.5" />} href={`/clientes/${encodeURIComponent(c.id)}/tipificacion`} />
+                      <BotonOperativo label="Tipificación" icon={<ClipboardList className="h-3.5 w-3.5" />} onClick={() => setModalTipificacion(true)} onHover={() => precargarTipificacion(c.id)} />
                       <BotonOperativo label="Contactos" icon={<Users className="h-3.5 w-3.5" />} onClick={() => setModalContactos(true)} />
                       <BotonOperativo label="Facturación" icon={<Calendar className="h-3.5 w-3.5" />} onClick={() => sobreSuscripcion("facturacion")} />
                       <BotonOperativo label="Facturar venta" icon={<Receipt className="h-3.5 w-3.5" />} href={`/caja/nueva?cliente=${encodeURIComponent(c.id)}`} />
@@ -490,6 +497,10 @@ function GestionClientes() {
           onClose={() => setModalServicios(false)}
           onVerFacturacion={(id) => { setModalServicios(false); setAccionSusc({ tipo: "facturacion", id }); }} />
       ) : null}
+      {c && modalTipificacion ? (
+        <ModalTipificacion clienteId={c.id} clienteNombre={nombre} onClose={() => setModalTipificacion(false)} onGuardada={(r) => avisoTip.mostrar(r)} />
+      ) : null}
+      {avisoTip.nodo}
       {c && modalHistorial ? <ModalHistorial clienteId={c.id} clienteNombre={nombre} onClose={() => setModalHistorial(false)} /> : null}
       {c && accionSusc ? (
         <AccionSuscripcion accion={accionSusc} clienteId={c.id} clienteNombre={c.razon_social || c.nombre} ruc={rucParaFactura(c)}
@@ -671,11 +682,13 @@ function Kpi({ titulo, valor, chico, tono, borde, marca }: {
   );
 }
 
-function BotonOperativo({ label, icon, href, onClick, title }: {
+function BotonOperativo({ label, icon, href, onClick, onHover, title }: {
   label: string;
   icon: React.ReactNode;
   href?: string;
   onClick?: () => void;
+  /** precarga al pasar el mouse / al tocar */
+  onHover?: () => void;
   /** tooltip (en los deshabilitados, el porqué) */
   title?: string;
 }) {
@@ -686,7 +699,7 @@ function BotonOperativo({ label, icon, href, onClick, title }: {
     return <Link href={href} className={activo} style={estilo} title={title}>{icon}{label}</Link>;
   }
   if (onClick) {
-    return <button type="button" onClick={onClick} className={activo} style={estilo} title={title}>{icon}{label}</button>;
+    return <button type="button" onClick={onClick} onMouseEnter={onHover} onFocus={onHover} onTouchStart={onHover} className={activo} style={estilo} title={title}>{icon}{label}</button>;
   }
   return (
     <span title={title} className="flex sm:inline-flex">

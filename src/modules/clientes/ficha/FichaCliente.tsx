@@ -37,6 +37,8 @@ import { moduloEstaActivo } from "@/modules/registry";
 import { ProyectosDeCliente } from "@/modules/proyectos/ui/ProyectosDeCliente";
 import { PresupuestosDeCliente } from "@/modules/presupuestos/PresupuestosDeCliente";
 import { ScrollHorizontal } from "@/components/ScrollHorizontal";
+import { ModalTipificacion, useAvisoTipificacion } from "@/modules/tipificacion/ModalTipificacion";
+import { precargarTipificacion } from "@/modules/tipificacion/datos";
 
 type Tab = "informacion" | "estado_cuenta" | "suscripciones" | "presupuestos" | "proyectos" | "historial";
 const CON_PROYECTOS = moduloEstaActivo("proyectos");
@@ -72,6 +74,8 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
   const [subsError, setSubsError] = useState<string | null>(null);
   const [nuevaSusc, setNuevaSusc] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [tipificando, setTipificando] = useState(false);
+  const avisoTip = useAvisoTipificacion();
   const puedeSuscribir = me?.rol === "ADMIN" || me?.rol === "VENDEDOR";
   const puedePresupuestar = CON_PRESUPUESTOS && !!me?.rol && ROLES_PRESUPUESTOS.includes(me.rol);
 
@@ -259,10 +263,10 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
               className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
               Registrar pago
             </button>
-            <Link href={`/clientes/${encodeURIComponent(c.id)}/tipificacion`}
+            <button type="button" onClick={() => setTipificando(true)} onMouseEnter={() => precargarTipificacion(c.id)} onFocus={() => precargarTipificacion(c.id)}
               className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
               <ClipboardPen className="h-3.5 w-3.5" /> Tipificación
-            </Link>
+            </button>
             <Link href={`/clientes/gestion?cliente=${encodeURIComponent(c.id)}`}
               className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">
               Abrir en Gestión
@@ -349,6 +353,11 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
         <ModalNuevaSuscripcion clienteId={c.id} suscripciones={subs} esAdmin={esAdmin} onClose={() => setNuevaSusc(false)}
           onCreada={(m) => { setNuevaSusc(false); setTab("suscripciones"); void suscripcionesCambiaron(m); }} />
       ) : null}
+      {tipificando ? (
+        <ModalTipificacion clienteId={c.id} clienteNombre={c.nombre} onClose={() => setTipificando(false)}
+          onGuardada={(r) => { avisoTip.mostrar(r); setRecargaHist((k) => k + 1); }} />
+      ) : null}
+      {avisoTip.nodo}
       {eliminando ? (
         <ModalEliminar clienteId={c.id} onClose={() => setEliminando(false)} onEliminado={() => salir("/clientes")}
           onDarDeBaja={estado === "activo" ? () => { setEliminando(false); setBajando(true); } : undefined} />

@@ -180,14 +180,48 @@ export type Tipificacion = {
 };
 export type Clasificacion = { codigo: string; tipo_codigo: string; nombre: string; sla_horas: number; prioridad_sugerida: string | null };
 export type PersonaEquipo = { id: string; nombre: string; rol: string };
-export type ListadoTipificaciones = {
-  cliente: { id: string; nombre: string; codigo: string | null; ruc: string | null; documento: string | null; telefono: string | null; email: string | null; activo: boolean; baja_at: string | null };
+
+/** Fila del registro (tipificaciones_registro, receta 81): la tipificación con su cliente. */
+export type TipificacionRegistro = Tipificacion & {
+  familia_id: string | null;
+  estado_id: string | null;
+  cliente: { id: string; nombre: string; codigo: string | null; ruc: string | null; documento: string | null };
+};
+export type RegistroTipificaciones = { total: number; filas: TipificacionRegistro[] };
+
+export type ClienteTipificacion = {
+  id: string; nombre: string; codigo: string | null; ruc: string | null; documento: string | null;
+  telefono: string | null; email: string | null; activo: boolean; baja_at: string | null;
+};
+/** GET /api/clientes/[id]/tipificaciones: el cliente y su historial (más nuevas primero). */
+export type HistorialTipificaciones = { cliente: ClienteTipificacion; total: number; tipificaciones: TipificacionRegistro[] };
+
+/**
+ * GET /api/tipificaciones/contexto: todo lo que el formulario necesita y NO depende del
+ * cliente (catálogo activo, equipo, horario, clasificaciones de Soporte…). Se cachea en el
+ * navegador: abrir el formulario no espera a la red.
+ */
+export type ContextoTipificacion = {
+  familias: EstadoCat[];
   usuario_actual: { id: string; nombre: string };
+  es_admin: boolean;
   equipo: PersonaEquipo[];
   puede_soporte: boolean;
   horario: Horario;
   clasificaciones: Clasificacion[];
   prioridades: { codigo: string; nombre: string; color: string | null }[];
   responsable_defecto: { id: string; nombre: string } | null;
-  tipificaciones: Tipificacion[];
 };
+
+/** Respuesta del alta: lo creado y la fila lista para sumar al historial sin recargar. */
+export type AltaTipificacion = {
+  tipificacion_id: string;
+  ticket: { id: string; numero: number } | null;
+  cita_id: string | null;
+  fila: TipificacionRegistro | null;
+};
+
+/** Acción del sub-estado como texto corto ("crea ticket", "agenda capacitación"). */
+export function sufijoAccion(c: Comportamiento | null | undefined): string {
+  return c === "ticket_error" || c === "ticket_cambio" ? "crea ticket" : c === "capacitacion" ? "agenda capacitación" : "";
+}

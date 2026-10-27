@@ -483,7 +483,7 @@ export default function SoporteConfiguracionPage() {
         subtitulo="Parámetros y catálogos del módulo"
         icono={Settings2}
         tono="pizarra"
-        acciones={<Link href="/clientes/tipificaciones" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><Tags className="h-4 w-4" /> Tipificaciones</Link>}
+        acciones={<Link href="/clientes/tipificaciones?vista=catalogo" className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"><Tags className="h-4 w-4" /> Tipificaciones</Link>}
       />
       <Suspense fallback={<Cargando />}>
         <Contenido />
