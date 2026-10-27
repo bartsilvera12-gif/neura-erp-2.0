@@ -6,7 +6,7 @@
  * soporte de Neura, que lo sube por base de datos (no hay pantalla para eso).
  *
  * "Hablar con soporte" abre, en este orden:
- *   1. NEXT_PUBLIC_SOPORTE_NEURA_WHATSAPP (número, ej. 595981123456) → WhatsApp con el mensaje
+ *   1. WhatsApp de Neura (+595 973 989068, o NEXT_PUBLIC_SOPORTE_NEURA_WHATSAPP si está) con el mensaje
  *   2. NEXT_PUBLIC_SOPORTE_NEURA_URL → esa página (se le agrega ?asunto=…)
  *   3. si no, la pantalla de nuevo ticket del módulo Soporte (/soporte/tickets/nuevo?asunto=…)
  */
@@ -17,8 +17,11 @@ import { TEAL, type CupoUsuarios } from "@/modules/usuarios/ui/comun";
 export const ASUNTO_SOPORTE = "Quiero sumar usuarios a mi plan";
 export const RE_LIMITE_USUARIOS = /l[ií]mite de \d+ usuarios/i;
 
+/** WhatsApp del soporte de Neura (se puede cambiar por instalación con NEXT_PUBLIC_SOPORTE_NEURA_WHATSAPP). */
+const WHATSAPP_SOPORTE_NEURA = "595973989068";
+
 export function urlSoporteNeura(asunto = ASUNTO_SOPORTE): { href: string; externo: boolean } {
-  const wa = (process.env.NEXT_PUBLIC_SOPORTE_NEURA_WHATSAPP ?? "").replace(/\D/g, "");
+  const wa = (process.env.NEXT_PUBLIC_SOPORTE_NEURA_WHATSAPP || WHATSAPP_SOPORTE_NEURA).replace(/\D/g, "");
   if (wa) return { href: `https://wa.me/${wa}?text=${encodeURIComponent(asunto)}`, externo: true };
   const url = (process.env.NEXT_PUBLIC_SOPORTE_NEURA_URL ?? "").trim();
   if (/^https?:\/\//.test(url)) {
