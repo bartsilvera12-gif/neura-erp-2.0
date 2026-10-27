@@ -357,3 +357,22 @@ export function fechaHora(iso: string | null | undefined) {
 export function hora(iso: string) {
   return new Date(iso).toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit" });
 }
+
+// ── Turnos viejos: la fecha se muestra si no es de hoy y se avisa pasadas 24 h ──
+const TZ = "America/Asuncion";
+const diaClave = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: TZ });
+/** "14/10" (día y mes, hora de Paraguay). */
+export const diaMes = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { day: "2-digit", month: "2-digit", timeZone: TZ });
+export const esDeHoy = (iso: string) => diaClave(new Date(iso)) === diaClave(new Date());
+/** Desde cuándo está abierto: hoy "09:36 a. m."; otro día "el 14/10 09:36 a. m.". */
+export function desdeTurno(iso: string) {
+  return esDeHoy(iso) ? hora(iso) : `el ${diaMes(iso)} ${hora(iso)}`;
+}
+/** Turno abierto hace más de 24 h → { fecha "14/10", dias } (null si es reciente). */
+export function turnoViejo(iso: string | null | undefined): { fecha: string; dias: number } | null {
+  if (!iso) return null;
+  const ms = Date.now() - new Date(iso).getTime();
+  if (!(ms > 24 * 3600_000)) return null;
+  return { fecha: diaMes(iso), dias: Math.floor(ms / (24 * 3600_000)) };
+}
+export const haceDias = (dias: number) => `hace ${dias} día${dias === 1 ? "" : "s"}`;

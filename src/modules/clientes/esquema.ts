@@ -3,9 +3,23 @@
  * ficha completa. Las rutas no pueden exportar nada que no sea un handler, por eso vive acá.
  */
 import { z } from "zod";
+import { normalizarRuc, validarRuc } from "@/modules/empresa/tipos";
 
 const texto = (max: number) => z.string().trim().max(max).nullish();
 const email = z.string().trim().email("Email inválido").max(120).nullish().or(z.literal(""));
+
+/**
+ * RUC de "Datos para facturación": vacío o un RUC válido (dígito verificador de la SET). Se
+ * guarda sin puntos ni espacios. La base también lo exige al facturar (receta 84).
+ */
+export function rucFacturacion() {
+  return z.string().trim().max(40).nullish().superRefine((v, ctx) => {
+    if (!v) return;
+    const r = validarRuc(v);
+    if (r.estado === "dv") ctx.addIssue({ code: "custom", message: `RUC de facturación: ${r.mensaje}.` });
+    else if (r.estado === "incompleto") ctx.addIssue({ code: "custom", message: `RUC de facturación: ${r.mensaje}.` });
+  }).transform((v) => (v ? normalizarRuc(v) : v));
+}
 
 /** Campos editables de la ficha (todos opcionales: PATCH parcial). */
 export const camposCliente = {
@@ -13,7 +27,7 @@ export const camposCliente = {
   tipo_cliente: z.enum(["empresa", "persona"]).optional(),
   razon_social: texto(200),
   documento: texto(40),
-  ruc: texto(40),
+  ruc: rucFacturacion(),
   nombre_contacto: texto(200),
   telefono: texto(40),
   telefono_secundario: texto(40),

@@ -29,10 +29,11 @@ const TD = "px-4 py-3";
 const numero = (v: number, moneda: string) =>
   Number(v || 0).toLocaleString("es-PY", moneda === "USD" ? { minimumFractionDigits: 2, maximumFractionDigits: 2 } : { maximumFractionDigits: 0 });
 
-export function TabSuscripciones({ clienteNombre, ruc, suscripciones, cargando, error, rol, onNueva, onCambio }: {
+export function TabSuscripciones({ clienteNombre, ruc, avisoRuc, suscripciones, cargando, error, rol, onNueva, onCambio }: {
   clienteNombre: string;
   /** RUC para facturar (rucParaFactura): sin RUC las cuotas (factura) no se emiten. */
   ruc?: string | null;
+  avisoRuc?: string | null;
   suscripciones: SuscripcionCliente[];
   cargando: boolean;
   error: string | null;
@@ -134,7 +135,7 @@ export function TabSuscripciones({ clienteNombre, ruc, suscripciones, cargando, 
       )}
 
       {viendo ? (
-        <ModalFacturacion clienteNombre={clienteNombre} ruc={ruc} suscripcion={viendo} puedeEmitir={puedeOperar}
+        <ModalFacturacion clienteNombre={clienteNombre} ruc={ruc} avisoRuc={avisoRuc} suscripcion={viendo} puedeEmitir={puedeOperar}
           onClose={() => setFacturando(null)} onCambio={() => onCambio()} />
       ) : null}
       {aCambiar ? (

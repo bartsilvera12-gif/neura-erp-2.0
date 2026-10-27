@@ -8,7 +8,7 @@
 import { ArrowLeftRight, Eye, Lock, Unlock, Warehouse } from "lucide-react";
 import { Select } from "@/components/Select";
 import { TEAL } from "@/modules/inventario/ui";
-import { etiquetaCaja, hora, type CajaAbierta, type EstadoCajas } from "@/modules/caja/turno";
+import { desdeTurno, etiquetaCaja, turnoViejo, type CajaAbierta, type EstadoCajas } from "@/modules/caja/turno";
 
 export function CajaBarra({ estado, caja, onElegir, onAbrir, onMov, onVer, onCerrar }: {
   estado: EstadoCajas | null;
@@ -64,9 +64,9 @@ export function CajaBarra({ estado, caja, onElegir, onAbrir, onMov, onVer, onCer
           ) : (
             <p className="truncate text-sm font-semibold text-slate-900">{etiquetaCaja(caja)}</p>
           )}
-          <p className="mt-0.5 flex min-w-0 items-center gap-x-1.5 overflow-hidden whitespace-nowrap text-[11px] text-slate-500 sm:flex-wrap xl:mt-0 xl:flex-nowrap" title={`Turno N° ${caja.numero_caja} · ${caja.abierta_por_nombre ?? "—"} desde ${hora(caja.fecha_apertura)} · ${caja.deposito_nombre}`}>
+          <p className="mt-0.5 flex min-w-0 items-center gap-x-1.5 overflow-hidden whitespace-nowrap text-[11px] text-slate-500 sm:flex-wrap xl:mt-0 xl:flex-nowrap" title={`Turno N° ${caja.numero_caja} · ${caja.abierta_por_nombre ?? "—"} desde ${desdeTurno(caja.fecha_apertura)} · ${caja.deposito_nombre}`}>
             <span>Turno N° {caja.numero_caja}</span><span className="text-slate-300">·</span>
-            <span className="truncate">{caja.abierta_por_nombre ?? "—"} desde {hora(caja.fecha_apertura)}</span><span className="hidden text-slate-300 sm:inline">·</span>
+            <span className={`truncate ${turnoViejo(caja.fecha_apertura) ? "font-semibold text-amber-700" : ""}`}>{caja.abierta_por_nombre ?? "—"} desde {desdeTurno(caja.fecha_apertura)}</span><span className="hidden text-slate-300 sm:inline">·</span>
             <span className="hidden items-center gap-1 sm:inline-flex"><Warehouse className="h-3 w-3" /> {caja.deposito_nombre}</span>
           </p>
         </div>

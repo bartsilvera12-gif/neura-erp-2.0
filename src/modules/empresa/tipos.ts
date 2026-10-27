@@ -97,22 +97,60 @@ export function validarRuc(valor: string): ValidacionRuc {
     };
   }
   const dv = rucDv(m[1])!;
-  if (dv !== Number(m[2])) return { estado: "dv", mensaje: `El dígito verificador no coincide: para ${m[1]} es ${m[1]}-${dv}`, dvSugerido: dv };
+  if (dv !== Number(m[2])) return { estado: "dv", mensaje: `El dígito verificador de ${m[1]} es ${dv}: el RUC es ${m[1]}-${dv}`, dvSugerido: dv };
   return { estado: "ok" };
 }
 
+/** RUC corregido que se ofrece con "Usar …" (null si no se puede sugerir uno). */
+export function rucSugerido(valor: string): string | null {
+  const v = validarRuc(valor);
+  if (v.estado === "ok" || v.estado === "vacio" || v.dvSugerido === null) return null;
+  const base = normalizarRuc(valor).split("-")[0];
+  return `${base}-${v.dvSugerido}`;
+}
+
 // ── Receptor de la factura (receta 66: "sin RUC no hay factura") ─────────────
+/** Un documento con forma de RUC (números, guion y un dígito): se trata como RUC, no como CI. */
+const FORMA_RUC = /^\d{3,8}-\d$/;
+
+export type RucFactura =
+  | { estado: "ok"; ruc: string }
+  | { estado: "sin" }
+  /** Hay un RUC cargado (o el documento tiene forma de RUC) pero el dígito verificador no da. */
+  | { estado: "invalido"; ruc: string; sugerido: string | null; dv: number | null };
+
 /**
- * RUC con el que se le factura a un cliente (mismo criterio que ruc_receptor() en la base):
- * primero `ruc` (Datos para facturación); si está vacío, `documento` SOLO si es un RUC con
- * dígito verificador correcto. Una CI sola no alcanza → null (solo ticket).
+ * RUC con el que se le factura a un cliente (mismo criterio que ruc_receptor() en la base, 84):
+ * primero `ruc` (Datos para facturación) y tiene que ser válido; si está vacío, `documento`
+ * SOLO si es un RUC con dígito verificador correcto. Una CI sola no alcanza → sin RUC.
  */
-export function rucParaFactura(c: { ruc?: string | null; documento?: string | null } | null | undefined): string | null {
-  if (!c) return null;
-  const ruc = (c.ruc ?? "").trim();
-  if (ruc) return ruc;
+export function rucFacturaEstado(c: { ruc?: string | null; documento?: string | null } | null | undefined): RucFactura {
+  if (!c) return { estado: "sin" };
+  const ruc = normalizarRuc(c.ruc ?? "");
   const doc = normalizarRuc(c.documento ?? "");
-  return doc && validarRuc(doc).estado === "ok" ? doc : null;
+  const candidato = ruc || (FORMA_RUC.test(doc) ? doc : "");
+  if (!candidato) return { estado: "sin" };
+  const v = validarRuc(candidato);
+  if (v.estado === "ok") return { estado: "ok", ruc: candidato };
+  return { estado: "invalido", ruc: candidato, sugerido: rucSugerido(candidato), dv: v.estado === "vacio" ? null : v.dvSugerido };
+}
+
+export function rucParaFactura(c: { ruc?: string | null; documento?: string | null } | null | undefined): string | null {
+  const r = rucFacturaEstado(c);
+  return r.estado === "ok" ? r.ruc : null;
+}
+
+/** Aviso cuando el cliente tiene un RUC cargado pero no es válido. */
+export function avisoRucInvalido(r: { ruc: string; dv: number | null }): string {
+  return r.dv !== null
+    ? `El RUC ${r.ruc} no es válido: debería terminar en -${r.dv}. Corregilo en el cliente para poder facturar.`
+    : `El RUC ${r.ruc} no es válido. Corregilo en el cliente para poder facturar.`;
+}
+
+/** Aviso para el cliente elegido sin RUC válido (null si se le puede facturar). */
+export function avisoRucCliente(c: { ruc?: string | null; documento?: string | null } | null | undefined): string | null {
+  const r = rucFacturaEstado(c);
+  return r.estado === "ok" ? null : r.estado === "invalido" ? avisoRucInvalido(r) : AVISO_SIN_RUC;
 }
 
 /** Nombre con el que se factura (como nombre_receptor() en la base): razón social; si no, el nombre. */

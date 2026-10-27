@@ -8,6 +8,7 @@ import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, ERR } from "@/lib/api/responses";
 import { errorCrm, idProspecto } from "@/modules/crm/server";
+import { rucFacturacion } from "@/modules/clientes/esquema";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ const convertir = z.object({
   telefono: t(40),
   email: t(200),
   documento: t(40),
-  ruc: t(40),
+  ruc: rucFacturacion(), // RUC con dígito verificador correcto (sin RUC válido no hay factura)
   ciudad: t(120),
   direccion: t(300),
 });

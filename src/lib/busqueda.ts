@@ -26,6 +26,18 @@ export function compactar(t: string | null | undefined): string {
   return normalizar(t).replace(/[^a-z0-9]+/g, "");
 }
 
+/**
+ * Sube arriba (sin cambiar el orden del resto) los que coinciden TAL CUAL con lo escrito en
+ * alguno de sus textos (nombre, documento…), ignorando tildes, mayúsculas y separadores.
+ */
+export function exactosPrimero<T>(items: T[], q: string, textos: (it: T) => (string | null | undefined)[]): T[] {
+  const cq = compactar(q);
+  if (!cq) return items;
+  const exacto = (it: T) => textos(it).some((t) => !!t && compactar(t) === cq);
+  const arriba = items.filter(exacto);
+  return arriba.length ? [...arriba, ...items.filter((it) => !exacto(it))] : items;
+}
+
 /** Palabras de lo que se escribió (máx. 8). */
 export function tokensBusqueda(q: string): string[] {
   return normalizar(q).split(/[^a-z0-9]+/).filter(Boolean).slice(0, 8);

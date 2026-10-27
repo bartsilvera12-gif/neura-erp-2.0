@@ -13,7 +13,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { rucParaFactura } from "@/modules/empresa/tipos";
+import { avisoRucCliente, rucParaFactura } from "@/modules/empresa/tipos";
 import {
   Calendar, CalendarClock, ChevronDown, ChevronUp, ClipboardList, History,
   FileText, Link2, Loader2, Receipt, RefreshCw, SlidersHorizontal, Users,
@@ -503,7 +503,7 @@ function GestionClientes() {
       {avisoTip.nodo}
       {c && modalHistorial ? <ModalHistorial clienteId={c.id} clienteNombre={nombre} onClose={() => setModalHistorial(false)} /> : null}
       {c && accionSusc ? (
-        <AccionSuscripcion accion={accionSusc} clienteId={c.id} clienteNombre={c.razon_social || c.nombre} ruc={rucParaFactura(c)}
+        <AccionSuscripcion accion={accionSusc} clienteId={c.id} clienteNombre={c.razon_social || c.nombre} ruc={rucParaFactura(c)} avisoRuc={avisoRucCliente(c)}
           paraFacturacion={paraFacturacion} vigentes={vigentes} puedeEmitir={puedeOperar}
           onElegir={(id) => setAccionSusc({ ...accionSusc, id })}
           onClose={() => setAccionSusc(null)}
@@ -521,11 +521,12 @@ function GestionClientes() {
 }
 
 /** Facturación / Cambio de plan / Cambio fecha venc.: elegir la suscripción si hace falta y abrir su modal. */
-function AccionSuscripcion({ accion, clienteId, clienteNombre, ruc, paraFacturacion, vigentes, puedeEmitir, onElegir, onClose, onCambio }: {
+function AccionSuscripcion({ accion, clienteId, clienteNombre, ruc, avisoRuc, paraFacturacion, vigentes, puedeEmitir, onElegir, onClose, onCambio }: {
   accion: AccionSusc;
   clienteId: string;
   clienteNombre: string;
   ruc: string | null;
+  avisoRuc?: string | null;
   paraFacturacion: SuscripcionCliente[];
   vigentes: SuscripcionCliente[];
   puedeEmitir: boolean;
@@ -544,7 +545,7 @@ function AccionSuscripcion({ accion, clienteId, clienteNombre, ruc, paraFacturac
     return <ModalElegirSuscripcion titulo={titulo} clienteId={clienteId} suscripciones={lista} onElegir={(x) => onElegir(x.suscripcion_id)} onClose={onClose} />;
   }
   if (accion.tipo === "facturacion") {
-    return <ModalFacturacion clienteNombre={clienteNombre} ruc={ruc} suscripcion={s} puedeEmitir={puedeEmitir} onClose={onClose} onCambio={() => onCambio()} />;
+    return <ModalFacturacion clienteNombre={clienteNombre} ruc={ruc} avisoRuc={avisoRuc} suscripcion={s} puedeEmitir={puedeEmitir} onClose={onClose} onCambio={() => onCambio()} />;
   }
   return <ModalCambioPlan suscripcion={s} onClose={onClose} onHecho={(m) => { onClose(); onCambio(m); }} />;
 }

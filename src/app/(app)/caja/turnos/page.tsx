@@ -18,13 +18,14 @@ import { descargarArchivo } from "@/lib/api/client-blob";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, TEAL } from "@/modules/inventario/ui";
 import { AccionesPagina } from "@/components/EncabezadoPagina";
 import { TablaTarjetas } from "@/components/TablaResponsive";
-import { fechaHora, hora, invalidarCajas, useEstadoCajas, type CajaPunto, type EstadoCajas } from "@/modules/caja/turno";
+import { desdeTurno, fechaHora, hora, invalidarCajas, useEstadoCajas, type CajaPunto, type EstadoCajas } from "@/modules/caja/turno";
 import { formatGs } from "@/modules/caja/lib";
 import { AperturaModal } from "@/modules/caja/AperturaModal";
 import { MovimientoModal } from "@/modules/caja/MovimientoModal";
 import { CierreModal } from "@/modules/caja/CierreModal";
 import { TurnoModal } from "@/modules/caja/TurnoModal";
 import { ConfigurarCajasModal } from "@/modules/caja/ConfigurarCajas";
+import { AvisoTurnoViejo } from "@/modules/caja/AvisoTurnoViejo";
 
 type Dia = {
   fecha: string;
@@ -233,16 +234,17 @@ function TarjetaCaja({ c, estado, onAbrir, onVer, onMov, onCerrar }: {
               {c.nombre}
               <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Abierta</span>
             </p>
-            <p className="mt-0.5 text-xs text-slate-500 sm:truncate">Turno N° {t.numero_caja} · {t.abierta_por_nombre ?? "—"}{mia ? " (vos)" : ""} · desde {hora(t.fecha_apertura)}</p>
+            <p className="mt-0.5 text-xs text-slate-500 sm:truncate">Turno N° {t.numero_caja} · {t.abierta_por_nombre ?? "—"}{mia ? " (vos)" : ""} · desde {desdeTurno(t.fecha_apertura)}</p>
           </div>
           <button type="button" onClick={onVer} title="Ver turno" aria-label="Ver turno" className="-mr-1.5 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-white hover:text-slate-700 sm:m-0 sm:h-auto sm:w-auto sm:p-1.5"><Eye className="h-4 w-4" /></button>
         </div>
       </div>
       <div className="grid grid-cols-3 divide-x divide-slate-100 border-y border-slate-100 text-center">
         <Mini label="Inicial" valor={formatGs(t.monto_apertura)} />
-        <Mini label={`Ventas (${t.ventas_cantidad})`} valor={formatGs(t.ventas_total)} />
+        <Mini label={`Ventas del turno (${t.ventas_cantidad})`} valor={formatGs(t.ventas_total)} />
         <Mini label="Efectivo esperado" valor={formatGs(t.efectivo_esperado)} destacado />
       </div>
+      <AvisoTurnoViejo fechaApertura={t.fecha_apertura} onCerrar={onCerrar} compacto className="mx-3 mt-3" />
       <div className="flex gap-2 p-3">
         <button type="button" onClick={onMov} className={`${BOTON_SECUNDARIO} flex-1 max-sm:min-h-11`}><ArrowLeftRight className="h-4 w-4" /> Retiro / ingreso</button>
         <button type="button" onClick={onCerrar} className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-3.5 py-2 text-sm max-sm:min-h-11 font-semibold text-rose-600 shadow-sm transition hover:bg-rose-50">

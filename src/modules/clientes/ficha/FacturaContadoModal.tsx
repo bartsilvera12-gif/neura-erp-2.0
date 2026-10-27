@@ -16,11 +16,13 @@ import MontoInput from "@/components/ui/MontoInput";
 const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition-colors hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
 const LABEL = "mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500";
 
-export function FacturaContadoModal({ clienteId, clienteNombre, ruc, moneda, onClose, onEmitida, onEditarCliente }: {
+export function FacturaContadoModal({ clienteId, clienteNombre, ruc, avisoRuc, moneda, onClose, onEmitida, onEditarCliente }: {
   clienteId: string;
   clienteNombre: string;
   /** RUC para facturar (rucParaFactura). Sin RUC no hay factura (receta 66). */
   ruc: string | null;
+  /** Aviso si no hay RUC válido (avisoRucCliente): distingue "sin RUC" de "RUC con DV mal". */
+  avisoRuc?: string | null;
   moneda: "GS" | "USD";
   /** Abre la edición del cliente (Datos para facturación), si la pantalla la tiene. */
   onEditarCliente?: () => void;
@@ -36,7 +38,7 @@ export function FacturaContadoModal({ clienteId, clienteNombre, ruc, moneda, onC
 
   async function emitir(e: React.FormEvent) {
     e.preventDefault();
-    if (!ruc) { setError(AVISO_SIN_RUC); return; }
+    if (!ruc) { setError(avisoRuc || AVISO_SIN_RUC); return; }
     if (!(monto > 0)) { setError("El monto debe ser mayor a 0."); return; }
     setBusy(true);
     setError(null);
@@ -70,7 +72,7 @@ export function FacturaContadoModal({ clienteId, clienteNombre, ruc, moneda, onC
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-4">
           {!ruc ? (
             <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
-              <p className="font-medium">{AVISO_SIN_RUC}</p>
+              <p className="font-medium">{avisoRuc || AVISO_SIN_RUC}</p>
               <p className="mt-0.5">Con la CI sola no se puede facturar.</p>
               {onEditarCliente ? (
                 <button type="button" onClick={onEditarCliente} className="mt-1.5 min-h-11 font-semibold text-amber-900 underline underline-offset-2 sm:min-h-0">

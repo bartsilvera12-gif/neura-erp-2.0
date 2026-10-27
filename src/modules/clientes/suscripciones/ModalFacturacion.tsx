@@ -15,10 +15,12 @@ import type { SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos"
 import { AVISO_SIN_RUC } from "@/modules/empresa/tipos";
 import { BadgeMes, BadgeSuscripcion, fechaDia, mesActual, monto, nombreMes } from "@/modules/clientes/suscripciones/ui";
 
-export function ModalFacturacion({ clienteNombre, ruc, suscripcion: s, puedeEmitir, onClose, onCambio }: {
+export function ModalFacturacion({ clienteNombre, ruc, avisoRuc, suscripcion: s, puedeEmitir, onClose, onCambio }: {
   clienteNombre: string;
   /** RUC para facturar (rucParaFactura). null = sin RUC → la cuota (factura) no se emite (receta 66). */
   ruc?: string | null;
+  /** Aviso si no hay RUC válido (avisoRucCliente): distingue "sin RUC" de "RUC con DV mal". */
+  avisoRuc?: string | null;
   suscripcion: SuscripcionCliente;
   puedeEmitir: boolean;
   onClose: () => void;
@@ -99,7 +101,7 @@ export function ModalFacturacion({ clienteNombre, ruc, suscripcion: s, puedeEmit
           ) : null}
           {sinRuc && activa && puedeEmitir ? (
             <p className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-800">
-              {AVISO_SIN_RUC} Las cuotas se emiten como factura: hasta cargar el RUC no se pueden emitir.
+              {avisoRuc || AVISO_SIN_RUC} Las cuotas se emiten como factura: hasta tener un RUC válido no se pueden emitir.
             </p>
           ) : null}
           {s.meses.length === 0 ? (
@@ -137,7 +139,7 @@ export function ModalFacturacion({ clienteNombre, ruc, suscripcion: s, puedeEmit
                             Ver venta
                           </button>
                         ) : puedeEmitir && activa ? (
-                          <button type="button" disabled={!!emitiendo || sinRuc} title={sinRuc ? AVISO_SIN_RUC : undefined}
+                          <button type="button" disabled={!!emitiendo || sinRuc} title={sinRuc ? avisoRuc || AVISO_SIN_RUC : undefined}
                             onClick={() => (futuro ? setConfirmarFuturo(m.periodo) : void emitir(m.periodo))}
                             className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition disabled:cursor-not-allowed disabled:opacity-50 ${futuro ? "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50" : "text-white hover:brightness-95"}`}
                             style={futuro ? undefined : { backgroundColor: TEAL }}>

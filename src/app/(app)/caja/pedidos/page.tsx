@@ -17,7 +17,7 @@ import Link from "next/link";
 import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeft, CheckCircle2, ClipboardList, Loader2, Package, Pencil, Printer, RotateCw, Search, Trash2, UserRound, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
-import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
+import { buscar, buscarEnIndice, exactosPrimero, indexar } from "@/lib/busqueda";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { QtyInput } from "@/components/ui/QtyInput";
 import { clienteConfig } from "@/cliente.config";
@@ -187,7 +187,9 @@ export default function PedidosMostradorPage() {
     return () => document.removeEventListener("mousedown", fuera);
   }, []);
   const clientesFiltrados = useMemo(
-    () => buscar(clientesBuscados, qCliente, (c) => ({ principal: c.razon_social || c.nombre, otros: [c.nombre], codigos: [c.documento, c.ruc, c.telefono] })).slice(0, 20),
+    () => exactosPrimero(
+      buscar(clientesBuscados, qCliente, (c) => ({ principal: c.razon_social || c.nombre, otros: [c.nombre], codigos: [c.documento, c.ruc, c.telefono] })),
+      qCliente, (c) => [c.nombre, c.razon_social, c.documento, c.ruc, c.telefono]).slice(0, 20),
     [clientesBuscados, qCliente],
   );
 
@@ -417,6 +419,11 @@ export default function PedidosMostradorPage() {
               </div>
             ) : (
               <input id="ped-cliente" type="text" value={qCliente} onChange={(e) => { setQCliente(e.target.value); setAbiertoCliente(true); }} onFocus={() => setAbiertoCliente(true)}
+                onKeyDown={(e) => {
+                  // Enter elige el primero de la lista (el que coincide tal cual va arriba).
+                  if (e.key === "Enter") { e.preventDefault(); const c = clientesFiltrados[0]; if (c && qCliente.trim()) { setCliente(c); setQCliente(""); setAbiertoCliente(false); } }
+                  else if (e.key === "Escape") setAbiertoCliente(false);
+                }}
                 placeholder="Nombre, CI, RUC o teléfono" autoComplete="off"
                 className="min-h-11 w-full rounded-lg border border-slate-200 px-3 text-base outline-none focus:ring-2 sm:text-sm" style={{ ["--tw-ring-color" as string]: `${TEAL}55` }} />
             )}
@@ -424,9 +431,9 @@ export default function PedidosMostradorPage() {
               <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto overscroll-contain rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
                 {clientesFiltrados.length === 0 ? (
                   <p className="px-3 py-2 text-xs text-slate-400">Sin clientes que coincidan.</p>
-                ) : clientesFiltrados.map((c) => (
+                ) : clientesFiltrados.map((c, i) => (
                   <button key={c.id} type="button" onClick={() => { setCliente(c); setQCliente(""); setAbiertoCliente(false); }}
-                    className="block min-h-11 w-full px-3 py-2 text-left text-sm hover:bg-slate-50">
+                    className={`block min-h-11 w-full px-3 py-2 text-left text-sm hover:bg-slate-50 ${i === 0 ? "bg-slate-50" : ""}`}>
                     <span className="font-medium text-slate-800">{c.nombre}</span>
                     {c.ruc ? <span className="ml-2 text-xs text-slate-400">RUC {c.ruc}</span> : c.documento ? <span className="ml-2 text-xs text-slate-400">{c.documento}</span> : null}
                     {c.telefono ? <span className="ml-2 text-xs text-slate-400">· {c.telefono}</span> : null}

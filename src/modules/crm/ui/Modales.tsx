@@ -9,6 +9,8 @@ import { Modal } from "@/components/Modal";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { COLORES_ETAPA, COLOR_LABEL, tonoEtapa, type Tarjeta } from "@/modules/crm/tipos";
 import { BTN_PRIMARIO, BTN_SECUNDARIO, INPUT, LABEL } from "./comun";
+import { AyudaRuc, claseRuc, rucConError } from "@/modules/clientes/AyudaRuc";
+import { normalizarRuc, validarRuc } from "@/modules/empresa/tipos";
 
 /** Marca para que el modal grande de abajo no se cierre con el mismo Escape. */
 const Marca = () => <span data-modal-chico hidden />;
@@ -73,15 +75,18 @@ export function ConvertirClienteModal({ prospecto, onClose, onConvertido }: {
   const [error, setError] = useState<string | null>(null);
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const empresa = f.tipo_cliente === "empresa";
+  // Empresa, o con guion: es un RUC (va a Datos para facturación) y se valida el dígito verificador.
+  const pareceRuc = !!f.doc.trim() && (empresa || f.doc.includes("-"));
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
     if (!f.nombre.trim()) return;
+    if (pareceRuc && rucConError(f.doc)) { const v = validarRuc(f.doc); setError(`RUC: ${"mensaje" in v ? v.mensaje : "no es válido"}.`); return; }
     setBusy(true);
     setError(null);
     try {
       const doc = f.doc.trim();
-      const esRuc = empresa || /^\d{3,}-\d$/.test(doc);
+      const esRuc = pareceRuc;
       const r = await apiFetch<Convertido>(`/api/crm/${prospecto.id}/convertir`, {
         method: "POST",
         body: JSON.stringify({
@@ -91,7 +96,7 @@ export function ConvertirClienteModal({ prospecto, onClose, onConvertido }: {
           telefono: f.telefono.trim(),
           email: f.email.trim(),
           documento: doc && !esRuc ? doc : "",
-          ruc: doc && esRuc ? doc : "",
+          ruc: doc && esRuc ? normalizarRuc(doc) : "",
           ciudad: f.ciudad.trim(),
           direccion: f.direccion.trim(),
         }),
@@ -131,7 +136,8 @@ export function ConvertirClienteModal({ prospecto, onClose, onConvertido }: {
           ) : null}
           <label className={`block ${empresa ? "" : "sm:col-span-2"}`}>
             <span className={LABEL}>{empresa ? "RUC" : "CI / RUC"}</span>
-            <input value={f.doc} onChange={(e) => set("doc", e.target.value)} placeholder="Opcional" className={INPUT} />
+            <input value={f.doc} onChange={(e) => set("doc", e.target.value)} placeholder="Opcional" aria-invalid={pareceRuc && rucConError(f.doc)} className={`${INPUT} ${pareceRuc ? claseRuc(f.doc) : ""}`} />
+            {pareceRuc ? <AyudaRuc valor={f.doc} onUsar={(r) => { set("doc", r); setError(null); }} /> : null}
           </label>
         </div>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

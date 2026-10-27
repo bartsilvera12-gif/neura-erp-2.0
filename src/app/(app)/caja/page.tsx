@@ -19,7 +19,7 @@ import { HojaInferior } from "@/components/HojaInferior";
 import { TablaTarjetas } from "@/components/TablaResponsive";
 import { useMediaQuery } from "@/lib/ui/responsive";
 import { formatGs } from "@/modules/caja/lib";
-import { etiquetaCaja, hora, metodoLabel, METODOS_VENTA, useEstadoCajas, type EstadoCajas } from "@/modules/caja/turno";
+import { desdeTurno, etiquetaCaja, haceDias, metodoLabel, turnoViejo, METODOS_VENTA, useEstadoCajas, type EstadoCajas } from "@/modules/caja/turno";
 import { SelectorFecha } from "@/components/SelectorFecha";
 
 const TEAL = clienteConfig.color;
@@ -70,18 +70,23 @@ function CajasAbiertas({ estado }: { estado: EstadoCajas | null }) {
         <Link href="/caja/turnos" className="flex min-h-11 shrink-0 items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
           <Wallet className="h-4 w-4" /> No hay cajas abiertas · Abrir caja
         </Link>
-      ) : abiertas.map(({ c, s }) => (
-        <Link key={c.id} href="/caja/turnos" className="w-[240px] shrink-0 rounded-2xl border border-emerald-100 bg-white px-4 py-3 shadow-sm transition hover:border-emerald-200 hover:shadow">
+      ) : abiertas.map(({ c, s }) => {
+        const viejo = turnoViejo(c.turno!.fecha_apertura);
+        return (
+        <Link key={c.id} href="/caja/turnos" className={`w-[240px] shrink-0 rounded-2xl border bg-white px-4 py-3 shadow-sm transition hover:shadow ${viejo ? "border-amber-200 hover:border-amber-300" : "border-emerald-100 hover:border-emerald-200"}`}>
           <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
             <span className="h-2 w-2 rounded-full bg-emerald-500" /> {etiquetaCaja({ punto_nombre: c.nombre, sucursal_nombre: s.nombre })}
           </p>
-          <p className="mt-0.5 text-[11px] text-slate-500">Turno N° {c.turno!.numero_caja} · {c.turno!.abierta_por_nombre ?? "—"} · desde {hora(c.turno!.fecha_apertura)}</p>
+          <p className="mt-0.5 text-[11px] text-slate-500">Turno N° {c.turno!.numero_caja} · {c.turno!.abierta_por_nombre ?? "—"} · desde {desdeTurno(c.turno!.fecha_apertura)}</p>
+          {/* Lo vendido es del turno (puede abarcar varios días), no "de hoy". */}
           <p className="mt-1.5 flex items-baseline justify-between gap-3 text-xs">
-            <span className="text-slate-500">{c.turno!.ventas_cantidad} venta{c.turno!.ventas_cantidad === 1 ? "" : "s"}</span>
+            <span className="text-slate-500">Ventas del turno · {c.turno!.ventas_cantidad}</span>
             <span className="font-bold tabular-nums text-slate-900">{formatGs(c.turno!.ventas_total)}</span>
           </p>
+          {viejo ? <p className="mt-1.5 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">Abierto {haceDias(viejo.dias)}: cerralo y abrí uno nuevo.</p> : null}
         </Link>
-      ))}
+        );
+      })}
     </ScrollHorizontal>
   );
 }

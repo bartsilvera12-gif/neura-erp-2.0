@@ -31,12 +31,12 @@ import {
   claveMods, esVacia, modsParaEnviar, partesSel, precioMods, selDeSnapshot, tieneMods,
   type ModsSeleccion, type ModsSnapshot,
 } from "@/modules/mesas/modificadores";
-import { buscar, buscarEnIndice, indexar } from "@/lib/busqueda";
+import { buscar, buscarEnIndice, exactosPrimero, indexar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { anchoTicket, type ConfigFacturacion } from "@/modules/facturacion/tipos";
-import { AVISO_SIN_RUC, rucParaFactura } from "@/modules/empresa/tipos";
+import { AVISO_SIN_RUC, avisoRucInvalido, rucFacturaEstado } from "@/modules/empresa/tipos";
 import { browserClient } from "@/lib/supabase/browser";
 import { tienePermiso, useFuncion, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
@@ -45,6 +45,7 @@ import { HojaInferior } from "@/components/HojaInferior";
 import { useEsEscritorio } from "@/lib/ui/responsive";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
 import { CajaBarra } from "@/modules/caja/CajaBarra";
+import { AvisoTurnoViejo } from "@/modules/caja/AvisoTurnoViejo";
 import { AperturaModal } from "@/modules/caja/AperturaModal";
 import { MovimientoModal } from "@/modules/caja/MovimientoModal";
 import { CierreModal } from "@/modules/caja/CierreModal";
@@ -451,14 +452,32 @@ function CajaPageContenido() {
     () =>
       (clienteQuery.trim() === ""
         ? clientes
-        : clientesBuscados ?? buscar(clientes, clienteQuery, (c) => ({ principal: c.razon_social || c.nombre, otros: [c.nombre], codigos: [c.documento, c.ruc, c.telefono] }))
+        // El que coincide tal cual (nombre, razón social, CI/RUC, teléfono) va primero.
+        : exactosPrimero(
+            clientesBuscados ?? buscar(clientes, clienteQuery, (c) => ({ principal: c.razon_social || c.nombre, otros: [c.nombre], codigos: [c.documento, c.ruc, c.telefono] })),
+            clienteQuery, (c) => [c.nombre, c.razon_social, c.documento, c.ruc, c.telefono])
       ).slice(0, 50),
     [clientes, clienteQuery, clientesBuscados],
   );
+  // Opciones del desplegable de cliente, en el orden en que se ven (Enter elige la marcada, la
+  // primera por defecto). Con texto: primero los clientes que coinciden, después "Cargar nuevo
+  // cliente" y al final el ocasional; con el campo vacío, el ocasional primero.
+  type OpcionCliente = { tipo: "ocasional" } | { tipo: "nuevo" } | { tipo: "cliente"; c: Cliente };
+  const opcionesCliente = useMemo<OpcionCliente[]>(() => {
+    const lista = clientesFiltrados.map((c): OpcionCliente => ({ tipo: "cliente", c }));
+    return clienteQuery.trim()
+      ? [...lista, { tipo: "nuevo" }, { tipo: "ocasional" }]
+      : [{ tipo: "ocasional" }, { tipo: "nuevo" }, ...lista];
+  }, [clientesFiltrados, clienteQuery]);
+  const [clienteMarcado, setClienteMarcado] = useState(0);
+  useEffect(() => { setClienteMarcado(0); }, [clienteQuery, clientesBuscados]);
 
   // Receta 66: sin RUC no hay factura. RUC = el de Datos para facturación o el documento si es un
   // RUC con dígito verificador (una CI sola no alcanza). Sin cliente o sin RUC → solo ticket.
-  const rucFactura = rucParaFactura(clienteSel);
+  const rucEstado = rucFacturaEstado(clienteSel);
+  const rucFactura = rucEstado.estado === "ok" ? rucEstado.ruc : null;
+  // Sin RUC → el aviso de siempre; con un RUC cargado pero con el dígito verificador mal → cuál debería ser.
+  const avisoRuc = rucEstado.estado === "invalido" ? avisoRucInvalido(rucEstado) : AVISO_SIN_RUC;
   // Receta 67: cliente ocasional (X): factura sin RUC, salvo que la venta pase el tope configurado.
   const nombreOcasional = cfgFact?.ocasional_nombre?.trim() || "X";
   const rucOcasional = cfgFact?.ocasional_ruc?.trim() || "X";
@@ -478,6 +497,27 @@ function CajaPageContenido() {
     if (tipoVenta === "CREDITO") { setTipoVenta("CONTADO"); setPlazoDias(""); }
     if (facturar) setTipoDocumento("factura");
     if (cobroError) setCobroError(null);
+  }
+  function elegirOpcionCliente(o: OpcionCliente) {
+    if (o.tipo === "ocasional") { elegirOcasional(); return; }
+    if (o.tipo === "nuevo") { setClienteOpen(false); setHojaOpciones(false); setModalNuevoCliente(true); return; }
+    const c = o.c;
+    if (!clientes.some((x) => x.id === c.id)) setClientes((prev) => [c, ...prev]);
+    setClienteId(c.id);
+    setClienteQuery("");
+    setClienteOpen(false);
+  }
+  // Buscador de cliente: ↑/↓ marcan, Enter elige la marcada (la primera de la lista), Esc cierra.
+  function onKeyDownCliente(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (ocasional || clienteSel) return;
+    if (e.key === "ArrowDown") { e.preventDefault(); setClienteOpen(true); setClienteMarcado((i) => Math.min(i + 1, opcionesCliente.length - 1)); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); setClienteMarcado((i) => Math.max(i - 1, 0)); }
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      e.stopPropagation();
+      const o = opcionesCliente[Math.min(clienteMarcado, opcionesCliente.length - 1)];
+      if (o) elegirOpcionCliente(o);
+    } else if (e.key === "Escape" && clienteOpen) { e.stopPropagation(); setClienteOpen(false); }
   }
   useEffect(() => {
     if (!puedeFacturar && tipoDocumento === "factura") setTipoDocumento("ticket");
@@ -959,6 +999,11 @@ function CajaPageContenido() {
             value={ocasional ? `Cliente ocasional — ${nombreOcasional}` : clienteSel ? clienteSel.nombre : clienteQuery}
             onChange={(e) => { if (ocasional) return; setClienteId(""); setClienteQuery(e.target.value); setClienteOpen(true); }}
             onFocus={() => { if (!ocasional) setClienteOpen(true); }}
+            onKeyDown={onKeyDownCliente}
+            role="combobox"
+            aria-expanded={clienteOpen && !clienteSel && !ocasional}
+            aria-controls="caja-clientes"
+            aria-activedescendant={clienteOpen && !clienteSel && !ocasional ? `caja-cli-${clienteMarcado}` : undefined}
             readOnly={ocasional}
             placeholder="Buscar por nombre o RUC…"
             autoComplete="off"
@@ -975,7 +1020,7 @@ function CajaPageContenido() {
         {/* Cliente elegido: RUC (o documento) y teléfono, para confirmar que es el correcto. */}
         {clienteSel ? (
           <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-slate-500">
-            <span>CI o RUC <b className="font-mono font-semibold text-slate-700">{rucFactura || clienteSel.documento || "—"}</b></span>
+            <span>CI o RUC <b className="font-mono font-semibold text-slate-700">{rucFactura || (rucEstado.estado === "invalido" ? rucEstado.ruc : clienteSel.documento) || "—"}</b></span>
             <span>Tel. <b className="font-semibold text-slate-700">{clienteSel.telefono || "—"}</b></span>
           </p>
         ) : ocasional ? (
@@ -986,25 +1031,46 @@ function CajaPageContenido() {
           </p>
         ) : null}
         {clienteOpen && !clienteSel && !ocasional && (
-          <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto overscroll-contain rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
-            <button type="button" onClick={() => elegirOcasional()} className="flex min-h-11 w-full flex-col items-start border-b border-slate-100 px-3 py-2 text-left hover:bg-slate-50 lg:min-h-0">
-              <span className="text-sm font-semibold text-slate-800">Cliente ocasional ({nombreOcasional})</span>
-              <span className="text-[11px] text-slate-500">Consumidor final que no da sus datos · se puede facturar · solo contado</span>
-            </button>
-            <button type="button" onClick={() => { setClienteOpen(false); setHojaOpciones(false); setModalNuevoCliente(true); }} className="flex min-h-11 w-full items-center gap-1.5 border-b border-slate-100 px-3 py-2 text-left text-xs font-semibold hover:bg-slate-50 lg:min-h-0" style={{ color: TEAL, backgroundColor: `${TEAL}0f` }}>
-              <span className="text-base leading-none">＋</span> Cargar nuevo cliente
-              {clienteQuery.trim() && <span className="ml-1 truncate text-slate-500">«{clienteQuery.trim()}»</span>}
-            </button>
-            {clientesFiltrados.length === 0 ? (
+          <div id="caja-clientes" role="listbox" aria-label="Clientes" className="absolute z-20 mt-1 max-h-64 w-full overflow-auto overscroll-contain rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
+            {clienteQuery.trim() && clientesFiltrados.length === 0 ? (
+              <p className="border-b border-slate-100 px-3 py-2 text-xs text-slate-400">{clientesBuscados ? "Sin clientes que coincidan." : "Buscando…"}</p>
+            ) : null}
+            {opcionesCliente.map((o, i) => {
+              const marcado = i === clienteMarcado;
+              const base = `${marcado ? "bg-slate-100" : "hover:bg-slate-50"}`;
+              if (o.tipo === "ocasional") {
+                return (
+                  <button key="ocasional" id={`caja-cli-${i}`} role="option" aria-selected={marcado} type="button" onMouseEnter={() => setClienteMarcado(i)} onClick={() => elegirOpcionCliente(o)}
+                    className={`flex min-h-11 w-full flex-col items-start border-slate-100 px-3 py-2 text-left lg:min-h-0 ${clienteQuery.trim() ? "border-t" : "border-b"} ${base}`}>
+                    <span className="text-sm font-semibold text-slate-800">Cliente ocasional ({nombreOcasional})</span>
+                    <span className="text-[11px] text-slate-500">Consumidor final que no da sus datos · se puede facturar · solo contado</span>
+                  </button>
+                );
+              }
+              if (o.tipo === "nuevo") {
+                return (
+                  <button key="nuevo" id={`caja-cli-${i}`} role="option" aria-selected={marcado} type="button" onMouseEnter={() => setClienteMarcado(i)} onClick={() => elegirOpcionCliente(o)}
+                    className={`flex min-h-11 w-full items-center gap-1.5 border-slate-100 px-3 py-2 text-left text-xs font-semibold lg:min-h-0 ${clienteQuery.trim() ? "border-t" : "border-b"} ${marcado ? "brightness-95" : "hover:brightness-95"}`}
+                    style={{ color: TEAL, backgroundColor: marcado ? `${TEAL}1f` : `${TEAL}0f` }}>
+                    <span className="text-base leading-none">＋</span> Cargar nuevo cliente
+                    {clienteQuery.trim() && <span className="ml-1 truncate text-slate-500">«{clienteQuery.trim()}»</span>}
+                  </button>
+                );
+              }
+              const c = o.c;
+              return (
+                <button key={c.id} id={`caja-cli-${i}`} role="option" aria-selected={marcado} type="button" onMouseEnter={() => setClienteMarcado(i)} onClick={() => elegirOpcionCliente(o)}
+                  className={`block min-h-11 w-full px-3 py-2 text-left text-sm lg:min-h-0 ${base}`}>
+                  <span className="font-medium text-slate-800">{c.nombre}</span>
+                  {c.ruc && <span className="ml-2 text-xs text-slate-400">RUC {c.ruc}</span>}
+                  {c.documento && !c.ruc && <span className="ml-2 text-xs text-slate-400">{c.documento}</span>}
+                  {c.telefono && <span className="ml-2 text-xs text-slate-400">· {c.telefono}</span>}
+                </button>
+              );
+            })}
+            {!clienteQuery.trim() && clientesFiltrados.length === 0 ? (
               <p className="px-3 py-2 text-xs text-slate-400">Sin clientes que coincidan.</p>
-            ) : clientesFiltrados.map((c) => (
-              <button key={c.id} type="button" onClick={() => { if (!clientes.some((x) => x.id === c.id)) setClientes((prev) => [c, ...prev]); setClienteId(c.id); setClienteQuery(""); setClienteOpen(false); }} className="block min-h-11 w-full px-3 py-2 text-left text-sm hover:bg-slate-50 lg:min-h-0">
-                <span className="font-medium text-slate-800">{c.nombre}</span>
-                {c.ruc && <span className="ml-2 text-xs text-slate-400">RUC {c.ruc}</span>}
-                {c.documento && !c.ruc && <span className="ml-2 text-xs text-slate-400">{c.documento}</span>}
-                {c.telefono && <span className="ml-2 text-xs text-slate-400">· {c.telefono}</span>}
-              </button>
-            ))}
+            ) : null}
           </div>
         )}
       </div>
@@ -1036,7 +1102,7 @@ function CajaPageContenido() {
         <Segmented value={tipoDocumento} onChange={setTipoDocumento} options={[
           {
             value: "factura", label: "Factura", disabled: !puedeFacturar,
-            title: superaTopeOcasional ? "La venta supera el tope para facturar a cliente ocasional" : clienteSel ? AVISO_SIN_RUC : "Para emitir factura elegí un cliente con RUC o Cliente ocasional (X)",
+            title: superaTopeOcasional ? "La venta supera el tope para facturar a cliente ocasional" : clienteSel ? avisoRuc : "Para emitir factura elegí un cliente con RUC o Cliente ocasional (X)",
           },
           { value: "ticket", label: "Solo ticket" },
         ]} />
@@ -1047,7 +1113,7 @@ function CajaPageContenido() {
             </p>
           ) : clienteSel ? (
             <div className="mt-1.5 rounded-lg border border-amber-200 bg-amber-50 px-2.5 py-2 text-[11px] text-amber-800">
-              <p>{AVISO_SIN_RUC}</p>
+              <p>{avisoRuc}</p>
               <p className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
                 <a href={`/clientes/${encodeURIComponent(clienteSel.id)}`} target="_blank" rel="noopener noreferrer"
                   className="inline-flex min-h-11 items-center font-semibold text-amber-900 underline underline-offset-2 lg:min-h-0">
@@ -1123,6 +1189,9 @@ function CajaPageContenido() {
           onVer={() => setModalCaja("ver")} onCerrar={() => setModalCaja("cerrar")} />
       </div>
       </div>
+
+      {/* Turno abierto hace más de 24 h: se puede seguir vendiendo, pero el arqueo mezcla días. */}
+      {caja ? <AvisoTurnoViejo fechaApertura={caja.fecha_apertura} onCerrar={() => setModalCaja("cerrar")} compacto className="shrink-0" /> : null}
 
       {/* Venta registrada: en escritorio una franja; en celular / tablet un aviso flotante
           sobre el pie fijo (se ve aunque se haya bajado por el carrito). */}
@@ -1817,6 +1886,7 @@ function CajaPageContenido() {
 
       {modalNuevoCliente && (
         <NuevoCliente
+          inicial={clienteQuery.trim() && !/^[\d.\s-]+$/.test(clienteQuery.trim()) ? { nombre: clienteQuery.trim() } : undefined}
           onClose={() => setModalNuevoCliente(false)}
           onCreado={(c) => { setClientes((prev) => [c, ...prev]); setClienteId(c.id); setClienteQuery(""); setModalNuevoCliente(false); }}
         />

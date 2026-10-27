@@ -17,6 +17,8 @@ import { Select } from "@/components/Select";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
 import type { Categoria } from "@/modules/clientes/esquema";
 import type { Cliente } from "@/modules/caja/lib";
+import { normalizarRuc, validarRuc } from "@/modules/empresa/tipos";
+import { AyudaRuc, claseRuc, rucConError } from "@/modules/clientes/AyudaRuc";
 
 const BRAND = clienteConfig.color;
 const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]";
@@ -65,11 +67,14 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
     // El RUC o CI es obligatorio: de ahí salen los datos para facturar.
     if (!f.documento.trim()) { setError(empresa ? "Cargá el RUC de la empresa: se usa para facturar." : "Cargá el RUC o la CI del cliente: se usa para facturar."); return; }
     if (!f.telefono.trim()) { setError("Cargá un teléfono del cliente."); return; }
+    // Sin RUC válido no hay factura (84): el de Datos para facturación tiene que dar el dígito verificador.
+    if (rucConError(f.ruc)) { const v = validarRuc(f.ruc); setError(`RUC de facturación: ${"mensaje" in v ? v.mensaje : "no es válido"}.`); return; }
     setBusy(true);
     setError(null);
     try {
       const doc = f.documento.trim();
-      const esRuc = /^\d{3,}-\d$/.test(doc);
+      // Solo un RUC con dígito verificador correcto pasa a "Datos para facturación".
+      const esRuc = validarRuc(doc).estado === "ok";
       const body = JSON.stringify({
         tipo_cliente: f.tipo_cliente,
         nombre: f.nombre.trim(),
@@ -77,7 +82,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
         documento: doc || null,
         // RUC para factura: el que se cargó en "Datos para facturación"; si está vacío y el
         // documento es un RUC (con dígito verificador), se usa ese.
-        ruc: f.ruc.trim() || (esRuc ? doc : null),
+        ruc: f.ruc.trim() ? normalizarRuc(f.ruc) : esRuc ? normalizarRuc(doc) : null,
         categoria_id: f.categoria_id || null,
         nombre_contacto: empresa ? f.nombre_contacto.trim() || null : undefined,
         // Empresa: teléfono y email de la persona de contacto (los principales son de la empresa).
@@ -127,7 +132,8 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
           </label>
             <label className="block">
               <span className={ET}>{empresa ? "RUC *" : "RUC o CI *"}</span>
-              <input value={f.documento} onChange={(e) => set("documento", e.target.value)} maxLength={30} placeholder={empresa ? "Ej: 80011222-7" : "Ej: 3456789 o 3456789-0"} className={`${INPUT} font-mono`} />
+              <input value={f.documento} onChange={(e) => set("documento", e.target.value)} maxLength={30} placeholder={empresa ? "Ej: 80011222-9" : "Ej: 3456789 o 3456789-5"} className={`${INPUT} font-mono`} />
+              {empresa || f.documento.includes("-") ? <AyudaRuc valor={f.documento} aviso onUsar={(r) => set("documento", r)} /> : null}
             </label>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -163,7 +169,9 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
             </label>
             <label className="block">
               <span className={ET}>RUC {OPC}</span>
-              <input value={f.ruc} onChange={(e) => set("ruc", e.target.value)} maxLength={40} placeholder="00000000-0" className={`${INPUT} font-mono`} />
+              <input value={f.ruc} onChange={(e) => set("ruc", e.target.value)} onBlur={() => f.ruc.trim() && set("ruc", normalizarRuc(f.ruc))}
+                maxLength={40} placeholder="80012345-0" aria-invalid={rucConError(f.ruc)} className={`${INPUT} font-mono ${claseRuc(f.ruc)}`} />
+              <AyudaRuc valor={f.ruc} onUsar={(r) => { set("ruc", r); setError(null); }} />
             </label>
           </div>
         </Bloque>

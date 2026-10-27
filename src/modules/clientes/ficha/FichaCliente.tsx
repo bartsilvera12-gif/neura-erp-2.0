@@ -23,7 +23,7 @@ import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
 import { RegistrarTransferencia } from "@/modules/cobranzas/RegistrarTransferencia";
 import { FacturaContadoModal } from "@/modules/clientes/ficha/FacturaContadoModal";
-import { nombreParaFactura, rucParaFactura } from "@/modules/empresa/tipos";
+import { avisoRucCliente, nombreParaFactura, rucParaFactura } from "@/modules/empresa/tipos";
 import type { Detalle } from "@/modules/clientes/ficha/tipos";
 import { TabInformacion } from "@/modules/clientes/ficha/TabInformacion";
 import { TabEstadoCuenta } from "@/modules/clientes/ficha/TabEstadoCuenta";
@@ -324,7 +324,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
                 onCambio={() => void cambio()} />
             ) : null}
             {tab === "suscripciones" ? (
-              <TabSuscripciones clienteNombre={c.razon_social || c.nombre} ruc={rucParaFactura(c)} suscripciones={subs} cargando={subsCargando} error={subsError}
+              <TabSuscripciones clienteNombre={c.razon_social || c.nombre} ruc={rucParaFactura(c)} avisoRuc={avisoRucCliente(c)} suscripciones={subs} cargando={subsCargando} error={subsError}
                 rol={me?.rol} onNueva={() => setNuevaSusc(true)} onCambio={suscripcionesCambiaron} />
             ) : null}
             {tab === "presupuestos" && puedePresupuestar ? <PresupuestosDeCliente clienteId={c.id} clienteNombre={c.razon_social || c.nombre} /> : null}
@@ -340,7 +340,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
           onHecho={(m) => { setTransfiriendo(null); setAviso(m); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); void cambio(); }} />
       ) : null}
       {facturaContado ? (
-        <FacturaContadoModal clienteId={c.id} clienteNombre={nombreParaFactura(c)} ruc={rucParaFactura(c)} moneda={c.moneda_preferida === "USD" ? "USD" : "GS"}
+        <FacturaContadoModal clienteId={c.id} clienteNombre={nombreParaFactura(c)} ruc={rucParaFactura(c)} avisoRuc={avisoRucCliente(c)} moneda={c.moneda_preferida === "USD" ? "USD" : "GS"}
           onClose={() => setFacturaContado(false)}
           onEditarCliente={() => { setFacturaContado(false); setTab("informacion"); }}
           onEmitida={(m) => { setFacturaContado(false); setAviso(m); setRecargaCuenta((k) => k + 1); setTab("estado_cuenta"); void cambio(); }} />

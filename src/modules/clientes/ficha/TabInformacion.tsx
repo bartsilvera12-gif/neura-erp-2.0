@@ -17,6 +17,8 @@ import type { Categoria, ClienteCompleto } from "@/modules/clientes/esquema";
 import type { UsuarioMin } from "@/modules/clientes/ficha/tipos";
 import { TEAL, fechaCorta } from "@/modules/clientes/ui";
 import { PerfilTributario } from "@/modules/clientes/ficha/PerfilTributario";
+import { normalizarRuc, validarRuc } from "@/modules/empresa/tipos";
+import { AyudaRuc, claseRuc, rucConError } from "@/modules/clientes/AyudaRuc";
 
 const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition-colors hover:border-[var(--brand)]/60 focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]";
 const LABEL = "mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500";
@@ -142,6 +144,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
     e.preventDefault();
     if (!f.nombre.trim()) { setError("El nombre es obligatorio."); return; }
     if (errorPais) { setError(errorPais); return; }
+    if (rucConError(f.ruc)) { const v = validarRuc(f.ruc); setError(`RUC de facturación: ${"mensaje" in v ? v.mensaje : "no es válido"}.`); return; }
     setBusy(true);
     setError(null);
     setGuardado(false);
@@ -158,7 +161,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
           telefono: f.telefono.trim() || null,
           telefono_secundario: f.telefono_secundario.trim() || null,
           razon_social: f.razon_social.trim() || null,
-          ruc: f.ruc.trim() || null,
+          ruc: f.ruc.trim() ? normalizarRuc(f.ruc) : null,
           email: f.email.trim() || null,
           email_secundario: f.email_secundario.trim() || null,
           direccion: f.direccion.trim() || null,
@@ -346,7 +349,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
           </p>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Campo label={empresa ? "Razón social" : "Nombre para factura"}><input {...inp("razon_social")} maxLength={200} className={INPUT} /></Campo>
-            <Campo label="RUC"><input {...inp("ruc")} maxLength={40} placeholder="00000000-0" className={INPUT} /></Campo>
+            <Campo label="RUC"><input {...inp("ruc")} onBlur={() => f.ruc.trim() && set("ruc", normalizarRuc(f.ruc))} maxLength={40} placeholder="80012345-0" aria-invalid={rucConError(f.ruc)} className={`${INPUT} font-mono ${claseRuc(f.ruc)}`} /><AyudaRuc valor={f.ruc} onUsar={(r) => { set("ruc", r); setError(null); }} /></Campo>
           </div>
         </div>
       </section>

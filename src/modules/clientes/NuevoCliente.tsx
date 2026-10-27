@@ -7,6 +7,8 @@ import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
 import { PIE_MODAL } from "@/modules/clientes/ui";
 import type { Cliente } from "@/modules/caja/lib";
+import { normalizarRuc, validarRuc } from "@/modules/empresa/tipos";
+import { AyudaRuc, claseRuc, rucConError } from "@/modules/clientes/AyudaRuc";
 
 const BRAND = clienteConfig.color;
 const INPUT =
@@ -30,10 +32,15 @@ export function NuevoCliente({
   const [condicion, setCondicion] = useState<"CONTADO" | "CREDITO">("CONTADO");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Con guion (o si es empresa) el documento es un RUC: se valida el dígito verificador.
+  const pareceRuc = !!documento.trim() && (tipo === "empresa" || documento.includes("-"));
+  const rucEmpresaMal = tipo === "empresa" && pareceRuc && rucConError(documento);
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault();
     if (!nombre.trim()) return;
+    // Empresa: el documento es su RUC y tiene que dar el dígito verificador (sin RUC válido no hay factura).
+    if (rucEmpresaMal) { const v = validarRuc(documento); setError(`RUC: ${"mensaje" in v ? v.mensaje : "no es válido"}.`); return; }
     setBusy(true);
     setError(null);
     try {
@@ -42,7 +49,7 @@ export function NuevoCliente({
         body: JSON.stringify({
           nombre: nombre.trim(),
           tipo_cliente: tipo,
-          documento: documento.trim() || undefined,
+          documento: documento.trim() ? (pareceRuc ? normalizarRuc(documento) : documento.trim()) : undefined,
           telefono: telefono.trim() || undefined,
           condicion_pago: condicion,
         }),
@@ -79,7 +86,8 @@ export function NuevoCliente({
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-slate-600">{tipo === "empresa" ? "RUC" : "Documento"}</span>
-            <input value={documento} onChange={(e) => setDocumento(e.target.value)} className={INPUT} placeholder="Opcional" />
+            <input value={documento} onChange={(e) => setDocumento(e.target.value)} className={`${INPUT} ${pareceRuc ? claseRuc(documento) : ""}`} placeholder="Opcional" aria-invalid={pareceRuc && rucConError(documento)} />
+            {pareceRuc ? <AyudaRuc valor={documento} aviso={tipo !== "empresa"} onUsar={(r) => { setDocumento(r); setError(null); }} /> : null}
           </label>
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-slate-600">Teléfono</span>
