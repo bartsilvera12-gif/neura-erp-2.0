@@ -23,6 +23,7 @@ import { apiFetchSWR, guardadoAlInstante, invalidar } from "@/lib/api/cache-clie
 import { clienteConfig } from "@/cliente.config";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT, Pestanas } from "@/modules/inventario/ui";
 import { EstacionesConfig } from "@/modules/mesas/EstacionesConfig";
+import { useFuncion } from "@/lib/sesion/ContextoUsuario";
 import { linkMesa, type Mesa, type MesasConfig } from "@/modules/mesas/tipos";
 
 const URL_MESAS = "/api/mesas";
@@ -54,7 +55,10 @@ export default function MesasConfigPage() {
   // "Imprimir QR": elegir todas o solo algunas mesas.
   const [elegir, setElegir] = useState(false);
   // Receta 70: pestaña "Estaciones de cocina".
-  const [tab, setTab] = useState<"mesas" | "estaciones">("mesas");
+  // Receta 75: con Cocina y estaciones apagada, solo la pestaña Mesas.
+  const conCocina = useFuncion("cocina");
+  const [tabElegida, setTab] = useState<"mesas" | "estaciones">("mesas");
+  const tab = conCocina ? tabElegida : "mesas";
   const [nuevaEstacion, setNuevaEstacion] = useState(false);
 
   async function imprimir(lista: Mesa[]) {
@@ -100,10 +104,12 @@ export default function MesasConfigPage() {
         )}
       />
 
-      <Pestanas valor={tab} onChange={(v) => setTab(v as "mesas" | "estaciones")} opciones={[
-        { id: "mesas", label: "Mesas" },
-        { id: "estaciones", label: "Estaciones de cocina" },
-      ]} />
+      {conCocina ? (
+        <Pestanas valor={tab} onChange={(v) => setTab(v as "mesas" | "estaciones")} opciones={[
+          { id: "mesas", label: "Mesas" },
+          { id: "estaciones", label: "Estaciones de cocina" },
+        ]} />
+      ) : null}
 
       {tab === "estaciones" ? (
         <EstacionesConfig nueva={nuevaEstacion} onNuevaCerrada={() => setNuevaEstacion(false)} />

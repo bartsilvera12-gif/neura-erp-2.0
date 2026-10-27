@@ -28,6 +28,7 @@ import { SelectorFecha } from "@/components/SelectorFecha";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, INPUT } from "@/modules/inventario/ui";
 import { Aviso, Campo, Chip, Cifra, Interruptor, Tarjeta, fechaHora } from "@/modules/facturacion/ui";
 import { TarjetaComanda, TarjetaTicketVenta } from "@/modules/facturacion/TarjetasTickets";
+import { useFuncion } from "@/lib/sesion/ContextoUsuario";
 import {
   IMPRESIONES, MODOS, esTicket, numeroFactura,
   type Autoimpresor, type ConfigFacturacion, type ModoFacturacion, type TipoImpresion,
@@ -84,6 +85,8 @@ export default function FacturacionPage() {
   useEffect(cargar, [cargar]);
 
   const soloLectura = cfg ? !cfg.puede_editar : true;
+  // Receta 75: la comanda es de Cocina y estaciones; apagada, no se muestra su tarjeta.
+  const conCocina = useFuncion("cocina");
   const original = useMemo(() => (cfg ? deConfig(cfg) : f), [cfg, f]);
   const sucio = (Object.keys(f) as (keyof FormNum)[]).some((k) => f[k].trim() !== original[k].trim());
 
@@ -296,7 +299,7 @@ export default function FacturacionPage() {
 
       {/* ── Ticket de venta y comanda de cocina (receta 71) ─────────────── */}
       <TarjetaTicketVenta cfg={cfg} soloLectura={soloLectura} onGuardado={setCfg} />
-      <TarjetaComanda cfg={cfg} soloLectura={soloLectura} onGuardado={setCfg} />
+      {conCocina ? <TarjetaComanda cfg={cfg} soloLectura={soloLectura} onGuardado={setCfg} /> : null}
 
       {/* ── SIFEN ───────────────────────────────────────────────────────── */}
       <Tarjeta

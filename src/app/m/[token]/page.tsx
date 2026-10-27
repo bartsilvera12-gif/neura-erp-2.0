@@ -43,6 +43,12 @@ export default async function MenuMesaPage({ params }: { params: Promise<{ token
   if (!menu) {
     return <Aviso titulo="Este QR no es válido" texto="El código no corresponde a ninguna mesa o ya fue reemplazado. Pedile a quien te atiende el QR actualizado de tu mesa." />;
   }
+  if (!menu.activa && menu.sin_qr) {
+    return (
+      <Aviso logo={menu.logo_url} empresa={menu.empresa} titulo="Este local no está tomando pedidos por QR"
+        texto="Por ahora no se reciben pedidos desde el celular. Pedile a quien te atiende." />
+    );
+  }
   if (!menu.activa) {
     return (
       <Aviso logo={menu.logo_url} empresa={menu.empresa} titulo={`${menu.mesa} no está tomando pedidos por QR`}

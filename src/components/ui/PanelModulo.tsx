@@ -80,7 +80,7 @@ export function PanelModulo({
     const catalogo = pantallasCatalogo();
     return tarjetas.filter((t) => {
       const p = catalogo.find((x) => x.href === t.href);
-      return !!p && !!t.acceso && !!p.accesoPropio && !perfilVePantalla(p, me.rol, me.perfil) && !!p.niveles?.length && !p.niveles.includes(me.rol);
+      return !!p && !!t.acceso && !!p.accesoPropio && !perfilVePantalla(p, me.rol, me.perfil, me.funciones) && !!p.niveles?.length && !p.niveles.includes(me.rol);
     });
   }, [me, tarjetas]);
   const [permitidas, setPermitidas] = useState<Set<string>>(() => new Set());
@@ -106,7 +106,7 @@ export function PanelModulo({
     return tarjetas.filter((t) => {
       const ve = (href: string) => {
         const p = catalogo.find((x) => x.href === href);
-        return !!p && perfilVePantalla(p, me.rol, me.perfil);
+        return !!p && perfilVePantalla(p, me.rol, me.perfil, me.funciones);
       };
       return t.pantallas ? t.pantallas.some(ve) : ve(t.href) || permitidas.has(t.href);
     });

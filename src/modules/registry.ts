@@ -20,6 +20,7 @@ import { moduloProyectos } from "@/modules/proyectos/module";
 import { moduloPresupuestos } from "@/modules/presupuestos/module";
 import { moduloConfiguracion } from "@/modules/configuracion/module";
 import type { PerfilSesion } from "@/modules/usuarios/permisos";
+import { pantallaConFuncionVisible, type FuncionPantalla, type Funciones } from "@/modules/configuracion/funciones";
 
 // El orden de acá es el orden dentro de cada familia del menú (igual que sistemas-propio):
 // Comercial: Clientes, CRM Funnel, Presupuestos, Gestión Clientes, Planes, Agenda, Proyectos — en el menú son UN ítem
@@ -85,6 +86,8 @@ export type Pantalla = {
   /** permiso que además hace falta (ej. Usuarios → administrar_usuarios) */
   permiso?: string;
   accesoPropio?: boolean;
+  /** receta 75: función de la empresa que hace falta (o "rubro") */
+  funcion?: FuncionPantalla;
 };
 
 function interseccion(a?: string[], b?: string[]): string[] | undefined {
@@ -101,7 +104,7 @@ export function pantallasCatalogo(): Pantalla[] {
     const base = { moduloId: m.id, moduloLabel: m.label, familia: m.familia ?? "General", icon: m.icon, permiso: m.permiso, accesoPropio: m.accesoPropio };
     if (m.children?.length) {
       for (const c of m.children) {
-        out.push({ ...base, href: c.href, label: c.label, niveles: interseccion(m.roles, c.roles), permiso: c.permiso ?? m.permiso, accesoPropio: c.accesoPropio ?? m.accesoPropio });
+        out.push({ ...base, href: c.href, label: c.label, niveles: interseccion(m.roles, c.roles), permiso: c.permiso ?? m.permiso, accesoPropio: c.accesoPropio ?? m.accesoPropio, funcion: c.funcion });
       }
     } else {
       out.push({ ...base, href: m.href, label: m.label, niveles: m.roles?.length ? m.roles : undefined });
@@ -188,8 +191,12 @@ export function hrefsDeModulo(id: string): string[] {
   return m.children?.length ? m.children.map((c) => c.href) : [m.href];
 }
 
-/** ¿El perfil puede abrir esta pantalla? (nivel base + pantallas del perfil + permiso) */
-export function perfilVePantalla(p: Pantalla, rol: string | undefined, perfil: PerfilSesion | null | undefined): boolean {
+/**
+ * ¿El perfil puede abrir esta pantalla? (nivel base + pantallas del perfil + permiso; y, si se
+ * pasan, las funciones de la empresa — receta 75: Mesas / Cocina / Recetas apagadas no se ven).
+ */
+export function perfilVePantalla(p: Pantalla, rol: string | undefined, perfil: PerfilSesion | null | undefined, funciones?: Funciones | null): boolean {
+  if (!pantallaConFuncionVisible(p.funcion, funciones)) return false;
   if (p.niveles?.length && (!rol || !p.niveles.includes(rol))) return false;
   if (!perfil) return true; // sin perfil (servidor viejo): como antes, solo por rol
   if (p.permiso && !perfil.todo && !perfil.permisos.includes(p.permiso)) return false;
@@ -201,17 +208,20 @@ export function perfilVePantalla(p: Pantalla, rol: string | undefined, perfil: P
  * perfil (un módulo con submenú queda con las sub-pantallas permitidas). Los módulos con
  * `grupo` salen juntos en el ítem de su grupo (ej. "Finanzas"), solo con lo que el perfil ve.
  */
-export function modulosDelPerfil(rol: string | undefined, perfil: PerfilSesion | null | undefined): Modulo[] {
-  return agruparEnMenu(modulosVisibles(rol, perfil));
+export function modulosDelPerfil(rol: string | undefined, perfil: PerfilSesion | null | undefined, funciones?: Funciones | null): Modulo[] {
+  return agruparEnMenu(modulosVisibles(rol, perfil, funciones));
 }
 
-function modulosVisibles(rol: string | undefined, perfil: PerfilSesion | null | undefined): Modulo[] {
-  const base = modulosActivos(rol);
+function modulosVisibles(rol: string | undefined, perfil: PerfilSesion | null | undefined, funciones?: Funciones | null): Modulo[] {
+  const base = modulosActivos(rol).map((m) =>
+    // Receta 75: sub-pantallas de funciones apagadas fuera (también sin perfil cargado).
+    m.children?.some((c) => c.funcion) ? { ...m, children: m.children.filter((c) => pantallaConFuncionVisible(c.funcion, funciones)) } : m,
+  );
   if (!perfil) return base;
   const catalogo = pantallasCatalogo();
   const ve = (href: string) => {
     const p = catalogo.find((x) => x.href === href);
-    return p ? perfilVePantalla(p, rol, perfil) : true;
+    return p ? perfilVePantalla(p, rol, perfil, funciones) : true;
   };
   return base.flatMap((m) => {
     if (m.permiso && !perfil.todo && !perfil.permisos.includes(m.permiso)) return [];

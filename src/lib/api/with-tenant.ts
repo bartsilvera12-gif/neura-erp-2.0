@@ -14,6 +14,8 @@
  *      decide y `roles` no se mira: "si tiene el permiso, pasa")
  *   4. body inválido → 422 (validado con zod)
  *   5. ctx.db está atado a la empresa: imposible tocar datos de otra
+ *   6. rutas de una función apagada de la empresa (receta 75: /api/mesas, /api/mesas/estaciones,
+ *      /api/inventario/recetas) → 403 "Esta función no está activa en tu empresa"
  */
 import type { NextRequest } from "next/server";
 import type { User } from "@supabase/supabase-js";
@@ -23,7 +25,9 @@ import { tenantSchema } from "@/lib/tenant/schema";
 import { resolveTenantSession } from "@/lib/api/resolve-session";
 import type { PerfilSesion } from "@/modules/usuarios/permisos";
 import { TenantDb } from "@/lib/api/tenant-db";
-import { ERR } from "@/lib/api/responses";
+import { ERR, fail } from "@/lib/api/responses";
+import { funcionesDeEmpresa } from "@/lib/api/funciones-servidor";
+import { funcionActiva, funcionDeRutaApi, MSJ_FUNCION_INACTIVA } from "@/modules/configuracion/funciones";
 
 export type TenantContext = {
   user: User;
@@ -152,6 +156,12 @@ export function withTenant<B = unknown>(handler: Handler<B>, opts: Options<B> = 
         if (faltan.length) return ERR.sinPermiso(faltan[0]);
       } else if (opts.roles && !opts.roles.includes(session.rol)) {
         return ERR.forbidden();
+      }
+
+      // Receta 75: rutas de una función que la empresa tiene apagada (Mesas, Cocina, Recetas) → 403.
+      const funcion = funcionDeRutaApi(new URL(req.url).pathname);
+      if (funcion && !funcionActiva(await funcionesDeEmpresa(session.empresaId), funcion)) {
+        return fail(MSJ_FUNCION_INACTIVA, 403, "funcion_inactiva");
       }
 
       let input = undefined as unknown as B;

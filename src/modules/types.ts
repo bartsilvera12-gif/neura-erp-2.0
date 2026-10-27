@@ -1,3 +1,5 @@
+import type { FuncionPantalla } from "@/modules/configuracion/funciones";
+
 /** Contrato de un módulo del ERP. Cada módulo se describe con esto. */
 export type Modulo = {
   /** id estable, igual que el nombre de la carpeta en src/modules/ */
@@ -24,6 +26,12 @@ export type Modulo = {
     permiso?: string;
     /** como `accesoPropio` del módulo, pero solo para esta sub-pantalla (ej. Omnicanal › Monitoreo) */
     accesoPropio?: boolean;
+    /**
+     * Receta 75: la sub-pantalla es de una función que la empresa puede apagar (Mesas, Cocina,
+     * Recetas) o es la pantalla Rubro y funciones ("rubro": se oculta si Neura la ocultó).
+     * Apagada → no sale en el menú ni en los paneles, y el guard no deja entrar por URL.
+     */
+    funcion?: FuncionPantalla;
     /**
      * Solo en los ítems agrupadores del menú (ver `grupo`): el módulo del que viene esta
      * pantalla (ej. "Gastos empresariales" para "Resumen"), para el buscador del menú.

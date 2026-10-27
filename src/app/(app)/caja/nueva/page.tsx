@@ -32,7 +32,7 @@ import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { anchoTicket, type ConfigFacturacion } from "@/modules/facturacion/tipos";
 import { AVISO_SIN_RUC, rucParaFactura } from "@/modules/empresa/tipos";
 import { browserClient } from "@/lib/supabase/browser";
-import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useFuncion, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
 import { QtyInput } from "@/components/ui/QtyInput";
 import { HojaInferior } from "@/components/HojaInferior";
@@ -510,7 +510,9 @@ function CajaPageContenido() {
   // Cuentas que Pedidos de mesas envió a caja, de la sucursal de la caja en uso (cada 4 s, con
   // un pitido cuando entra una nueva). Se carga UNA en el carrito: sus líneas quedan fijas (no se
   // quitan ni se bajan) y al cobrar la base cierra la cuenta con la venta en la misma transacción.
-  const { cuentas: porCobrar, fresco: porCobrarFresco, recargar: recargarPorCobrar, ahora: ahoraMesas } = usePorCobrar(caja?.id ?? null, () => pitido());
+  // Receta 75: con Mesas y QR apagada no hay bandeja "Mesas por cobrar" ni su polling.
+  const conMesas = useFuncion("mesas");
+  const { cuentas: porCobrar, fresco: porCobrarFresco, recargar: recargarPorCobrar, ahora: ahoraMesas } = usePorCobrar(conMesas ? caja?.id ?? null : null, () => pitido());
   const [bandejaMesas, setBandejaMesas] = useState(false);
   const [cuentaMesa, setCuentaMesa] = useState<CuentaPorCobrar | null>(null);
   const [errorMesa, setErrorMesa] = useState<string | null>(null);

@@ -21,7 +21,8 @@ export type ProductoMenu = {
 };
 
 export type MenuMesa =
-  | { activa: false; mesa: string; empresa: string; logo_url: string | null }
+  /** sin_qr (receta 75): el local tiene Mesas y QR apagada (no la mesa). */
+  | { activa: false; mesa: string; empresa: string; logo_url: string | null; sin_qr?: boolean }
   | {
       activa: true;
       mesa: string;
@@ -49,12 +50,22 @@ const limpio = (m: string) => m.replace(/^.*?ERROR:\s*/, "");
 
 export async function menuPorToken(token: string): Promise<MenuMesa | null> {
   if (!TOKEN_MESA_RE.test(token)) return null;
-  const { data, error } = await clientePublico().rpc("mesa_menu_publico", { p_token: token });
+  const sb = clientePublico();
+  // Receta 75: ¿el local toma pedidos por QR? (Mesas y QR prendida). En paralelo con el menú.
+  const [{ data, error }, qr] = await Promise.all([
+    sb.rpc("mesa_menu_publico", { p_token: token }),
+    sb.rpc("mesa_qr_activo", { p_token: token }),
+  ]);
   if (error) {
     console.error("[mesa_menu_publico]", error.message);
     throw new Error("No se pudo cargar el menú");
   }
-  return (data as MenuMesa | null) ?? null;
+  const menu = (data as MenuMesa | null) ?? null;
+  // Si la base todavía no tiene mesa_qr_activo (sin la 75) se sigue como antes.
+  if (menu && !qr.error && qr.data === false) {
+    return { activa: false, sin_qr: true, mesa: menu.mesa, empresa: menu.empresa, logo_url: menu.logo_url };
+  }
+  return menu;
 }
 
 export async function crearPedido(
@@ -64,6 +75,9 @@ export async function crearPedido(
   nombre: string | null,
 ) {
   if (!TOKEN_MESA_RE.test(token)) return { ok: false as const, error: "Mesa no encontrada" };
+  // Receta 75: con Mesas y QR apagada no entra (la base también lo corta con un trigger).
+  const qr = await clientePublico().rpc("mesa_qr_activo", { p_token: token });
+  if (!qr.error && qr.data === false) return { ok: false as const, error: "Este local no está tomando pedidos por QR. Pedile a quien te atiende." };
   const { data, error } = await clientePublico().rpc("mesa_pedido_publico_crear", {
     p_token: token,
     p_items: items,

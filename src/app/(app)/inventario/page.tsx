@@ -17,7 +17,7 @@ import {
 import { depositosPlanos, hayVariosDepositos, invalidarDepositos, opcionesAlcance, opcionesDepositos, partesAlcance, useDepositos, type DepositoPlano } from "@/modules/inventario/depositos";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
-import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useFuncion, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { MQ_MOVIL, useMediaQuery } from "@/lib/ui/responsive";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { clienteConfig } from "@/cliente.config";
@@ -82,6 +82,8 @@ export default function InventarioPage() {
   const [verInactivos, setVerInactivos] = useState(false);
   // Receta 72: filtro por tipo de producto (Reventa / Menú / Materia prima).
   const [tipo, setTipo] = useState("");
+  // Receta 75: con Recetas apagada no hay filtro de tipo (ni chip de "Reventa"; los Menú / Materia prima que ya existan se siguen marcando).
+  const conRecetas = useFuncion("recetas");
   const [pagina, setPagina] = useState(1);
   const [porPagina, setPorPagina] = useState<number>(25);
 
@@ -238,7 +240,7 @@ export default function InventarioPage() {
         ),
       },
       { key: "precio", titulo: "Precio", movil: "valor", celda: (p) => (p.tipo_producto === "materia_prima" ? <span className="text-xs font-medium text-slate-400">No se vende</span> : gs(Number(p.precio_venta))) },
-      { key: "tipo", titulo: "Tipo", movil: "chip", celda: (p) => <ChipTipo tipo={p.tipo_producto} /> },
+      { key: "tipo", titulo: "Tipo", movil: "chip", celda: (p) => (!conRecetas && (p.tipo_producto ?? "reventa") === "reventa" ? null : <ChipTipo tipo={p.tipo_producto} />) },
       {
         key: "stock", titulo: "Stock", movil: "chip",
         celda: (p) => {
@@ -316,7 +318,7 @@ export default function InventarioPage() {
       },
     });
     return cols;
-  }, [alcanceSel.deposito, alcanceSel.sucursal, depPorId, variosDepositos, categoriaPorId, colores, togglingId, abrirForm, toggleActivo, precargarFicha]);
+  }, [alcanceSel.deposito, alcanceSel.sucursal, depPorId, variosDepositos, categoriaPorId, colores, togglingId, abrirForm, toggleActivo, precargarFicha, conRecetas]);
 
   const opcionesCategoria: [string, string][] = [
     ["", "Todas las categorías"],
@@ -410,7 +412,9 @@ export default function InventarioPage() {
             }
           >
               <Select value={categoriaId} onChange={(v) => { setCategoriaId(v); setPagina(1); }} options={opcionesCategoria} minWidth={190} etiqueta="Categoría" />
-              <Select value={tipo} onChange={(v) => { setTipo(v); setPagina(1); }} options={[["", "Todos los tipos"], ...TIPOS_PRODUCTO.map((t): [string, string] => [t.id, t.label])]} minWidth={170} etiqueta="Tipo de producto" />
+              {conRecetas ? (
+                <Select value={tipo} onChange={(v) => { setTipo(v); setPagina(1); }} options={[["", "Todos los tipos"], ...TIPOS_PRODUCTO.map((t): [string, string] => [t.id, t.label])]} minWidth={170} etiqueta="Tipo de producto" />
+              ) : null}
               {variosDepositos ? (
                 <Select value={alcance} onChange={setAlcance} options={opcionesAlcance(deps.datos, "Stock: todos los depósitos")} minWidth={220} etiqueta="Ver stock de" />
               ) : null}

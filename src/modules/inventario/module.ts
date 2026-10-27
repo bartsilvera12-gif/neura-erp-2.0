@@ -19,7 +19,7 @@ export const moduloInventario: Modulo = {
   children: [
     { label: "Productos", href: "/inventario" },
     // Receta 72: recetas de los platos (Menú) y preparaciones. Muestra costos → "ver costos".
-    { label: "Recetas", href: "/inventario/recetas", permiso: "ver_costos" },
+    { label: "Recetas", href: "/inventario/recetas", permiso: "ver_costos", funcion: "recetas" },
     { label: "Movimientos", href: "/inventario/movimientos" },
     { label: "Traslados", href: "/inventario/traslados" },
     { label: "Ajustes y pérdidas", href: "/inventario/ajustes" },

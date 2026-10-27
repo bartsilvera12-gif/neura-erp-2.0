@@ -5,6 +5,7 @@ import type { Modulo } from "@/modules/types";
  * sub-módulo (como Inventario):
  *   · Datos de la empresa: identificación fiscal y contacto que salen en todos los documentos.
  *   · Tickets y facturación: ticket de venta y comanda, modo, impresión, numeración, condiciones de pago y SIFEN.
+ *   · Mesas y QR (si la función está prendida) y Rubro y funciones (receta 75).
  *   · Usuarios: usuarios, perfiles, pantallas y permisos.
  * Las pantallas (hrefs) son las mismas de antes, así los perfiles guardados siguen valiendo.
  * Solo nivel ADMIN; cada sub-pantalla pide su permiso: "Configuración del sistema" o, para
@@ -21,7 +22,9 @@ export const moduloConfiguracion: Modulo = {
   children: [
     { label: "Datos de la empresa", href: "/configuracion/empresa", permiso: "configuracion" },
     { label: "Tickets y facturación", href: "/configuracion/facturacion", permiso: "configuracion" },
-    { label: "Mesas y QR", href: "/configuracion/mesas", permiso: "configuracion" },
+    { label: "Mesas y QR", href: "/configuracion/mesas", permiso: "configuracion", funcion: "mesas" },
+    // Receta 75: rubro (Comercio / Gastronomía) y funciones. Neura puede ocultarla (solo por SQL).
+    { label: "Rubro y funciones", href: "/configuracion/funciones", permiso: "configuracion", funcion: "rubro" },
     { label: "Usuarios", href: "/configuracion/usuarios", permiso: "administrar_usuarios" },
   ],
 };

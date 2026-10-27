@@ -3,10 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { ShieldAlert } from "lucide-react";
+import { PowerOff, ShieldAlert } from "lucide-react";
 import { browserClient } from "@/lib/supabase/browser";
 import { apiFetchCache, limpiarCache } from "@/lib/api/cache-cliente";
-import { ProveedorUsuario, type Usuario } from "@/lib/sesion/ContextoUsuario";
+import { EVENTO_RECARGAR_ME, ProveedorUsuario, type Usuario } from "@/lib/sesion/ContextoUsuario";
+import { NOMBRE_FUNCION, pantallaConFuncionVisible, type FuncionId } from "@/modules/configuracion/funciones";
 import { modulosDelPerfil, panelDeRuta, pantallaDeRuta, perfilVePantalla } from "@/modules/registry";
 import { NotificacionesBell } from "@/modules/notificaciones/NotificacionesBell";
 import { MarcoApp } from "@/components/shell/MarcoApp";
@@ -55,7 +56,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // /api/me no se lista ninguno (si no, aparecerían módulos que no ve y después desaparecerían).
   const rol = me?.rol;
   const perfil = me?.perfil;
-  const modulos = useMemo(() => (rol === undefined ? [] : modulosDelPerfil(rol, perfil)), [rol, perfil]);
+  const funciones = me?.funciones;
+  const modulos = useMemo(() => (rol === undefined ? [] : modulosDelPerfil(rol, perfil, funciones)), [rol, perfil, funciones]);
+
+  // Rubro y funciones (receta 75): después de guardar, la pantalla pide recargar /api/me.
+  useEffect(() => {
+    const recargar = () => {
+      apiFetchCache<Me>("/api/me", { fresco: true }).then(setMe).catch(() => {});
+    };
+    window.addEventListener(EVENTO_RECARGAR_ME, recargar);
+    return () => window.removeEventListener(EVENTO_RECARGAR_ME, recargar);
+  }, []);
+
+  // Receta 75: pantalla de una función que la empresa tiene apagada → aviso (no importa el perfil).
+  const funcionApagada = useMemo(() => {
+    if (!me || !funciones) return null;
+    if (panelDeRuta(pathname)) return null;
+    const p = pantallaDeRuta(pathname);
+    if (!p?.funcion || pantallaConFuncionVisible(p.funcion, funciones)) return null;
+    return p;
+  }, [me, funciones, pathname]);
 
   // Guard de página: entrar por URL a una pantalla que el perfil no tiene → "Sin acceso".
   // (Las APIs y la base lo vuelven a validar; esto es para no mostrar una pantalla rota.)
@@ -66,11 +86,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     // /inventario). Si no ve ninguna, sigue la regla de siempre (el panel muestra solo las
     // tarjetas permitidas).
     const panel = panelDeRuta(pathname);
-    if (panel && panel.pantallas.some((x) => perfilVePantalla(x, rol, perfil))) return null;
+    if (panel && panel.pantallas.some((x) => perfilVePantalla(x, rol, perfil, funciones))) return null;
     const p = pantallaDeRuta(pathname);
     if (!p || p.accesoPropio) return null;
-    return perfilVePantalla(p, rol, perfil) ? null : p;
-  }, [me, perfil, rol, pathname]);
+    return perfilVePantalla(p, rol, perfil, funciones) ? null : p;
+  }, [me, perfil, rol, pathname, funciones]);
 
   if (!ready) {
     return (
@@ -90,9 +110,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       campana={<NotificacionesBell />}
     >
       <ProveedorUsuario value={me}>
-        {pantallaBloqueada ? <SinAcceso pantalla={`${pantallaBloqueada.moduloLabel}${pantallaBloqueada.label !== pantallaBloqueada.moduloLabel ? ` › ${pantallaBloqueada.label}` : ""}`} perfil={perfil?.nombre ?? null} /> : children}
+        {funcionApagada?.funcion && funcionApagada.funcion !== "rubro" ? (
+          <FuncionInactiva funcion={funcionApagada.funcion} pantalla={funcionApagada.label} esAdmin={rol === "ADMIN"} />
+        ) : pantallaBloqueada ? <SinAcceso pantalla={`${pantallaBloqueada.moduloLabel}${pantallaBloqueada.label !== pantallaBloqueada.moduloLabel ? ` › ${pantallaBloqueada.label}` : ""}`} perfil={perfil?.nombre ?? null} /> : children}
       </ProveedorUsuario>
     </MarcoApp>
+  );
+}
+
+function FuncionInactiva({ funcion, pantalla, esAdmin }: { funcion: FuncionId; pantalla: string; esAdmin: boolean }) {
+  return (
+    <div className="mx-auto flex max-w-lg flex-col items-center px-4 py-20 text-center">
+      <span className="grid h-12 w-12 place-items-center rounded-full bg-slate-100 text-slate-500">
+        <PowerOff className="h-6 w-6" aria-hidden />
+      </span>
+      <h1 className="mt-4 text-lg font-semibold text-slate-900">Esta función no está activa</h1>
+      <p className="mt-1.5 text-sm text-slate-500">
+        <span className="font-medium text-slate-700">{pantalla}</span> es parte de{" "}
+        <span className="font-medium text-slate-700">{NOMBRE_FUNCION[funcion]}</span>, que está apagada en tu empresa.
+        {esAdmin ? " Podés prenderla en Configuración › Rubro y funciones." : " Si la necesitás, pedíselo a un administrador."}
+      </p>
+      <Link href="/" className="mt-5 inline-flex min-h-11 items-center rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 no-underline hover:bg-slate-50 lg:min-h-0">
+        Volver al inicio
+      </Link>
+    </div>
   );
 }
 

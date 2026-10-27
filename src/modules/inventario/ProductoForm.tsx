@@ -16,7 +16,7 @@ import { TIPOS_PRODUCTO, UNIDADES_MP, type ProductoInventario, type TipoProducto
 import { partesCategoria, type Categoria } from "@/modules/inventario/categorias";
 import { HistorialCostos } from "@/modules/inventario/HistorialCostos";
 import { StockDepositosProducto } from "@/modules/inventario/LotesProducto";
-import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { useFuncion, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
 import { opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
 import { loteAutomatico } from "@/modules/inventario/vencimientos";
@@ -119,6 +119,11 @@ export function ProductoForm({
     return () => { vivo = false; };
   }, [producto?.id, producto?.en_menu_qr, producto?.estacion_id]);
   const estaciones = useEstaciones();
+  // Receta 75: con Recetas apagada no se elige el tipo (altas nuevas = reventa); un producto que ya
+  // es Menú / Materia prima se sigue viendo y editando con su tipo. Con Mesas apagada: sin menú QR.
+  const conRecetas = useFuncion("recetas");
+  const conMesas = useFuncion("mesas");
+  const mostrarTipo = conRecetas || (!!producto && (producto.tipo_producto ?? "reventa") !== "reventa");
   const [subiendo, setSubiendo] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -259,6 +264,7 @@ export function ProductoForm({
 
         <fieldset disabled={soloLectura} className="space-y-6 disabled:opacity-70">
           {/* ── Tipo de producto (receta 72) ─────────────────────────────── */}
+          {mostrarTipo ? (
           <Bloque titulo="Tipo de producto">
             <div role="radiogroup" aria-label="Tipo de producto" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               {TIPOS_PRODUCTO.map((t) => {
@@ -272,7 +278,7 @@ export function ProductoForm({
                 );
               })}
             </div>
-            {editando && (esMenu || esMP) ? (
+            {!conRecetas ? null : editando && (esMenu || esMP) ? (
               <Link href={`/inventario/recetas?producto=${producto!.id}`} className="mt-2 inline-flex min-h-9 items-center gap-1.5 text-xs font-semibold text-[var(--brand)] hover:underline">
                 <ChefHat className="h-3.5 w-3.5" /> {esMenu ? "Ver / cargar su receta" : "Cargarle receta (preparación)"}
               </Link>
@@ -280,6 +286,7 @@ export function ProductoForm({
               <p className="mt-2 text-[11px] text-slate-500">Después de crearlo, cargá su receta en Inventario › Recetas: sin receta no se puede vender.</p>
             ) : null}
           </Bloque>
+          ) : null}
 
           {/* ── Producto ─────────────────────────────────────────────────── */}
           <Bloque titulo="Producto" extra={editando ? (
@@ -469,15 +476,15 @@ export function ProductoForm({
               {!esMP ? (
                 <>
                   <Interruptor checked={f.es_vendible} onChange={(v) => set("es_vendible", v)} label="Se vende en caja" detalle="Aparece en el buscador de la caja." />
-                  <Interruptor checked={!!enMenu} onChange={(v) => setEnMenu(v)} label="En el menú QR"
-                    detalle={enMenu === null ? "Cargando…" : "Sale en el menú que abren los clientes con el QR de las mesas (con su foto y precio)."} />
+                  {conMesas ? <Interruptor checked={!!enMenu} onChange={(v) => setEnMenu(v)} label="En el menú QR"
+                    detalle={enMenu === null ? "Cargando…" : "Sale en el menú que abren los clientes con el QR de las mesas (con su foto y precio)."} /> : null}
                 </>
               ) : (
                 <p className="rounded-xl border border-lime-200 bg-lime-50 px-3 py-2.5 text-xs text-lime-900">
                   <strong>No se vende:</strong> no aparece en la caja, en presupuestos ni en el menú QR. Se compra y se usa en las recetas.
                 </p>
               )}
-              {!esMP && enMenu && estaciones?.length ? (
+              {!esMP && conMesas && enMenu && estaciones?.length ? (
                 <div className="rounded-xl border border-slate-200 px-3 py-2.5">
                   <span className={ET}>Estación de cocina</span>
                   <Select

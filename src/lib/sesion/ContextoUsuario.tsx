@@ -11,6 +11,7 @@
  */
 import { createContext, useContext } from "react";
 import type { PerfilSesion, Permiso } from "@/modules/usuarios/permisos";
+import { funcionActiva, type FuncionId, type Funciones } from "@/modules/configuracion/funciones";
 
 export type Usuario = {
   usuarioId?: string;
@@ -21,7 +22,25 @@ export type Usuario = {
   sucursalId?: string | null;
   /** perfil efectivo (pantallas, permisos, alcance, tope de descuento) */
   perfil?: PerfilSesion | null;
+  /** Receta 75: funciones de la empresa (Mesas / Cocina / Recetas). null/undefined = sin filtrar. */
+  funciones?: Funciones | null;
 };
+
+/** Evento para que el layout vuelva a pedir /api/me (ej. después de cambiar Rubro y funciones). */
+export const EVENTO_RECARGAR_ME = "erp:recargar-me";
+export function recargarUsuario() {
+  if (typeof window !== "undefined") window.dispatchEvent(new Event(EVENTO_RECARGAR_ME));
+}
+
+/**
+ * ¿La función de la empresa está activa? Mientras /api/me no llegó: false (no se muestra nada
+ * gastronómico para después esconderlo). Si el servidor no informa funciones: true (como antes).
+ */
+export function useFuncion(id: FuncionId): boolean {
+  const me = useContext(ContextoUsuario);
+  if (!me) return false;
+  return funcionActiva(me.funciones, id);
+}
 
 const ContextoUsuario = createContext<Usuario | null>(null);
 

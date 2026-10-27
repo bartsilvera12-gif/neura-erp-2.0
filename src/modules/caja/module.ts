@@ -20,7 +20,8 @@ export const moduloCaja: Modulo = {
     { label: "Órdenes de venta", href: "/caja" },
     { label: "Ventas a crédito", href: "/caja/credito" },
     // Receta 68: pedidos por QR de las mesas (cola + cuentas abiertas) y la pantalla de cocina.
-    { label: "Pedidos de mesas", href: "/caja/mesas", permiso: "pedidos_mesas" },
-    { label: "Cocina", href: "/caja/cocina", permiso: "cocina" },
+    // Receta 75: se apagan con Rubro y funciones (Mesas y QR / Cocina y estaciones).
+    { label: "Pedidos de mesas", href: "/caja/mesas", permiso: "pedidos_mesas", funcion: "mesas" },
+    { label: "Cocina", href: "/caja/cocina", permiso: "cocina", funcion: "cocina" },
   ],
 };
