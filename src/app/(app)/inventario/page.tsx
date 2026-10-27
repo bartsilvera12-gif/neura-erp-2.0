@@ -24,7 +24,7 @@ import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
-import { colorCategoria, coloresPorCategoria, opcionesFiltroCategoria, partesCategoria, rutaCategoria, type Categoria, type ColorCategoria } from "@/modules/inventario/categorias";
+import { colorCategoria, coloresPorCategoria, opcionesFiltroCategoria, partesCategoria, type Categoria, type ColorCategoria } from "@/modules/inventario/categorias";
 import { invalidarLista, precargarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
 import { precargarFichaProducto } from "@/modules/inventario/ficha-cache";
 import { TIPOS_PRODUCTO, tipoProducto, type ProductoInventario } from "@/modules/inventario/tipos";
@@ -40,6 +40,17 @@ const POR_PAGINA = [25, 50, 100, 200] as const;
 type Pagina = { rows: ProductoInventario[]; total: number };
 
 /** URL de una página del listado (misma forma siempre: es la clave del cache). */
+/** Chip "Tipo": arranca en "De venta" (Reventa + Menú); las materias primas se eligen aparte. */
+const OPCIONES_TIPO: [string, string][] = [
+  ["", "De venta (Reventa y Menú)"],
+  ...TIPOS_PRODUCTO.map((t): [string, string] => [t.id, t.id === "materia_prima" ? "Materias primas" : t.label]),
+  ["todos", "Todos los tipos"],
+];
+
+/** Interruptor con aspecto de chip de la barra de filtros (mismo alto que los Select chip). */
+const CHIP_TOGGLE = (on: boolean) =>
+  `flex h-[38px] cursor-pointer select-none items-center gap-2 whitespace-nowrap rounded-xl border px-3 text-[13px] transition max-md:h-12 max-md:text-sm ${on ? "border-[color-mix(in_srgb,var(--brand)_38%,white)] bg-[var(--brand-50)] font-semibold text-[var(--brand)]" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`;
+
 function urlPagina(f: { pagina: number; porPagina: number; busqueda: string; categoriaId: string; verInactivos: boolean; tipo: string }) {
   const sp = new URLSearchParams({ paginado: "1", pagina: String(f.pagina), por_pagina: String(f.porPagina) });
   if (f.busqueda) sp.set("q", f.busqueda);
@@ -144,7 +155,10 @@ export default function InventarioPage() {
 
   // Un solo request por combinación de filtros + página, cacheado: volver a una página ya
   // vista pinta al instante; mientras llega una nueva quedan las filas anteriores.
-  const filtros = { busqueda, categoriaId, verInactivos, porPagina, tipo };
+  // La lista arranca con lo que se vende (Reventa + Menú); las materias primas, con el chip Tipo.
+  // Buscando por nombre se busca en todos los tipos (si no, "ajo" no aparecería).
+  const tipoParam = !conRecetas ? "" : tipo === "todos" ? "" : tipo || (busqueda ? "" : "vendible");
+  const filtros = { busqueda, categoriaId, verInactivos, porPagina, tipo: tipoParam };
   const url = urlPagina({ ...filtros, pagina });
   const { datos, cargando, error } = useListaCacheada<Pagina>(url, recarga);
   const productos = useMemo(() => (error ? [] : datos?.rows ?? []), [datos, error]);
@@ -171,7 +185,7 @@ export default function InventarioPage() {
   const hastaIdx = Math.min(paginaSegura * porPagina, total);
   const categoriaPorId = useMemo(() => new Map(categorias.map((c) => [c.id, c])), [categorias]);
   const colores = useMemo(() => coloresPorCategoria(categorias), [categorias]);
-  const hayFiltros = !!busqueda || !!categoriaId || !!tipo;
+  const hayFiltros = !!busqueda || !!categoriaId || (!!tipo && tipo !== "");
 
   // Callbacks estables para las filas memorizadas (FilaProducto).
   const toggleEnCurso = useRef(false);
@@ -368,17 +382,10 @@ export default function InventarioPage() {
       <section className="overflow-hidden rounded-2xl border bg-white shadow-sm" style={{ borderColor: `${TEAL}33` }}>
         <div className="flex flex-col gap-3 border-b p-4 sm:p-5" style={{ borderColor: `${TEAL}22`, background: `linear-gradient(to right, ${TEAL}0d, transparent)` }}>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>
-                <Package className="h-4 w-4" />
-              </div>
-              <div className="min-w-0">
-                <h2 className="text-sm font-semibold text-slate-900">Productos</h2>
-                <p className="text-[11px] text-slate-500">
-                  {cargando ? "Cargando..." : total === 0 ? "Sin resultados" : `Mostrando ${desdeIdx.toLocaleString("es-PY")}–${hastaIdx.toLocaleString("es-PY")} de ${total.toLocaleString("es-PY")}`}
-                </p>
-              </div>
-            </div>
+            {/* El título "Productos" ya está arriba: acá solo la cantidad. */}
+            <p className="text-sm text-slate-500">
+              {cargando ? "Cargando…" : total === 0 ? "Sin resultados" : <>Mostrando <span className="font-semibold text-slate-700">{desdeIdx.toLocaleString("es-PY")}–{hastaIdx.toLocaleString("es-PY")}</span> de <span className="font-semibold text-slate-700">{total.toLocaleString("es-PY")}</span> {total === 1 ? "producto" : "productos"}</>}
+            </p>
             <div className="ml-auto">
               <button onClick={() => abrirForm(null)} onMouseEnter={() => void cargarProductoForm()} onFocus={() => void cargarProductoForm()} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 active:scale-95" style={{ backgroundColor: TEAL }}>
                 <Plus className="h-3.5 w-3.5" /> Nuevo producto
@@ -401,7 +408,7 @@ export default function InventarioPage() {
                 type="search"
                 enterKeyHint="search"
                 aria-label="Buscar productos"
-                className="h-11 w-full rounded-xl md:h-10 border border-slate-200 bg-white pl-9 pr-9 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]"
+                className="h-11 w-full rounded-xl md:h-[38px] border border-slate-200 bg-white pl-9 pr-9 text-[13px] outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] max-md:text-sm"
               />
               {busquedaBorrador ? (
                 <button onClick={() => setBusquedaBorrador("")} aria-label="Limpiar búsqueda" className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-600 md:right-2 md:h-auto md:w-auto md:p-1">
@@ -411,33 +418,21 @@ export default function InventarioPage() {
             </div>
             }
           >
-              <Select value={categoriaId} onChange={(v) => { setCategoriaId(v); setPagina(1); }} options={opcionesCategoria} minWidth={190} etiqueta="Categoría" />
+              <Select chip prefijo="Categoría" textoVacio="Todas" value={categoriaId} onChange={(v) => { setCategoriaId(v); setPagina(1); }} options={opcionesCategoria} minWidth={200} etiqueta="Categoría" className="max-w-[260px] max-md:max-w-none" />
               {conRecetas ? (
-                <Select value={tipo} onChange={(v) => { setTipo(v); setPagina(1); }} options={[["", "Todos los tipos"], ...TIPOS_PRODUCTO.map((t): [string, string] => [t.id, t.label])]} minWidth={170} etiqueta="Tipo de producto" />
+                <Select chip prefijo="Tipo" textoVacio="De venta" value={tipo} onChange={(v) => { setTipo(v); setPagina(1); }} options={OPCIONES_TIPO} minWidth={200} etiqueta="Tipo de producto" />
               ) : null}
               {variosDepositos ? (
-                <Select value={alcance} onChange={setAlcance} options={opcionesAlcance(deps.datos, "Stock: todos los depósitos")} minWidth={220} etiqueta="Ver stock de" />
+                <Select chip prefijo="Stock" textoVacio="Todos los depósitos" value={alcance} onChange={setAlcance} options={opcionesAlcance(deps.datos, "Todos los depósitos")} minWidth={220} etiqueta="Ver stock de" />
               ) : null}
-              <label className="flex h-11 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 md:h-10" title="Mostrar también los productos inactivos (para reactivarlos)">
-                <input type="checkbox" checked={verInactivos} onChange={(e) => { setVerInactivos(e.target.checked); setPagina(1); }} className="h-4 w-4 rounded border-slate-300" />
+              <label className={CHIP_TOGGLE(verInactivos)} title="Mostrar también los productos inactivos (para reactivarlos)">
+                <input type="checkbox" checked={verInactivos} onChange={(e) => { setVerInactivos(e.target.checked); setPagina(1); }} className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]" />
                 Ver inactivos
               </label>
-              <Select value={String(porPagina)} onChange={(v) => { setPorPagina(Number(v)); setPagina(1); }} options={POR_PAGINA.map((n): [string, string] => [String(n), `${n} / pág`])} minWidth={110} etiqueta="Productos por página" />
+              <Select chip value={String(porPagina)} onChange={(v) => { setPorPagina(Number(v)); setPagina(1); }} options={POR_PAGINA.map((n): [string, string] => [String(n), `${n} por página`])} minWidth={130} etiqueta="Productos por página" />
           </BarraFiltros>
 
-          {hayFiltros ? (
-            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
-              <span>Filtros activos:</span>
-              {busqueda ? <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>Búsqueda: &quot;{busqueda}&quot;</span> : null}
-              {tipo ? <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>Tipo: {tipoProducto(tipo).label}</span> : null}
-              {categoriaId ? (
-                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-medium" style={{ backgroundColor: `${TEAL}1a`, color: TEAL }}>
-                  {categoriaId === "__sin__" ? "Sin categoría" : rutaCategoria(categoriaId, categoriaPorId) ?? "Categoría"}
-                </span>
-              ) : null}
-              <button onClick={limpiarFiltros} className="ml-auto rounded px-1 text-slate-400 underline-offset-2 hover:text-slate-700 hover:underline max-sm:min-h-9">Limpiar</button>
-            </div>
-          ) : null}
+          {/* Los filtros activos ya se ven resaltados en sus chips (y "Limpiar filtros" en la barra). */}
         </div>
 
         {/* Lista: tarjetas en celular (< 768 px), la tabla de siempre desde tablet. */}
