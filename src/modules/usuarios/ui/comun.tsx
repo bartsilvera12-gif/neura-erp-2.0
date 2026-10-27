@@ -40,8 +40,12 @@ export type UsuarioFila = {
 export type PerfilMin = { id: string; nombre: string; codigo: string | null; sistema: boolean; nivel_base: string; alcance_sucursal: "propia" | "todas" };
 export type SucursalMin = { id: string; nombre: string; activa: boolean; es_principal: boolean };
 
+/** Cupo de usuarios del plan (receta 76): activos (incluye invitaciones pendientes) vs. límite. */
+export type CupoUsuarios = { limite: number; usados: number; disponibles: number; excedido: boolean };
+
 export type DatosUsuarios = {
   mi_usuario_id: string;
+  cupo?: CupoUsuarios;
   usuarios: UsuarioFila[];
   perfiles: PerfilMin[];
   sucursales: SucursalMin[];

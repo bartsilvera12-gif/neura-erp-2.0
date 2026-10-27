@@ -13,7 +13,27 @@ import type { CrearUsuario } from "@/modules/usuarios/esquemas";
 
 export function falloRpc(error: { message: string; code?: string }) {
   const msg = error.message.replace(/^.*?ERROR:\s*/, "");
+  if (RE_LIMITE.test(msg)) return fail(msg, 409, "limite_usuarios");
   return fail(msg, error.code === "42501" || /^Sin permiso|^Tu perfil no/i.test(msg) ? 403 : 400);
+}
+
+/** Mensaje del límite de usuarios del plan (receta 76: trigger tg_usuarios_cupo). */
+const RE_LIMITE = /l[ií]mite de \d+ usuarios/i;
+const mensajeLimite = (limite: number) =>
+  `Llegaste al límite de ${limite} usuarios de tu plan. Para sumar más, hablá con el soporte de Neura.`;
+
+type Cupo = { limite: number; usados: number; disponibles: number; excedido: boolean };
+
+/**
+ * Antes de crear la cuenta de acceso o mandar la invitación: si el cupo está lleno se corta acá
+ * (no quedan cuentas sueltas ni emails mandados). La base lo vuelve a controlar con bloqueo por
+ * empresa al insertar (trigger), así que dos altas a la vez no pasan las dos.
+ */
+async function cupoLleno(ctx: TenantContext) {
+  const { data, error } = await ctx.db.rpc<Cupo>("usuarios_cupo");
+  if (error) return falloRpc(error);
+  if (data && data.disponibles <= 0) return fail(mensajeLimite(data.limite), 409, "limite_usuarios");
+  return null;
 }
 
 /** Además del permiso, nivel ADMIN (la base lo exige igual; esto corta antes de tocar auth). */
@@ -61,6 +81,8 @@ export async function crearUsuario(ctx: TenantContext, req: NextRequest, input: 
   // El perfil y la sucursal se validan ANTES de crear la cuenta (no dejar cuentas sueltas).
   const { data: pf } = await ctx.db.select("perfiles", "id").eq("id", input.perfil_id).maybeSingle();
   if (!pf) return fail("Elegí el perfil", 422);
+  const lleno = await cupoLleno(ctx);
+  if (lleno) return lleno;
 
   const existente = await buscarCuenta(input.email);
   if (existente?.usuario) {

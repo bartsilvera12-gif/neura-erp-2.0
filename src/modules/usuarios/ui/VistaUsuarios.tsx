@@ -11,6 +11,7 @@ import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { filtrar } from "@/lib/busqueda";
 import { BOTON_PRIMARIO, INPUT_FILTRO } from "@/modules/inventario/ui";
 import { ModalUsuario } from "@/modules/usuarios/ui/ModalUsuario";
+import { AvisoCupo, cupoLleno, IndicadorCupo, ModalCupoLleno, RE_LIMITE_USUARIOS } from "@/modules/usuarios/ui/Cupo";
 import {
   api, Avatar, estadoDe, fechaHora, haceCuanto, InsigniaPerfil, invalidarTodo, PillEstado, TEAL,
   type DatosUsuarios, type Estado, type PerfilCompleto, type UsuarioFila,
@@ -30,6 +31,9 @@ export function VistaUsuarios({ datos, perfiles, cargando, error, onCambio }: {
   const [modal, setModal] = useState<{ abierto: boolean; u: UsuarioFila | null }>({ abierto: false, u: null });
   const [trabajando, setTrabajando] = useState<string | null>(null);
   const [aviso, setAviso] = useState<{ tono: "ok" | "error"; texto: string } | null>(null);
+  const [verCupo, setVerCupo] = useState(false);
+  const cupo = datos?.cupo;
+  const lleno = cupoLleno(cupo);
 
   const usuarios = useMemo(() => datos?.usuarios ?? [], [datos]);
   const conteo = useMemo(() => {
@@ -50,6 +54,8 @@ export function VistaUsuarios({ datos, perfiles, cargando, error, onCambio }: {
   const admins = usuarios.filter((u) => u.activo && u.perfil_codigo === "ADMIN").length;
 
   async function activar(u: UsuarioFila, activo: boolean) {
+    // Reactivar con el cupo lleno: el aviso del plan (la base igual lo rechazaría).
+    if (activo && lleno) { setVerCupo(true); return; }
     setTrabajando(u.id);
     setAviso(null);
     try {
@@ -58,7 +64,9 @@ export function VistaUsuarios({ datos, perfiles, cargando, error, onCambio }: {
       onCambio();
       setAviso({ tono: "ok", texto: `${u.nombre} quedó ${activo ? "activo" : "desactivado"}.` });
     } catch (e) {
-      setAviso({ tono: "error", texto: (e as Error).message });
+      const msg = (e as Error).message;
+      if (RE_LIMITE_USUARIOS.test(msg) && cupo) { onCambio(); setVerCupo(true); }
+      else setAviso({ tono: "error", texto: msg });
     } finally {
       setTrabajando(null);
     }
@@ -146,10 +154,17 @@ export function VistaUsuarios({ datos, perfiles, cargando, error, onCambio }: {
           );
         })}
         </ScrollHorizontal>
-        <button type="button" onClick={() => setModal({ abierto: true, u: null })} disabled={!datos} className={`${BOTON_PRIMARIO} max-sm:order-first max-sm:min-h-11 max-sm:w-full sm:shrink-0`} style={{ backgroundColor: TEAL }}>
-          <Plus className="h-4 w-4" /> Nuevo usuario
-        </button>
+        <div className="flex items-center gap-2 max-sm:order-first max-sm:flex-col max-sm:items-stretch sm:shrink-0">
+          {cupo ? <span className="max-sm:order-2 max-sm:self-start"><IndicadorCupo cupo={cupo} /></span> : null}
+          <button type="button" onClick={() => setModal({ abierto: true, u: null })} disabled={!datos || lleno}
+            title={lleno ? "Llegaste al máximo de usuarios de tu plan" : undefined}
+            className={`${BOTON_PRIMARIO} max-sm:order-1 max-sm:min-h-11 max-sm:w-full disabled:cursor-not-allowed`} style={{ backgroundColor: TEAL }}>
+            <Plus className="h-4 w-4" /> Nuevo usuario
+          </button>
+        </div>
       </div>
+
+      {cupo && lleno ? <AvisoCupo cupo={cupo} /> : null}
 
       <BarraFiltros
         activos={filtrosActivos}
@@ -211,6 +226,7 @@ export function VistaUsuarios({ datos, perfiles, cargando, error, onCambio }: {
         <ModalUsuario usuario={modal.u} datos={datos} perfiles={perfiles}
           onClose={() => setModal({ abierto: false, u: null })} onGuardado={onCambio} />
       ) : null}
+      {verCupo && cupo ? <ModalCupoLleno cupo={cupo} onClose={() => setVerCupo(false)} /> : null}
     </div>
   );
 }

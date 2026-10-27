@@ -16,6 +16,7 @@ import { nivelLabel } from "@/modules/usuarios/permisos";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT, ModalDocumento } from "@/modules/inventario/ui";
 import { Historial } from "@/modules/usuarios/ui/Historial";
 import { VistaPrevia } from "@/modules/usuarios/ui/VistaPrevia";
+import { AvisoCupo, BotonSoporte, cupoLleno, RE_LIMITE_USUARIOS } from "@/modules/usuarios/ui/Cupo";
 import {
   api, copiar, estadoDe, fechaHora, haceCuanto, Interruptor, invalidarTodo, linkWhatsApp, PillEstado, TEAL,
   type DatosUsuarios, type PerfilCompleto, type UsuarioFila,
@@ -78,6 +79,9 @@ export function ModalUsuario({
   const perfilElegido = perfiles?.find((p) => p.id === f.perfil_id) ?? null;
   const admins = datos.usuarios.filter((u) => u.activo && u.perfil_codigo === "ADMIN").length;
   const esUltimoAdmin = !!usuario && usuario.activo && usuario.perfil_codigo === "ADMIN" && admins <= 1;
+  // Reactivar a un desactivado ocupa un lugar del plan: con el cupo lleno no se puede.
+  const sinLugar = !!usuario && !usuario.activo && cupoLleno(datos.cupo);
+  const errorLimite = !!error && RE_LIMITE_USUARIOS.test(error);
   const sucursales = datos.sucursales.filter((s) => s.activa || s.id === f.sucursal_id);
   const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email.trim());
   const listo = f.nombres.trim().length > 0 && !!f.perfil_id && (!nuevo || emailValido);
@@ -307,9 +311,11 @@ export function ModalUsuario({
             {usuario ? (
               <section className="space-y-2">
                 <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Estado</h3>
-                <Interruptor checked={f.activo} disabled={usuario.es_yo || esUltimoAdmin} onChange={(v) => set("activo", v)}
+                <Interruptor checked={f.activo} disabled={usuario.es_yo || esUltimoAdmin || sinLugar} onChange={(v) => set("activo", v)}
                   label={f.activo ? "Activo: puede entrar" : "Desactivado: no puede entrar"}
-                  detalle={usuario.es_yo ? "No podés desactivar tu propio usuario." : esUltimoAdmin ? "Es el único administrador: no se puede desactivar." : "Desactivarlo le corta el acceso al instante. Su historial queda."} />
+                  detalle={usuario.es_yo ? "No podés desactivar tu propio usuario." : esUltimoAdmin ? "Es el único administrador: no se puede desactivar."
+                    : sinLugar ? "No hay lugares libres en tu plan para activarlo." : "Desactivarlo le corta el acceso al instante. Su historial queda."} />
+                {sinLugar && datos.cupo ? <AvisoCupo cupo={datos.cupo} /> : null}
               </section>
             ) : null}
 
@@ -343,7 +349,12 @@ export function ModalUsuario({
               </section>
             ) : null}
 
-            {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
+            {error ? (
+              <div className="flex flex-col gap-2 rounded-lg bg-rose-50 p-2.5 sm:flex-row sm:items-center">
+                <p className="min-w-0 flex-1 text-xs text-rose-700">{error}</p>
+                {errorLimite ? <BotonSoporte className="sm:shrink-0 max-sm:w-full" /> : null}
+              </div>
+            ) : null}
 
             {usuario ? (
               <section>
