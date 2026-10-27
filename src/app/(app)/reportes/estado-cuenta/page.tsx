@@ -68,7 +68,7 @@ function EstadoDeCuenta() {
           {d.ventas.productos_sin_costo ? (
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800 sm:px-4">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span className="min-w-0 flex-1 max-sm:basis-[calc(100%-1.5rem)]">{d.ventas.productos_sin_costo} producto(s) se vendieron sin costo cargado: el margen está sobreestimado.</span>
+              <span className="min-w-0 flex-1 max-sm:basis-[calc(100%-1.5rem)]">{d.ventas.productos_sin_costo} {Number(d.ventas.productos_sin_costo) === 1 ? "producto se vendió" : "productos se vendieron"} sin costo cargado: el margen está sobreestimado.</span>
               <Link href={`/reportes/ventas?desde=${d.desde}&hasta=${d.hasta}`} className="ml-auto inline-flex items-center font-semibold underline max-sm:-mb-2 max-sm:ml-6 max-sm:min-h-11">Corregir costos</Link>
             </p>
           ) : null}

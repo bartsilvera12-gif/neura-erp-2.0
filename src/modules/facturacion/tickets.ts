@@ -252,7 +252,9 @@ export type DatosTicketVenta = {
   cajero?: string | null;
   cliente: { nombre: string; documento?: string | null };
   /** Receta 73: `detalle` = modificadores del plato en chico (extras con su precio). */
-  items: { nombre: string; cantidad: number; precio: number; total: number; detalle?: string | null }[];
+  /** `precioLista`: precio unitario de lista cuando se vendió más barato (descuento del producto
+   *  o precio manual menor): se muestra tachado y una línea "Desc. 10 %: −Gs. 2.600". */
+  items: { nombre: string; cantidad: number; precio: number; total: number; detalle?: string | null; precioLista?: number | null }[];
   subtotal: number;
   iva: number;
   total: number;
@@ -279,9 +281,16 @@ export function papelTicketVenta(cfg: ConfigTicketVenta, d: DatosTicketVenta): s
   const cajero = cfg.mostrar_cajero ? (d.cajero ?? "").trim() : "";
 
   const filas = d.items
-    .map((it) => `<tr><td class="qty"><strong>${it.cantidad}×</strong></td><td>${escHtml(it.nombre)}</td><td class="amt">${gs(it.total)}</td></tr>
-        <tr class="sub"><td></td><td colspan="2">${it.cantidad} × ${gs(it.precio)}</td></tr>${(it.detalle ?? "").trim() ? `
-        <tr class="sub"><td></td><td colspan="2">${escHtml((it.detalle ?? "").trim())}</td></tr>` : ""}`)
+    .map((it) => {
+      const lista = Number(it.precioLista) || 0;
+      const conDesc = lista > it.precio + 0.5;
+      const desc = conDesc ? Math.round((lista - it.precio) * it.cantidad) : 0;
+      const pct = conDesc ? Math.round((1 - it.precio / lista) * 1000) / 10 : 0;
+      return `<tr><td class="qty"><strong>${it.cantidad}×</strong></td><td>${escHtml(it.nombre)}</td><td class="amt">${gs(it.total)}</td></tr>
+        <tr class="sub"><td></td><td colspan="2">${it.cantidad} × ${conDesc ? `<s>${gs(lista)}</s> ` : ""}${gs(it.precio)}</td></tr>${conDesc ? `
+        <tr class="sub"><td></td><td colspan="2">Desc. ${pct.toLocaleString("es-PY")} %: −${gs(desc)}</td></tr>` : ""}${(it.detalle ?? "").trim() ? `
+        <tr class="sub"><td></td><td colspan="2">${escHtml((it.detalle ?? "").trim())}</td></tr>` : ""}`;
+    })
     .join("");
 
   const filasPago = !cfg.mostrar_pago
@@ -419,13 +428,13 @@ export function ejemploTicketVenta(empresa: EmpresaTicket): DatosTicketVenta {
     cliente: { nombre: "Juan Pérez", documento: "RUC: 4567890-1" },
     items: [
       { nombre: "Hamburguesa completa", cantidad: 2, precio: 35000, total: 70000, detalle: "sin cebolla · + extra queso (Gs. 5.000) · a punto" },
-      { nombre: "Gaseosa 500 ml", cantidad: 2, precio: 8000, total: 16000 },
+      { nombre: "Gaseosa 500 ml", cantidad: 2, precio: 7200, total: 14400, precioLista: 8000 },
       { nombre: "Papas fritas", cantidad: 1, precio: 15000, total: 15000 },
     ],
-    subtotal: 91818,
-    iva: 9182,
-    total: 101000,
-    pago: { detalle: [{ etiqueta: "Efectivo", monto: 101000, recibido: 150000, vuelto: 49000, efectivo: true }] },
+    subtotal: 90364,
+    iva: 9036,
+    total: 99400,
+    pago: { detalle: [{ etiqueta: "Efectivo", monto: 99400, recibido: 150000, vuelto: 50600, efectivo: true }] },
   };
 }
 

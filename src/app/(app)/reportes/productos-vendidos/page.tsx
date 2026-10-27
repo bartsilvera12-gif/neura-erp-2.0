@@ -239,7 +239,7 @@ function Contenido() {
           <Boxes className="h-4 w-4" style={{ color: TEAL }} />
           <h2 className="text-[15px] font-bold text-slate-800">{modo === "resumido" ? "Resumen por producto" : "Detalle de ventas"}</h2>
           {cargando ? <Loader2 className="h-4 w-4 animate-spin" style={{ color: TEAL }} /> : (
-            <span className="text-xs text-slate-400">{modo === "resumido" ? `${items.length} producto${items.length === 1 ? "" : "s"}` : `${num(totalLineas)} línea(s)`}</span>
+            <span className="text-xs text-slate-400">{modo === "resumido" ? `${items.length} producto${items.length === 1 ? "" : "s"}` : `${num(totalLineas)} línea${Number(totalLineas) === 1 ? "" : "s"}`}</span>
           )}
         </div>
 

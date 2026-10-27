@@ -12,7 +12,7 @@
  * (pago mixto) · Enter confirma · Esc cancela.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Banknote, CreditCard, Landmark, Loader2, Plus, QrCode, ScrollText, Trash2, Wallet } from "lucide-react";
+import { Banknote, CreditCard, FileText, Landmark, Loader2, Plus, QrCode, ReceiptText, ScrollText, Trash2, Wallet } from "lucide-react";
 import MontoInput from "@/components/ui/MontoInput";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -47,12 +47,16 @@ function sugerencias(monto: number): number[] {
   return [...out].sort((a, b) => a - b).slice(0, 4);
 }
 
-export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, cobrando, error, onClose, onConfirmar }: {
+export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, documento, imprimir = true, cobrando, error, onClose, onConfirmar }: {
   total: number;
   cantItems: number;
   tipoVenta: "CONTADO" | "CREDITO";
   plazoDias: number;
   cliente: Cliente | null;
+  /** qué se emite: factura (a nombre de… con RUC) o solo ticket; se muestra como chip arriba */
+  documento?: { tipo: "factura"; nombre: string; ruc: string | null } | { tipo: "ticket" };
+  /** Receta 71 (`ticket_venta.imprimir_al_cobrar`): si está apagado, el botón dice solo "Cobrar" */
+  imprimir?: boolean;
   cobrando: boolean;
   error: string | null;
   onClose: () => void;
@@ -199,7 +203,22 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, co
         {/* Total */}
         <div className="flex shrink-0 items-end justify-between gap-4 px-4 pb-3 pt-3 sm:px-6 sm:pb-4 sm:pt-5" style={{ background: `linear-gradient(to right, ${TEAL}14, transparent)` }}>
           <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEAL }}>{tipoVenta === "CREDITO" ? "Venta a crédito" : "Cobrar"}</p>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em]" style={{ color: TEAL }}>{tipoVenta === "CREDITO" ? "Venta a crédito" : "Cobrar"}</p>
+              {documento ? (
+                documento.tipo === "factura" ? (
+                  <span className="inline-flex max-w-full items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-indigo-200"
+                    title={`Factura a ${documento.nombre}${documento.ruc ? ` · RUC ${documento.ruc}` : ""}`}>
+                    <FileText className="h-3 w-3 shrink-0" />
+                    <span className="truncate">Factura{!cliente && documento.nombre ? <span className="font-medium"> a {documento.nombre}</span> : null}{documento.ruc ? <span className="font-medium"> · RUC {documento.ruc}</span> : null}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600 ring-1 ring-slate-200">
+                    <ReceiptText className="h-3 w-3 shrink-0" /> Ticket
+                  </span>
+                )
+              ) : null}
+            </div>
             <p className="mt-0.5 truncate text-xs text-slate-500">{cantItems} ítem{cantItems === 1 ? "" : "s"}{cliente ? ` · ${cliente.nombre}` : ""}</p>
           </div>
           <p className="shrink-0 text-[28px] font-extrabold leading-none tabular-nums tracking-tight text-slate-900 sm:text-3xl">{formatGs(total)}</p>
@@ -337,7 +356,7 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, co
             <button type="button" onClick={confirmar} disabled={cobrando || !!problema}
               className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 max-lg:min-h-12 max-lg:flex-[2] max-lg:text-base" style={{ backgroundColor: TEAL }}>
               {cobrando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              {cobrando ? "Registrando…" : tipoVenta === "CREDITO" ? "Confirmar crédito e imprimir" : "Cobrar e imprimir"}
+              {cobrando ? "Registrando…" : tipoVenta === "CREDITO" ? (imprimir ? "Confirmar crédito e imprimir" : "Confirmar crédito") : imprimir ? "Cobrar e imprimir" : "Cobrar"}
             </button>
           </div>
         </div>

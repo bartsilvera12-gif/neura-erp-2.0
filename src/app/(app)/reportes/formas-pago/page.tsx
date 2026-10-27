@@ -131,7 +131,7 @@ function FormasDePago() {
           {d.totales.productos_sin_costo ? (
             <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-sm text-amber-800 sm:px-4">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span className="min-w-0 flex-1 max-sm:basis-[calc(100%-1.5rem)]">{d.totales.productos_sin_costo} venta(s) tienen productos sin costo cargado: la ganancia está sobreestimada.</span>
+              <span className="min-w-0 flex-1 max-sm:basis-[calc(100%-1.5rem)]">{d.totales.productos_sin_costo} {Number(d.totales.productos_sin_costo) === 1 ? "venta tiene" : "ventas tienen"} productos sin costo cargado: la ganancia está sobreestimada.</span>
               <Link href={`/reportes/ventas?desde=${d.desde}&hasta=${d.hasta}`} className="ml-auto inline-flex items-center font-semibold underline max-sm:-mb-2 max-sm:ml-6 max-sm:min-h-11">Corregir costos</Link>
             </p>
           ) : null}
@@ -144,7 +144,7 @@ function FormasDePago() {
               </div>
             )}
             <div className="mt-4 space-y-1">
-              {d.totales.mixtas ? <Nota>{num(d.totales.mixtas)} venta(s) se pagaron con más de un medio: cada medio suma lo que se pagó con él y el costo de la venta se reparte en la misma proporción (por eso la cantidad de ventas de los medios suma más que el total).</Nota> : null}
+              {d.totales.mixtas ? <Nota>{num(d.totales.mixtas)} {Number(d.totales.mixtas) === 1 ? "venta se pagó" : "ventas se pagaron"} con más de un medio: cada medio suma lo que se pagó con él y el costo de la venta se reparte en la misma proporción (por eso la cantidad de ventas de los medios suma más que el total).</Nota> : null}
               <Nota>La venta a crédito va aparte: lo que se cobre de esas cuentas aparece abajo, en “Plata que entró por medio”. Ventas anuladas fuera del total: {num(d.anuladas.cantidad)} por {gs(d.anuladas.total)}.</Nota>
             </div>
           </Tarjeta>
@@ -183,7 +183,7 @@ function FormasDePago() {
                 pie={["Total", gs(d.totales.contado), gs(d.cobros.total), gs(x.ingresoTotal)]}
                 vacio="No entró plata en el período." />
             </div>
-            <div className="mt-4"><Nota>{num(d.cobros.cantidad)} cobro(s) de créditos en el período. {d.sucursal_id ? "Con sucursal elegida: lo cobrado de ventas de esa sucursal." : ""}</Nota></div>
+            <div className="mt-4"><Nota>{num(d.cobros.cantidad)} {Number(d.cobros.cantidad) === 1 ? "cobro" : "cobros"} de créditos en el período. {d.sucursal_id ? "Con sucursal elegida: lo cobrado de ventas de esa sucursal." : ""}</Nota></div>
           </Tarjeta>
         </>
       )}

@@ -63,8 +63,8 @@ export function CorregirCostos({
         }),
       });
       onListo(
-        `Costo cargado en ${r.productos_actualizados} producto(s)` +
-          (completar ? ` y completado en ${r.lineas_completadas} línea(s) de ventas pasadas.` : "."),
+        `Costo cargado en ${r.productos_actualizados} producto${Number(r.productos_actualizados) === 1 ? "" : "s"}` +
+          (completar ? ` y completado en ${r.lineas_completadas} línea${Number(r.lineas_completadas) === 1 ? "" : "s"} de ventas pasadas.` : "."),
       );
     } catch (e) {
       setError((e as Error).message);

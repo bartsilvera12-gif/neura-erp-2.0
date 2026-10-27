@@ -240,7 +240,7 @@ function NuevaCompra() {
           if (i < 0) return ls;
           const l = ls[i] as LineaGasto;
           const c = indice.get(u.categoria_id!);
-          const n: LineaGasto = { ...l, categoria_id: u.categoria_id, iva_tipo: u.iva_tipo ?? l.iva_tipo, descripcion: l.descripcion || u.descripcion || c?.nombre || "", deducible: c?.deducible_iva ?? true };
+          const n: LineaGasto = { ...l, categoria_id: u.categoria_id, iva_tipo: u.iva_tipo ?? l.iva_tipo, descripcion: l.descripcion || u.descripcion || "", deducible: c?.deducible_iva ?? true };
           return ls.map((x, j) => (j === i ? n : x));
         });
       }
@@ -471,7 +471,7 @@ function NuevaCompra() {
           })),
           gastos: gastos.map((l) => ({
             categoria_id: l.categoria_id,
-            descripcion: l.descripcion.trim(),
+            // vacía = el nombre de la categoría (se muestra como sugerencia en el campo)
             monto: Number(l.monto) || 0,
             iva_tipo: ivaGasto(l),
             deducible: dedGasto(l),
@@ -922,7 +922,6 @@ function LineaGastoCard({ l, n, moneda, factor, conComprobante, cat, indice, emp
     const x = indice.get(id);
     onCambiar({
       categoria_id: id || null,
-      descripcion: l.descripcion.trim() ? l.descripcion : x?.nombre ?? "",
       iva_tipo: x && !x.deducible_iva && x.es_personal && l.iva_tipo === "10%" ? "exenta" : l.iva_tipo,
       empleado_id: x?.es_personal ? l.empleado_id : null,
       deducible: x?.deducible_iva ?? true,

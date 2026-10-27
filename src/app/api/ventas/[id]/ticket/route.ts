@@ -47,7 +47,7 @@ export const GET = withTenant(async (ctx, req) => {
       "ventas",
       "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, metodo_pago, cliente_id, usuario_nombre, " +
         "tipo_documento, receptor_nombre, receptor_ruc, receptor_ocasional, " +
-        `ventas_items(producto_nombre, sku, cantidad, precio_venta, tipo_iva, monto_iva, total_linea${mods ? ", modificadores, modificadores_texto" : ""}), ` +
+        `ventas_items(producto_nombre, sku, cantidad, precio_venta, precio_venta_original, tipo_iva, monto_iva, total_linea${mods ? ", modificadores, modificadores_texto, precio_mods" : ""}), ` +
         "pagos:ventas_pagos_detalle(metodo_pago, monto, referencia, recibido, vuelto, created_at), " +
         "punto:puntos_venta(nombre), sucursal:sucursales(nombre), " +
         "cliente:clientes!cliente_id(nombre, razon_social, ruc, documento)",
@@ -93,6 +93,8 @@ export const GET = withTenant(async (ctx, req) => {
       nombre: String(it.producto_nombre ?? ""),
       cantidad: Number(it.cantidad) || 0,
       precio: Number(it.precio_venta) || 0,
+      // Descuento (del producto o precio manual menor): el de lista (+ los extras del plato) tachado.
+      precioLista: Number(it.precio_venta_original) > 0 ? Number(it.precio_venta_original) + (Number(it.precio_mods) || 0) : null,
       total: Number(it.total_linea) || 0,
       // Receta 73: modificadores del plato debajo, en chico (extras con su precio).
       detalle: textoConPrecios(it.modificadores as ModsSnapshot | null) || (it.modificadores_texto as string | null) || null,

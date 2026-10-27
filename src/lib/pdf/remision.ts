@@ -103,7 +103,7 @@ export async function pdfRemision(t: TrasladoDetalle, empresa?: DatosEmpresa | n
     margin: { left: M, right: M, bottom: 16 },
     head: [head],
     body,
-    foot: [["", "", `${t.items.length} producto(s)`, "", "TOTAL", cant(totalEnv), ...(recibido ? [cant(totalRec)] : [])]],
+    foot: [["", "", `${t.items.length} producto${t.items.length === 1 ? "" : "s"}`, "", "TOTAL", cant(totalEnv), ...(recibido ? [cant(totalRec)] : [])]],
     theme: "grid",
     styles: { font: "helvetica", fontSize: 8.2, cellPadding: { top: 1.8, bottom: 1.8, left: 2, right: 2 }, lineColor: [220, 220, 220], lineWidth: 0.2, textColor: COLOR.negro, valign: "middle" },
     headStyles: { fillColor: [244, 247, 247], textColor: COLOR.teal, fontStyle: "bold", fontSize: 7 },
@@ -125,7 +125,7 @@ export async function pdfRemision(t: TrasladoDetalle, empresa?: DatosEmpresa | n
 
   if (recibido && Number(t.diferencia_unidades) > 0) {
     doc.setFont("helvetica", "bold").setFontSize(8.5).setTextColor(...COLOR.ambar);
-    const txt = doc.splitTextToSize(pdfTxt(`Diferencia en la recepción: ${cant(t.diferencia_unidades)} unidad(es) (Gs. ${gs(t.diferencia_valor)} al costo). Motivo: ${t.diferencia_motivo ?? "—"}`), W) as string[];
+    const txt = doc.splitTextToSize(pdfTxt(`Diferencia en la recepción: ${cant(t.diferencia_unidades)} ${Math.abs(Number(t.diferencia_unidades)) === 1 ? "unidad" : "unidades"} (Gs. ${gs(t.diferencia_valor)} al costo). Motivo: ${t.diferencia_motivo ?? "—"}`), W) as string[];
     doc.text(txt, M, y);
     y += txt.length * 4.2 + 3;
   }

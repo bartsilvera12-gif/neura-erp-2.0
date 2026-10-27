@@ -25,7 +25,7 @@ export async function pdfCierreDia(d: CierreDiaDetalle, empresa?: DatosEmpresa |
   const t = d.totales;
 
   y = kpisPdf(doc, y, [
-    { label: "Total vendido", valor: g(t.total_vendido), sub: `${gs(t.cantidad_ventas)} ventas · ${t.turnos} turno(s)`, color: COLOR.teal },
+    { label: "Total vendido", valor: g(t.total_vendido), sub: `${gs(t.cantidad_ventas)} ${Number(t.cantidad_ventas) === 1 ? "venta" : "ventas"} · ${t.turnos} ${Number(t.turnos) === 1 ? "turno" : "turnos"}`, color: COLOR.teal },
     { label: "Contado", valor: g(t.ventas_contado) },
     { label: "Crédito", valor: g(t.ventas_credito) },
     { label: "Cobros de cuentas", valor: g(t.cobros) },

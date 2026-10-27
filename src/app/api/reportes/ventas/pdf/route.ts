@@ -93,7 +93,7 @@ export const GET = withTenant(
     if (k.productos_sin_costo) {
       doc.setFillColor(255, 251, 235).rect(M, y - 3.5, W, 6.5, "F");
       doc.setFont("helvetica", "bold").setFontSize(7.6).setTextColor(...COLOR.ambar);
-      doc.text(pdfTxt(`Atención: ${k.productos_sin_costo} producto(s) se vendieron sin costo cargado; su ganancia figura como el total de la venta.`), M + 2, y + 0.6);
+      doc.text(pdfTxt(`Atención: ${k.productos_sin_costo} ${Number(k.productos_sin_costo) === 1 ? "producto se vendió" : "productos se vendieron"} sin costo cargado; su ganancia figura como el total de la venta.`), M + 2, y + 0.6);
       y += 8;
     }
 

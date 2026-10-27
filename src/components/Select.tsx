@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Search } from "lucide-react";
+import { filtrar, normalizar } from "@/lib/busqueda";
 import { clienteConfig } from "@/cliente.config";
 import { HojaInferior } from "@/components/HojaInferior";
 import { useEsMovil } from "@/lib/ui/responsive";
@@ -32,7 +33,10 @@ export function Select({
   chip = false,
   prefijo,
   textoVacio,
+  buscador,
 }: {
+  /** campo "Buscar…" arriba de la lista; por defecto, solo con más de 8 opciones */
+  buscador?: boolean;
   /** "chip" de barra de filtros (38 px, texto 13 px, "Prefijo: valor"); se resalta con el color
    *  de marca cuando el valor no es la primera opción ("Todos…"). Ver `prefijo` / `textoVacio`. */
   chip?: boolean;
@@ -64,6 +68,51 @@ export function Select({
   const lista = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState<{ left: number; width: number; top?: number; bottom?: number; maxH: number } | null>(null);
   const current = options.find((o) => o[0] === value) ?? options[0];
+  const boton = useRef<HTMLButtonElement>(null);
+  const campo = useRef<HTMLInputElement>(null);
+  // Listas largas: buscador arriba (búsqueda inteligente: tildes, errores de tipeo, plural).
+  const conBuscador = buscador ?? options.length > 8;
+  const [q, setQ] = useState("");
+  const visibles = useMemo(
+    () => (conBuscador && q.trim() ? filtrar(options, q, (o) => ({ principal: o[1] })) : options),
+    [conBuscador, q, options],
+  );
+  const abiertoConTecla = useRef(false);
+
+  /** Abre la lista (con `texto` si se abrió escribiendo) y resalta la elegida o la 1.ª coincidencia. */
+  function abrir(texto = "") {
+    abiertoConTecla.current = !!texto;
+    setQ(texto);
+    if (texto) {
+      setHi(0);
+    } else {
+      setHi(Math.max(0, options.findIndex((o) => o[0] === value)));
+    }
+    setOpen(true);
+  }
+  function cerrar(volverFoco = false) {
+    setOpen(false);
+    setQ("");
+    if (volverFoco) boton.current?.focus();
+  }
+  function elegir(v: string) {
+    onChange(v);
+    cerrar(true);
+  }
+
+  // Foco al buscador al abrir (en celular solo si se abrió escribiendo, para no tapar con el teclado).
+  useEffect(() => {
+    if (!open || !conBuscador) return;
+    if (esMovil && !abiertoConTecla.current) return;
+    const t = window.setTimeout(() => campo.current?.focus(), esMovil ? 60 : 0);
+    return () => window.clearTimeout(t);
+  }, [open, conBuscador, esMovil]);
+
+  // La opción resaltada con el teclado siempre a la vista.
+  useEffect(() => {
+    if (!open || hi < 0) return;
+    lista.current?.querySelector<HTMLElement>(`[data-idx="${hi}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [hi, open]);
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -82,13 +131,13 @@ export function Select({
     const margen = 8;
     const abajo = window.innerHeight - r.bottom - margen;
     const arriba = r.top - margen;
-    const alto = Math.min(320, options.length * 38 + 10);
+    const alto = Math.min(320, options.length * 38 + 10 + (conBuscador ? 46 : 0));
     if (abajo >= Math.min(alto, 180) || abajo >= arriba) {
       setPos({ left: r.left, width: r.width, top: r.bottom + 6, maxH: Math.max(120, abajo - 6) });
     } else {
       setPos({ left: r.left, width: r.width, bottom: window.innerHeight - r.top + 6, maxH: Math.max(120, arriba - 6) });
     }
-  }, [options.length]);
+  }, [options.length, conBuscador]);
   useLayoutEffect(() => {
     if (!open || esMovil) return;
     ubicar();
@@ -111,21 +160,73 @@ export function Select({
   }, [open, pos != null, esMovil]);
 
   // Navegación por teclado (combobox): ↑/↓ mueven, Enter elige, Esc cierra.
+  function mover(e: React.KeyboardEvent) {
+    e.preventDefault();
+    const n = visibles.length;
+    if (!n) return;
+    setHi((h) => (e.key === "ArrowDown" ? (h + 1) % n : (h - 1 + n) % n));
+  }
   function onTriggerKey(e: React.KeyboardEvent) {
     if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-      e.preventDefault();
-      if (!open) { setOpen(true); setHi(Math.max(0, options.findIndex((o) => o[0] === value))); return; }
-      setHi((h) => {
-        const n = options.length;
-        return e.key === "ArrowDown" ? (h + 1) % n : (h - 1 + n) % n;
-      });
+      if (!open) { e.preventDefault(); abrir(); return; }
+      mover(e);
     } else if (e.key === "Enter" || e.key === " ") {
-      if (open && hi >= 0) { e.preventDefault(); onChange(options[hi][0]); setOpen(false); }
+      if (open && hi >= 0 && visibles[hi]) { e.preventDefault(); elegir(visibles[hi][0]); }
       // si está cerrado, el click nativo del botón lo abre
     } else if (e.key === "Escape") {
-      if (open) { e.preventDefault(); e.stopPropagation(); setOpen(false); }
+      if (open) { e.preventDefault(); e.stopPropagation(); cerrar(); }
+    } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey && !disabled) {
+      // Escribir con el select enfocado: con buscador lo abre filtrando; sin él, salta a la
+      // primera opción que empieza con esa letra.
+      if (conBuscador) {
+        e.preventDefault();
+        if (!open) abrir(e.key);
+        else { setQ((x) => x + e.key); setHi(0); campo.current?.focus(); }
+      } else {
+        const l = normalizar(e.key);
+        const i = options.findIndex((o) => normalizar(o[1]).startsWith(l));
+        if (i >= 0) { e.preventDefault(); if (!open) setOpen(true); setHi(i); }
+      }
     }
   }
+  function onBuscarKey(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") mover(e);
+    else if (e.key === "Enter") {
+      e.preventDefault();
+      if (visibles[hi]) elegir(visibles[hi][0]);
+    } else if (e.key === "Escape") {
+      e.preventDefault(); e.stopPropagation(); cerrar(true);
+    } else if (e.key === "Tab") {
+      cerrar(true);
+    }
+  }
+
+  /** Campo "Buscar…" arriba de la lista (fijo al scrollear). */
+  function campoBuscar(movil: boolean) {
+    if (!conBuscador) return null;
+    return (
+      <div className={`sticky top-0 z-[1] bg-white ${movil ? "px-2 pb-1 pt-2" : "p-1 pb-1.5"}`}>
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            ref={campo}
+            type="text"
+            value={q}
+            onChange={(e) => { setQ(e.target.value); setHi(0); }}
+            onKeyDown={onBuscarKey}
+            placeholder="Buscar…"
+            aria-label={etiqueta ? `Buscar ${etiqueta.toLowerCase()}` : "Buscar"}
+            autoComplete="off"
+            spellCheck={false}
+            className={`w-full rounded-lg border border-slate-200 bg-slate-50 pl-8 pr-2.5 text-slate-800 outline-none placeholder:text-slate-400 focus:border-[var(--brand)] focus:bg-white ${movil ? "h-11 text-base" : "h-9 text-sm"}`}
+          />
+        </div>
+      </div>
+    );
+  }
+  const sinResultados = conBuscador && !visibles.length
+    ? <p className="px-3 py-3 text-center text-sm text-slate-400">Sin resultados</p>
+    : null;
 
   // Chip: activo = no está en la primera opción (la de "Todos…").
   const chipActivo = chip && value !== (options[0]?.[0] ?? "");
@@ -138,7 +239,8 @@ export function Select({
         <button
           type="button"
           disabled={disabled}
-          onClick={() => setOpen((v) => { const n = !v; if (n) setHi(Math.max(0, options.findIndex((o) => o[0] === value))); return n; })}
+          ref={boton}
+          onClick={() => (open ? cerrar() : abrir())}
           onKeyDown={onTriggerKey}
           aria-haspopup="listbox"
           aria-expanded={open}
@@ -162,7 +264,8 @@ export function Select({
       <button
         type="button"
         disabled={disabled}
-        onClick={() => setOpen((v) => { const n = !v; if (n) setHi(Math.max(0, options.findIndex((o) => o[0] === value))); return n; })}
+        ref={boton}
+          onClick={() => (open ? cerrar() : abrir())}
         onKeyDown={onTriggerKey}
         aria-haspopup="listbox"
         aria-expanded={open}
@@ -182,20 +285,23 @@ export function Select({
     return (
     <>
       {open && !disabled && esMovil ? (
-        <HojaInferior titulo={etiqueta ?? "Elegí una opción"} onClose={() => setOpen(false)} z="z-[200]" sinPadding panelRef={lista}>
+        <HojaInferior titulo={etiqueta ?? "Elegí una opción"} onClose={() => cerrar()} z="z-[200]" sinPadding panelRef={lista}>
+          {campoBuscar(true)}
           <div role="listbox" aria-label={etiqueta} className="p-2">
-            {options.map(([v, label]) => {
+            {visibles.map(([v, label], idx) => {
               const sel = v === value;
+              const activo = conBuscador && q.trim() !== "" && idx === hi;
               return (
-                <button key={v} type="button" role="option" aria-selected={sel}
-                  onClick={() => { onChange(v); setOpen(false); }}
+                <button key={v} type="button" role="option" aria-selected={sel} data-idx={idx}
+                  onClick={() => elegir(v)}
                   className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-xl px-3.5 text-left text-[15px] transition-colors active:bg-slate-100 ${sel ? "font-semibold" : "text-slate-700"}`}
-                  style={sel ? { backgroundColor: "var(--brand-50)", color: BRAND } : undefined}>
+                  style={sel ? { backgroundColor: "var(--brand-50)", color: BRAND } : activo ? { backgroundColor: "#f1f5f9" } : undefined}>
                   <span className="min-w-0 break-words py-2">{label}</span>
                   {sel ? <Check className="h-5 w-5 shrink-0" /> : null}
                 </button>
               );
             })}
+            {sinResultados}
           </div>
         </HojaInferior>
       ) : null}
@@ -203,33 +309,37 @@ export function Select({
       {open && !disabled && !esMovil && pos && typeof document !== "undefined" ? createPortal(
         <div
           ref={lista}
-          className="fixed z-[200] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_-8px_rgba(2,48,71,0.25)]"
+          className={`fixed z-[200] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white shadow-[0_12px_32px_-8px_rgba(2,48,71,0.25)] ${conBuscador ? "" : "p-1"}`}
           style={{
             // Si la lista es más ancha que el botón (chips), no se sale por la derecha.
-            left: Math.max(8, Math.min(pos.left, window.innerWidth - Math.max(pos.width, minWidth ?? 0) - 8)), width: Math.max(pos.width, minWidth ?? 0), top: pos.top, bottom: pos.bottom, maxHeight: pos.maxH,
+            left: Math.max(8, Math.min(pos.left, window.innerWidth - Math.max(pos.width, minWidth ?? 0, conBuscador ? 220 : 0) - 8)), width: Math.max(pos.width, minWidth ?? 0, conBuscador ? 220 : 0), top: pos.top, bottom: pos.bottom, maxHeight: pos.maxH,
             transformOrigin: pos.top != null ? "top" : "bottom", animation: "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)",
           }}
-          role="listbox"
         >
-          {options.map(([v, label], idx) => {
-            const sel = v === value;
-            const activo = idx === hi;
-            return (
-              <button
-                key={v}
-                type="button"
-                role="option"
-                aria-selected={sel}
-                onMouseEnter={() => setHi(idx)}
-                onClick={() => { onChange(v); setOpen(false); }}
-                className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-sm transition-colors"
-                style={sel ? { backgroundColor: "var(--brand-50)", color: BRAND, fontWeight: 500 } : activo ? { backgroundColor: "#f1f5f9", color: "#475569" } : { color: "#475569" }}
-              >
-                <span className="truncate">{label}</span>
-                {sel ? <Check className="h-4 w-4 shrink-0" /> : null}
-              </button>
-            );
-          })}
+          {campoBuscar(false)}
+          <div role="listbox" aria-label={etiqueta} className={conBuscador ? "px-1 pb-1" : ""}>
+            {visibles.map(([v, label], idx) => {
+              const sel = v === value;
+              const activo = idx === hi;
+              return (
+                <button
+                  key={v}
+                  type="button"
+                  role="option"
+                  aria-selected={sel}
+                  data-idx={idx}
+                  onMouseEnter={() => setHi(idx)}
+                  onClick={() => elegir(v)}
+                  className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors"
+                  style={sel ? { backgroundColor: "var(--brand-50)", color: BRAND, fontWeight: 500, boxShadow: activo ? `inset 0 0 0 1px color-mix(in srgb, ${BRAND} 35%, white)` : undefined } : activo ? { backgroundColor: "#f1f5f9", color: "#475569" } : { color: "#475569" }}
+                >
+                  <span className="truncate">{label}</span>
+                  {sel ? <Check className="h-4 w-4 shrink-0" /> : null}
+                </button>
+              );
+            })}
+            {sinResultados}
+          </div>
         </div>,
         document.body,
       ) : null}

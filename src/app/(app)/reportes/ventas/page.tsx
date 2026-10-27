@@ -203,7 +203,7 @@ function Contenido() {
         <div className={`space-y-6 transition-opacity ${cargando ? "opacity-60" : ""}`}>
           {/* Números clave */}
           <FilaKpis n={5}>
-            <Kpi accent label="Ventas netas" value={gs(k.ventas_netas)} hint={`${num(k.cantidad_ventas)} venta(s) · ${num(k.unidades)} unidades`} />
+            <Kpi accent label="Ventas netas" value={gs(k.ventas_netas)} hint={`${num(k.cantidad_ventas)} venta${Number(k.cantidad_ventas) === 1 ? "" : "s"} · ${num(k.unidades)} ${Number(k.unidades) === 1 ? "unidad" : "unidades"}`} />
             <Kpi label="Ticket promedio" value={gs(ticket)} hint="por venta" />
             <Kpi label="Ganancia bruta" value={gs(k.ganancia)} hint={`${pct(k.ganancia, k.ventas_netas)} sobre ventas`} valueClass={k.ganancia < 0 ? "text-red-600" : undefined} />
             <Kpi label="IVA incluido" value={gs(k.iva_total)} hint={(resumen.iva ?? []).map((t) => `${t.tipo === "EXENTA" ? "Exentas" : t.tipo} ${gs(t.total)}`).join(" · ") || "—"} />
@@ -214,7 +214,7 @@ function Contenido() {
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
               <span className="flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                <span><strong>{k.productos_sin_costo} producto(s) vendidos sin costo</strong> · la ganancia está sobreestimada</span>
+                <span><strong>{k.productos_sin_costo} {Number(k.productos_sin_costo) === 1 ? "producto vendido" : "productos vendidos"} sin costo</strong> · la ganancia está sobreestimada</span>
               </span>
               <button onClick={() => setCorrigiendo(true)} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-amber-700 max-sm:min-h-11 max-sm:w-full max-sm:text-sm">
                 Corregir costos
@@ -297,7 +297,7 @@ function Contenido() {
       )}
 
       {/* Detalle de ventas */}
-      <Tarjeta titulo="Detalle de ventas" extra={<span className="text-sm text-slate-400">{num(totalVentas)} venta(s)</span>}>
+      <Tarjeta titulo="Detalle de ventas" extra={<span className="text-sm text-slate-400">{num(totalVentas)} venta{Number(totalVentas) === 1 ? "" : "s"}</span>}>
         {/* Lista de ventas que se abren: tarjetas en celular, tabla desde 768 px. */}
         <div className={`transition-opacity ${cargandoDet ? "opacity-60" : ""} ${SANGRIA_TARJETAS}`}>
           <TablaTarjetas filas={ventas} claveFila={(v) => v.id} onFila={(v) => setViendo(v.id)} minAncho={960}

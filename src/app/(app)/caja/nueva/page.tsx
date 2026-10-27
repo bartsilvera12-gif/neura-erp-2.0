@@ -1193,10 +1193,11 @@ function CajaPageContenido() {
       {/* Turno abierto hace más de 24 h: se puede seguir vendiendo, pero el arqueo mezcla días. */}
       {caja ? <AvisoTurnoViejo fechaApertura={caja.fecha_apertura} onCerrar={() => setModalCaja("cerrar")} compacto className="shrink-0" /> : null}
 
-      {/* Venta registrada: en escritorio una franja; en celular / tablet un aviso flotante
-          sobre el pie fijo (se ve aunque se haya bajado por el carrito). */}
+      {/* Venta registrada: aviso FLOTANTE (no empuja el contenido: al irse no se corre nada y el
+          click no cae en otro lado). En celular / tablet va sobre el pie fijo; en escritorio,
+          arriba al centro, sobre la barra superior (no tapa el carrito ni el buscador). */}
       {ventaOk && (
-        <div role="status" className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 shadow-sm max-lg:fixed max-lg:inset-x-3 max-lg:bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] max-lg:z-40 max-lg:py-3 max-lg:pr-1.5 max-lg:shadow-xl sm:max-lg:mx-auto sm:max-lg:max-w-xl"
+        <div role="status" className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-medium text-emerald-800 shadow-xl fixed z-40 lg:top-3 lg:left-1/2 lg:z-50 lg:w-max lg:max-w-[min(40rem,calc(100vw-2rem))] lg:-translate-x-1/2 max-lg:inset-x-3 max-lg:bottom-[calc(env(safe-area-inset-bottom)+5.75rem)] max-lg:py-3 max-lg:pr-1.5 max-lg:shadow-xl sm:max-lg:mx-auto sm:max-lg:max-w-xl"
           style={{ animation: "fade-in 0.2s ease-out" }}>
           <CheckCircle2 className="h-5 w-5 shrink-0" />
           <span className="min-w-0 flex-1 lg:flex-none">Venta <strong>{ventaOk.numero}</strong> registrada.{ventaOk.impreso ? " Ticket enviado a imprimir." : null}</span>
@@ -1703,6 +1704,10 @@ function CajaPageContenido() {
       {/* Cobro: formas de pago (mixto, vuelto) o crédito */}
       {cobroOpen && (
         <CobroModal total={total} cantItems={cantTotal} tipoVenta={tipoVenta} plazoDias={plazoDiasNum} cliente={clienteSel}
+          documento={tipoDocumento === "factura"
+            ? { tipo: "factura", nombre: ocasional ? nombreOcasional : clienteSel?.nombre ?? "", ruc: ocasional ? rucOcasional : rucFactura }
+            : { tipo: "ticket" }}
+          imprimir={cfgFact?.ticket_venta?.imprimir_al_cobrar !== false}
           cobrando={cobrando} error={cobroError} onClose={() => { setCobroOpen(false); setCobroError(null); }}
           onConfirmar={(p) => void confirmarCobro(p)} />
       )}

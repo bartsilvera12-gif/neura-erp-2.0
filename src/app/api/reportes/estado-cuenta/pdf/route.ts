@@ -51,7 +51,7 @@ export const GET = withTenant(
     doc.text(`Anuladas fuera del total: ${d.anuladas.cantidad} por Gs. ${gs(d.anuladas.total)}.`, M, yi);
     yi += 4;
     if (d.ventas.productos_sin_costo) {
-      doc.setTextColor(...COLOR.ambar).text(`${d.ventas.productos_sin_costo} producto(s) vendidos sin costo: el margen está sobreestimado.`, M, yi);
+      doc.setTextColor(...COLOR.ambar).text(`${d.ventas.productos_sin_costo} ${Number(d.ventas.productos_sin_costo) === 1 ? "producto vendido" : "productos vendidos"} sin costo: el margen está sobreestimado.`, M, yi);
       yi += 4;
     }
 
