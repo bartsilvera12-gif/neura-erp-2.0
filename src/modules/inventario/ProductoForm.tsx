@@ -16,7 +16,8 @@ import { TIPOS_PRODUCTO, UNIDADES_MP, type ProductoInventario, type TipoProducto
 import { partesCategoria, type Categoria } from "@/modules/inventario/categorias";
 import { HistorialCostos } from "@/modules/inventario/HistorialCostos";
 import { StockDepositosProducto } from "@/modules/inventario/LotesProducto";
-import { useFuncion, useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { CostoPorCompra } from "@/modules/inventario/CostoPorCompra";
+import { useFuncion, usePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { SelectorProveedor } from "@/modules/proveedores/SelectorProveedor";
 import { opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
 import { loteAutomatico } from "@/modules/inventario/vencimientos";
@@ -72,6 +73,10 @@ export function ProductoForm({
 }) {
   const editando = !!producto;
   const esAdmin = useUsuario()?.rol === "ADMIN";
+  // Receta 79: "Costo por compra" (capas PEPS) muestra costos → "ver costos" (o "editar productos").
+  const permisoCostos = usePermiso("ver_costos");
+  const permisoEditar = usePermiso("editar_productos");
+  const verCostos = permisoCostos || permisoEditar;
   const soloLectura = producto?.activo === false;
   const [f, setF] = useState({
     nombre: producto?.nombre ?? inicial?.nombre ?? "",
@@ -262,7 +267,7 @@ export function ProductoForm({
           </p>
         ) : null}
 
-        <fieldset disabled={soloLectura} className="space-y-6 disabled:opacity-70">
+        <fieldset disabled={soloLectura} className="min-w-0 space-y-6 disabled:opacity-70">
           {/* ── Tipo de producto (receta 72) ─────────────────────────────── */}
           {mostrarTipo ? (
           <Bloque titulo="Tipo de producto">
@@ -577,6 +582,13 @@ export function ProductoForm({
           {editando && producto && producto.controla_stock && conStock ? (
             <Bloque titulo="Stock por depósito" extra={producto.controla_lotes ? <Link href="/inventario/vencimientos" className="text-xs font-semibold text-[var(--brand)] hover:underline">Ver vencimientos</Link> : null}>
               <StockDepositosProducto productoId={producto.id} unidad={producto.unidad_medida ?? "Unidad"} puedeEditar={esAdmin && !soloLectura} />
+            </Bloque>
+          ) : null}
+
+          {/* ── Costo por compra (capas PEPS, receta 79): cuánto queda de cada compra ── */}
+          {editando && producto && producto.controla_stock && conStock && verCostos ? (
+            <Bloque titulo="Costo por compra">
+              <CostoPorCompra productoId={producto.id} unidad={producto.unidad_medida ?? "Unidad"} />
             </Bloque>
           ) : null}
         </fieldset>
