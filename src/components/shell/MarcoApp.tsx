@@ -325,9 +325,13 @@ function NavMenu({
       {!cargando && q.trim() && familias.length === 0 ? (
         <p className="px-3 py-6 text-center text-sm text-slate-400">Nada coincide con “{q.trim()}”.</p>
       ) : null}
-      {familias.map(([fam, items]) => (
-        <div key={fam} className="mt-4">
-          {!collapsed ? (
+      {familias.map(([fam, items]) => {
+        // El título de la familia solo cuando agrupa 2 o más ítems, o buscando (ayuda a ubicar
+        // el resultado): "CAJA / Caja", "SOPORTE / Soporte" repetían la palabra.
+        const conTitulo = items.length > 1 || !!q.trim();
+        return (
+        <div key={fam} className={conTitulo ? "mt-4" : "mt-1"}>
+          {!conTitulo ? null : !collapsed ? (
             <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-500">{fam}</p>
           ) : (
             <div className="mx-auto mb-2 h-px w-6 bg-white/10" />
@@ -399,7 +403,8 @@ function NavMenu({
             );
           })}
         </div>
-      ))}
+        );
+      })}
     </nav>
   );
 }
