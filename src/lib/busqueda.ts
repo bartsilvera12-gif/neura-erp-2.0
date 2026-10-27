@@ -208,6 +208,8 @@ type Token = {
   memo: Map<string, number>;
   entera: RegExp;
   inicio: RegExp;
+  /** Singulares posibles de una palabra en plural ("galletas" → "galleta", "panes" → "pan"): cuentan como coincidencia tal cual. */
+  singulares: string[];
 };
 
 /** Lo escrito, compilado una vez: palabras (con sus regex), frase, código, documento y monto. */
@@ -246,6 +248,7 @@ function compilar(q: string): Consulta {
       // t solo tiene [a-z0-9] (sale de tokensBusqueda): es seguro dentro de la regex.
       entera: new RegExp(`(^|[^a-z0-9])${t}($|[^a-z0-9])`),
       inicio: new RegExp(`(^|[^a-z0-9])${t}`),
+      singulares: /^[a-z]{4,}s$/.test(t) ? [t.slice(0, -1), ...(t.endsWith("es") && t.length > 4 ? [t.slice(0, -2)] : [])].filter((s) => s.length >= 3) : [],
     };
   });
   return { tokens, qn: normalizar(q).trim(), qc: compactar(q), doc: partesDocumento(q), monto: montoDe(q) };
@@ -257,6 +260,7 @@ function compilar(q: string): Consulta {
  */
 function coincidePalabra(tok: Token, e: Preparado): number {
   if (e.texto.includes(tok.t)) return 1;
+  if (tok.singulares.some((s) => e.texto.includes(s))) return 1;
   if (!tok.max) return 0;
   for (const p of e.palabras) {
     let v = tok.memo.get(p);
@@ -291,14 +295,22 @@ function puntaje(cq: Consulta, e: Preparado): number {
     const m = coincidePalabra(tok, e);
     if (!m) return 0; // todas las palabras tienen que aparecer (o parecerse)
     // palabra entera en el nombre > comienzo de una palabra > contenida > parecida
-    if (m === 1) suma += tok.entera.test(e.principal) ? 40 : tok.inicio.test(e.principal) ? 30 : 20;
+    if (m === 1) {
+      // El singular ("panes" → "pan") también puntúa como palabra entera / comienzo.
+      const entera = tok.entera.test(e.principal) || tok.singulares.some((s) => new RegExp(`(^|[^a-z0-9])${s}($|[^a-z0-9])`).test(e.principal));
+      const inicio = entera || tok.inicio.test(e.principal) || tok.singulares.some((s) => new RegExp(`(^|[^a-z0-9])${s}`).test(e.principal));
+      suma += entera ? 40 : inicio ? 30 : 20;
+    }
     else {
       suma += 10;
       todasReales = false;
     }
   }
   const { qn } = cq;
-  const frase = e.principal === qn ? 400 : e.principal.startsWith(qn) ? 300 : e.principal.includes(qn) ? 200 : 0;
+  const fraseDe = (f: string) => (e.principal === f ? 400 : e.principal.startsWith(f) ? 300 : e.principal.includes(f) ? 200 : 0);
+  // También la frase en singular ("tomates" → "Tomate" va antes que "Salsa de tomate").
+  const qs = qn.split(" ").map((w) => (/^[a-z]{4,}s$/.test(w) ? w.slice(0, -1) : w)).join(" ");
+  const frase = Math.max(fraseDe(qn), qs !== qn ? fraseDe(qs) : 0);
   // lo que coincide tal cual va siempre antes que lo que solo se parece (error de tipeo)
   return frase + suma + (todasReales ? 100 : 0);
 }
@@ -318,6 +330,15 @@ function deLaSerie(cq: Consulta, e: Preparado): boolean {
 function soloExactos<T extends { p: number }>(cq: Consulta, r: T[], serie: boolean): T[] {
   if (!cq.doc || (!serie && !r.some((x) => x.p === P_DOCUMENTO))) return r;
   return r.filter((x) => x.p >= P_DOCUMENTO);
+}
+
+/**
+ * Si algo coincide tal cual (todas las palabras escritas están, sin errores de tipeo), lo que
+ * solo "se parece" no se muestra: "coca" trae Coca-Cola y no "Mate cocido". Si nada coincide
+ * tal cual, quedan los parecidos ("galeta" sigue encontrando "Galletitas").
+ */
+function soloReales<T extends { p: number }>(r: T[]): T[] {
+  return r.some((x) => x.p >= 100) ? r.filter((x) => x.p >= 100) : r;
 }
 
 // Cache por objeto para buscar/filtrar: el mismo elemento no se re-normaliza en cada tecla.
@@ -352,7 +373,7 @@ function ordenar<T>(items: T[], cq: Consulta, prep: (it: T, i: number) => Prepar
     if (p > 0) r.push({ it: items[i], i, p });
     if (!serie && cq.doc && e.documentos.length) serie = deLaSerie(cq, e);
   }
-  r = soloExactos(cq, r, serie);
+  r = soloReales(soloExactos(cq, r, serie));
   r.sort((a, b) => b.p - a.p || a.i - b.i);
   const out = r.map((x) => x.it);
   return limite != null ? out.slice(0, limite) : out;
@@ -387,7 +408,7 @@ export function filtrar<T>(items: T[], q: string, campos: (it: T) => CamposBusqu
     if (p > 0) r.push({ it: items[i], i, p });
     if (!serie && cq.doc && e.documentos.length) serie = deLaSerie(cq, e);
   }
-  r = soloExactos(cq, r, serie);
+  r = soloReales(soloExactos(cq, r, serie));
   const exacta = (p: number) => (p >= P_MONTO ? 1 : 0);
   r.sort((a, b) => exacta(b.p) - exacta(a.p) || a.i - b.i);
   return r.map((x) => x.it);
