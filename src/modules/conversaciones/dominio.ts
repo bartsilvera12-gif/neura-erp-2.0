@@ -45,12 +45,15 @@ export type FilaBandeja = {
   avatar_url: string | null;
   cliente_id: string | null;
   prospecto_id: string | null;
+  /** Con búsqueda: fragmento del mensaje anterior que coincidió (si no fue el último). */
+  coincidencia?: string | null;
 };
 
 export type Contadores = { mias: number; mias_no_leidas: number; sin_asignar: number; abiertas: number };
 export const CONTADORES_VACIOS: Contadores = { mias: 0, mias_no_leidas: 0, sin_asignar: 0, abiertas: 0 };
 
-export type Cursor = { at: string; id: string };
+/** Sin búsqueda: keyset (at, id). Con búsqueda (orden por relevancia): `offset`. */
+export type Cursor = { at: string; id: string; offset?: number };
 export type PaginaBandeja = { rows: FilaBandeja[]; contadores: Contadores; siguiente: Cursor | null };
 
 export type TipoMensaje =

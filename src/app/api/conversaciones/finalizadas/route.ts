@@ -1,7 +1,9 @@
 /**
  * Conversaciones finalizadas — UNA consulta keyset (chat_finalizadas).
- *   GET /api/conversaciones/finalizadas?desde=&hasta=&asesor=&asignado=&cola=&estado=&semaforo=&q=&modo=&cursor_at=&cursor_id=
- *   → { rows, siguiente: { at, id } | null, seguimientos: { pendientes, vencidos }, alcance: "todas" | "equipo" | "propias" }
+ *   GET /api/conversaciones/finalizadas?desde=&hasta=&asesor=&asignado=&cola=&estado=&semaforo=&q=&modo=&cursor_at=&cursor_id=&offset=
+ *   → { rows, siguiente: { at, id, offset? } | null, seguimientos: { pendientes, vencidos }, alcance: "todas" | "equipo" | "propias" }
+ *   · q: también en los mensajes y en el cliente vinculado (RUC/CI/email); orden por
+ *     relevancia y paginado por `offset`.
  *   · modo=seguimientos: próximas acciones pendientes (de la más próxima a la más lejana); las
  *     fechas filtran la próxima acción y el cursor `at` es esa fecha (YYYY-MM-DD).
  *   · semaforo=verde|ambar|rojo|sin: días desde el último mensaje del asesor.
@@ -29,22 +31,26 @@ export const GET = withTenant(async (ctx, req) => {
   const cursorId = uuid(sp.get("cursor_id"));
   const conCursor = !!cursorAt && !!cursorId && (seguimientos ? FECHA_RE.test(cursorAt) : Number.isFinite(Date.parse(cursorAt)));
   const semaforo = sp.get("semaforo");
+  const q = sp.get("q")?.trim().slice(0, 120) || null;
+  // Con búsqueda el orden es por relevancia: se pagina por offset.
+  const offset = q ? Math.min(100_000, Math.max(0, Math.trunc(Number(sp.get("offset")) || 0))) : 0;
 
   const { data, error } = await ctx.db.rpc<{ rows: Finalizada[]; seguimientos: ConteoSeguimientos | null }>("chat_finalizadas", {
     p_desde: fecha(sp.get("desde")),
     p_hasta: fecha(sp.get("hasta")),
     p_asesor: todas ? uuid(sp.get("asesor")) : ctx.usuarioId,
     p_estado: uuid(sp.get("estado")),
-    p_q: sp.get("q")?.trim().slice(0, 120) || null,
-    p_cursor_at: conCursor && !seguimientos ? cursorAt : null,
-    p_cursor_id: conCursor ? cursorId : null,
+    p_q: q,
+    p_cursor_at: conCursor && !seguimientos && !q ? cursorAt : null,
+    p_cursor_id: conCursor && !q ? cursorId : null,
     p_limite: PAGINA_FINALIZADAS,
     p_cola: uuid(sp.get("cola")),
     p_asignado: todas ? uuid(sp.get("asignado")) : null,
     p_semaforo: esSemaforo(semaforo) ? semaforo : null,
     p_seguimientos: seguimientos,
-    p_cursor_fecha: conCursor && seguimientos ? cursorAt : null,
+    p_cursor_fecha: conCursor && seguimientos && !q ? cursorAt : null,
     p_alcance: equipo,
+    p_offset: offset,
   });
   if (error) {
     console.error("[conversaciones] finalizadas", error.message);
@@ -52,10 +58,14 @@ export const GET = withTenant(async (ctx, req) => {
   }
   const rows = (data?.rows ?? []).map((r) => ({ ...r, etiquetas: r.etiquetas ?? [] }));
   const ult = rows.length === PAGINA_FINALIZADAS ? rows[rows.length - 1] : null;
-  const siguiente = ult ? { at: seguimientos ? ult.proxima_accion_fecha ?? "" : ult.cerrada_at, id: ult.id } : null;
+  const siguiente = !ult
+    ? null
+    : q
+      ? { at: (seguimientos ? ult.proxima_accion_fecha : ult.cerrada_at) ?? "", id: ult.id, offset: offset + rows.length }
+      : { at: seguimientos ? ult.proxima_accion_fecha ?? "" : ult.cerrada_at, id: ult.id };
   return ok({
     rows,
-    siguiente: siguiente?.at ? siguiente : null,
+    siguiente: siguiente && (siguiente.at || "offset" in siguiente) ? siguiente : null,
     seguimientos: { pendientes: Number(data?.seguimientos?.pendientes ?? 0), vencidos: Number(data?.seguimientos?.vencidos ?? 0) },
     alcance: !todas ? "propias" : equipo ? "equipo" : "todas",
   });

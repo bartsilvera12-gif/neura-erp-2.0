@@ -204,7 +204,7 @@ export function Historial() {
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), setQ(texto.trim()))}
-                placeholder="Buscar por nombre o número"
+                placeholder="Buscar por nombre, número, RUC o mensaje"
                 aria-label="Buscar contacto"
                 autoFocus
                 enterKeyHint="search"

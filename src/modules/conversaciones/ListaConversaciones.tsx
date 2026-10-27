@@ -18,6 +18,7 @@ export function ListaConversaciones({
   hayMas,
   cargandoMas,
   hayBusqueda,
+  busqueda,
   onAbrir,
   onCargarMas,
 }: {
@@ -28,6 +29,8 @@ export function ListaConversaciones({
   hayMas: boolean;
   cargandoMas: boolean;
   hayBusqueda: boolean;
+  /** Lo buscado (resalta el fragmento del mensaje que coincidió). */
+  busqueda?: string;
   onAbrir: (id: string) => void;
   onCargarMas: () => void;
 }) {
@@ -65,7 +68,7 @@ export function ListaConversaciones({
   return (
     <>
       {filas.map((c) => (
-        <TarjetaConversacion key={c.id} c={c} seleccionada={c.id === seleccionadaId} detalle={detalle} onAbrir={onAbrir} />
+        <TarjetaConversacion key={c.id} c={c} seleccionada={c.id === seleccionadaId} detalle={detalle} busqueda={busqueda} onAbrir={onAbrir} />
       ))}
       {hayMas ? (
         <div ref={centinela}>

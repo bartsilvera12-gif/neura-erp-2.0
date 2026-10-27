@@ -226,7 +226,7 @@ export function Bandeja() {
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), setQ(texto.trim()))}
-                placeholder="Buscar por nombre, número o mensaje"
+                placeholder="Buscar por nombre, número, RUC o mensaje"
                 enterKeyHint="search"
                 className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 pr-10 text-xs md:pr-24 text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 md:h-auto"
                 aria-label="Buscar conversaciones"
@@ -335,6 +335,7 @@ export function Bandeja() {
               hayMas={b.hayMas}
               cargandoMas={b.cargandoMas}
               hayBusqueda={!!q}
+              busqueda={q}
               onAbrir={abrir}
               onCargarMas={() => void b.cargarMas()}
             />

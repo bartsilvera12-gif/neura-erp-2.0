@@ -5,24 +5,70 @@
  * (las demás reciben el mismo objeto y el mismo onAbrir estable).
  * Alto fijo + content-visibility:auto → el navegador no pinta las que están fuera de vista.
  */
-import { memo } from "react";
-import { Check, StickyNote } from "lucide-react";
+import { memo, type ReactNode } from "react";
+import { Check, Search, StickyNote } from "lucide-react";
+import { normalizar, tokensBusqueda } from "@/lib/busqueda";
 import { ESTADO_CLASE, ESTADO_LABEL, horaLista, inicial, nombreContacto, telefonoLegible, type FilaBandeja } from "@/modules/conversaciones/dominio";
 import { Avatar, IconoCanal, VentanaWhatsApp } from "@/modules/conversaciones/ui";
 import { SlaBadge } from "@/modules/conversaciones/ui-supervision";
 
 export const ALTO_TARJETA = 96;
 
+/** Resalta en `texto` las palabras buscadas (sin tildes ni mayúsculas; plural → singular). */
+function resaltar(texto: string, q: string): ReactNode {
+  // La palabra entera y, si es plural, también su singular (se marca la más larga que esté).
+  const raices = tokensBusqueda(q)
+    .filter((t) => t.length >= 2)
+    .flatMap((t) => (/^[a-z]{4,}s$/.test(t) ? [t, t.slice(0, -1)] : [t]));
+  if (!raices.length) return texto;
+  // Texto normalizado + a qué posición del original corresponde cada carácter.
+  const chars = Array.from(texto);
+  let norm = "";
+  const orig: number[] = [];
+  let pos = 0;
+  for (const ch of chars) {
+    const n = normalizar(ch);
+    for (let k = 0; k < n.length; k++) orig.push(pos);
+    norm += n;
+    pos += ch.length;
+  }
+  orig.push(pos);
+  const marcas: [number, number][] = [];
+  for (const r of raices) {
+    for (let i = norm.indexOf(r); i >= 0; i = norm.indexOf(r, i + r.length)) marcas.push([orig[i], orig[i + r.length]]);
+  }
+  if (!marcas.length) return texto;
+  marcas.sort((a, b) => a[0] - b[0] || b[1] - a[1]);
+  const out: ReactNode[] = [];
+  let desde = 0;
+  for (const [a, b] of marcas) {
+    if (b <= desde) continue;
+    const ini = Math.max(a, desde);
+    if (ini > desde) out.push(texto.slice(desde, ini));
+    out.push(
+      <mark key={ini} className="rounded-sm bg-amber-100 px-px text-slate-800">
+        {texto.slice(ini, b)}
+      </mark>,
+    );
+    desde = b;
+  }
+  if (desde < texto.length) out.push(texto.slice(desde));
+  return out;
+}
+
 function Tarjeta({
   c,
   seleccionada,
   detalle,
+  busqueda,
   onAbrir,
 }: {
   c: FilaBandeja;
   seleccionada: boolean;
   /** Vistas "Todas" / "Cerradas": se muestra el estado y el agente. */
   detalle: boolean;
+  /** Lo buscado: con `c.coincidencia` se muestra el fragmento del mensaje que coincidió. */
+  busqueda?: string;
   onAbrir: (id: string) => void;
 }) {
   const nombre = nombreContacto(c);
@@ -56,11 +102,19 @@ function Tarjeta({
               ) : null}
             </div>
           </div>
-          <p className="mt-1 truncate text-[12px] leading-snug text-slate-500">
-            {c.ultimo_from_me ? <Check className="mr-0.5 inline-block h-3.5 w-3.5 align-[-3px] text-slate-400" aria-label="Enviado por vos" /> : null}
-            {c.ultimo_tipo === "nota" ? <StickyNote className="mr-0.5 inline-block h-3 w-3 text-amber-500" /> : null}
-            {c.ultimo_preview || "—"}
-          </p>
+          {c.coincidencia && busqueda?.trim() ? (
+            // Coincidió en un mensaje anterior: en lugar del último, el fragmento con lo buscado.
+            <p className="mt-1 truncate text-[12px] leading-snug text-slate-500" title={c.coincidencia}>
+              <Search className="mr-1 inline-block h-3 w-3 align-[-2px] text-slate-400" aria-label="Coincide en un mensaje" />
+              {resaltar(c.coincidencia, busqueda)}
+            </p>
+          ) : (
+            <p className="mt-1 truncate text-[12px] leading-snug text-slate-500">
+              {c.ultimo_from_me ? <Check className="mr-0.5 inline-block h-3.5 w-3.5 align-[-3px] text-slate-400" aria-label="Enviado por vos" /> : null}
+              {c.ultimo_tipo === "nota" ? <StickyNote className="mr-0.5 inline-block h-3 w-3 text-amber-500" /> : null}
+              {c.ultimo_preview && busqueda?.trim() ? resaltar(c.ultimo_preview, busqueda) : c.ultimo_preview || "—"}
+            </p>
+          )}
           <div className="mt-1 flex flex-wrap items-center gap-1 overflow-hidden" style={{ maxHeight: 20 }}>
             {detalle ? (
               <span className={`rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${ESTADO_CLASE[c.estado]}`}>{ESTADO_LABEL[c.estado]}</span>

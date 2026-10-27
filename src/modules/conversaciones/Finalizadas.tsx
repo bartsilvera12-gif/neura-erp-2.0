@@ -21,7 +21,7 @@ import { marcarSeguimiento, pedirFinalizadas, type AlcanceFinalizadas, type Filt
 import { nombreContacto, telefonoLegible } from "@/modules/conversaciones/dominio";
 import {
   SEMAFORO, diasLegible, duracionCorta, segundosEntre,
-  type ConteoSeguimientos, type Finalizada, type Semaforo,
+  type ConteoSeguimientos, type Finalizada, type PaginaFinalizadas, type Semaforo,
 } from "@/modules/conversaciones/supervision";
 import { Encabezado, VOLVER_OMNICANAL, btnPrimario } from "@/modules/conversaciones/ui-supervision";
 import { Girando, tabClass } from "@/modules/conversaciones/ui";
@@ -86,7 +86,7 @@ export function Finalizadas() {
   const [borrador, setBorrador] = useState<FiltrosFinalizadas>(VACIOS);
   const [filtros, setFiltros] = useState<FiltrosFinalizadas>(VACIOS);
   const [rows, setRows] = useState<Finalizada[]>([]);
-  const [siguiente, setSiguiente] = useState<{ at: string; id: string } | null>(null);
+  const [siguiente, setSiguiente] = useState<PaginaFinalizadas["siguiente"]>(null);
   const [alcance, setAlcance] = useState<AlcanceFinalizadas | null>(null);
   const [seg, setSeg] = useState<ConteoSeguimientos>({ pendientes: 0, vencidos: 0 });
   const [cargando, setCargando] = useState(true);
@@ -218,7 +218,7 @@ export function Finalizadas() {
     setExportando(true);
     try {
       const todas: Finalizada[] = [];
-      let cur: { at: string; id: string } | null = null;
+      let cur: PaginaFinalizadas["siguiente"] = null;
       do {
         const p = await pedirFinalizadas(filtros, cur, undefined, seguimientos);
         todas.push(...p.rows);
@@ -389,8 +389,8 @@ export function Finalizadas() {
               />
             </div>
             <label className={`${etiqueta} sm:col-span-2 lg:col-span-1`}>
-              Nombre, número u observación
-              <input type="search" value={borrador.q} onChange={(e) => set("q", e.target.value)} placeholder="Buscar contacto…" className={campo} />
+              Buscar (nombre, número, RUC, observación o mensaje)
+              <input type="search" value={borrador.q} onChange={(e) => set("q", e.target.value)} placeholder="Nombre, número, RUC o mensaje…" className={campo} />
             </label>
           </div>
           <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4">

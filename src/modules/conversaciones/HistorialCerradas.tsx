@@ -99,7 +99,7 @@ export function HistorialCerradas() {
               value={texto}
               onChange={(e) => setTexto(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), setQ(texto.trim()))}
-              placeholder="Buscar por nombre, número o mensaje"
+              placeholder="Buscar por nombre, número, RUC o mensaje"
               aria-label="Buscar conversaciones cerradas"
               enterKeyHint="search"
               className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-3 text-xs text-slate-800 outline-none max-md:h-11 placeholder:text-slate-400 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
@@ -136,6 +136,7 @@ export function HistorialCerradas() {
             hayMas={!!siguiente}
             cargandoMas={cargandoMas}
             hayBusqueda={!!q}
+            busqueda={q}
             onAbrir={abrir}
             onCargarMas={() => void cargarMas()}
           />

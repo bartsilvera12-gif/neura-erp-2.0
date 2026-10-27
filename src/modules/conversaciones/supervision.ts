@@ -151,8 +151,9 @@ export type Finalizada = {
 export type ConteoSeguimientos = { pendientes: number; vencidos: number };
 export type PaginaFinalizadas = {
   rows: Finalizada[];
-  /** Cursor: cerrada_at (finalizadas) o la fecha de la próxima acción (seguimientos). */
-  siguiente: { at: string; id: string } | null;
+  /** Cursor: cerrada_at (finalizadas) o la fecha de la próxima acción (seguimientos); con
+   *  búsqueda (orden por relevancia), `offset`. */
+  siguiente: { at: string; id: string; offset?: number } | null;
   seguimientos: ConteoSeguimientos;
 };
 

@@ -25,11 +25,13 @@ export type FiltrosFinalizadas = {
   desde: string; hasta: string; asesor: string; asignado: string; cola: string; estado: string; semaforo: string; q: string;
 };
 export type AlcanceFinalizadas = "todas" | "equipo" | "propias";
-export function pedirFinalizadas(f: FiltrosFinalizadas, cursor: { at: string; id: string } | null, signal?: AbortSignal, seguimientos = false) {
+export function pedirFinalizadas(f: FiltrosFinalizadas, cursor: { at: string; id: string; offset?: number } | null, signal?: AbortSignal, seguimientos = false) {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(f)) if (v.trim()) sp.set(k, v.trim());
   if (seguimientos) sp.set("modo", "seguimientos");
-  if (cursor) {
+  // Con búsqueda (orden por relevancia) se pagina por offset; si no, keyset.
+  if (cursor?.offset != null) sp.set("offset", String(cursor.offset));
+  else if (cursor) {
     sp.set("cursor_at", cursor.at);
     sp.set("cursor_id", cursor.id);
   }

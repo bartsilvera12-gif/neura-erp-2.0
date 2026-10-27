@@ -16,7 +16,8 @@ export function pedirBandeja(f: FiltrosBandeja, cursor: Cursor | null, signal?: 
   if (f.asesor === SIN_ASIGNAR) sp.set("sin_asignar", "1");
   else if (f.asesor) sp.set("asignado", f.asesor);
   if (f.cola) sp.set("cola", f.cola);
-  if (cursor) {
+  if (cursor?.offset != null) sp.set("offset", String(cursor.offset));
+  else if (cursor) {
     sp.set("cursor_at", cursor.at);
     sp.set("cursor_id", cursor.id);
   }

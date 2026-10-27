@@ -47,8 +47,13 @@ export function useBandeja({ empresaId, yo, filtros }: { empresaId: string | nul
       setContadores(p.contadores);
       if (silencioso && sigRef.current && filasRef.current.length > p.rows.length) {
         // Respaldo con varias páginas cargadas: se mezcla la primera en lo que ya hay.
+        // Con búsqueda el orden es por relevancia (las páginas ya vienen en orden): no se reordena por fecha.
         const nuevas = new Map(p.rows.map((r) => [r.id, r]));
-        setFilas((prev) => [...p.rows, ...prev.filter((f) => !nuevas.has(f.id))].sort(compararFilas));
+        const conQ = !!filtrosRef.current.q.trim();
+        setFilas((prev) => {
+          const juntas = [...p.rows, ...prev.filter((f) => !nuevas.has(f.id))];
+          return conQ ? juntas : juntas.sort(compararFilas);
+        });
       } else {
         setFilas(p.rows);
         setSiguiente(p.siguiente);
@@ -124,9 +129,15 @@ export function useBandeja({ empresaId, yo, filtros }: { empresaId: string | nul
       setFilas((prev) => {
         const i = prev.findIndex((x) => x.id === f.id);
         if (!entra) return i < 0 ? prev : prev.filter((x) => x.id !== f.id);
+        // Con búsqueda activa: la fila se actualiza en su lugar (orden por relevancia, no por
+        // fecha) y conserva el fragmento que coincidió (/resumen no lo trae).
+        if (filtrosRef.current.q.trim()) {
+          if (i < 0) return prev;
+          const copia = prev.slice();
+          copia[i] = { ...f, coincidencia: f.coincidencia ?? prev[i].coincidencia };
+          return copia;
+        }
         if (i < 0) {
-          // Con búsqueda activa no se cuelan filas que quizá no coinciden.
-          if (filtrosRef.current.q.trim()) return prev;
           // Más vieja que lo cargado (y hay más páginas): llegará al paginar.
           const cur = sigRef.current;
           if (cur && f.ultimo_mensaje_at && Date.parse(f.ultimo_mensaje_at) < Date.parse(cur.at)) return prev;
