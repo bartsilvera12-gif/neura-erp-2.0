@@ -10,12 +10,15 @@
  *   · Ingredientes: cada uno con "Se puede quitar" (el cliente lo pide "sin …", no se descuenta).
  *   · Extras: se activan de la lista común (Recetas › Extras) con precio propio opcional y máximo.
  *   · Opciones: grupos ("Punto de la carne") obligatorios o no, con mínimo / máximo y opciones con
- *     precio extra opcional.
- *   · "Copiar de otro plato": suma los extras y los grupos de opciones de otro plato.
+ *     precio extra opcional. Receta 74: cada opción con "Ingredientes de esta opción" (desplegable,
+ *     misma fila que los ingredientes base; por plato, con merma) y su costo; con grupos
+ *     obligatorios con ingredientes el costo del plato se muestra "desde … hasta …".
+ *   · "Copiar de otro plato": suma los extras y los grupos de opciones de otro plato (con los
+ *     ingredientes de cada opción).
  */
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ChefHat, Copy, Loader2, Plus, Search, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { AlertTriangle, ChefHat, ChevronDown, Copy, Loader2, Plus, Search, Trash2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { buscar } from "@/lib/busqueda";
 import { clienteConfig } from "@/cliente.config";
@@ -24,7 +27,7 @@ import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT, ModalDocumento, Pestanas }
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 import {
   brutoEnUnidadInsumo, cant, colorMargen, gs, margenPct, numero, precioFinal, unidadCorta, unidadSugerida, unidadesCompatibles,
-  type DetalleReceta, type ExtraComun, type ExtraPlato, type GrupoOpciones, type ListaRecetas,
+  type DetalleReceta, type ExtraComun, type ExtraPlato, type GrupoOpciones, type IngredienteOpcion, type ListaRecetas,
 } from "@/modules/inventario/recetas";
 
 const TEAL = clienteConfig.color;
@@ -49,13 +52,36 @@ type Linea = {
 };
 
 type ExtraEd = { extra_id: string; nombre: string; precio_lista: number; precio: string; maximo: string; activo: boolean; detalle: string; disponible?: number };
-type OpcionEd = { key: string; id?: string; nombre: string; precio: string; activo: boolean };
+/** Receta 74: cada opción con sus ingredientes (por plato) y el desplegable abierto o no. */
+type OpcionEd = { key: string; id?: string; nombre: string; precio: string; activo: boolean; items: Linea[]; abierto: boolean; disponible?: boolean };
 type GrupoEd = { key: string; id?: string; nombre: string; obligatorio: boolean; minimo: string; maximo: string; opciones: OpcionEd[] };
 
 let sec = 0;
 const nuevaKey = () => `l${++sec}`;
 const soloEntero = (v: string) => v.replace(/\D/g, "").slice(0, 2);
 const soloGs = (v: string) => v.replace(/\D/g, "").slice(0, 9);
+const soloDecimal = (v: string) => v.replace(/[^\d.,]/g, "");
+
+/** Línea editable a partir de un ingrediente guardado (receta u opción). */
+const lineaDeItem = (i: IngredienteOpcion & { se_puede_quitar?: boolean }): Linea => ({
+  key: nuevaKey(), insumo_id: i.insumo_id, nombre: i.nombre, sku: i.sku, unidad_insumo: i.unidad_insumo,
+  cantidad: String(i.cantidad).replace(".", ","), unidad: i.unidad, merma: i.merma_pct ? String(i.merma_pct).replace(".", ",") : "",
+  costo_unitario: Number(i.costo_unitario) || 0, es_preparacion: i.es_preparacion, stock: Number(i.stock) || 0,
+  controla_stock: i.controla_stock, activo: i.activo, quitar: !!i.se_puede_quitar,
+});
+/** Línea nueva a partir de un producto elegido en el buscador. */
+const lineaDeProducto = (p: ProductoInventario): Linea => {
+  const u = p.unidad_medida || "Unidad";
+  return {
+    key: nuevaKey(), insumo_id: p.id, nombre: p.nombre, sku: p.sku, unidad_insumo: u, cantidad: "", unidad: unidadSugerida(u),
+    merma: "", costo_unitario: Number(p.costo_promedio) || 0, es_preparacion: p.controla_stock === false, stock: Number(p.stock_actual) || 0,
+    controla_stock: p.controla_stock !== false, activo: p.activo !== false, quitar: false,
+  };
+};
+const brutoLinea = (l: Linea) => brutoEnUnidadInsumo(numero(l.cantidad), l.unidad, numero(l.merma), l.unidad_insumo);
+/** Costo de los ingredientes de una opción para UN plato. */
+const costoOpcion = (o: OpcionEd) => o.items.reduce((s, l) => s + brutoLinea(l) * l.costo_unitario, 0);
+const itemsParaEnviar = (ls: Linea[]) => ls.map((l) => ({ insumo_id: l.insumo_id, cantidad: numero(l.cantidad), unidad: l.unidad, merma_pct: numero(l.merma) }));
 
 const extraEd = (e: ExtraPlato): ExtraEd => ({
   extra_id: e.extra_id, nombre: e.nombre, precio_lista: Number(e.precio_lista) || 0,
@@ -65,7 +91,10 @@ const extraEd = (e: ExtraPlato): ExtraEd => ({
 const grupoEd = (g: GrupoOpciones, conIds = true): GrupoEd => ({
   key: nuevaKey(), id: conIds ? g.id : undefined, nombre: g.nombre, obligatorio: g.obligatorio,
   minimo: String(g.obligatorio ? Math.max(1, g.minimo) : 1), maximo: String(g.maximo ?? 1),
-  opciones: g.opciones.map((o) => ({ key: nuevaKey(), id: conIds ? o.id : undefined, nombre: o.nombre, precio: o.precio ? String(o.precio) : "", activo: o.activo !== false })),
+  opciones: g.opciones.map((o) => ({
+    key: nuevaKey(), id: conIds ? o.id : undefined, nombre: o.nombre, precio: o.precio ? String(o.precio) : "", activo: o.activo !== false,
+    items: (o.items ?? []).map(lineaDeItem), abierto: false, disponible: conIds ? o.disponible : undefined,
+  })),
 });
 
 export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
@@ -92,12 +121,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
     setDet(d);
     setRend(String(d.rendimiento ?? 1).replace(".", ","));
     setNotas(d.notas ?? "");
-    setLineas(d.items.map((i) => ({
-      key: nuevaKey(), insumo_id: i.insumo_id, nombre: i.nombre, sku: i.sku, unidad_insumo: i.unidad_insumo,
-      cantidad: String(i.cantidad).replace(".", ","), unidad: i.unidad, merma: i.merma_pct ? String(i.merma_pct).replace(".", ",") : "",
-      costo_unitario: Number(i.costo_unitario) || 0, es_preparacion: i.es_preparacion, stock: Number(i.stock) || 0,
-      controla_stock: i.controla_stock, activo: i.activo, quitar: !!i.se_puede_quitar,
-    })));
+    setLineas(d.items.map(lineaDeItem));
     setExtras((d.extras ?? []).map(extraEd));
     setGrupos((d.grupos ?? []).map((g) => grupoEd(g)));
   }
@@ -121,12 +145,31 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
   const costoTanda = costos.reduce((s, c) => s + c.costo, 0);
   const costoUnidad = rendimiento > 0 ? costoTanda / rendimiento : 0;
   const precio = det ? precioFinal(det.producto.precio_venta, det.producto.descuento_pct) : 0;
-  const margen = !esPreparacion ? margenPct(costoUnidad, precio) : null;
+  // Receta 74: grupos obligatorios cuyas opciones llevan ingredientes → costo "desde" (la opción
+  // más barata de cada grupo) y "hasta" (la más cara). Igual que plato_costo_rango en la base.
+  const rango = useMemo((): { desde: number; hasta: number } | null => {
+    if (!esPlato) return null;
+    let lo = 0, hi = 0, hay = false;
+    for (const g of grupos) {
+      if (!g.obligatorio) continue;
+      const activas = g.opciones.filter((o) => o.activo);
+      if (!activas.some((o) => o.items.length)) continue;
+      hay = true;
+      const k = Math.max(1, Number(g.minimo) || 1);
+      const c = activas.map(costoOpcion).sort((a, b) => a - b);
+      lo += c.slice(0, k).reduce((s, x) => s + x, 0);
+      hi += c.slice(-k).reduce((s, x) => s + x, 0);
+    }
+    return hay ? { desde: costoUnidad + lo, hasta: costoUnidad + hi } : null;
+  }, [esPlato, grupos, costoUnidad]);
+  // Margen: con la opción más cara (el peor caso) si las opciones cambian el costo.
+  const margen = !esPreparacion ? margenPct(rango ? rango.hasta : costoUnidad, precio) : null;
   // Porciones que alcanzan con el stock del depósito (solo ingredientes con stock propio).
-  // (Las preparaciones se cuentan en el servidor: acá se muestra lo que devolvió al abrir.)
+  // (Las preparaciones y las opciones con ingredientes se cuentan en el servidor: acá se muestra
+  // lo que devolvió al abrir.)
   const porcionesVivo = useMemo((): number | null => {
     if (rendimiento <= 0) return null;
-    if (lineas.some((l) => l.es_preparacion)) return det?.porciones ?? null;
+    if (lineas.some((l) => l.es_preparacion) || rango) return det?.porciones ?? null;
     let min: number | null = null;
     for (let i = 0; i < lineas.length; i++) {
       const l = lineas[i];
@@ -137,7 +180,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
       min = min === null ? n : Math.min(min, n);
     }
     return min;
-  }, [lineas, costos, rendimiento, det?.porciones]);
+  }, [lineas, costos, rendimiento, det?.porciones, rango]);
 
   const faltaCantidad = lineas.some((l) => numero(l.cantidad) <= 0);
   const mermaMal = lineas.some((l) => numero(l.merma) < 0 || numero(l.merma) > 90);
@@ -152,6 +195,11 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
       if (max < 1) return `En «${g.nombre}» el máximo tiene que ser al menos 1.`;
       if (g.obligatorio && min > max) return `En «${g.nombre}» el mínimo no puede pasar el máximo.`;
       if (g.obligatorio && g.opciones.filter((o) => o.activo).length < Math.max(1, min)) return `El grupo obligatorio «${g.nombre}» necesita opciones activas.`;
+      // Receta 74: ingredientes de cada opción.
+      for (const o of g.opciones) {
+        if (o.items.some((l) => numero(l.cantidad) <= 0)) return `Cargá la cantidad de cada ingrediente de «${o.nombre || "la opción"}».`;
+        if (o.items.some((l) => numero(l.merma) < 0 || numero(l.merma) > 90)) return `En «${o.nombre || "la opción"}» la merma va de 0 a 90 %.`;
+      }
     }
     const nombres = grupos.map((g) => g.nombre.trim().toLowerCase());
     if (new Set(nombres).size !== nombres.length) return "Hay dos grupos de opciones con el mismo nombre.";
@@ -167,16 +215,21 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
     if (det.usado_en.some((u) => u.id === p.id)) { setAviso(`"${p.nombre}" ya usa "${det.producto.nombre}" en su receta: se formaría un ciclo.`); return; }
     if (p.tipo_producto && p.tipo_producto !== "materia_prima") { setAviso(`"${p.nombre}" no es materia prima.`); return; }
     if (lineas.some((l) => l.insumo_id === p.id)) { setAviso(`"${p.nombre}" ya está en la receta: cambiá su cantidad.`); return; }
-    const u = p.unidad_medida || "Unidad";
-    setLineas((ls) => [...ls, {
-      key: nuevaKey(), insumo_id: p.id, nombre: p.nombre, sku: p.sku, unidad_insumo: u, cantidad: "", unidad: unidadSugerida(u),
-      merma: "", costo_unitario: Number(p.costo_promedio) || 0, es_preparacion: p.controla_stock === false, stock: Number(p.stock_actual) || 0,
-      controla_stock: p.controla_stock !== false, activo: p.activo !== false, quitar: false,
-    }]);
+    setLineas((ls) => [...ls, lineaDeProducto(p)]);
   }
 
   const cambiar = (key: string, campo: "cantidad" | "unidad" | "merma", v: string) =>
     setLineas((ls) => ls.map((l) => (l.key === key ? { ...l, [campo]: v } : l)));
+
+  // ── Ingredientes de una opción (receta 74) ──
+  function agregarAOpcion(gk: string, o: OpcionEd, p: ProductoInventario) {
+    setAviso(null);
+    if (p.tipo_producto && p.tipo_producto !== "materia_prima") { setAviso(`"${p.nombre}" no es materia prima.`); return; }
+    if (o.items.some((l) => l.insumo_id === p.id)) { setAviso(`"${p.nombre}" ya está en «${o.nombre || "la opción"}»: cambiá su cantidad.`); return; }
+    cambiarOpcion(gk, o.key, { items: [...o.items, lineaDeProducto(p)] });
+  }
+  const cambiarItemOpcion = (gk: string, o: OpcionEd, key: string, campo: "cantidad" | "unidad" | "merma", v: string) =>
+    cambiarOpcion(gk, o.key, { items: o.items.map((l) => (l.key === key ? { ...l, [campo]: v } : l)) });
 
   // ── Extras / opciones (receta 73) ──
   const cambiarExtra = (id: string, campo: "precio" | "maximo", v: string) =>
@@ -199,7 +252,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
       return [...gs, ...nuevos];
     });
     setCopiando(false);
-    setTimeout(() => setAviso(nExt + nGr ? `Se copiaron de «${d.producto.nombre}»: ${nExt} extra(s) y ${nGr} grupo(s) de opciones. Guardá para aplicarlos.` : `«${d.producto.nombre}» no tiene extras ni opciones nuevas para copiar.`), 0);
+    setTimeout(() => setAviso(nExt + nGr ? `Se copiaron de «${d.producto.nombre}»: ${nExt} extra(s) y ${nGr} grupo(s) de opciones (con los ingredientes de cada opción). Guardá para aplicarlos.` : `«${d.producto.nombre}» no tiene extras ni opciones nuevas para copiar.`), 0);
   }
 
   async function guardar(items: Linea[]) {
@@ -221,7 +274,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
             grupos: grupos.map((g) => ({
               id: g.id ?? null, nombre: g.nombre.trim(), obligatorio: g.obligatorio,
               minimo: g.obligatorio ? Math.max(1, Number(g.minimo) || 1) : 0, maximo: Math.max(1, Number(g.maximo) || 1),
-              opciones: g.opciones.map((o) => ({ id: o.id ?? null, nombre: o.nombre.trim(), precio: Number(o.precio) || 0, activo: o.activo })),
+              opciones: g.opciones.map((o) => ({ id: o.id ?? null, nombre: o.nombre.trim(), precio: Number(o.precio) || 0, activo: o.activo, items: itemsParaEnviar(o.items) })),
             })),
           } : {}),
         }),
@@ -299,7 +352,12 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
             <>
               {/* Resumen en vivo */}
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-                <Cifra etiqueta={esPreparacion ? `Costo por ${unidadCorta(unidadProd)}` : "Costo por porción"} valor={gs(costoUnidad)} />
+                {rango ? (
+                  <Cifra etiqueta="Costo por porción" valor={`desde ${gs(rango.desde)}`}
+                    detalle={`base ${gs(costoUnidad)}${rango.hasta !== rango.desde ? ` · hasta ${gs(rango.hasta)}` : ""}`} />
+                ) : (
+                  <Cifra etiqueta={esPreparacion ? `Costo por ${unidadCorta(unidadProd)}` : "Costo por porción"} valor={gs(costoUnidad)} />
+                )}
                 {esPreparacion ? (
                   <Cifra etiqueta="Costo de la tanda" valor={gs(costoTanda)} />
                 ) : (
@@ -309,7 +367,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                   <Cifra etiqueta="Rinde" valor={`${cant(rendimiento)} ${unidadCorta(unidadProd)}`} />
                 ) : (
                   <Cifra etiqueta="Margen" valor={margen == null ? "—" : `${margen.toFixed(1)}%`} clase={colorMargen(margen)}
-                    detalle={precio > 0 ? `ganancia ${gs(precio - costoUnidad)}` : "sin precio de venta"} />
+                    detalle={precio > 0 ? (rango ? `con la opción más cara · ${gs(precio - rango.hasta)}` : `ganancia ${gs(precio - costoUnidad)}`) : "sin precio de venta"} />
                 )}
                 <Cifra etiqueta={esPreparacion ? "Alcanza para" : "Porciones posibles"}
                   valor={porcionesVivo == null ? "—" : `${cant(porcionesVivo, 0)} ${esPreparacion ? unidadCorta(unidadProd) : "porc."}`}
@@ -355,70 +413,16 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                   <ul className="mt-3 space-y-2">
                     {lineas.map((l, i) => {
                       const c = costos[i];
-                      const unidades = unidadesCompatibles(l.unidad_insumo);
                       const sinStock = l.controla_stock && !l.es_preparacion && rendimiento > 0 && l.stock < c.bruto / rendimiento;
                       return (
-                        <li key={l.key} className={`rounded-xl border px-3 py-2.5 ${sinStock || !l.activo ? "border-rose-200 bg-rose-50/40" : "border-slate-200 bg-white"}`}>
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-slate-900">
-                                {l.nombre}
-                                {l.es_preparacion ? <span className="ml-1.5 rounded-full bg-lime-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-lime-800 ring-1 ring-lime-200">Preparación</span> : null}
-                                {!l.activo ? <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-700">Inactivo</span> : null}
-                              </p>
-                              <p className="text-[11px] text-slate-500">
-                                {gs(l.costo_unitario)} / {unidadCorta(l.unidad_insumo)}
-                                {l.es_preparacion ? " · se explota en sus ingredientes" : l.controla_stock ? ` · stock ${cant(l.stock)} ${unidadCorta(l.unidad_insumo)}` : " · sin control de stock"}
-                              </p>
-                            </div>
-                            {puedeEditar ? (
-                              <button type="button" onClick={() => setLineas((ls) => ls.filter((x) => x.key !== l.key))} aria-label={`Quitar ${l.nombre}`}
-                                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 max-sm:h-11 max-sm:w-11">
-                                <Trash2 className="h-4 w-4" />
-                              </button>
-                            ) : null}
-                          </div>
-                          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-[120px_auto_100px_minmax(0,1fr)] sm:items-end">
-                            <label className="block">
-                              <span className={MINI}>Cantidad neta</span>
-                              <input inputMode="decimal" disabled={!puedeEditar} value={l.cantidad} onChange={(e) => cambiar(l.key, "cantidad", e.target.value.replace(/[^\d.,]/g, ""))}
-                                placeholder="0" aria-label={`Cantidad de ${l.nombre}`} className={`${NUM} py-2`} />
-                            </label>
-                            <div>
-                              <span className={MINI}>Unidad</span>
-                              <div role="radiogroup" aria-label={`Unidad de ${l.nombre}`} className="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
-                                {unidades.map((u) => (
-                                  <button key={u} type="button" role="radio" aria-checked={l.unidad === u} disabled={!puedeEditar} onClick={() => cambiar(l.key, "unidad", u)}
-                                    className="min-w-10 flex-1 rounded-lg px-2 py-1 text-sm font-semibold transition max-sm:min-h-9"
-                                    style={l.unidad === u ? { backgroundColor: "#fff", color: TEAL, boxShadow: "0 1px 2px rgba(15,23,42,.08)" } : { color: "#64748b" }}>
-                                    {unidadCorta(u)}
-                                  </button>
-                                ))}
-                              </div>
-                            </div>
-                            <label className="block">
-                              <span className={MINI}>Merma</span>
-                              <div className="relative">
-                                <input inputMode="decimal" disabled={!puedeEditar} value={l.merma} onChange={(e) => cambiar(l.key, "merma", e.target.value.replace(/[^\d.,]/g, "").slice(0, 5))}
-                                  placeholder="0" aria-label={`Merma de ${l.nombre}`} className={`${NUM} py-2 pr-7 ${numero(l.merma) > 90 ? "border-rose-300" : ""}`} />
-                                <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">%</span>
-                              </div>
-                            </label>
-                            <div className="text-right max-sm:col-span-1 max-sm:self-end">
-                              <p className="text-[11px] text-slate-500 tabular-nums">
-                                Descuenta {cant(c.bruto, 4)} {unidadCorta(l.unidad_insumo)}
-                              </p>
-                              <p className="text-sm font-semibold tabular-nums text-slate-900">{gs(c.costo)}</p>
-                            </div>
-                          </div>
+                        <FilaIngrediente key={l.key} l={l} bruto={c.bruto} costo={c.costo} puedeEditar={puedeEditar}
+                          onCambiar={(campo, v) => cambiar(l.key, campo, v)} onQuitar={() => setLineas((ls) => ls.filter((x) => x.key !== l.key))}
+                          sinStock={sinStock ? `No alcanza para una ${esPreparacion ? "tanda" : "porción"} con el stock de tu depósito.` : null}>
                           {esPlato ? (
                             <Interruptor activo={l.quitar} disabled={!puedeEditar} onChange={(v) => setLineas((ls) => ls.map((x) => (x.key === l.key ? { ...x, quitar: v } : x)))}
                               texto="Se puede quitar" detalle={l.quitar ? `El cliente lo puede pedir "sin ${l.nombre.toLowerCase()}" (no se descuenta)` : undefined} />
                           ) : null}
-                          {sinStock ? (
-                            <p className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-rose-700"><AlertTriangle className="h-3.5 w-3.5" /> No alcanza para una {esPreparacion ? "tanda" : "porción"} con el stock de tu depósito.</p>
-                          ) : null}
-                        </li>
+                        </FilaIngrediente>
                       );
                     })}
                   </ul>
@@ -454,7 +458,11 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
             <section className="space-y-3">
               <p className="text-[11px] leading-relaxed text-slate-500">
                 Grupos para elegir al pedir (ej. «Punto de la carne»: Jugosa / A punto / Bien cocida). Si es obligatorio, no se puede pedir sin elegir.
-                Cada opción puede sumar un precio (0 = sin cargo). Las opciones no cambian el stock.
+                Cada opción puede sumar un precio (0 = sin cargo) y llevar <strong>sus propios ingredientes</strong>: se descuentan del stock (con su merma) solo si el cliente la elige.
+                Una opción sin stock queda deshabilitada; si un grupo obligatorio se queda sin opciones, el plato no se vende.
+              </p>
+              <p className="rounded-lg bg-sky-50 px-3 py-2 text-[11px] leading-relaxed text-sky-800">
+                Si la guarnición la define la opción (ej. «Papas fritas» / «Puré»), sacala de los ingredientes base para no descontarla dos veces.
               </p>
               {grupos.length === 0 ? (
                 <div className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">Este plato no tiene opciones para elegir.</div>
@@ -488,28 +496,71 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                     <span className="pb-2 text-[11px] text-slate-400">{Number(g.maximo) === 1 ? "Se elige una" : `Se eligen hasta ${Number(g.maximo) || 0}`}</span>
                   </div>
                   <ul className="mt-3 space-y-2">
-                    {g.opciones.map((o) => (
-                      <li key={o.key} className="grid grid-cols-[minmax(0,1fr)_7.5rem_auto] items-end gap-2 max-sm:grid-cols-[minmax(0,1fr)_6.5rem_auto]">
-                        <label className="block min-w-0">
-                          <span className={MINI}>Opción</span>
-                          <input value={o.nombre} disabled={!puedeEditar} onChange={(e) => cambiarOpcion(g.key, o.key, { nombre: e.target.value.slice(0, 60) })} placeholder="Ej.: A punto"
-                            className={`${INPUT} py-2 ${o.activo ? "" : "text-slate-400 line-through"}`} />
-                        </label>
-                        <label className="block">
-                          <span className={MINI}>+ Precio (Gs.)</span>
-                          <input inputMode="numeric" disabled={!puedeEditar} value={o.precio} onChange={(e) => cambiarOpcion(g.key, o.key, { precio: soloGs(e.target.value) })} placeholder="0" className={`${NUM} py-2`} />
-                        </label>
-                        {puedeEditar ? (
-                          <button type="button" onClick={() => cambiarGrupo(g.key, { opciones: g.opciones.filter((x) => x.key !== o.key) })} aria-label={`Quitar la opción ${o.nombre}`}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 max-sm:h-11 max-sm:w-11">
-                            <X className="h-4 w-4" />
+                    {g.opciones.map((o) => {
+                      const costoOp = costoOpcion(o);
+                      return (
+                        <li key={o.key} className="rounded-xl border border-slate-100 bg-slate-50/50 p-2">
+                          <div className="grid grid-cols-[minmax(0,1fr)_7.5rem_auto] items-end gap-2 max-sm:grid-cols-[minmax(0,1fr)_6.5rem_auto]">
+                            <label className="block min-w-0">
+                              <span className={MINI}>Opción</span>
+                              <input value={o.nombre} disabled={!puedeEditar} onChange={(e) => cambiarOpcion(g.key, o.key, { nombre: e.target.value.slice(0, 60) })} placeholder="Ej.: A punto"
+                                className={`${INPUT} py-2 ${o.activo ? "" : "text-slate-400 line-through"}`} />
+                            </label>
+                            <label className="block">
+                              <span className={MINI}>+ Precio (Gs.)</span>
+                              <input inputMode="numeric" disabled={!puedeEditar} value={o.precio} onChange={(e) => cambiarOpcion(g.key, o.key, { precio: soloGs(e.target.value) })} placeholder="0" className={`${NUM} py-2`} />
+                            </label>
+                            {puedeEditar ? (
+                              <button type="button" onClick={() => cambiarGrupo(g.key, { opciones: g.opciones.filter((x) => x.key !== o.key) })} aria-label={`Quitar la opción ${o.nombre}`}
+                                className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 max-sm:h-11 max-sm:w-11">
+                                <X className="h-4 w-4" />
+                              </button>
+                            ) : <span />}
+                          </div>
+                          {/* Receta 74: ingredientes de esta opción (desplegable). */}
+                          <button type="button" aria-expanded={o.abierto} onClick={() => cambiarOpcion(g.key, o.key, { abierto: !o.abierto })}
+                            className="mt-1.5 flex min-h-10 w-full items-center gap-2 rounded-lg px-1 text-left text-xs">
+                            <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${o.abierto ? "rotate-180" : ""}`} />
+                            <span className="min-w-0 flex-1 font-semibold text-slate-700">
+                              Ingredientes de esta opción{o.items.length ? ` (${o.items.length})` : ""}
+                              {o.disponible === false ? <span className="ml-1.5 rounded-full bg-rose-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-rose-700 ring-1 ring-rose-200">Sin stock</span> : null}
+                            </span>
+                            <span className="shrink-0 tabular-nums text-slate-500">{o.items.length ? `costo ${gs(costoOp)}` : "sin ingredientes"}</span>
                           </button>
-                        ) : <span />}
-                      </li>
-                    ))}
+                          {o.abierto ? (
+                            <div className="mt-1 space-y-2 border-t border-slate-100 pt-2">
+                              {puedeEditar ? <BuscadorProductos tipo="materia_prima" onElegir={(p) => agregarAOpcion(g.key, o, p)} /> : null}
+                              {o.items.length === 0 ? (
+                                <p className="rounded-lg border border-dashed border-slate-200 bg-white px-3 py-3 text-center text-[11px] text-slate-500">
+                                  Sin ingredientes propios: elegirla no cambia el stock.
+                                </p>
+                              ) : (
+                                <ul className="space-y-2">
+                                  {o.items.map((l) => {
+                                    const bruto = brutoLinea(l);
+                                    const sinStock = l.controla_stock && !l.es_preparacion && l.stock < bruto;
+                                    return (
+                                      <FilaIngrediente key={l.key} l={l} bruto={bruto} costo={bruto * l.costo_unitario} puedeEditar={puedeEditar}
+                                        onCambiar={(campo, v) => cambiarItemOpcion(g.key, o, l.key, campo, v)}
+                                        onQuitar={() => cambiarOpcion(g.key, o.key, { items: o.items.filter((x) => x.key !== l.key) })}
+                                        sinStock={sinStock ? "No alcanza para un plato con el stock de tu depósito." : null} />
+                                    );
+                                  })}
+                                </ul>
+                              )}
+                              {o.items.length ? (
+                                <p className="text-right text-[11px] text-slate-500">
+                                  Por plato: <strong className="tabular-nums text-slate-800">{gs(costoOp)}</strong> (se suma al costo base si eligen «{o.nombre || "esta opción"}»)
+                                </p>
+                              ) : null}
+                            </div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
                   </ul>
                   {puedeEditar ? (
-                    <button type="button" onClick={() => cambiarGrupo(g.key, { opciones: [...g.opciones, { key: nuevaKey(), nombre: "", precio: "", activo: true }] })}
+                    <button type="button" onClick={() => cambiarGrupo(g.key, { opciones: [...g.opciones, { key: nuevaKey(), nombre: "", precio: "", activo: true, items: [], abierto: false }] })}
                       className="mt-2 inline-flex min-h-10 items-center gap-1 rounded-lg px-1 text-xs font-semibold" style={{ color: TEAL }}>
                       <Plus className="h-3.5 w-3.5" /> Opción
                     </button>
@@ -518,11 +569,10 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
               ))}
               {puedeEditar ? (
                 <button type="button" className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:w-full`}
-                  onClick={() => setGrupos((gs) => [...gs, { key: nuevaKey(), nombre: "", obligatorio: true, minimo: "1", maximo: "1", opciones: [{ key: nuevaKey(), nombre: "", precio: "", activo: true }, { key: nuevaKey(), nombre: "", precio: "", activo: true }] }])}>
+                  onClick={() => setGrupos((gs) => [...gs, { key: nuevaKey(), nombre: "", obligatorio: true, minimo: "1", maximo: "1", opciones: [{ key: nuevaKey(), nombre: "", precio: "", activo: true, items: [], abierto: false }, { key: nuevaKey(), nombre: "", precio: "", activo: true, items: [], abierto: false }] }])}>
                   <Plus className="h-4 w-4" /> Grupo de opciones
                 </button>
               ) : null}
-              <p className="text-[11px] text-slate-400">Pendiente: que una opción agregue o reemplace un ingrediente (por ahora solo cambia el precio).</p>
             </section>
           )}
           {problemaOpciones && tab !== "ingredientes" ? <p className="rounded-lg bg-amber-50 p-2.5 text-xs text-amber-800">{problemaOpciones}</p> : null}
@@ -653,7 +703,7 @@ function CopiarDePlato({ excluir, onElegir, onClose }: { excluir: string; onEleg
     }
   }
   return (
-    <ModalDocumento ancho="max-w-md" titulo="Copiar de otro plato" subtitulo="Se suman sus extras activados y sus grupos de opciones (los que este plato no tiene)" onClose={onClose}>
+    <ModalDocumento ancho="max-w-md" titulo="Copiar de otro plato" subtitulo="Se suman sus extras activados y sus grupos de opciones con sus ingredientes (los que este plato no tiene)" onClose={onClose}>
       <div className="space-y-3 pb-2">
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -681,6 +731,80 @@ function CopiarDePlato({ excluir, onElegir, onClose }: { excluir: string; onEleg
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
       </div>
     </ModalDocumento>
+  );
+}
+
+/** Fila de un ingrediente (receta base y opciones): cantidad neta, unidad, merma, lo que descuenta y su costo. */
+function FilaIngrediente({ l, bruto, costo, puedeEditar, onCambiar, onQuitar, sinStock, children }: {
+  l: Linea;
+  bruto: number;
+  costo: number;
+  puedeEditar: boolean;
+  onCambiar: (campo: "cantidad" | "unidad" | "merma", v: string) => void;
+  onQuitar: () => void;
+  sinStock?: string | null;
+  children?: ReactNode;
+}) {
+  const unidades = unidadesCompatibles(l.unidad_insumo);
+  return (
+    <li className={`rounded-xl border px-3 py-2.5 ${sinStock || !l.activo ? "border-rose-200 bg-rose-50/40" : "border-slate-200 bg-white"}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-900">
+            {l.nombre}
+            {l.es_preparacion ? <span className="ml-1.5 rounded-full bg-lime-50 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-lime-800 ring-1 ring-lime-200">Preparación</span> : null}
+            {!l.activo ? <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-700">Inactivo</span> : null}
+          </p>
+          <p className="text-[11px] text-slate-500">
+            {gs(l.costo_unitario)} / {unidadCorta(l.unidad_insumo)}
+            {l.es_preparacion ? " · se explota en sus ingredientes" : l.controla_stock ? ` · stock ${cant(l.stock)} ${unidadCorta(l.unidad_insumo)}` : " · sin control de stock"}
+          </p>
+        </div>
+        {puedeEditar ? (
+          <button type="button" onClick={onQuitar} aria-label={`Quitar ${l.nombre}`}
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 max-sm:h-11 max-sm:w-11">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
+      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-[120px_auto_100px_minmax(0,1fr)] sm:items-end">
+        <label className="block">
+          <span className={MINI}>Cantidad neta</span>
+          <input inputMode="decimal" disabled={!puedeEditar} value={l.cantidad} onChange={(e) => onCambiar("cantidad", soloDecimal(e.target.value))}
+            placeholder="0" aria-label={`Cantidad de ${l.nombre}`} className={`${NUM} py-2`} />
+        </label>
+        <div>
+          <span className={MINI}>Unidad</span>
+          <div role="radiogroup" aria-label={`Unidad de ${l.nombre}`} className="flex gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
+            {unidades.map((u) => (
+              <button key={u} type="button" role="radio" aria-checked={l.unidad === u} disabled={!puedeEditar} onClick={() => onCambiar("unidad", u)}
+                className="min-w-10 flex-1 rounded-lg px-2 py-1 text-sm font-semibold transition max-sm:min-h-9"
+                style={l.unidad === u ? { backgroundColor: "#fff", color: TEAL, boxShadow: "0 1px 2px rgba(15,23,42,.08)" } : { color: "#64748b" }}>
+                {unidadCorta(u)}
+              </button>
+            ))}
+          </div>
+        </div>
+        <label className="block">
+          <span className={MINI}>Merma</span>
+          <div className="relative">
+            <input inputMode="decimal" disabled={!puedeEditar} value={l.merma} onChange={(e) => onCambiar("merma", soloDecimal(e.target.value).slice(0, 5))}
+              placeholder="0" aria-label={`Merma de ${l.nombre}`} className={`${NUM} py-2 pr-7 ${numero(l.merma) > 90 ? "border-rose-300" : ""}`} />
+            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">%</span>
+          </div>
+        </label>
+        <div className="text-right max-sm:col-span-1 max-sm:self-end">
+          <p className="text-[11px] text-slate-500 tabular-nums">
+            Descuenta {cant(bruto, 4)} {unidadCorta(l.unidad_insumo)}
+          </p>
+          <p className="text-sm font-semibold tabular-nums text-slate-900">{gs(costo)}</p>
+        </div>
+      </div>
+      {children}
+      {sinStock ? (
+        <p className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-rose-700"><AlertTriangle className="h-3.5 w-3.5" /> {sinStock}</p>
+      ) : null}
+    </li>
   );
 }
 

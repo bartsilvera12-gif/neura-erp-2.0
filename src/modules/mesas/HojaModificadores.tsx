@@ -3,7 +3,8 @@
 /**
  * Hoja de modificadores de un plato (receta 73), compartida por el menú QR y Caja › Nueva venta.
  * En celular es una hoja inferior (CapaModal la apoya abajo); en tablet / escritorio, un modal.
- *   · Opciones (radios si se elige una, casillas si más; las obligatorias con *)
+ *   · Opciones (radios si se elige una, casillas si más; las obligatorias con *). Receta 74: una
+ *     opción cuyos ingredientes no alcanzan aparece deshabilitada con "Sin stock".
  *   · Quitar ("Sin lechuga")
  *   · Extras (− / + con su precio; sin stock: no aparecen en el QR, deshabilitados en la caja)
  *   · Nota (opcional), cantidad y el precio en vivo.
@@ -141,17 +142,20 @@ export function HojaModificadores({
                 <div role={g.maximo === 1 ? "radiogroup" : "group"} aria-label={g.nombre} className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
                   {g.opciones.map((o) => {
                     const on = sel.opciones.includes(o.id);
-                    const bloqueada = !on && g.maximo > 1 && marcadas >= g.maximo;
+                    // Receta 74: sin stock para sus ingredientes → deshabilitada (si ya estaba elegida, se puede sacar).
+                    const sinStock = o.disponible === false;
+                    const bloqueada = !on && (sinStock || (g.maximo > 1 && marcadas >= g.maximo));
                     return (
                       <button key={o.id} type="button" role={g.maximo === 1 ? "radio" : "checkbox"} aria-checked={on} disabled={bloqueada}
                         onClick={() => elegirOpcion(g.id, o.id, g.maximo)}
-                        className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left text-sm transition active:bg-slate-50 disabled:opacity-40">
+                        className={`flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left text-sm transition active:bg-slate-50 ${sinStock && !on ? "disabled:opacity-50" : "disabled:opacity-40"}`}>
                         <span className={`grid h-5 w-5 shrink-0 place-items-center border-2 ${g.maximo === 1 ? "rounded-full" : "rounded-md"}`}
                           style={{ borderColor: on ? color : "#cbd5e1", backgroundColor: on && g.maximo > 1 ? color : undefined }}>
                           {on ? (g.maximo === 1 ? <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: color }} /> : <Check className="h-3.5 w-3.5 text-white" strokeWidth={3} />) : null}
                         </span>
                         <span className={`min-w-0 flex-1 ${on ? "font-semibold text-slate-900" : "text-slate-700"}`}>{o.nombre}</span>
-                        {o.precio > 0 ? <span className="shrink-0 text-xs font-medium tabular-nums text-slate-500">+ {gs(o.precio)}</span> : null}
+                        {sinStock ? <span className="shrink-0 text-xs font-medium text-rose-600">Sin stock</span>
+                          : o.precio > 0 ? <span className="shrink-0 text-xs font-medium tabular-nums text-slate-500">+ {gs(o.precio)}</span> : null}
                       </button>
                     );
                   })}

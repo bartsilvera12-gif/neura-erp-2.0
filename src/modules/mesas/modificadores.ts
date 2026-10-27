@@ -18,7 +18,8 @@ export type ModsCatalogo = {
     obligatorio: boolean;
     minimo: number;
     maximo: number;
-    opciones: { id: string; nombre: string; precio: number }[];
+    /** Receta 74: `disponible` false = sus ingredientes no alcanzan ("Sin stock", deshabilitada). */
+    opciones: { id: string; nombre: string; precio: number; disponible?: boolean }[];
   }[];
 };
 

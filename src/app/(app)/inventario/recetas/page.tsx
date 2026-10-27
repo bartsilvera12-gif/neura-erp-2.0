@@ -104,7 +104,19 @@ export default function RecetasPage() {
     },
     {
       key: "costo", titulo: "Costo", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-slate-700 max-md:text-left",
-      celda: (f) => (f.costo == null ? <span className="text-slate-300">—</span> : <>{gs(f.costo)}<span className="text-[10px] text-slate-400"> /{f.tipo === "menu" ? "porc." : unidadCorta(f.unidad_medida)}</span></>),
+      celda: (f) => {
+        if (f.costo == null) return <span className="text-slate-300">—</span>;
+        // Receta 74: con grupos obligatorios cuyas opciones llevan ingredientes, "desde" la opción más barata.
+        if (f.costo_desde != null) {
+          return (
+            <span title={`Base ${gs(f.costo)} · con opciones de ${gs(f.costo_desde)} a ${gs(f.costo_hasta ?? f.costo_desde)}`}>
+              <span className="text-[10px] text-slate-400">desde </span>{gs(f.costo_desde)}<span className="text-[10px] text-slate-400"> /porc.</span>
+              <span className="block text-[10px] text-slate-400">base {gs(f.costo)}{f.costo_hasta != null && f.costo_hasta !== f.costo_desde ? ` · hasta ${gs(f.costo_hasta)}` : ""}</span>
+            </span>
+          );
+        }
+        return <>{gs(f.costo)}<span className="text-[10px] text-slate-400"> /{f.tipo === "menu" ? "porc." : unidadCorta(f.unidad_medida)}</span></>;
+      },
     },
     {
       key: "precio", titulo: "Precio", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-semibold tabular-nums text-slate-900",
@@ -114,8 +126,9 @@ export default function RecetasPage() {
       key: "margen", titulo: "Margen", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-semibold tabular-nums max-md:text-left",
       celda: (f) => {
         if (f.tipo !== "menu" || f.costo == null) return <span className="text-slate-300">—</span>;
-        const m = margenPct(f.costo, precioFinal(f.precio_venta, f.descuento_pct));
-        return <span className={colorMargen(m)}>{m == null ? "—" : `${m.toFixed(1)}%`}</span>;
+        // Receta 74: con opciones que cambian el costo, el margen con la opción más cara (peor caso).
+        const m = margenPct(f.costo_hasta ?? f.costo, precioFinal(f.precio_venta, f.descuento_pct));
+        return <span className={colorMargen(m)} title={f.costo_hasta != null ? "Con la opción más cara" : undefined}>{m == null ? "—" : `${m.toFixed(1)}%`}</span>;
       },
     },
     {

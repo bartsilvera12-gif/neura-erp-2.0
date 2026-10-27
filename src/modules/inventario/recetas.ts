@@ -26,6 +26,9 @@ export type FilaReceta = {
   estado: EstadoReceta;
   /** Receta 73: quitables + extras + grupos de opciones. */
   modificadores?: number;
+  /** Receta 74: costo con la opción más barata / más cara de los grupos obligatorios con ingredientes (null = no hay). */
+  costo_desde?: number | null;
+  costo_hasta?: number | null;
 };
 
 export type ListaRecetas = { deposito_id: string | null; deposito: string | null; items: FilaReceta[] };
@@ -53,10 +56,13 @@ export type ExtraPlato = {
   insumo_nombre: string; cantidad: number; unidad: string; disponible?: number;
 };
 
-/** Grupo de opciones del plato (receta 73). */
+/** Ingrediente de una opción (receta 74): por plato, sin rendimiento; mismos campos que la receta. */
+export type IngredienteOpcion = Omit<IngredienteReceta, "se_puede_quitar">;
+
+/** Grupo de opciones del plato (receta 73). Receta 74: cada opción con sus ingredientes y su costo. */
 export type GrupoOpciones = {
   id?: string; nombre: string; obligatorio: boolean; minimo: number; maximo: number;
-  opciones: { id?: string; nombre: string; precio: number; activo: boolean }[];
+  opciones: { id?: string; nombre: string; precio: number; activo: boolean; items?: IngredienteOpcion[]; costo?: number; disponible?: boolean }[];
 };
 
 /** Extra de la lista común (Inventario › Recetas › Extras). */
@@ -75,6 +81,8 @@ export type DetalleReceta = {
   rendimiento: number;
   notas: string | null;
   costo: number;
+  /** Receta 74: costo base + opción más barata / más cara de los grupos obligatorios con ingredientes. */
+  costo_rango?: { desde: number; hasta: number } | null;
   porciones: number | null;
   items: IngredienteReceta[];
   usado_en: { id: string; nombre: string }[];

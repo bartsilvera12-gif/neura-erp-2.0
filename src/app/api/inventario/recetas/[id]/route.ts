@@ -5,6 +5,8 @@
  *   PUT /api/inventario/recetas/[id] → guarda { rendimiento, notas, items: [{ insumo_id, cantidad,
  *                                      unidad, merma_pct }] }. items vacío = quitar la receta.
  *        La base valida tipos, unidades, merma (0–90 %), ciclos y profundidad (5).
+ *        Receta 73: extras y grupos de opciones; receta 74: cada opción con sus `items`
+ *        (ingredientes por plato: insumo, cantidad neta, unidad, merma %).
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
@@ -57,6 +59,16 @@ const guardar = z.object({
           nombre: z.string().trim().min(1, "Escribí el nombre de cada opción").max(60),
           precio: z.coerce.number().min(0).max(100000000).default(0),
           activo: z.boolean().default(true),
+          // Receta 74: ingredientes de la opción (por plato). Si no vienen, no se tocan.
+          items: z
+            .array(z.object({
+              insumo_id: z.string().uuid(),
+              cantidad: z.coerce.number().positive("Cargá la cantidad de cada ingrediente de la opción"),
+              unidad: z.enum(["Unidad", "kg", "g", "l", "ml"]),
+              merma_pct: z.coerce.number().min(0).max(90, "La merma va de 0 a 90 %").default(0),
+            }))
+            .max(20, "Hasta 20 ingredientes por opción")
+            .optional(),
         }))
         .min(1, "Cada grupo necesita al menos una opción")
         .max(20, "Hasta 20 opciones por grupo"),
