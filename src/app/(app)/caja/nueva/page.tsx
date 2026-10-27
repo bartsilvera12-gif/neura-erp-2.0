@@ -11,16 +11,22 @@
  * Mesas por cobrar (receta 69): las cuentas que Pedidos de mesas envió a caja (de la sucursal
  * de la caja). Se cargan en el carrito (no se pueden quitar ni bajar sus ítems; agregar otros sí)
  * y al cobrar la venta cierra la cuenta en la misma transacción.
+ * Pedidos por cobrar (receta 77): los pedidos de mostrador que el vendedor envió a caja (de hoy,
+ * de la sucursal de la caja). Se cargan desde la bandeja o escaneando / escribiendo "P-0042" en el
+ * buscador; se pueden agregar, quitar o bajar productos (chip "modificado en caja") y al cobrar el
+ * pedido queda cobrado con la venta en la misma transacción.
  */
 
 import Link from "next/link";
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ChevronRight, FileSignature, Lock, Package, Printer, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronRight, ClipboardList, FileSignature, Lock, Package, Printer, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
 import { usePorCobrar } from "@/modules/mesas/usePorCobrar";
 import { haceCuanto, origenPedido, pitido, type CuentaPorCobrar } from "@/modules/mesas/tipos";
 import { HojaModificadores, type ResultadoMods } from "@/modules/mesas/HojaModificadores";
 import { ModsDetalle } from "@/modules/mesas/ModsDetalle";
+import { usePedidosPorCobrar } from "@/modules/pedidos-mostrador/cliente";
+import { numeroDePedido, type PedidoMostrador } from "@/modules/pedidos-mostrador/tipos";
 import {
   claveMods, esVacia, modsParaEnviar, partesSel, precioMods, selDeSnapshot, tieneMods,
   type ModsSeleccion, type ModsSnapshot,
@@ -89,6 +95,8 @@ type CartLine = {
   descuento_pct: number;
   /** Línea de la cuenta de una mesa (receta 69): lo pedido; no se quita ni se baja de acá. */
   mesa_min?: number;
+  /** Línea de un pedido de mostrador (receta 77): la cantidad pedida (se puede quitar o bajar: es mostrador). */
+  pedido_cant?: number;
   /** Receta 73: modificadores elegidos (se mandan como `mods`), cómo se ven y su precio por unidad
    *  (vista previa: el servidor los valida y les pone el precio). Misma combinación = misma línea. */
   mods?: ModsSeleccion;
@@ -553,7 +561,10 @@ function CajaPageContenido() {
     setErrorMesa(null);
     const lineas = lineasDeMesa(c);
     if (typeof lineas === "string") { setErrorMesa(lineas); return; }
-    setCart((prev) => [...lineas, ...prev.filter((l) => !l.mesa_min)]);
+    // Receta 77: una mesa o un pedido por venta (cargar la mesa suelta el pedido).
+    setCart((prev) => [...lineas, ...prev.filter((l) => !l.mesa_min && l.pedido_cant == null)]);
+    setPedido(null);
+    setErrorPedido(null);
     setUltimo(lineas.length ? lineas[lineas.length - 1].producto : null);
     setCuentaMesa(c);
     setBandejaMesas(false);
@@ -566,6 +577,111 @@ function CajaPageContenido() {
     setCuentaMesa(null);
     setErrorMesa(null);
     idempotencyKeyRef.current = null;
+  }
+
+  // ── Pedidos por cobrar (receta 77) ──────────────────────────────────────────
+  // Pedidos de mostrador que el vendedor envió a caja (de hoy, de la sucursal de la caja; cada 4 s,
+  // con un pitido cuando entra uno). El nivel Vendedor arma pedidos pero no los cobra: sin bandeja.
+  // Se carga UNO en el carrito (con los precios del pedido); se puede agregar, quitar o bajar. Al
+  // cobrar, la base deja el pedido cobrado con la venta en la misma transacción.
+  const conPedidos = useFuncion("pedidos");
+  const cobraPedidos = !!me && me.rol !== "VENDEDOR";
+  const { pedidos: pedidosPorCobrar, fresco: pedidosFresco, recargar: recargarPedidos, ahora: ahoraPedidos } =
+    usePedidosPorCobrar(conPedidos && cobraPedidos ? caja?.id ?? null : null, () => pitido());
+  const [bandejaPedidos, setBandejaPedidos] = useState(false);
+  const [pedido, setPedido] = useState<PedidoMostrador | null>(null);
+  const [errorPedido, setErrorPedido] = useState<string | null>(null);
+  const [buscandoPedido, setBuscandoPedido] = useState(false);
+  const [numeroBandeja, setNumeroBandeja] = useState("");
+  const pedidoAhora = pedido ? pedidosPorCobrar.find((x) => x.id === pedido.id) ?? null : null;
+  const pedidoCambio = !!pedido && !!pedidoAhora && pedidoAhora.version !== pedido.version;
+  const pedidoSeFue = !!pedido && pedidosFresco && !pedidoAhora;
+  // "Modificado en caja": se quitó o cambió una línea del pedido, o se agregaron otras.
+  const pedidoModificado = useMemo(() => {
+    if (!pedido) return false;
+    const delPedido = cart.filter((l) => l.pedido_cant != null);
+    if (delPedido.length !== pedido.items.length || delPedido.length !== cart.length) return true;
+    return delPedido.some((l) => l.cantidad !== l.pedido_cant);
+  }, [pedido, cart]);
+
+  function lineasDePedido(pd: PedidoMostrador): CartLine[] | string {
+    const t = Date.now();
+    const out: CartLine[] = [];
+    for (const [i, it] of pd.items.entries()) {
+      const prod = it.producto_id ? productos.find((x) => x.id === it.producto_id) : undefined;
+      if (!prod) return `"${it.nombre}" no está en el catálogo de esta caja: no se puede cargar el pedido.`;
+      const sel = it.modificadores ? selDeSnapshot(it.modificadores) : undefined;
+      const pMods = sel ? (tieneMods(prod.mods) ? precioMods(prod.mods, sel) : Number(it.precio_mods) || 0) : 0;
+      out.push({
+        cart_line_id: `ped_${pd.id}_${i}_${t}`,
+        producto: prod,
+        cantidad: Number(it.cantidad),
+        tipo_iva: prod.tipo_iva,
+        // Precio del pedido: si es el de hoy, el de lista con el descuento del producto (igual que la
+        // caja); si cambió desde que se armó, se respeta el del pedido (sin los modificadores).
+        precio_override: it.precio_de_hoy ? null : Number(it.precio_base),
+        tier_manual: true,
+        tipo_precio: "minorista",
+        descuento_pct: it.precio_de_hoy ? Math.max(0, Math.min(Number(prod.descuento_pct) || 0, 100)) : 0,
+        pedido_cant: Number(it.cantidad),
+        mods: sel,
+        mods_snap: it.modificadores ?? null,
+        precio_mods: pMods,
+      });
+    }
+    return out;
+  }
+
+  function cargarPedido(pd: PedidoMostrador) {
+    setErrorPedido(null);
+    const lineas = lineasDePedido(pd);
+    if (typeof lineas === "string") { setErrorPedido(lineas); return; }
+    // Un pedido o una mesa por venta: cargar el pedido suelta la cuenta de mesa (y el pedido anterior).
+    setCart((prev) => [...lineas, ...prev.filter((l) => !l.mesa_min && l.pedido_cant == null)]);
+    if (cuentaMesa) { setCuentaMesa(null); setErrorMesa(null); }
+    setUltimo(lineas.length ? lineas[lineas.length - 1].producto : null);
+    setPedido(pd);
+    setBandejaPedidos(false);
+    setNumeroBandeja("");
+    idempotencyKeyRef.current = null;
+    if (cobroError) setCobroError(null);
+    // Cliente del pedido (si tiene): queda elegido; el cajero lo puede cambiar.
+    const cid = pd.cliente?.id;
+    if (cid) {
+      setOcasional(false);
+      apiFetch<{ cliente: Cliente }>(`/api/clientes/${encodeURIComponent(cid)}`)
+        .then(({ cliente: c }) => {
+          if (!c?.id) return;
+          setClientes((prev) => (prev.some((x) => x.id === c.id) ? prev : [c, ...prev]));
+          setClienteId(c.id);
+        })
+        .catch(() => {});
+    }
+  }
+
+  function soltarPedido() {
+    setCart((prev) => prev.filter((l) => l.pedido_cant == null));
+    setPedido(null);
+    setErrorPedido(null);
+    idempotencyKeyRef.current = null;
+  }
+
+  /** Escaneo / número escrito ("P-0042"): de la bandeja, o se pide a la base (mensaje claro si no se puede). */
+  async function cargarPedidoPorNumero(n: number) {
+    setErrorPedido(null);
+    const enBandeja = pedidosPorCobrar.find((x) => x.numero === n);
+    if (enBandeja) { cargarPedido(enBandeja); return; }
+    if (!caja) { setErrorPedido("Abrí la caja para cobrar el pedido."); return; }
+    setBuscandoPedido(true);
+    try {
+      const pd = await apiFetch<PedidoMostrador>(`/api/pedidos-mostrador/numero/${n}?caja=${caja.id}`);
+      cargarPedido(pd);
+      void recargarPedidos();
+    } catch (e) {
+      setErrorPedido((e as Error).message);
+    } finally {
+      setBuscandoPedido(false);
+    }
   }
 
   // ── Acciones carrito ───────────────────────────────────────────────────────
@@ -648,6 +764,7 @@ function CajaPageContenido() {
     setCart([]);
     setUltimo(null);
     setCuentaMesa(null);
+    setPedido(null);
   }, []);
 
   function onKeyDownBuscar(e: React.KeyboardEvent<HTMLInputElement>) {
@@ -658,6 +775,19 @@ function CajaPageContenido() {
       // El lector de códigos tipea rápido y aprieta Enter: si la lista todavía es la de una
       // consulta vieja (diferida), se busca YA con lo escrito para no agregar otro producto.
       const alDia = qDiferida === q;
+      // Receta 77: "P-0042" (escaneado del comprobante o escrito) carga el pedido, salvo que sea
+      // justo el código de un producto.
+      const nPedido = conPedidos && cobraPedidos ? numeroDePedido(q) : null;
+      if (nPedido) {
+        const t = q.trim().toLowerCase();
+        const esCodigo = productos.some((x) => (x.sku ?? "").toLowerCase() === t || (x.codigo_barras ?? "").toLowerCase() === t);
+        if (!esCodigo) {
+          setQ("");
+          setHitsHighlight(-1);
+          void cargarPedidoPorNumero(nPedido);
+          return;
+        }
+      }
       const lista = alDia ? hits : q.trim() ? buscarEnIndice(indice, q, 8) : [];
       const pick = alDia && hitsHighlight >= 0 ? lista[hitsHighlight] : lista[0];
       if (pick) addToCart(pick, true); // lector / teclado: sigue en el buscador
@@ -675,6 +805,8 @@ function CajaPageContenido() {
     if (cuentaMesaSeFue) { setCobroError("La cuenta de la mesa ya no está en caja: soltala para seguir."); return; }
     if (cuentaMesaCambio) { setCobroError("La cuenta de la mesa cambió: recargala antes de cobrar."); return; }
     if (cuentaMesaAhora && cuentaMesaAhora.pendientes > 0) { setCobroError("La mesa tiene un pedido nuevo sin atender: aceptalo o rechazalo en Pedidos de mesas."); return; }
+    if (pedidoSeFue) { setCobroError(`El pedido ${pedido?.etiqueta} ya no está en caja (lo cobraron, lo anularon o venció): soltalo para seguir.`); return; }
+    if (pedidoCambio) { setCobroError(`El pedido ${pedido?.etiqueta} cambió: recargalo antes de cobrar.`); return; }
     if (clienteObligatorio && !clienteId) {
       setCobroError(tipoDocumento === "factura" ? "Para emitir factura elegí un cliente." : "La venta a crédito requiere un cliente.");
       if (!esEscritorio) setHojaOpciones(true); // celular / tablet: el cliente está en la hoja
@@ -739,16 +871,20 @@ function CajaPageContenido() {
           // Receta 69: la venta cierra la cuenta de la mesa (misma transacción en la base).
           mesa_cuenta_id: cuentaMesa?.id,
           mesa_version: cuentaMesa?.version,
+          // Receta 77: la venta deja el pedido de mostrador cobrado (misma transacción en la base).
+          pedido_id: pedido?.id,
+          pedido_version: pedido?.version,
         }),
       });
       idempotencyKeyRef.current = null;
       if (cuentaMesa) void recargarPorCobrar();
+      if (pedido) void recargarPedidos();
       if (presuActivo) {
         setVentaPresu(venta.aviso_presupuesto ?? `Presupuesto ${presuActivo.etiqueta} convertido en venta.`);
         setPresu(null);
         router.replace("/caja/nueva", { scroll: false });
       } else {
-        setVentaPresu(cuentaMesa ? `Cuenta de ${cuentaMesa.mesa.nombre} cerrada.` : null);
+        setVentaPresu(cuentaMesa ? `Cuenta de ${cuentaMesa.mesa.nombre} cerrada.` : pedido ? `Pedido ${pedido.etiqueta} cobrado.` : null);
       }
       // Stock: se descuenta en pantalla lo recién vendido (antes se volvía a bajar TODO el
       // catálogo después de cada venta). La base igual valida el stock al vender.
@@ -790,7 +926,7 @@ function CajaPageContenido() {
 
   // Espejo del estado para los atajos de teclado (siempre el último valor).
   kbRef.current = {
-    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente || hojaOpciones || pedirComprador || bandejaMesas || !!hojaMods, cart, q, inputRef,
+    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente || hojaOpciones || pedirComprador || bandejaMesas || bandejaPedidos || !!hojaMods, cart, q, inputRef,
     updateCant, removeFromCart, setCobroOpen, setQ, setClienteOpen,
   };
 
@@ -1083,6 +1219,63 @@ function CajaPageContenido() {
       ) : null}
       {errorMesa && !bandejaMesas ? <p className="shrink-0 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{errorMesa}</p> : null}
 
+      {/* Pedidos por cobrar (receta 77): bandeja + el pedido cargado en el carrito. */}
+      {caja && (pedidosPorCobrar.length > 0 || pedido) ? (
+        <div className={`grid shrink-0 gap-2 ${pedido && pedidosPorCobrar.length > 0 ? "md:grid-cols-2" : ""}`}>
+          {pedidosPorCobrar.length > 0 ? (
+            <button type="button" onClick={() => { setErrorPedido(null); setBandejaPedidos(true); }}
+              className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-violet-200 bg-violet-50 px-3 py-2 text-left transition hover:bg-violet-100 active:scale-[0.99]">
+              <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-violet-700 ring-1 ring-violet-200">
+                <ClipboardList className="h-4 w-4" aria-hidden />
+                <span className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full bg-violet-600 px-1 text-[11px] font-bold text-white tabular-nums">{pedidosPorCobrar.length}</span>
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-violet-900">Pedidos por cobrar ({pedidosPorCobrar.length})</span>
+                <span className="block truncate text-xs text-violet-800/80">{pedidosPorCobrar.map((x) => x.etiqueta).join(" · ")}</span>
+              </span>
+              <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-violet-800">Ver <ChevronRight className="h-4 w-4" aria-hidden /></span>
+            </button>
+          ) : null}
+          {pedido ? (
+            <div className="space-y-1.5 rounded-xl border px-3 py-2 text-sm" style={{ borderColor: `${TEAL}55`, backgroundColor: `${TEAL}10` }}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-slate-800">
+                  <ClipboardList className="h-4 w-4 shrink-0" style={{ color: TEAL }} aria-hidden />
+                  <span className="min-w-0">
+                    Pedido <b className="font-mono">{pedido.etiqueta}</b>
+                    {pedido.vendedor ? <> · vendedor {pedido.vendedor}</> : null}
+                    {pedido.cliente ? <> · cliente <b>{pedido.cliente.nombre}</b></> : null}
+                    {" · "}<span className="whitespace-nowrap tabular-nums">{formatGs(pedido.total)}</span>
+                  </span>
+                  {pedidoModificado ? <span className="rounded-full border border-amber-300 bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">Modificado en caja</span> : null}
+                </p>
+                <button type="button" onClick={soltarPedido} className="min-h-11 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-white/70 hover:text-slate-800 lg:min-h-0">Soltar pedido</button>
+              </div>
+              {pedido.nota ? <p className="text-xs text-slate-600">Nota: {pedido.nota}</p> : null}
+              {pedidoCambio && pedidoAhora ? (
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-900" role="status">
+                  El pedido cambió (ahora {formatGs(pedidoAhora.total)}): recargalo.
+                  <button type="button" onClick={() => cargarPedido(pedidoAhora)} className="inline-flex min-h-11 items-center gap-1 font-semibold underline underline-offset-2 lg:min-h-0">
+                    <RotateCw className="h-3.5 w-3.5" aria-hidden /> Recargar
+                  </button>
+                </p>
+              ) : null}
+              {pedidoSeFue ? (
+                <p className="rounded-lg bg-rose-50 px-2.5 py-1.5 text-xs font-medium text-rose-700" role="alert">
+                  Este pedido ya no está en caja (lo cobraron, lo anularon o venció). Soltalo para seguir.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+      {(errorPedido || buscandoPedido) && !bandejaPedidos ? (
+        <p className={`flex shrink-0 items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm ${errorPedido ? "bg-rose-50 text-rose-700" : "bg-slate-50 text-slate-600"}`} role={errorPedido ? "alert" : "status"}>
+          <span>{errorPedido ?? "Buscando el pedido…"}</span>
+          {errorPedido ? <button type="button" onClick={() => setErrorPedido(null)} aria-label="Cerrar aviso" className="inline-flex h-11 w-11 shrink-0 items-center justify-center text-rose-400 hover:text-rose-700 lg:h-auto lg:w-auto"><X className="h-4 w-4" /></button> : null}
+        </p>
+      ) : null}
+
       {!caja ? (
         <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500 shadow-sm max-lg:min-h-[40vh]">
           {estadoCajas ? (estadoCajas.abiertas.length > 1 ? "Elegí arriba la caja en la que vas a vender." : "Abrí la caja para empezar a cobrar.") : "Cargando la caja…"}
@@ -1249,6 +1442,12 @@ function CajaPageContenido() {
                           <div className="flex flex-wrap items-center gap-1.5">
                             <p className="min-w-0 flex-1 text-sm font-medium leading-snug text-slate-900 [overflow-wrap:anywhere] @lg:truncate">{l.producto.nombre}</p>
                             {l.mesa_min ? <span className="rounded-full border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">Mesa · {l.mesa_min}</span> : null}
+                            {l.pedido_cant != null ? (
+                              <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${l.cantidad !== l.pedido_cant ? "border-amber-300 bg-amber-50 text-amber-800" : "border-violet-200 bg-violet-50 text-violet-800"}`}
+                                title={l.cantidad !== l.pedido_cant ? `En el pedido: ${l.pedido_cant}` : "Del pedido"}>
+                                Pedido · {l.pedido_cant}
+                              </span>
+                            ) : null}
                             {sinStockLinea && <span className="rounded-full border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-800">❌ Sin stock</span>}
                             {!sinStockLinea && idsVencidos.has(l.producto.id) && <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-800">⚠ Vencido</span>}
                             {tier !== "minorista" && (
@@ -1516,6 +1715,67 @@ function CajaPageContenido() {
               )}
               {errorMesa ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{errorMesa}</p> : null}
               {cart.some((l) => !l.mesa_min) ? <p className="mt-3 text-[11px] text-slate-500">Lo que ya está en el carrito se mantiene: la cuenta se suma.</p> : null}
+            </div>
+          </div>
+        </CapaModal>
+      ) : null}
+
+      {/* Pedidos por cobrar (receta 77): elegir el pedido que se carga en el carrito */}
+      {bandejaPedidos ? (
+        <CapaModal onClose={() => setBandejaPedidos(false)} z="z-[70]">
+          <div role="dialog" aria-modal="true" aria-labelledby="pedidos-titulo" className={`flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${ALTO_MAX_MODAL}`}>
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Caja</p>
+                <h3 id="pedidos-titulo" className="text-base font-semibold text-slate-900">Pedidos por cobrar ({pedidosPorCobrar.length})</h3>
+              </div>
+              <button type="button" aria-label="Cerrar" onClick={() => setBandejaPedidos(false)} className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:h-9 lg:w-9"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-5">
+              <form className="mb-3 flex gap-2" onSubmit={(e) => {
+                e.preventDefault();
+                const n = numeroDePedido(numeroBandeja) ?? (/^\s*\d{1,7}\s*$/.test(numeroBandeja) ? Number(numeroBandeja) : null);
+                if (!n) { setErrorPedido("Escribí el número del pedido (por ejemplo P-0042 o 42)."); return; }
+                void cargarPedidoPorNumero(n);
+              }}>
+                <input type="text" inputMode="text" value={numeroBandeja} onChange={(e) => setNumeroBandeja(e.target.value)} placeholder="Nº de pedido (P-0042) o escaneá"
+                  aria-label="Número de pedido" autoComplete="off" enterKeyHint="search"
+                  className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-200 px-3 text-base outline-none focus:ring-2 sm:text-sm" style={{ ["--tw-ring-color" as string]: `${TEAL}55` }} />
+                <button type="submit" disabled={buscandoPedido || !numeroBandeja.trim() || !productos.length} className="inline-flex min-h-11 shrink-0 items-center rounded-lg px-4 text-sm font-semibold text-white disabled:opacity-50" style={{ backgroundColor: TEAL }}>
+                  Cargar
+                </button>
+              </form>
+              {pedidosPorCobrar.length === 0 ? (
+                <p className="py-10 text-center text-sm text-slate-400">No hay pedidos esperando cobro.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {pedidosPorCobrar.map((x) => {
+                    const cargado = pedido?.id === x.id;
+                    return (
+                      <li key={x.id}>
+                        <button type="button" disabled={!productos.length} onClick={() => cargarPedido(x)}
+                          className={`flex min-h-14 w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition hover:bg-slate-50 active:scale-[0.99] disabled:opacity-50 ${cargado ? "border-[var(--brand)]" : "border-slate-200"}`}>
+                          <span className="min-w-0 flex-1">
+                            <span className="block font-mono text-base font-bold text-slate-900">{x.etiqueta}</span>
+                            <span className="block text-xs text-slate-500 [overflow-wrap:anywhere]">
+                              {haceCuanto(x.creado_at, ahoraPedidos())}{x.vendedor ? ` · ${x.vendedor}` : ""}{x.cliente ? ` · ${x.cliente.nombre}` : ""}
+                              {" · "}{x.items.length} producto{x.items.length === 1 ? "" : "s"}
+                              {cargado ? <b className="ml-1 font-semibold" style={{ color: TEAL }}>· en el carrito</b> : null}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-right">
+                            <span className="block text-base font-bold tabular-nums text-slate-900">{formatGs(x.total)}</span>
+                            <span className="text-xs font-semibold" style={{ color: TEAL }}>{cargado ? "Recargar" : "Cargar"}</span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+              {errorPedido ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{errorPedido}</p> : null}
+              {cart.some((l) => l.pedido_cant == null) ? <p className="mt-3 text-[11px] text-slate-500">Lo que ya está en el carrito se mantiene: el pedido se suma.</p> : null}
+              <p className="mt-2 text-[11px] text-slate-500">También podés escanear el código del comprobante en el buscador de productos.</p>
             </div>
           </div>
         </CapaModal>

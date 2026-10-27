@@ -15,6 +15,8 @@ const TARJETAS: TarjetaPanel[] = [
   { href: "/caja", titulo: "Órdenes de venta", imagen: "/finanzas/ordenes-venta-ticket-impreso.webp", color: "214 40% 24%", posicion: "55% 40%" },
   { href: "/caja/mesas", titulo: "Pedidos de mesas", imagen: "/finanzas/ordenes-compra-caja-pedido.webp", color: "24 55% 24%", posicion: "50% 45%" },
   { href: "/caja/cocina", titulo: "Cocina", imagen: "/soporte/mis-tickets-lista-pendientes.webp", color: "8 45% 24%", posicion: "50% 45%" },
+  // Receta 77: foto prestada (la de compras: canasto) hasta tener una propia — ver docs/creditos-imagenes-demo.md.
+  { href: "/caja/pedidos", titulo: "Pedidos", imagen: "/finanzas/compras-canasto-supermercado.webp", color: "262 32% 26%", posicion: "50% 50%" },
 ];
 
 export default function PanelCajaPage() {
@@ -22,7 +24,7 @@ export default function PanelCajaPage() {
     <PanelModulo
       kicker="Caja"
       titulo="Caja"
-      subtitulo="Vender, abrir y cerrar las cajas, las ventas de contado y a crédito, y los pedidos de las mesas."
+      subtitulo="Vender, abrir y cerrar las cajas, las ventas de contado y a crédito, los pedidos de mostrador y los de las mesas."
       tarjetas={TARJETAS}
       vacio="No tenés pantallas de Caja habilitadas."
     />

@@ -3,12 +3,13 @@
 /**
  * /configuracion/funciones — Rubro y funciones (receta 75).
  * Arriba el rubro (Comercio / Gastronomía, tarjetas seleccionables); debajo un interruptor por
- * función (Mesas y QR, Cocina y estaciones, Recetas e ingredientes). Elegir un rubro aplica su
+ * función (Mesas y QR, Cocina y estaciones, Recetas e ingredientes, y — receta 77 — Pedidos de
+ * mostrador, independiente del rubro). Elegir un rubro aplica su
  * preset; si después se ajusta una función y no coincide con ninguno: "Personalizado".
  * Solo el Administrador guarda (la base lo vuelve a exigir). Apagar no borra nada.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ChefHat, Loader2, QrCode, Sparkles, Store, UtensilsCrossed, BookOpen, X } from "lucide-react";
+import { AlertTriangle, ChefHat, ClipboardList, Loader2, QrCode, Sparkles, Store, UtensilsCrossed, BookOpen, X } from "lucide-react";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -17,14 +18,14 @@ import { Aviso, Interruptor, Tarjeta } from "@/modules/facturacion/ui";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO } from "@/modules/inventario/ui";
 import { rubroDe, URL_FUNCIONES, type FuncionesEmpresa, type Rubro } from "@/modules/configuracion/funciones";
 
-type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean };
+type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean };
 
 const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: string; resumen: string; Icono: typeof Store }[] = [
   {
     key: "comercio",
     titulo: "Comercio",
     ejemplos: "Ferretería, almacén, tienda",
-    resumen: "Caja, inventario y compras de siempre. Sin mesas, cocina ni recetas.",
+    resumen: "Caja, inventario y compras de siempre, con pedidos de mostrador. Sin mesas, cocina ni recetas.",
     Icono: Store,
   },
   {
@@ -37,8 +38,8 @@ const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: 
 ];
 
 const PRESET: Record<Exclude<Rubro, "personalizado">, Borrador> = {
-  comercio: { mesas: false, cocina: false, recetas: false },
-  gastronomia: { mesas: true, cocina: true, recetas: true },
+  comercio: { mesas: false, cocina: false, recetas: false, pedidos: true },
+  gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false },
 };
 
 const plural = (n: number, s: string, p: string) => `${n} ${n === 1 ? s : p}`;
@@ -59,7 +60,7 @@ export default function RubroFuncionesPage() {
     try {
       const d = await apiFetch<FuncionesEmpresa>(URL_FUNCIONES);
       setCfg(d);
-      setB({ mesas: d.mesas, cocina: d.cocina, recetas: d.recetas });
+      setB({ mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -69,7 +70,7 @@ export default function RubroFuncionesPage() {
   useEffect(() => { void cargar(); }, [cargar]);
 
   const rubro = rubroDe(b);
-  const cambios = !!cfg && (cfg.mesas !== b.mesas || cfg.cocina !== b.cocina || cfg.recetas !== b.recetas);
+  const cambios = !!cfg && (cfg.mesas !== b.mesas || cfg.cocina !== b.cocina || cfg.recetas !== b.recetas || (cfg.pedidos !== false) !== b.pedidos);
   const soloLectura = !cfg?.puede_editar;
   const abiertas = (cfg?.cuentas_abiertas ?? 0) + (cfg?.pedidos_sin_cerrar ?? 0);
   const bloqueaMesas = !!cfg && cfg.mesas && !b.mesas && abiertas > 0;
@@ -98,7 +99,7 @@ export default function RubroFuncionesPage() {
         body: JSON.stringify({ ...b, ...(confirmar ? { confirmar_recetas: true } : {}) }),
       });
       setCfg(d);
-      setB({ mesas: d.mesas, cocina: d.cocina, recetas: d.recetas });
+      setB({ mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false });
       setConfirmarRecetas(null);
       setOkGuardar("Funciones guardadas. El menú ya se actualizó.");
       recargarUsuario();
@@ -217,6 +218,13 @@ export default function RubroFuncionesPage() {
             etiqueta={<span className="inline-flex items-center gap-1.5"><BookOpen className="h-4 w-4 text-slate-400" aria-hidden /> Recetas e ingredientes</span>}
             descripcion="Tipos de producto Menú y Materia prima, recetas con merma, extras y opciones de los platos."
           />
+          <Interruptor
+            activo={b.pedidos}
+            disabled={soloLectura || guardando}
+            onChange={(v) => tocar({ pedidos: v })}
+            etiqueta={<span className="inline-flex items-center gap-1.5"><ClipboardList className="h-4 w-4 text-slate-400" aria-hidden /> Pedidos de mostrador</span>}
+            descripcion="El vendedor arma el pedido en Caja › Pedidos y lo envía a caja con un número; la caja lo cobra. Sirve para cualquier rubro (ferretería, tienda…)."
+          />
         </div>
       </Tarjeta>
 
@@ -227,7 +235,7 @@ export default function RubroFuncionesPage() {
         <div className="max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-30 max-sm:border-t max-sm:border-slate-200 max-sm:bg-white/95 max-sm:px-4 max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur sm:flex sm:justify-end">
           <div className="flex gap-2 max-sm:[&>*]:min-h-11 max-sm:[&>*]:flex-1">
             {cambios ? (
-              <button type="button" disabled={guardando} onClick={() => { setB({ mesas: cfg.mesas, cocina: cfg.cocina, recetas: cfg.recetas }); setErrGuardar(null); }} className={BOTON_SECUNDARIO}>
+              <button type="button" disabled={guardando} onClick={() => { setB({ mesas: cfg.mesas, cocina: cfg.cocina, recetas: cfg.recetas, pedidos: cfg.pedidos !== false }); setErrGuardar(null); }} className={BOTON_SECUNDARIO}>
                 Descartar
               </button>
             ) : null}

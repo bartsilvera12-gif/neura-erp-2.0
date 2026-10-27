@@ -20,7 +20,7 @@ export const nivelLabel = (n?: string) => NIVELES.find((x) => x.id === n)?.label
 
 export type Permiso =
   | "ver_costos" | "anular_ventas" | "anular_ventas_cerradas" | "descuentos_precio" | "vender_credito"
-  | "abrir_cerrar_caja" | "movimientos_caja" | "ver_cajas_otras_sucursales" | "pedidos_mesas" | "cocina"
+  | "abrir_cerrar_caja" | "movimientos_caja" | "ver_cajas_otras_sucursales" | "pedidos_mesas" | "cocina" | "pedidos_mostrador"
   | "registrar_cobros" | "registrar_transferencias" | "aprobar_transferencias" | "anular_cobros"
   | "registrar_compras" | "anular_compras" | "registrar_gastos" | "anular_gastos" | "pagar_proveedores"
   | "editar_productos" | "ajustes_inventario" | "registrar_perdidas" | "aprobar_perdidas" | "crear_traslados" | "recibir_traslados"
@@ -52,6 +52,7 @@ export const GRUPOS_PERMISOS: { id: string; label: string; permisos: DefPermiso[
       { id: "ver_cajas_otras_sucursales", label: "Ver cajas de otras sucursales", descripcion: "Ve el estado de las cajas de todas las sucursales, no solo de la suya." },
       { id: "pedidos_mesas", label: "Atender pedidos de mesas", descripcion: "Acepta o rechaza los pedidos que llegan por el QR de las mesas y cobra la cuenta de cada mesa." },
       { id: "cocina", label: "Pantalla de cocina", descripcion: "Ve los pedidos aceptados de las mesas y los marca en preparación y listos." },
+      { id: "pedidos_mostrador", label: "Armar pedidos de mostrador", descripcion: "Arma pedidos en Caja › Pedidos y los envía a caja con un número; los edita o anula mientras no se cobran. El nivel Vendedor ve solo los suyos y no los cobra; los demás niveles ven todos y los cobran en Nueva venta." },
     ],
   },
   {

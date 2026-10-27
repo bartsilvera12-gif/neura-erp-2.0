@@ -22,5 +22,7 @@ export const moduloCaja: Modulo = {
     // Receta 75: se apagan con Rubro y funciones (Mesas y QR / Cocina y estaciones).
     { label: "Pedidos de mesas", href: "/caja/mesas", permiso: "pedidos_mesas", funcion: "mesas" },
     { label: "Cocina", href: "/caja/cocina", permiso: "cocina", funcion: "cocina" },
+    // Receta 77: pedidos de mostrador (el vendedor arma y envía a caja; la caja cobra en Nueva venta).
+    { label: "Pedidos", href: "/caja/pedidos", permiso: "pedidos_mostrador", funcion: "pedidos" },
   ],
 };
