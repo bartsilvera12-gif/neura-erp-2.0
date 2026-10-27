@@ -83,7 +83,7 @@ export const MEDIO_NOMBRE: Record<string, string> = {
   efectivo: "Efectivo",
   tarjeta: "Tarjeta",
   transferencia: "Transferencia",
-  qr: "QR",
+  qr: "QR / billetera",
   cheque: "Cheque",
   otro: "Otros",
   credito: "Crédito",

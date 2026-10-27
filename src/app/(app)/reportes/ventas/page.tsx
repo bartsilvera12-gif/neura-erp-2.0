@@ -27,8 +27,8 @@ const TZ = "America/Asuncion";
 const POR_PAGINA = 25;
 
 const MEDIO: Record<string, string> = {
-  // Receta 78: posnet (pos*) va en "Tarjeta" y QR tiene su renglón.
-  efectivo: "Efectivo", tarjeta: "Tarjeta", transferencia: "Transferencia", qr: "QR", cheque: "Cheque", otro: "Otros", credito: "Crédito",
+  // Recetas 78/83: posnet (pos*) va en "Tarjeta"; QR y billetera juntos ("QR / billetera", como en la caja).
+  efectivo: "Efectivo", tarjeta: "Tarjeta", transferencia: "Transferencia", qr: "QR / billetera", cheque: "Cheque", otro: "Otros", credito: "Crédito",
 };
 const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
 const num = (v: number) => Number(v || 0).toLocaleString("es-PY", { maximumFractionDigits: 3 });
