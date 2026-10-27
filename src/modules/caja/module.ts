@@ -2,14 +2,15 @@ import type { Modulo } from "@/modules/types";
 
 /**
  * Manifiesto del módulo Caja (POS por sucursal: apertura, venta, arqueo, cierre, crédito).
- * Ítem propio del menú lateral (familia "Caja", separado de Finanzas) con sus pantallas como
- * submenú. Las rutas no cambian (Órdenes de venta sigue en /caja), así los perfiles guardados y los
- * links siguen valiendo; /caja/panel redirige a Nueva venta (next.config.ts).
+ * Ítem propio del menú lateral (familia "Caja", separado de Finanzas) que abre su panel de
+ * tarjetas con foto (/caja/panel). Las rutas no cambian (Órdenes de venta sigue en /caja), así los
+ * perfiles guardados y los links siguen valiendo.
  */
 export const moduloCaja: Modulo = {
   id: "caja",
   label: "Caja",
-  href: "/caja/nueva",
+  href: "/caja/panel",
+  panel: true,
   icon: "wallet",
   familia: "Caja",
   roles: ["ADMIN", "SUPERVISOR", "CAJERO", "VENDEDOR"],

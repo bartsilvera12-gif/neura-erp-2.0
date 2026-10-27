@@ -81,7 +81,7 @@ function TurnosContenido() {
 
   return (
     <div className="space-y-6 pb-10">
-      <Cabecera kicker="Caja" titulo="Apertura y cierre"
+      <Cabecera volver={{ href: "/caja/panel", label: "Caja" }} kicker="Caja" titulo="Apertura y cierre"
         subtitulo={datos ? (datos.es_admin ? "Las cajas de todas las sucursales: abrí, mové efectivo y cerrá con arqueo" : `Las cajas de ${sucursales[0]?.nombre ?? "tu sucursal"}`) : "Cargando cajas…"}>
         {/* Celular: "Abrir caja" e "Ir a vender" a la vista; configurar en "⋯". */}
         <div className="w-full sm:w-auto"><AccionesPagina acciones={[
