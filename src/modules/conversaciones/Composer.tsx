@@ -13,7 +13,7 @@
  * en hoja inferior (sobre el teclado). Con el chat ancho, igual que siempre.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Lock, Mic, Paperclip, Plus, SendHorizontal, Smile, Square, Trash2, X, Zap } from "lucide-react";
+import { FileText, Film, Lock, Mic, Music, Paperclip, Plus, SendHorizontal, Smile, Square, Trash2, X, Zap } from "lucide-react";
 import { HojaInferior } from "@/components/HojaInferior";
 import { MenuAcciones, type ItemMenu } from "@/components/MenuAcciones";
 import { useEsMovil, useEsTactil } from "@/lib/ui/responsive";
@@ -55,7 +55,12 @@ export type ComposerProps = {
   onPlantilla: (id: string, variables: Record<string, string>) => void;
   onArchivo: (archivo: File | Blob, o: { nombre: string; caption?: string; responde_a?: string | null; notaVoz?: boolean }) => void;
   onReabrir: () => void;
+  /** Archivos arrastrados sobre el chat (el panel los suelta acá; cada tanda con su id). */
+  soltados?: { id: number; archivos: File[] } | null;
 };
+
+/** Máximo de archivos por tanda (arrastrados o pegados), como WhatsApp Web. */
+const MAX_TANDA = 10;
 
 export function Composer(p: ComposerProps) {
   const { conv } = p;
@@ -63,7 +68,7 @@ export function Composer(p: ComposerProps) {
   const [modoNota, setModoNota] = useState(false);
   const [panel, setPanel] = useState<null | "emoji" | "respuestas" | "plantillas">(null);
   const [error, setError] = useState<string | null>(null);
-  const [pegada, setPegada] = useState<File | null>(null);
+  const [pendientes, setPendientes] = useState<File[]>([]);
   const area = useRef<HTMLTextAreaElement>(null);
   const archivoRef = useRef<HTMLInputElement>(null);
   const ventana = ventanaAbierta(conv);
@@ -150,7 +155,58 @@ export function Composer(p: ComposerProps) {
     setError(null);
   };
 
+  // Archivos arrastrados o pegados: quedan a la vista hasta "Enviar" (el texto va como pie del primero).
+  const sumarPendientes = (nuevos: File[]) => {
+    if (!nuevos.length) return;
+    if (cerrada) return setError("La conversación está cerrada: reabrila para enviar archivos.");
+    if (!ventana) return setError("Pasaron más de 24 h desde el último mensaje del cliente: solo se puede enviar una plantilla.");
+    if (modoNota) return setError("Las notas internas no llevan archivos: volvé a escribirle al cliente.");
+    const pesados = nuevos.filter((f) => f.size > MAX_ADJUNTO_BYTES);
+    const validos = nuevos.filter((f) => f.size <= MAX_ADJUNTO_BYTES);
+    setPendientes((prev) => {
+      const todos = [...prev, ...validos];
+      if (todos.length > MAX_TANDA) setError(`Se envían hasta ${MAX_TANDA} archivos por vez: quedaron los primeros ${MAX_TANDA}.`);
+      return todos.slice(0, MAX_TANDA);
+    });
+    if (pesados.length) {
+      setError(
+        pesados.length === 1
+          ? `"${pesados[0].name}" pesa ${tamanoLegible(pesados[0].size)}: el máximo es ${tamanoLegible(MAX_ADJUNTO_BYTES)}.`
+          : `${pesados.length} archivos pasan el máximo de ${tamanoLegible(MAX_ADJUNTO_BYTES)} y no se agregaron.`,
+      );
+    } else if (validos.length) setError(null);
+    requestAnimationFrame(() => area.current?.focus());
+  };
+
+  const enviarPendientes = () => {
+    const caption = texto.trim() || undefined;
+    pendientes.forEach((f, i) => enviarArchivo(f, i === 0 ? caption : undefined));
+    setPendientes([]);
+    setTexto("");
+  };
+
+  // Lo que el panel suelta al arrastrar (cada tanda una sola vez).
+  const ultimaTanda = useRef<number | null>(p.soltados?.id ?? null);
+  useEffect(() => {
+    if (!p.soltados || p.soltados.id === ultimaTanda.current) return;
+    ultimaTanda.current = p.soltados.id;
+    sumarPendientes(p.soltados.archivos);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.soltados]);
+
+  // Al cambiar de chat no se arrastran los archivos del anterior.
+  useEffect(() => setPendientes([]), [conv.id]);
+
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (pendientes.length && e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      e.preventDefault();
+      enviarPendientes();
+      return;
+    }
+    if (pendientes.length && e.key === "Escape") {
+      setPendientes([]);
+      return;
+    }
     if (qrVisible && respuestasFiltradas.length) {
       if (e.key === "ArrowDown") {
         e.preventDefault();
@@ -224,6 +280,10 @@ export function Composer(p: ComposerProps) {
     <form
       onSubmit={(e) => {
         e.preventDefault();
+        if (pendientes.length) {
+          enviarPendientes();
+          return;
+        }
         if (voz.pendiente) {
           p.onArchivo(voz.pendiente.blob, { nombre: voz.pendiente.nombre, notaVoz: true });
           voz.descartar(true);
@@ -236,12 +296,13 @@ export function Composer(p: ComposerProps) {
       <input
         ref={archivoRef}
         type="file"
+        multiple
         className="hidden"
         accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.zip,.rar"
         onChange={(e) => {
-          const f = e.target.files?.[0];
+          const fs = [...(e.target.files ?? [])];
           e.target.value = "";
-          if (f) enviarArchivo(f);
+          sumarPendientes(fs);
         }}
       />
       {error ? (
@@ -258,15 +319,13 @@ export function Composer(p: ComposerProps) {
           </button>
         </div>
       ) : null}
-      {pegada ? (
-        <ImagenPegada
-          archivo={pegada}
-          onCancelar={() => setPegada(null)}
-          onEnviar={() => {
-            enviarArchivo(pegada, texto.trim() || undefined);
-            setTexto("");
-            setPegada(null);
-          }}
+      {pendientes.length ? (
+        <ArchivosPendientes
+          archivos={pendientes}
+          onQuitar={(i) => setPendientes((prev) => prev.filter((_, j) => j !== i))}
+          onAgregar={() => archivoRef.current?.click()}
+          onCancelar={() => setPendientes([])}
+          onEnviar={enviarPendientes}
         />
       ) : null}
       {p.respondiendo ? (
@@ -463,11 +522,10 @@ export function Composer(p: ComposerProps) {
             onChange={(e) => setTexto(e.target.value)}
             onKeyDown={onKeyDown}
             onPaste={(e) => {
-              const item = [...e.clipboardData.items].find((i) => i.kind === "file" && i.type.startsWith("image/"));
-              const f = item?.getAsFile();
-              if (!f || bloqueado || modoNota) return;
+              const fs = [...e.clipboardData.items].filter((i) => i.kind === "file").map((i) => i.getAsFile()).filter((f): f is File => !!f);
+              if (!fs.length) return;
               e.preventDefault();
-              setPegada(f);
+              sumarPendientes(fs);
             }}
           />
         )}
@@ -626,23 +684,68 @@ function PanelPlantillas({
   );
 }
 
-function ImagenPegada({ archivo, onCancelar, onEnviar }: { archivo: File; onCancelar: () => void; onEnviar: () => void }) {
+/** Miniatura de un archivo por enviar: la imagen o un ícono según el tipo, con su nombre y peso. */
+function MiniaturaArchivo({ archivo, onQuitar }: { archivo: File; onQuitar: () => void }) {
+  const esImagen = archivo.type.startsWith("image/");
   const [url, setUrl] = useState<string | null>(null);
   useEffect(() => {
+    if (!esImagen) return;
     const u = URL.createObjectURL(archivo);
     setUrl(u);
     return () => URL.revokeObjectURL(u);
-  }, [archivo]);
+  }, [archivo, esImagen]);
+  const Icono = archivo.type.startsWith("video/") ? Film : archivo.type.startsWith("audio/") ? Music : FileText;
   return (
-    <div className="flex items-center gap-3 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/[0.06] p-2">
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      {url ? <img src={url} alt="Imagen pegada" className="h-16 w-16 rounded-lg border border-slate-200 bg-white object-cover" /> : null}
-      <div className="min-w-0 flex-1 text-xs text-slate-600">
-        <p className="font-semibold text-slate-800">Imagen del portapapeles</p>
-        <p className="text-[11px] text-slate-500">El texto escrito va como pie de foto.</p>
+    <div className="group relative w-20 shrink-0" title={`${archivo.name} · ${tamanoLegible(archivo.size)}`}>
+      <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {esImagen && url ? <img src={url} alt={archivo.name} className="h-full w-full object-cover" /> : <Icono className="h-7 w-7 text-[#3F8E91]" aria-hidden />}
       </div>
-      <button type="button" onClick={onCancelar} className="shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 @max-lg:min-h-10">Cancelar</button>
-      <button type="button" onClick={onEnviar} className="shrink-0 rounded-lg bg-[#4FAEB2] px-3 py-1 text-xs font-semibold text-white hover:bg-[#3F8E91] @max-lg:min-h-10">Enviar</button>
+      <p className="mt-0.5 truncate text-[10px] text-slate-600">{archivo.name || "archivo"}</p>
+      <p className="text-[10px] text-slate-400">{tamanoLegible(archivo.size)}</p>
+      <button
+        type="button"
+        onClick={onQuitar}
+        aria-label={`Quitar ${archivo.name}`}
+        className="absolute -top-1.5 -right-1.5 inline-flex h-6 w-6 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-red-50 hover:text-red-600"
+      >
+        <X className="h-3.5 w-3.5" />
+      </button>
+    </div>
+  );
+}
+
+/** Archivos arrastrados, pegados o elegidos: vista previa antes de enviar (como WhatsApp Web). */
+function ArchivosPendientes({
+  archivos, onQuitar, onAgregar, onCancelar, onEnviar,
+}: { archivos: File[]; onQuitar: (i: number) => void; onAgregar: () => void; onCancelar: () => void; onEnviar: () => void }) {
+  const n = archivos.length;
+  return (
+    <div className="rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/[0.06] p-2">
+      <div className="flex gap-2.5 overflow-x-auto pt-1.5 pr-1.5 pb-1">
+        {archivos.map((f, i) => (
+          <MiniaturaArchivo key={`${f.name}-${f.size}-${f.lastModified}-${i}`} archivo={f} onQuitar={() => onQuitar(i)} />
+        ))}
+        {n < MAX_TANDA ? (
+          <button
+            type="button"
+            onClick={onAgregar}
+            aria-label="Agregar más archivos"
+            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg border border-dashed border-[#4FAEB2]/60 text-[#3F8E91] hover:bg-[#4FAEB2]/10"
+          >
+            <Plus className="h-6 w-6" />
+          </button>
+        ) : null}
+      </div>
+      <div className="mt-1.5 flex items-center justify-between gap-2 @max-sm:flex-col @max-sm:items-stretch">
+        <p className="text-[11px] text-slate-500">El texto escrito va como pie {n === 1 ? "del archivo" : "del primero"} · Enter envía · Esc cancela</p>
+        <div className="flex shrink-0 gap-2">
+          <button type="button" onClick={onCancelar} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 @max-lg:min-h-10 @max-sm:flex-1">Cancelar</button>
+          <button type="button" onClick={onEnviar} className="rounded-lg bg-[#4FAEB2] px-3 py-1 text-xs font-semibold text-white hover:bg-[#3F8E91] @max-lg:min-h-10 @max-sm:flex-1">
+            {n === 1 ? "Enviar" : `Enviar ${n} archivos`}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
