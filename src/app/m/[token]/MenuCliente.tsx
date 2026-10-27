@@ -2,8 +2,7 @@
 
 /**
  * Menú de la mesa en el celular del cliente (mobile-first): categorías desplegables (acordeón:
- * nombre + cantidad de productos; con pocas categorías arranca abierta la primera, con muchas
- * todas cerradas; "Otros" va al final; al buscar se abren las que tienen resultados), productos
+ * nombre + cantidad de productos; todas arrancan cerradas; "Otros" va al final; al buscar se abren las que tienen resultados), productos
  * con foto y precio, carrito (con nota por producto y nota general), nombre opcional y "Enviar pedido".
  * Después de enviar, "Tus pedidos" muestra el estado de cada uno (consulta cada 5 s mientras
  * haya alguno en curso). Los códigos de seguimiento se guardan en este celular (localStorage).
@@ -71,14 +70,9 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
     for (const p of filtrados) m.set(p.categoria, [...(m.get(p.categoria) ?? []), p]);
     return [...m.entries()].sort((a, b) => Number(a[0] === "Otros") - Number(b[0] === "Otros"));
   }, [filtrados]);
-  // Acordeón: con pocas categorías arranca abierta la primera; con muchas, todas cerradas (la
-  // lista de nombres sirve de índice y no hay que bajar tanto en el celular).
-  const totalCategorias = useMemo(() => new Set(menu.productos.map((p) => p.categoria)).size, [menu.productos]);
-  const [abiertas, setAbiertas] = useState<Set<string>>(() => {
-    if (totalCategorias > 6) return new Set();
-    const primera = [...new Set(menu.productos.map((p) => p.categoria))].sort((a, b) => Number(a === "Otros") - Number(b === "Otros"))[0];
-    return new Set(primera ? [primera] : []);
-  });
+  // Acordeón: todas las categorías arrancan cerradas (pedido del dueño); la lista de nombres sirve
+  // de índice y el cliente abre la que quiere ver.
+  const [abiertas, setAbiertas] = useState<Set<string>>(() => new Set());
   const alternar = (c: string) => setAbiertas((s) => {
     const n = new Set(s);
     if (n.has(c)) n.delete(c); else n.add(c);
