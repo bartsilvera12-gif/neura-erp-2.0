@@ -270,7 +270,6 @@ export default function PedidosMesasPage() {
   return (
     <div className="space-y-5 pb-10">
       <EncabezadoPagina
-        volver={{ href: "/caja/panel", label: "Caja" }}
         kicker="Caja"
         titulo="Pedidos de mesas"
         subtitulo="Los pedidos que llegan por el QR de cada mesa. Aceptalos para que pasen a la cocina y, cuando la mesa pida la cuenta, enviala a caja."

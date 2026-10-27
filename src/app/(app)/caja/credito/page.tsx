@@ -110,7 +110,7 @@ export default function VentasCreditoPage() {
 
   return (
     <div className="space-y-4 pb-10 sm:space-y-6">
-      <Cabecera volver={{ href: "/caja/panel", label: "Caja" }} kicker="Finanzas · Caja" titulo="Ventas a crédito" subtitulo="Lo que se vendió a crédito en las cajas: cliente, vencimiento, cobrado y saldo" />
+      <Cabecera kicker="Caja" titulo="Ventas a crédito" subtitulo="Lo que se vendió a crédito en las cajas: cliente, vencimiento, cobrado y saldo" />
 
       <div className="flex flex-wrap items-center gap-2 sm:gap-3">
         <Pestanas valor={periodo} onChange={cambiar(setPeriodo)} opciones={[

@@ -177,7 +177,6 @@ export default function CocinaPage() {
   return (
     <div ref={raiz} className={`space-y-5 pb-10 ${completa ? "overflow-y-auto bg-slate-50 p-6" : ""}`}>
       <EncabezadoPagina
-        volver={completa ? undefined : { href: "/caja/panel", label: "Caja" }}
         kicker={completa ? undefined : "Caja"}
         titulo={filtro === "todas" ? "Cocina" : nombreFiltro}
         subtitulo={completa ? undefined : "Las comandas que aceptó la caja, por estación. Marcalas en preparación y listas: la caja ve el avance de cada parte."}

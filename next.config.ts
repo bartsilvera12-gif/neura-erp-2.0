@@ -12,6 +12,8 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       { source: "/caja/cierres", destination: "/reportes/cajas", permanent: true },
+      // Caja salió del panel de Finanzas: ahora es un ítem del menú con sus pantallas como submenú.
+      { source: "/caja/panel", destination: "/caja/nueva", permanent: false },
       { source: "/caja/cierres/:id", destination: "/reportes/cajas/:id", permanent: true },
       // Gastos y Servicios ahora es Gastos empresariales › Gastos operativos (se conserva ?ver=<id>).
       { source: "/gastos", destination: "/gastos-empresariales/operativos", permanent: false },

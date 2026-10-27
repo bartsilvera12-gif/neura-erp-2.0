@@ -23,9 +23,9 @@ import type { PerfilSesion } from "@/modules/usuarios/permisos";
 
 // El orden de acá es el orden dentro de cada familia del menú (igual que sistemas-propio):
 // Comercial: Clientes, CRM Funnel, Presupuestos, Gestión Clientes, Planes, Agenda, Proyectos — en el menú son UN ítem
-// "Comercial" (grupo, panel /comercial; todos van directo a su pantalla) · Finanzas: Caja, Cobranzas, Conciliación, Pagos,
+// "Comercial" (grupo, panel /comercial; todos van directo a su pantalla) · Caja: ítem propio con sus pantallas como submenú · Finanzas: Cobranzas, Conciliación, Pagos,
 // Gastos empresariales (compras + gastos operativos), Reportes — en el menú son UN ítem "Finanzas" (grupo, panel /finanzas;
-// Caja y Gastos con panel propio) · Operaciones: Inventario · Omnicanal: Omnicanal (panel: Conversaciones, Finalizadas, Monitoreo, Historial omnicanal) ·
+// Gastos con panel propio) · Operaciones: Inventario · Omnicanal: Omnicanal (panel: Conversaciones, Finalizadas, Monitoreo, Historial omnicanal) ·
 // Soporte: Soporte · Configuración: Configuración (panel: Datos de la empresa, Facturación, Usuarios).
 const TODOS: Modulo[] = [
   moduloClientes,
@@ -71,7 +71,7 @@ export function moduloEstaActivo(id: string): boolean {
 // entero si no tiene. Se identifica por su href (es lo que guarda perfil_pantallas).
 
 /** Orden de las familias del menú (y del editor de perfiles). */
-export const ORDEN_FAMILIAS = ["Comercial", "Finanzas", "Operaciones", "Omnicanal", "Soporte", "Configuración", "Administración", "General"];
+export const ORDEN_FAMILIAS = ["Comercial", "Caja", "Finanzas", "Operaciones", "Omnicanal", "Soporte", "Configuración", "Administración", "General"];
 
 export type Pantalla = {
   href: string;

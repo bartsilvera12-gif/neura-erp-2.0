@@ -2,18 +2,16 @@
 
 /**
  * /finanzas — Panel Finanzas (el ítem "Finanzas" del menú abre acá): una tarjeta con foto por
- * módulo de la familia (PanelModulo → TarjetaImagen). Caja y Gastos empresariales abren su propio
- * panel (/caja/panel, /gastos-empresariales/panel); Cobranzas, Conciliación, Pagos y Reportes van
+ * módulo de la familia (PanelModulo → TarjetaImagen). Gastos empresariales abre su propio panel
+ * (/gastos-empresariales/panel); Caja ya no está acá (es un ítem propio del menú). Cobranzas, Conciliación, Pagos y Reportes van
  * directo a su pantalla. Las rutas de las pantallas no cambian. Se muestran solo los módulos de
  * los que el perfil ve alguna pantalla (`pantallas`). Fotos y créditos: public/finanzas/ y
  * docs/creditos-imagenes-demo.md (sección "Panel Finanzas").
  */
-import { PanelModulo, hslDeMarca, type TarjetaPanel } from "@/components/ui/PanelModulo";
-import { clienteConfig } from "@/cliente.config";
+import { PanelModulo, type TarjetaPanel } from "@/components/ui/PanelModulo";
 import { hrefsDeModulo } from "@/modules/registry";
 
 const TARJETAS: TarjetaPanel[] = [
-  { href: "/caja/panel", pantallas: hrefsDeModulo("caja"), titulo: "Caja", imagen: "/finanzas/caja-teclas-registradora.webp", color: hslDeMarca(clienteConfig.color), posicion: "50% 40%" },
   { href: "/cobranzas", titulo: "Cobranzas", imagen: "/finanzas/cobranzas-agenda-vencimientos.webp", color: "152 34% 22%", posicion: "50% 50%" },
   { href: "/cobranzas/conciliacion", titulo: "Conciliación", imagen: "/finanzas/conciliacion-planilla-laptop.webp", color: "214 40% 24%", posicion: "55% 35%" },
   { href: "/pagos", titulo: "Pagos", imagen: "/finanzas/pagos-tarjeta-terminal.webp", color: "258 28% 30%", posicion: "50% 55%" },
@@ -29,7 +27,7 @@ export default function PanelFinanzasPage() {
     <PanelModulo
       kicker="Finanzas"
       titulo="Finanzas"
-      subtitulo="Ventas y caja, lo que entra y lo que sale de plata, y los números de la empresa."
+      subtitulo="Lo que entra y lo que sale de plata, y los números de la empresa."
       tarjetas={TARJETAS}
       vacio="No tenés pantallas de Finanzas habilitadas."
     />
