@@ -13,7 +13,7 @@
  * en hoja inferior (sobre el teclado). Con el chat ancho, igual que siempre.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FileText, Film, Lock, Mic, Music, Paperclip, Plus, SendHorizontal, Smile, Square, Trash2, X, Zap } from "lucide-react";
+import { File as FileGenerico, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, Lock, Mic, Paperclip, Presentation, Plus, SendHorizontal, Smile, Square, Trash2, X, Zap } from "lucide-react";
 import { HojaInferior } from "@/components/HojaInferior";
 import { MenuAcciones, type ItemMenu } from "@/components/MenuAcciones";
 import { useEsMovil, useEsTactil } from "@/lib/ui/responsive";
@@ -684,7 +684,25 @@ function PanelPlantillas({
   );
 }
 
-/** Miniatura de un archivo por enviar: la imagen o un ícono según el tipo, con su nombre y peso. */
+/** Tipo de archivo para la miniatura: ícono, color y la etiqueta (PDF, Excel, Word…). */
+function tipoArchivo(f: File): { etiqueta: string; Icono: typeof FileText; caja: string; texto: string } {
+  const ext = (f.name.split(".").pop() ?? "").toLowerCase();
+  const t = f.type;
+  if (t.startsWith("audio/") || ["mp3", "ogg", "opus", "wav", "m4a", "aac"].includes(ext))
+    return { etiqueta: ext ? ext.toUpperCase() : "Audio", Icono: FileAudio, caja: "bg-violet-50 border-violet-200", texto: "text-violet-600" };
+  if (t.startsWith("video/") || ["mp4", "mov", "avi", "mkv", "webm", "3gp"].includes(ext))
+    return { etiqueta: ext ? ext.toUpperCase() : "Video", Icono: FileVideo, caja: "bg-pink-50 border-pink-200", texto: "text-pink-600" };
+  if (ext === "pdf" || t === "application/pdf") return { etiqueta: "PDF", Icono: FileText, caja: "bg-red-50 border-red-200", texto: "text-red-600" };
+  if (["xls", "xlsx", "xlsm", "ods"].includes(ext)) return { etiqueta: "Excel", Icono: FileSpreadsheet, caja: "bg-emerald-50 border-emerald-200", texto: "text-emerald-700" };
+  if (ext === "csv") return { etiqueta: "CSV", Icono: FileSpreadsheet, caja: "bg-emerald-50 border-emerald-200", texto: "text-emerald-700" };
+  if (["doc", "docx", "odt", "rtf"].includes(ext)) return { etiqueta: "Word", Icono: FileText, caja: "bg-blue-50 border-blue-200", texto: "text-blue-600" };
+  if (["ppt", "pptx", "odp"].includes(ext)) return { etiqueta: "PPT", Icono: Presentation, caja: "bg-orange-50 border-orange-200", texto: "text-orange-600" };
+  if (["zip", "rar", "7z", "tar", "gz"].includes(ext)) return { etiqueta: ext.toUpperCase(), Icono: FileArchive, caja: "bg-amber-50 border-amber-200", texto: "text-amber-700" };
+  if (t.startsWith("image/")) return { etiqueta: ext ? ext.toUpperCase() : "Imagen", Icono: FileImage, caja: "bg-sky-50 border-sky-200", texto: "text-sky-600" };
+  return { etiqueta: ext ? ext.toUpperCase() : "Archivo", Icono: FileGenerico, caja: "bg-slate-50 border-slate-200", texto: "text-slate-500" };
+}
+
+/** Miniatura de un archivo por enviar: la imagen, o el ícono y color de su tipo, con su nombre y peso. */
 function MiniaturaArchivo({ archivo, onQuitar }: { archivo: File; onQuitar: () => void }) {
   const esImagen = archivo.type.startsWith("image/");
   const [url, setUrl] = useState<string | null>(null);
@@ -694,14 +712,24 @@ function MiniaturaArchivo({ archivo, onQuitar }: { archivo: File; onQuitar: () =
     setUrl(u);
     return () => URL.revokeObjectURL(u);
   }, [archivo, esImagen]);
-  const Icono = archivo.type.startsWith("video/") ? Film : archivo.type.startsWith("audio/") ? Music : FileText;
+  const tipo = tipoArchivo(archivo);
+  // El nombre sin la extensión (la extensión ya la dice la etiqueta).
+  const punto = archivo.name.lastIndexOf(".");
+  const base = punto > 0 ? archivo.name.slice(0, punto) : archivo.name || "archivo";
   return (
     <div className="group relative w-20 shrink-0" title={`${archivo.name} · ${tamanoLegible(archivo.size)}`}>
-      <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-white">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        {esImagen && url ? <img src={url} alt={archivo.name} className="h-full w-full object-cover" /> : <Icono className="h-7 w-7 text-[#3F8E91]" aria-hidden />}
-      </div>
-      <p className="mt-0.5 truncate text-[10px] text-slate-600">{archivo.name || "archivo"}</p>
+      {esImagen && url ? (
+        <div className="h-20 w-20 overflow-hidden rounded-lg border border-slate-200 bg-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt={archivo.name} className="h-full w-full object-cover" />
+        </div>
+      ) : (
+        <div className={`flex h-20 w-20 flex-col items-center justify-center gap-1 rounded-lg border ${tipo.caja}`}>
+          <tipo.Icono className={`h-7 w-7 ${tipo.texto}`} aria-hidden />
+          <span className={`max-w-[4.5rem] truncate text-[10px] font-bold uppercase tracking-wide ${tipo.texto}`}>{tipo.etiqueta}</span>
+        </div>
+      )}
+      <p className="mt-0.5 truncate text-[10px] text-slate-600">{base}</p>
       <p className="text-[10px] text-slate-400">{tamanoLegible(archivo.size)}</p>
       <button
         type="button"
