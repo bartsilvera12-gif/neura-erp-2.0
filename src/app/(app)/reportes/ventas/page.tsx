@@ -168,25 +168,27 @@ function Contenido() {
         </button>
       </EncabezadoReporte>
 
-      {/* Filtros: fechas siempre a la vista; cajero, tipo, medio y categoría en línea desde 768 px
-          y, en celular, en la hoja "Filtros". */}
-      <section className="space-y-2.5 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:space-y-3 sm:p-4">
-        <RangoFechasLocal atajos={ATAJOS} atajo={atajo}
-          onAtajo={(key) => { const r = rangoAtajo(key); setDesde(r.desde); setHasta(r.hasta); setAtajo(key); }}
-          desde={desde} hasta={hasta}
-          onDesde={(v) => { if (v) { setDesde(v); setAtajo(null); } }}
-          onHasta={(v) => { if (v) { setHasta(v); setAtajo(null); } }} />
-        <BarraFiltros plano
+      {/* Filtros en UNA fila (≥ 768 px): período + chips (cajero, tipo, medio, categoría) y
+          "Limpiar filtros" a la derecha. En celular: período a lo ancho y los chips en la hoja "Filtros". */}
+      <section className="space-y-1.5">
+        <BarraFiltros
+          inicio={
+            <RangoFechasLocal atajos={ATAJOS} atajo={atajo}
+              onAtajo={(key) => { const r = rangoAtajo(key); setDesde(r.desde); setHasta(r.hasta); setAtajo(key); }}
+              desde={desde} hasta={hasta}
+              onDesde={(v) => { if (v) { setDesde(v); setAtajo(null); } }}
+              onHasta={(v) => { if (v) { setHasta(v); setAtajo(null); } }} />
+          }
           busqueda={angosta ? <span className="block truncate px-1 text-xs text-slate-400">Cajero, contado / crédito, medio y categoría</span> : undefined}
           activos={[cajero, tipo, medio, categoria].filter(Boolean).length}
           onLimpiar={() => { setCajero(""); setTipo(""); setMedio(""); setCategoria(""); }}>
-          <Select value={cajero} onChange={setCajero} minWidth={170} etiqueta="Cajero" options={[["", "Todos los cajeros"], ...cajeros.map((c): [string, string] => [c.id, c.nombre])]} />
-          <Select value={tipo} onChange={setTipo} minWidth={150} etiqueta="Contado o crédito" options={[["", "Contado y crédito"], ["CONTADO", "Solo contado"], ["CREDITO", "Solo crédito"]]} />
-          <Select value={medio} onChange={setMedio} minWidth={170} etiqueta="Medio de pago" options={[["", "Todos los medios"], ...Object.entries(MEDIO).map(([v, l]): [string, string] => [v, l])]} />
-          <Select value={categoria} onChange={setCategoria} minWidth={190} etiqueta="Categoría" options={[["", "Todas las categorías"], ["__sin__", "— Sin categoría —"], ...opcionesFiltroCategoria(categorias)]} />
+          <Select chip prefijo="Cajero" textoVacio="Todos" value={cajero} onChange={setCajero} minWidth={200} etiqueta="Cajero" options={[["", "Todos los cajeros"], ...cajeros.map((c): [string, string] => [c.id, c.nombre])]} />
+          <Select chip value={tipo} onChange={setTipo} minWidth={180} etiqueta="Contado o crédito" options={[["", "Contado y crédito"], ["CONTADO", "Solo contado"], ["CREDITO", "Solo crédito"]]} />
+          <Select chip prefijo="Medio" textoVacio="Todos" value={medio} onChange={setMedio} minWidth={190} etiqueta="Medio de pago" options={[["", "Todos los medios"], ...Object.entries(MEDIO).map(([v, l]): [string, string] => [v, l])]} />
+          <Select chip prefijo="Categoría" textoVacio="Todas" value={categoria} onChange={setCategoria} minWidth={220} etiqueta="Categoría" className="max-w-[260px] max-md:max-w-none lg:max-w-none" options={[["", "Todas las categorías"], ["__sin__", "— Sin categoría —"], ...opcionesFiltroCategoria(categorias)]} />
         </BarraFiltros>
         {medio || categoria ? (
-          <p className="text-[11px] text-slate-400">
+          <p className="px-1 text-[11px] text-slate-400">
             {medio ? "Con filtro de medio se incluyen las ventas que usaron ese medio (con su monto total). " : ""}
             {categoria ? "Con filtro de categoría, los montos son solo de los productos de esa categoría." : ""}
           </p>
@@ -258,7 +260,7 @@ function Contenido() {
               ) : null}>
                 <Tabla
                   // El puesto va junto al nombre: así la columna fija (la 1.ª) es el producto.
-                  cols={["Producto", "SKU", "Unidades", "Monto", "Ganancia", "Margen"]}
+                  cols={["Producto", "SKU", "Unidades", "Monto", "Ganancia", "Margen de ganancia"]}
                   der={[2, 3, 4, 5]}
                   filas={productos.map((p, i) => [
                     <span key="n" className="font-medium text-slate-800"><span className="mr-1.5 inline-block min-w-[1.5ch] text-right font-normal tabular-nums text-slate-400">{i + 1}</span>{p.nombre}{p.sin_costo ? <span className="ml-1 font-bold text-amber-600" title="Vendido al menos una vez sin costo cargado">*</span> : null}</span>,
@@ -283,7 +285,7 @@ function Contenido() {
                 {/* Categorías */}
                 <Tarjeta titulo="Por categoría">
                   <Tabla
-                    cols={["Categoría", "Unidades", "Monto", "% del total", "Margen"]}
+                    cols={["Categoría", "Unidades", "Monto", "% del total", "Margen de ganancia"]}
                     der={[1, 2, 3, 4]}
                     filas={resumen.por_categoria.map((c) => [c.nombre, num(c.unidades), gs(c.monto), pct(c.monto, k.ventas_netas), <span key="m" className={`font-semibold ${margenColor(c.ganancia, c.monto)}`}>{pct(c.ganancia, c.monto)}</span>])}
                   />

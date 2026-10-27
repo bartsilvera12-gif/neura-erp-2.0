@@ -80,7 +80,7 @@ function FichaProveedor() {
             ]} />}>
             {vista === "productos" ? (
               <Tabla minW={980} vacio="Este proveedor no tiene productos asociados."
-                cols={["Producto", "Comprado (rango)", "Unidades", "Última compra", "Último costo", "Costo prom.", "Precio venta", "Margen", "Stock"]}
+                cols={["Producto", "Comprado (rango)", "Unidades", "Última compra", "Último costo", "Costo prom.", "Precio venta", "Margen de ganancia", "Stock"]}
                 der={[1, 2, 4, 5, 6, 7, 8]}
                 filas={d.productos.map((x) => {
                   const margen = Number(x.precio_venta) - Number(x.costo_promedio);

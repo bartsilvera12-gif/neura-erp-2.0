@@ -6,9 +6,12 @@
  * carga de datos (stale-while-revalidate). Todas las pantallas de /reportes se ven iguales.
  */
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
+import { ArrowLeft, CalendarDays, Check, ChevronDown, FileSpreadsheet, FileText, Loader2 } from "lucide-react";
+import { HojaInferior } from "@/components/HojaInferior";
+import { useEsMovil, useMediaQuery } from "@/lib/ui/responsive";
 import { apiFetchSWR } from "@/lib/api/cache-cliente";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { hoyPY } from "@/lib/fecha/paraguay";
@@ -143,6 +146,11 @@ export function EncabezadoReporte({ kicker, titulo, subtitulo, volver = { href: 
 }
 
 
+/**
+ * Barra de filtros de los reportes: una sola fila (con wrap) en ≥ 640 px — el período en un
+ * botón ("Este mes · 1 – 27 oct 2026") + la sucursal como chip + extras, y a la derecha
+ * "Limpiar filtros" / "Actualizando…". En celular, todo a lo ancho, uno debajo del otro.
+ */
 export function FiltrosReporte({ filtros, atajos = ATAJOS_BASE, sucursales, cargando, children, sinFechas = false, etiquetaFechas }: {
   filtros: ReturnType<typeof useFiltrosReporte>;
   atajos?: Atajo[];
@@ -154,47 +162,39 @@ export function FiltrosReporte({ filtros, atajos = ATAJOS_BASE, sucursales, carg
   etiquetaFechas?: string;
 }) {
   const { f, setAtajo, setRango, setSucursal } = filtros;
-  // Responsive: en celular los atajos son una fila con scroll horizontal (sin saltos de línea),
-  // las fechas van en 2 columnas a todo el ancho y la sucursal / extras a todo el ancho.
+  const opcionesAtajo = useMemo(() => atajos.map((k): [string, string] => [k, ATAJO_LABEL[k]]), [atajos]);
+  const hayFiltro = !!f.sucursal && !!sucursales && sucursales.length > 1;
   return (
-    <section className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:flex-row sm:flex-wrap sm:items-center sm:p-3 max-sm:[&>*]:w-full">
+    // Con 1–2 controles la barra abraza su contenido (sin una franja vacía a la derecha).
+    <section aria-label="Filtros del reporte" className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-2 shadow-sm sm:w-fit sm:max-w-full sm:flex-row sm:flex-wrap sm:items-center">
       {!sinFechas ? (
-        <>
-          <ScrollHorizontal className="max-w-full rounded-xl bg-slate-100 p-1 sm:w-fit" claseFila="gap-0" dependencias={[f.atajo]}>
-            {atajos.map((k) => (
-              <button key={k} type="button" onClick={() => setAtajo(k)} aria-pressed={f.atajo === k} data-activo={f.atajo === k ? "true" : undefined}
-                className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-11 max-sm:px-3.5 max-sm:text-[13px] ${f.atajo === k ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-                {ATAJO_LABEL[k]}
-              </button>
-            ))}
-          </ScrollHorizontal>
-          {etiquetaFechas ? <span className="text-xs font-medium text-slate-400">{etiquetaFechas}</span> : null}
-          <div className="grid grid-cols-2 gap-2 sm:contents">
-            <div className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Desde
-              <SelectorFecha compacto etiqueta="Desde" value={f.desde} max={f.hasta || undefined} onChange={(v) => setRango(v, f.hasta)} claseBoton="h-[36px] rounded-xl px-2.5 text-slate-700 max-sm:h-11" className="min-w-0 max-sm:w-full sm:w-[140px]" />
-            </div>
-            <div className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Hasta
-              <SelectorFecha compacto etiqueta="Hasta" value={f.hasta} min={f.desde || undefined} max={hoyPY()} onChange={(v) => setRango(f.desde, v)} claseBoton="h-[36px] rounded-xl px-2.5 text-slate-700 max-sm:h-11" className="min-w-0 max-sm:w-full sm:w-[140px]" />
-            </div>
-          </div>
-        </>
+        <SelectorPeriodo atajos={opcionesAtajo} atajo={f.atajo} onAtajo={(k) => setAtajo(k as Atajo)}
+          desde={f.desde} hasta={f.hasta} onRango={setRango} maxHasta={hoyPY()} etiqueta={etiquetaFechas?.replace(/:\s*$/, "")} />
       ) : null}
       {sucursales && sucursales.length > 1 ? (
-        <Select value={f.sucursal} onChange={setSucursal} minWidth={190} etiqueta="Sucursal"
+        <Select chip prefijo="Sucursal" textoVacio="Todas" value={f.sucursal} onChange={setSucursal} minWidth={200} etiqueta="Sucursal"
           options={[["", "Todas las sucursales"], ...sucursales.map((s): [string, string] => [s.id, s.nombre])]} />
       ) : sucursales && sucursales.length === 1 ? (
-        <span className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium text-slate-500">{sucursales[0].nombre}</span>
+        <span className="inline-flex h-[38px] items-center rounded-xl bg-slate-50 px-3 text-[13px] text-slate-500 max-sm:h-11"><span className="text-slate-400">Sucursal:&nbsp;</span><span className="font-semibold text-slate-600">{sucursales[0].nombre}</span></span>
       ) : null}
       {children}
-      {cargando ? <span className="inline-flex items-center gap-1 text-xs text-slate-400"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Actualizando…</span> : null}
+      {hayFiltro || cargando ? (
+        <div className="flex items-center gap-2 sm:ml-auto max-sm:justify-between">
+          {cargando ? <span className="inline-flex items-center gap-1 px-1 text-xs text-slate-400"><Loader2 className="h-3.5 w-3.5 animate-spin motion-reduce:animate-none" /> Actualizando…</span> : null}
+          {hayFiltro ? (
+            <button type="button" onClick={() => setSucursal("")} className="shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-[var(--brand)] max-sm:ml-auto max-sm:min-h-11 max-sm:text-[13px]">
+              Limpiar filtros
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }
 
 /**
- * Atajos + Desde/Hasta con estado propio de la página (Ventas del período, Productos vendidos):
- * mismo aspecto responsive que FiltrosReporte (atajos con scroll horizontal, fechas en 2
- * columnas a todo el ancho en celular).
+ * Período con estado propio de la página (Ventas del período, Productos vendidos): el mismo
+ * botón de período que FiltrosReporte. Misma API de siempre (onAtajo / onDesde / onHasta).
  */
 export function RangoFechasLocal({ atajos, atajo, onAtajo, desde, hasta, onDesde, onHasta }: {
   atajos: [string, string][];
@@ -206,23 +206,237 @@ export function RangoFechasLocal({ atajos, atajo, onAtajo, desde, hasta, onDesde
   onHasta: (v: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-      <ScrollHorizontal className="max-w-full rounded-xl bg-slate-100 p-1 sm:w-fit" claseFila="gap-0" dependencias={[atajo]}>
-        {atajos.map(([k, l]) => (
-          <button key={k} type="button" onClick={() => onAtajo(k)} aria-pressed={atajo === k} data-activo={atajo === k ? "true" : undefined}
-            className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-11 max-sm:flex-1 max-sm:px-3.5 max-sm:text-[13px] ${atajo === k ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
-            {l}
+    <SelectorPeriodo atajos={atajos} atajo={atajo} onAtajo={onAtajo} desde={desde} hasta={hasta}
+      onRango={(d, h) => { if (d !== desde) onDesde(d); if (h !== hasta) onHasta(h); }} />
+  );
+}
+
+// ── Selector de período ─────────────────────────────────────────────────────
+const MESES_CORTOS = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"];
+const AYER = "__ayer";
+
+function ayerPY() {
+  const [y, m, d] = hoyPY().split("-").map(Number);
+  return ymd(new Date(Date.UTC(y, m - 1, d - 1)));
+}
+
+/** "1 – 27 oct 2026", "28 sep – 27 oct 2026", "27 oct 2026", "1 dic 2025 – 27 oct 2026". */
+export function textoRango(desde: string, hasta: string) {
+  const p = (s: string) => ({ y: Number(s.slice(0, 4)), m: Number(s.slice(5, 7)), d: Number(s.slice(8, 10)) });
+  const f = (s: string) => { const x = p(s); return `${x.d} ${MESES_CORTOS[x.m - 1]} ${x.y}`; };
+  if (!desde && !hasta) return "";
+  if (!desde) return `hasta ${f(hasta)}`;
+  if (!hasta) return `desde ${f(desde)}`;
+  if (desde === hasta) return f(desde);
+  const a = p(desde), b = p(hasta);
+  if (a.y === b.y && a.m === b.m) return `${a.d} – ${b.d} ${MESES_CORTOS[b.m - 1]} ${b.y}`;
+  if (a.y === b.y) return `${a.d} ${MESES_CORTOS[a.m - 1]} – ${b.d} ${MESES_CORTOS[b.m - 1]} ${b.y}`;
+  return `${f(desde)} – ${f(hasta)}`;
+}
+
+/**
+ * Un solo botón para el período ("📅 Este mes · 1 – 27 oct 2026"). Al tocarlo abre un popover
+ * (en celular, hoja inferior) con los atajos a la izquierda y Desde / Hasta + "Aplicar".
+ * Los atajos se aplican al toque; el rango personalizado, con "Aplicar". Si la lista trae "Hoy",
+ * suma "Ayer" (se aplica como rango de un día). Escape cierra (capa `data-capa-modal`).
+ */
+export function SelectorPeriodo({ atajos, atajo, onAtajo, desde, hasta, onRango, maxHasta, etiqueta }: {
+  atajos: [string, string][];
+  atajo: string | null;
+  onAtajo: (k: string) => void;
+  desde: string;
+  hasta: string;
+  onRango: (desde: string, hasta: string) => void;
+  /** tope del "Hasta" (ej. hoy) */
+  maxHasta?: string;
+  /** antes del período, ej. "Emitidas" */
+  etiqueta?: string;
+}) {
+  const esMovil = useEsMovil();
+  const sinAnimacion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const [abierto, setAbierto] = useState(false);
+  const [bDesde, setBDesde] = useState(desde);
+  const [bHasta, setBHasta] = useState(hasta);
+  const [pos, setPos] = useState<{ left: number; top?: number; bottom?: number; maxH: number } | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+  const boton = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLDivElement>(null);
+  const id = useId();
+
+  const ayer = ayerPY();
+  const lista = useMemo<[string, string][]>(() => {
+    const i = atajos.findIndex(([k]) => k === "hoy");
+    if (i < 0 || atajos.some(([k]) => k === "ayer")) return atajos;
+    return [...atajos.slice(0, i + 1), [AYER, "Ayer"], ...atajos.slice(i + 1)];
+  }, [atajos]);
+  const activo = atajo ?? (desde && desde === ayer && hasta === ayer && lista.some(([k]) => k === AYER) ? AYER : null);
+  const nombreAtajo = activo ? lista.find(([k]) => k === activo)?.[1] ?? null : null;
+  const rango = textoRango(desde, hasta);
+  const ANCHO = 452;
+
+  const cerrar = useCallback((devolverFoco = true) => {
+    setAbierto(false);
+    if (devolverFoco) window.setTimeout(() => boton.current?.focus(), 0);
+  }, []);
+  function abrir() {
+    setBDesde(desde);
+    setBHasta(hasta);
+    setAbierto(true);
+  }
+  function elegirAtajo(k: string) {
+    if (k === AYER) onRango(ayer, ayer);
+    else onAtajo(k);
+    cerrar();
+  }
+  const valido = !!bDesde && !!bHasta && bDesde <= bHasta;
+  function aplicar() {
+    if (!valido) return;
+    onRango(bDesde, bHasta);
+    cerrar();
+  }
+
+  // Escritorio: pegado al botón, sin salirse de la pantalla; se recalcula al scrollear.
+  const ubicar = useCallback(() => {
+    const r = ref.current?.getBoundingClientRect();
+    if (!r) return;
+    const margen = 8;
+    const alto = 330;
+    const abajo = window.innerHeight - r.bottom - margen;
+    const arriba = r.top - margen;
+    const left = Math.max(margen, Math.min(r.left, window.innerWidth - ANCHO - margen));
+    if (abajo >= alto || abajo >= arriba) setPos({ left, top: r.bottom + 6, maxH: Math.max(200, abajo - 6) });
+    else setPos({ left, bottom: window.innerHeight - r.top + 6, maxH: Math.max(200, arriba - 6) });
+  }, []);
+  useLayoutEffect(() => {
+    if (!abierto || esMovil) return;
+    ubicar();
+    window.addEventListener("resize", ubicar);
+    window.addEventListener("scroll", ubicar, true);
+    return () => {
+      window.removeEventListener("resize", ubicar);
+      window.removeEventListener("scroll", ubicar, true);
+    };
+  }, [abierto, esMovil, ubicar]);
+
+  // Escritorio: click afuera y Escape (sólo si es la capa de arriba: el calendario de
+  // Desde/Hasta también es una capa y se cierra primero).
+  useEffect(() => {
+    if (!abierto || esMovil) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Element;
+      if (ref.current?.contains(t) || t.closest?.("[data-capa-modal]")) return;
+      setAbierto(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      const capas = document.querySelectorAll("[data-capa-modal]");
+      if (capas.length && capas[capas.length - 1] !== panel.current) return;
+      e.preventDefault();
+      cerrar();
+    };
+    document.addEventListener("mousedown", onDown);
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [abierto, esMovil, cerrar]);
+
+  // Al abrir, foco en el atajo elegido (o el primero).
+  useEffect(() => {
+    if (!abierto || (!pos && !esMovil)) return;
+    const t = window.setTimeout(() => {
+      const el = panel.current?.querySelector<HTMLElement>('[data-atajo][aria-pressed="true"]') ?? panel.current?.querySelector<HTMLElement>("[data-atajo]");
+      el?.focus({ preventScroll: true });
+    }, esMovil ? 60 : 0);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [abierto, pos != null, esMovil]);
+
+  const listaAtajos = (
+    <div role="group" aria-label="Atajos" className={esMovil ? "grid grid-cols-2 gap-2" : "flex w-[148px] shrink-0 flex-col gap-0.5 border-r border-slate-100 pr-2"}>
+      {lista.map(([k, l]) => {
+        const sel = activo === k;
+        return (
+          <button key={k} type="button" data-atajo="" aria-pressed={sel} onClick={() => elegirAtajo(k)}
+            className={`flex items-center justify-between gap-2 rounded-lg text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-[var(--brand)] ${esMovil ? `min-h-11 border px-3 text-sm ${sel ? "border-transparent" : "border-slate-200"}` : "h-8 px-2.5 text-[13px]"} ${sel ? "bg-[var(--brand-50)] font-semibold text-[var(--brand)]" : "text-slate-600 hover:bg-slate-100 hover:text-slate-800"}`}>
+            <span className="truncate">{l}</span>
+            {sel ? <Check className="h-3.5 w-3.5 shrink-0" aria-hidden /> : null}
           </button>
-        ))}
-      </ScrollHorizontal>
-      <div className="grid grid-cols-2 gap-2 sm:contents">
-        <div className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Desde
-          <SelectorFecha compacto etiqueta="Desde" value={desde} max={hasta || undefined} onChange={onDesde} claseBoton="h-[36px] rounded-xl px-2.5 text-slate-700 max-sm:h-11" className="min-w-0 max-sm:w-full sm:w-[140px]" />
+        );
+      })}
+    </div>
+  );
+
+  const rangoPersonalizado = (
+    <div className="flex min-w-0 flex-1 flex-col gap-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-400">Rango personalizado</p>
+      <div className={esMovil ? "grid grid-cols-2 gap-2" : "flex flex-col gap-2.5"}>
+        <div className="min-w-0">
+          <p id={`${id}-d`} className="mb-1 text-xs font-medium text-slate-500">Desde</p>
+          <SelectorFecha compacto block etiqueta="Desde" value={bDesde} max={bHasta || maxHasta || undefined} onChange={setBDesde}
+            claseBoton="h-[38px] rounded-xl px-3 text-[13px] text-slate-800 max-sm:h-11 max-sm:text-sm" />
         </div>
-        <div className="flex min-w-0 flex-col gap-1 text-xs text-slate-500 sm:flex-row sm:items-center sm:gap-1.5">Hasta
-          <SelectorFecha compacto etiqueta="Hasta" value={hasta} min={desde || undefined} onChange={onHasta} claseBoton="h-[36px] rounded-xl px-2.5 text-slate-700 max-sm:h-11" className="min-w-0 max-sm:w-full sm:w-[140px]" />
+        <div className="min-w-0">
+          <p id={`${id}-h`} className="mb-1 text-xs font-medium text-slate-500">Hasta</p>
+          <SelectorFecha compacto block etiqueta="Hasta" value={bHasta} min={bDesde || undefined} max={maxHasta} onChange={setBHasta}
+            claseBoton="h-[38px] rounded-xl px-3 text-[13px] text-slate-800 max-sm:h-11 max-sm:text-sm" />
         </div>
       </div>
+      {!esMovil ? (
+        <div className="mt-auto flex items-center justify-end gap-1.5 pt-1">
+          <button type="button" onClick={() => cerrar()} className="h-8 rounded-lg px-3 text-[13px] font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-[var(--brand)]">Cancelar</button>
+          <button type="button" onClick={aplicar} disabled={!valido} className="h-8 rounded-lg bg-[var(--brand)] px-4 text-[13px] font-semibold text-white transition hover:brightness-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand)] disabled:opacity-40">Aplicar</button>
+        </div>
+      ) : null}
+    </div>
+  );
+
+  return (
+    <div ref={ref} className="relative min-w-0 max-sm:w-full">
+      <button ref={boton} type="button" onClick={() => (abierto ? cerrar(false) : abrir())}
+        aria-haspopup="dialog" aria-expanded={abierto}
+        aria-label={`Período${etiqueta ? ` (${etiqueta.toLowerCase()})` : ""}: ${[nombreAtajo, rango].filter(Boolean).join(", ") || "sin límite"}`}
+        className="flex h-[38px] w-full max-w-full items-center gap-2 whitespace-nowrap rounded-xl border bg-white pl-3 pr-2.5 text-[13px] text-slate-700 outline-none transition hover:border-slate-300 hover:bg-slate-50 focus-visible:shadow-[0_0_0_4px_var(--brand-100)] max-sm:h-11 max-sm:text-sm"
+        style={{ borderColor: abierto ? "var(--brand)" : "#e2e8f0", boxShadow: abierto ? "0 0 0 4px var(--brand-100)" : undefined }}>
+        <CalendarDays className="h-4 w-4 shrink-0 text-[var(--brand)]" aria-hidden />
+        <span className="min-w-0 flex-1 truncate text-left">
+          {etiqueta ? <span className="text-slate-400">{etiqueta}: </span> : null}
+          {nombreAtajo ? <span className="font-semibold text-slate-800">{nombreAtajo}</span> : null}
+          {nombreAtajo && rango ? <span className="text-slate-300"> · </span> : null}
+          {rango ? <span className={`tabular-nums ${nombreAtajo ? "text-slate-500" : "font-semibold text-slate-800"}`}>{rango}</span> : null}
+          {!nombreAtajo && !rango ? <span className="text-slate-400">Elegí un período</span> : null}
+        </span>
+        <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform duration-200 motion-reduce:transition-none ${abierto ? "rotate-180" : ""}`} aria-hidden />
+      </button>
+
+      {abierto && esMovil ? (
+        <HojaInferior titulo="Período" onClose={() => cerrar()} panelRef={panel}
+          pie={
+            <>
+              <button type="button" onClick={() => cerrar()} className="min-h-11 flex-1 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700">Cancelar</button>
+              <button type="button" onClick={aplicar} disabled={!valido} className="min-h-11 flex-1 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-white disabled:opacity-40">Aplicar rango</button>
+            </>
+          }>
+          <div className="flex flex-col gap-4">
+            {listaAtajos}
+            {rangoPersonalizado}
+          </div>
+        </HojaInferior>
+      ) : null}
+
+      {abierto && !esMovil && pos && typeof document !== "undefined" ? createPortal(
+        <div ref={panel} data-capa-modal="" role="dialog" aria-label="Elegir período"
+          className="fixed z-[200] flex gap-3 overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-2.5 shadow-[0_12px_32px_-8px_rgba(2,48,71,0.25)]"
+          style={{
+            left: pos.left, width: ANCHO, top: pos.top, bottom: pos.bottom, maxHeight: pos.maxH,
+            transformOrigin: pos.top != null ? "top" : "bottom", animation: sinAnimacion ? undefined : "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)",
+          }}>
+          {listaAtajos}
+          {rangoPersonalizado}
+        </div>,
+        document.body,
+      ) : null}
     </div>
   );
 }
@@ -395,13 +609,13 @@ export function Nota({ children }: { children: ReactNode }) {
 }
 
 /** Botón-pestaña chico (vista: por proveedor / por documento, etc.). */
-export function Segmentos<T extends string>({ valor, opciones, onChange }: { valor: T; opciones: [T, string][]; onChange: (v: T) => void }) {
+export function Segmentos<T extends string>({ valor, opciones, onChange, barra = false }: { valor: T; opciones: [T, string][]; onChange: (v: T) => void; /** 38 px de alto, como los chips de la barra de filtros */ barra?: boolean }) {
   return (
     // Responsive: si no entran, scroll horizontal interno (nunca se cortan ni saltan de línea).
     <ScrollHorizontal className="w-fit max-w-full rounded-xl bg-slate-100 p-1" claseFila="gap-0" dependencias={[valor]}>
       {opciones.map(([v, l]) => (
         <button key={v} type="button" onClick={() => onChange(v)} aria-pressed={valor === v} data-activo={valor === v ? "true" : undefined}
-          className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1 text-xs font-semibold transition max-sm:min-h-11 max-sm:px-3.5 max-sm:text-[13px] ${valor === v ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{l}</button>
+          className={`shrink-0 whitespace-nowrap rounded-lg px-3 text-xs font-semibold transition ${barra ? "h-[30px] max-sm:h-auto" : "py-1"} max-sm:min-h-11 max-sm:px-3.5 max-sm:text-[13px] ${valor === v ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{l}</button>
       ))}
     </ScrollHorizontal>
   );

@@ -141,9 +141,13 @@ export function AccionesPagina({ acciones, children }: { acciones?: AccionPagina
   );
 }
 
-export function BarraFiltros({ busqueda, children, activos = 0, onLimpiar, extra, className = "", plano = false }: {
+export function BarraFiltros({ busqueda, children, activos = 0, onLimpiar, extra, className = "", plano = false, inicio }: {
   /** sin caja propia (borde/fondo/padding): cuando la barra ya va dentro de una tarjeta */
   plano?: boolean;
+  /** algo que va primero y siempre a la vista (ej. el período de los reportes): en la misma
+   *  fila en ≥ 768 px; en celular a todo el ancho, arriba del botón "Filtros". Con `inicio`,
+   *  "Limpiar filtros" y `extra` se alinean a la derecha de la fila. */
+  inicio?: ReactNode;
   /** el buscador (siempre visible) */
   busqueda?: ReactNode;
   /** los filtros (Select, checkboxes, fechas…): en línea en ≥ 768 px; en una hoja en celular */
@@ -159,22 +163,29 @@ export function BarraFiltros({ busqueda, children, activos = 0, onLimpiar, extra
   const [hoja, setHoja] = useState(false);
 
   if (!angosta) {
+    const limpiar = onLimpiar && activos > 0 ? (
+      <button type="button" onClick={onLimpiar} className="shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-2 focus-visible:outline-[var(--brand)]">
+        Limpiar filtros
+      </button>
+    ) : null;
     return (
-      <div className={`flex flex-wrap items-center gap-2 ${plano ? "" : "rounded-xl border border-slate-200 bg-white p-2.5 shadow-sm"} ${className}`}>
+      <div className={`flex flex-wrap items-center gap-2 ${plano ? "" : `rounded-xl border border-slate-200 bg-white ${inicio ? "p-2" : "p-2.5"} shadow-sm`} ${className}`}>
+        {inicio}
         {busqueda ? <div className="min-w-[200px] flex-1">{busqueda}</div> : null}
-        {children}
-        {onLimpiar && activos > 0 ? (
-          <button type="button" onClick={onLimpiar} className="shrink-0 rounded-lg px-2.5 py-1.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700">
-            Limpiar filtros
-          </button>
-        ) : null}
-        {extra}
+        {/* Con `inicio` y sin búsqueda, desde lg los filtros se reparten el ancho de la fila
+            (sin hueco a la derecha); en tablet quedan a su ancho natural y envuelven. */}
+        {inicio && !busqueda ? <div className="contents lg:[&>*]:flex-auto">{children}</div> : children}
+        {inicio ? (
+          limpiar || extra ? <div className="ml-auto flex shrink-0 items-center gap-2">{limpiar}{extra}</div> : null
+        ) : (
+          <>{limpiar}{extra}</>
+        )}
       </div>
     );
   }
 
-  return (
-    <div className={`flex items-center gap-2 ${plano ? "" : "rounded-xl border border-slate-200 bg-white p-2 shadow-sm"} ${className}`}>
+  const fila = (
+    <div className={`flex items-center gap-2 ${plano || inicio ? "" : "rounded-xl border border-slate-200 bg-white p-2 shadow-sm"} ${inicio ? "" : className}`}>
       {busqueda ? <div className="min-w-0 flex-1">{busqueda}</div> : <div className="flex-1" />}
       {children ? (
         <button type="button" onClick={() => setHoja(true)} aria-label={`Filtros${activos ? ` (${activos} aplicados)` : ""}`}
@@ -203,6 +214,14 @@ export function BarraFiltros({ busqueda, children, activos = 0, onLimpiar, extra
           <div className="flex flex-col gap-3 [&>*]:!w-full [&>*]:!min-w-0">{children}</div>
         </HojaInferior>
       ) : null}
+    </div>
+  );
+
+  if (!inicio) return fila;
+  return (
+    <div className={`flex flex-col gap-2 ${plano ? "" : "rounded-xl border border-slate-200 bg-white p-2 shadow-sm"} ${className}`}>
+      {inicio}
+      {busqueda || children || extra ? fila : null}
     </div>
   );
 }

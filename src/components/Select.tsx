@@ -29,7 +29,17 @@ export function Select({
   chico = false,
   className = "",
   etiqueta,
+  chip = false,
+  prefijo,
+  textoVacio,
 }: {
+  /** "chip" de barra de filtros (38 px, texto 13 px, "Prefijo: valor"); se resalta con el color
+   *  de marca cuando el valor no es la primera opción ("Todos…"). Ver `prefijo` / `textoVacio`. */
+  chip?: boolean;
+  /** con `chip`: texto antes del valor (ej. "Cajero" → "Cajero: Todos") */
+  prefijo?: string;
+  /** con `chip`: qué mostrar cuando está en la primera opción (ej. "Todos" en vez de "Todos los cajeros") */
+  textoVacio?: string;
   value: string;
   onChange: (v: string) => void;
   options: [string, string][];
@@ -117,6 +127,36 @@ export function Select({
     }
   }
 
+  // Chip: activo = no está en la primera opción (la de "Todos…").
+  const chipActivo = chip && value !== (options[0]?.[0] ?? "");
+  const chipTexto = chip ? (chipActivo ? current?.[1] : textoVacio ?? current?.[1]) : null;
+  const bordeCerrado = chipActivo ? "color-mix(in srgb, var(--brand) 38%, white)" : "#e2e8f0";
+
+  if (chip) {
+    return (
+      <div ref={ref} className={`relative ${block ? "w-full" : ""} ${className}`}>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setOpen((v) => { const n = !v; if (n) setHi(Math.max(0, options.findIndex((o) => o[0] === value))); return n; })}
+          onKeyDown={onTriggerKey}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label={etiqueta ? `${etiqueta}: ${current?.[1] ?? ""}` : undefined}
+          className={`flex h-[38px] w-full max-w-full items-center justify-between gap-1.5 whitespace-nowrap rounded-xl border pl-3 pr-2.5 text-[13px] outline-none transition max-sm:h-11 max-sm:text-sm focus-visible:shadow-[0_0_0_4px_var(--brand-100)] disabled:cursor-not-allowed disabled:opacity-50 ${chipActivo ? "bg-[var(--brand-50)] text-[var(--brand)]" : "bg-white text-slate-700 hover:border-slate-300 hover:bg-slate-50"}`}
+          style={{ borderColor: open ? BRAND : bordeCerrado, boxShadow: open ? `0 0 0 4px var(--brand-100)` : undefined }}
+        >
+          <span className="min-w-0 truncate">
+            {prefijo ? <span className={chipActivo ? "opacity-75" : "text-slate-400"}>{prefijo}: </span> : null}
+            <span className="font-semibold">{chipTexto}</span>
+          </span>
+          <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform duration-200 motion-reduce:transition-none ${chipActivo ? "" : "text-slate-400"} ${open ? "rotate-180" : ""}`} />
+        </button>
+        {listas()}
+      </div>
+    );
+  }
+
   return (
     <div ref={ref} className={`relative ${block ? "w-full" : ""} ${className}`} style={minWidth ? { minWidth } : undefined}>
       <button
@@ -133,7 +173,14 @@ export function Select({
         <span className="truncate">{current?.[1]}</span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
       </button>
+      {listas()}
+    </div>
+  );
 
+  /** Lista de opciones: hoja inferior en celular, popover portaleado en escritorio. */
+  function listas() {
+    return (
+    <>
       {open && !disabled && esMovil ? (
         <HojaInferior titulo={etiqueta ?? "Elegí una opción"} onClose={() => setOpen(false)} z="z-[200]" sinPadding panelRef={lista}>
           <div role="listbox" aria-label={etiqueta} className="p-2">
@@ -158,7 +205,8 @@ export function Select({
           ref={lista}
           className="fixed z-[200] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white p-1 shadow-[0_12px_32px_-8px_rgba(2,48,71,0.25)]"
           style={{
-            left: pos.left, width: Math.max(pos.width, minWidth ?? 0), top: pos.top, bottom: pos.bottom, maxHeight: pos.maxH,
+            // Si la lista es más ancha que el botón (chips), no se sale por la derecha.
+            left: Math.max(8, Math.min(pos.left, window.innerWidth - Math.max(pos.width, minWidth ?? 0) - 8)), width: Math.max(pos.width, minWidth ?? 0), top: pos.top, bottom: pos.bottom, maxHeight: pos.maxH,
             transformOrigin: pos.top != null ? "top" : "bottom", animation: "rb-pop 0.15s cubic-bezier(0.16,1,0.3,1)",
           }}
           role="listbox"
@@ -185,6 +233,7 @@ export function Select({
         </div>,
         document.body,
       ) : null}
-    </div>
-  );
+    </>
+    );
+  }
 }

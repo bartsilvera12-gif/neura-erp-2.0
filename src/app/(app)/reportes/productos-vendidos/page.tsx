@@ -188,40 +188,38 @@ function Contenido() {
         </button>
       </EncabezadoReporte>
 
-      {/* Filtros: fechas y Resumido/Detallado siempre a la vista; búsqueda siempre visible;
-          categoría y "sin ventas" en línea desde 768 px y en la hoja "Filtros" en celular. */}
-      <section className="space-y-2.5 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:space-y-3 sm:p-4">
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
-          <RangoFechasLocal atajos={ATAJOS} atajo={atajo}
-            onAtajo={(k) => { const r = rangoAtajo(k); setDesde(r.desde); setHasta(r.hasta); setAtajo(k); }}
-            desde={desde} hasta={hasta}
-            onDesde={(v) => { if (v) { setDesde(v); setAtajo(null); } }}
-            onHasta={(v) => { if (v) { setHasta(v); setAtajo(null); } }} />
-          <div className="sm:ml-auto">
-            <Segmentos valor={modo} onChange={setModo} opciones={[["resumido", "Resumido"], ["detallado", "Detallado"]]} />
+      {/* Filtros en una fila (≥ 768 px): período, Resumido/Detallado, búsqueda, categoría y
+          "sin ventas". En celular: período y vista arriba; categoría y "sin ventas" en la hoja "Filtros". */}
+      <BarraFiltros
+        inicio={
+          <>
+            <RangoFechasLocal atajos={ATAJOS} atajo={atajo}
+              onAtajo={(k) => { const r = rangoAtajo(k); setDesde(r.desde); setHasta(r.hasta); setAtajo(k); }}
+              desde={desde} hasta={hasta}
+              onDesde={(v) => { if (v) { setDesde(v); setAtajo(null); } }}
+              onHasta={(v) => { if (v) { setHasta(v); setAtajo(null); } }} />
+            <Segmentos barra valor={modo} onChange={setModo} opciones={[["resumido", "Resumido"], ["detallado", "Detallado"]]} />
+          </>
+        }
+        activos={(categoria ? 1 : 0) + (modo === "resumido" && sinVentas ? 1 : 0)}
+        onLimpiar={() => { setCategoria(""); setSinVentas(false); }}
+        busqueda={
+          <div className="relative w-full">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} type="search" enterKeyHint="search"
+              placeholder={modo === "resumido" ? "Filtrar por producto, SKU o categoría…" : "Filtrar por producto, venta, cliente o cajero…"}
+              className="h-[38px] w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-[13px] outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] max-md:h-11 max-md:text-sm [&::-webkit-search-cancel-button]:hidden" />
+            {busqueda ? <button onClick={() => setBusqueda("")} aria-label="Limpiar" className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100"><X className="h-3.5 w-3.5" /></button> : null}
           </div>
-        </div>
-        <BarraFiltros plano
-          activos={(categoria ? 1 : 0) + (modo === "resumido" && sinVentas ? 1 : 0)}
-          onLimpiar={() => { setCategoria(""); setSinVentas(false); }}
-          busqueda={
-            <div className="relative w-full">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} type="search" enterKeyHint="search"
-                placeholder={modo === "resumido" ? "Filtrar por producto, SKU o categoría…" : "Filtrar por producto, venta, cliente o cajero…"}
-                className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] max-md:h-11 [&::-webkit-search-cancel-button]:hidden" />
-              {busqueda ? <button onClick={() => setBusqueda("")} aria-label="Limpiar" className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100"><X className="h-3.5 w-3.5" /></button> : null}
-            </div>
-          }>
-          <Select value={categoria} onChange={setCategoria} minWidth={190} etiqueta="Categoría" options={[["", "Todas las categorías"], ["__sin__", "— Sin categoría —"], ...opcionesFiltroCategoria(categorias)]} />
-          {modo === "resumido" ? (
-            <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 max-md:h-12" title="Suma los productos activos que no tuvieron ninguna venta en el período">
-              <input type="checkbox" checked={sinVentas} onChange={(e) => setSinVentas(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
-              Incluir productos sin ventas
-            </label>
-          ) : null}
-        </BarraFiltros>
-      </section>
+        }>
+        <Select chip prefijo="Categoría" textoVacio="Todas" value={categoria} onChange={setCategoria} minWidth={220} etiqueta="Categoría" className="max-w-[260px] max-md:max-w-none" options={[["", "Todas las categorías"], ["__sin__", "— Sin categoría —"], ...opcionesFiltroCategoria(categorias)]} />
+        {modo === "resumido" ? (
+          <label className={`flex h-[38px] cursor-pointer items-center gap-2 whitespace-nowrap rounded-xl border px-3 text-[13px] transition max-md:h-12 max-md:text-sm ${sinVentas ? "border-[color-mix(in_srgb,var(--brand)_38%,white)] bg-[var(--brand-50)] font-semibold text-[var(--brand)]" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`} title="Suma los productos activos que no tuvieron ninguna venta en el período">
+            <input type="checkbox" checked={sinVentas} onChange={(e) => setSinVentas(e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]" />
+            Incluir sin ventas
+          </label>
+        ) : null}
+      </BarraFiltros>
 
       {error ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">No se pudo cargar el reporte: {error}</div> : null}
 
@@ -262,7 +260,7 @@ function Contenido() {
                     <th className="px-3 py-3 text-right font-semibold uppercase tracking-wide">%</th>
                     <th className="px-3 py-3 text-right font-semibold uppercase tracking-wide">Precio prom.</th>
                     <Th campo="ganancia" der>Ganancia</Th>
-                    <Th campo="margen" der>Margen</Th>
+                    <Th campo="margen" der>Margen de ganancia</Th>
                     <Th campo="stock" der>Stock</Th>
                   </tr>
                 </thead>

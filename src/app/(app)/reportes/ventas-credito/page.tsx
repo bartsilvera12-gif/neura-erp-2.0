@@ -154,9 +154,9 @@ export default function VentasCreditoPage() {
             </div>
           }
           extra={<span className={`hidden whitespace-nowrap text-sm text-slate-400 md:inline ${cargando ? "opacity-50" : ""}`}>{(datos?.total ?? 0).toLocaleString("es-PY")} venta{datos?.total === 1 ? "" : "s"}</span>}>
-          {periodo !== "turno" && sucursalesOpts.length > 2 ? <Select value={sucursal} onChange={cambiar((v: string) => { setSucursal(v); setPunto(""); })} options={sucursalesOpts} minWidth={180} etiqueta="Sucursal" /> : null}
-          {periodo !== "turno" ? <Select value={punto} onChange={cambiar(setPunto)} options={cajasOpts} minWidth={190} etiqueta="Caja" /> : null}
-          <Select value={estado} onChange={cambiar(setEstado)} options={ESTADOS} minWidth={170} etiqueta="Estado" />
+          {periodo !== "turno" && sucursalesOpts.length > 2 ? <Select chip prefijo="Sucursal" textoVacio="Todas" value={sucursal} onChange={cambiar((v: string) => { setSucursal(v); setPunto(""); })} options={sucursalesOpts} minWidth={200} etiqueta="Sucursal" /> : null}
+          {periodo !== "turno" ? <Select chip prefijo="Caja" textoVacio="Todas" value={punto} onChange={cambiar(setPunto)} options={cajasOpts} minWidth={220} etiqueta="Caja" className="max-w-[260px] max-md:max-w-none" /> : null}
+          <Select chip prefijo="Estado" textoVacio="Todos" value={estado} onChange={cambiar(setEstado)} options={ESTADOS} minWidth={190} etiqueta="Estado" />
         </BarraFiltros>
         <p className={`px-4 pt-2 text-xs text-slate-400 md:hidden ${cargando ? "opacity-50" : ""}`}>{(datos?.total ?? 0).toLocaleString("es-PY")} venta{datos?.total === 1 ? "" : "s"}</p>
 

@@ -42,8 +42,9 @@ function CuentasPorPagar() {
 
       <FiltrosReporte filtros={filtros} atajos={ATAJOS} etiquetaFechas="Emitidas:" sucursales={d?.sucursales} cargando={cargando && !!d}>
         {prov ? (
-          <button type="button" onClick={() => filtros.cambiar({ proveedor: null })} className="rounded-xl bg-[var(--brand-50)] px-3 py-1.5 text-xs font-semibold text-[var(--brand)] max-sm:min-h-11 max-sm:text-[13px]">
-            {prov} ✕
+          <button type="button" onClick={() => filtros.cambiar({ proveedor: null })} aria-label={`Quitar filtro de proveedor ${prov}`}
+            className="inline-flex h-[38px] items-center gap-1.5 whitespace-nowrap rounded-xl border border-[color-mix(in_srgb,var(--brand)_38%,white)] bg-[var(--brand-50)] px-3 text-[13px] text-[var(--brand)] transition hover:brightness-95 max-sm:h-11 max-sm:text-sm">
+            <span className="opacity-75">Proveedor:</span> <span className="font-semibold">{prov}</span> <span aria-hidden>✕</span>
           </button>
         ) : null}
       </FiltrosReporte>

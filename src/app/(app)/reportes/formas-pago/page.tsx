@@ -77,7 +77,7 @@ function FormasDePago() {
         key: "ganancia", titulo: "Ganancia bruta", movil: "dato", etiquetaMovil: "Ganancia", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums",
         celda: (f) => <span className={`${f.ganancia < 0 ? "text-rose-600" : "text-emerald-700"} ${f.tipo === "total" ? "font-semibold" : ""}`}>{gs(f.ganancia)}</span>,
       },
-      { key: "margen", titulo: "Margen", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-slate-600", celda: (f) => <span className={fuerte(f)}>{pct(f.ganancia, f.ventas)}</span> },
+      { key: "margen", titulo: "Margen de ganancia", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-slate-600", celda: (f) => <span className={fuerte(f)}>{pct(f.ganancia, f.ventas)}</span> },
       {
         key: "part", titulo: "% del total", movil: "oculto", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-slate-600",
         celda: (f) => (

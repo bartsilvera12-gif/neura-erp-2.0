@@ -115,20 +115,20 @@ export default function ReporteStockMinimoPage() {
           <div className="relative w-full">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar por nombre, SKU, código o categoría…" type="search" enterKeyHint="search"
-              className="h-10 w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] max-md:h-11 [&::-webkit-search-cancel-button]:hidden" />
+              className="h-[38px] w-full rounded-xl border border-slate-200 bg-white pl-9 pr-9 text-[13px] outline-none max-md:text-sm transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)] max-md:h-11 [&::-webkit-search-cancel-button]:hidden" />
             {busqueda ? (
               <button onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100"><X className="h-3.5 w-3.5" /></button>
             ) : null}
           </div>
         }
         extra={
-          <button onClick={() => void cargar()} aria-label="Actualizar" className="inline-flex h-10 shrink-0 items-center gap-2 rounded-xl border px-4 text-sm font-semibold transition hover:bg-[var(--brand-50)] max-md:h-11 max-md:w-11 max-md:justify-center max-md:px-0" style={{ borderColor: `${TEAL}55`, color: TEAL }}>
+          <button onClick={() => void cargar()} aria-label="Actualizar" className="inline-flex h-[38px] shrink-0 items-center gap-2 rounded-xl border px-4 text-[13px] font-semibold transition hover:bg-[var(--brand-50)] max-md:h-11 max-md:w-11 max-md:justify-center max-md:px-0" style={{ borderColor: `${TEAL}55`, color: TEAL }}>
             <RefreshCw className={`h-4 w-4 ${cargando ? "animate-spin" : ""}`} /> <span className="max-md:hidden">Actualizar</span>
           </button>
         }>
-        <Select value={categoria} onChange={setCategoria} minWidth={190} etiqueta="Categoría" options={[["", "Todas las categorías"], ["__sin__", "— Sin categoría —"], ...opcionesFiltroCategoria(categorias)]} />
-        <label className="flex h-10 cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 max-md:h-12">
-          <input type="checkbox" checked={soloSinStock} onChange={(e) => setSoloSinStock(e.target.checked)} className="h-4 w-4 rounded border-slate-300" />
+        <Select chip prefijo="Categoría" textoVacio="Todas" value={categoria} onChange={setCategoria} minWidth={220} etiqueta="Categoría" className="max-w-[260px] max-md:max-w-none" options={[["", "Todas las categorías"], ["__sin__", "— Sin categoría —"], ...opcionesFiltroCategoria(categorias)]} />
+        <label className={`flex h-[38px] cursor-pointer items-center gap-2 whitespace-nowrap rounded-xl border px-3 text-[13px] transition max-md:h-12 max-md:text-sm ${soloSinStock ? "border-[color-mix(in_srgb,var(--brand)_38%,white)] bg-[var(--brand-50)] font-semibold text-[var(--brand)]" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`}>
+          <input type="checkbox" checked={soloSinStock} onChange={(e) => setSoloSinStock(e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]" />
           Solo sin stock
         </label>
       </BarraFiltros>
