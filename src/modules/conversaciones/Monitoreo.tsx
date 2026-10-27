@@ -202,7 +202,16 @@ export function Monitoreo() {
 
   return (
     <div className="flex flex-col gap-6 pb-10">
-      <Encabezado volver={VOLVER_OMNICANAL} eyebrow="Centro de control" titulo="Monitoreo" detalle="Colas, canales, carga de agentes y conversaciones que requieren atención.">
+      <Encabezado
+        volver={VOLVER_OMNICANAL}
+        eyebrow="Centro de control"
+        titulo="Monitoreo"
+        detalle={
+          datos?.equipo_limitado
+            ? "Tu equipo: los asesores que tenés a cargo y los chats que esperan respuesta de ellos (los sin asignar se ven todos)."
+            : "Colas, canales, carga de agentes y conversaciones que requieren atención."
+        }
+      >
         <span
           className={`inline-flex items-center gap-1 text-[11px] font-medium ${suscripto ? "text-emerald-600" : "text-amber-600"}`}
           title={suscripto ? "Recibiendo cambios en vivo (y refresco cada 20 s)" : "Sin conexión en vivo: se actualiza cada 20 s"}

@@ -25,6 +25,9 @@ export type FilaBandeja = {
   canal_id: string;
   canal_tipo: string;
   canal_nombre: string;
+  /** Cola de atención en la que está (null = sin cola). */
+  cola_id?: string | null;
+  cola_nombre?: string | null;
   prioridad: number;
   ultimo_mensaje_at: string | null;
   ultimo_preview: string | null;
@@ -90,6 +93,8 @@ export type OpcionesBandeja = {
   puede_soporte: boolean;
   canales: { id: string; nombre: string; tipo: string; proveedor: string; activo: boolean }[];
   equipo: { id: string; nombre: string; rol: string }[];
+  /** Colas activas (filtro de la bandeja y "Derivar a una cola"). */
+  colas: { id: string; nombre: string; estrategia: string; solo_transferencia: boolean }[];
   respuestas: RespuestaRapida[];
   plantillas: Plantilla[];
 };
@@ -242,10 +247,10 @@ export function compararFilas(a: FilaBandeja, b: FilaBandeja): number {
 
 /** ¿La fila entra en la vista/filtros actuales? (para el parche en vivo de la lista). */
 export function filaEnVista(
-  f: Pick<FilaBandeja, "estado" | "asignado_id" | "canal_id">,
+  f: Pick<FilaBandeja, "estado" | "asignado_id" | "canal_id" | "cola_id">,
   vista: Vista,
   yo: string,
-  filtros: { canal: string; asesor: string },
+  filtros: { canal: string; asesor: string; cola?: string },
 ): boolean {
   const abierta = f.estado !== "cerrada";
   const okVista =
@@ -256,6 +261,7 @@ export function filaEnVista(
   if (!okVista) return false;
   if (filtros.canal && f.canal_id !== filtros.canal) return false;
   if (filtros.asesor && f.asignado_id !== filtros.asesor) return false;
+  if (filtros.cola && (f.cola_id ?? null) !== filtros.cola) return false;
   return true;
 }
 

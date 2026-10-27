@@ -211,6 +211,9 @@ export const btnPrimario =
 export const btnIcono =
   "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:bg-[#4FAEB2]/8 hover:text-[#3F8E91] disabled:opacity-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11";
 export const thClase = "px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500";
+/** Interruptor con aspecto de chip (mismo estilo que el de Inventario / Existencias). */
+export const CHIP_TOGGLE = (on: boolean) =>
+  `inline-flex h-[38px] w-fit cursor-pointer select-none items-center gap-2 whitespace-nowrap rounded-xl border px-3 text-[13px] transition max-md:h-12 max-md:text-sm ${on ? "border-[color-mix(in_srgb,var(--brand)_38%,white)] bg-[var(--brand-50)] font-semibold text-[var(--brand)]" : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"}`;
 
 export function Seccion({
   titulo,

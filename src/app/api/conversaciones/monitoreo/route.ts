@@ -4,12 +4,13 @@
  *   → { resumen, sin_asignar, esperando, agentes, fecha_leads, es_admin }
  * chat_monitoreo arma todo en UNA consulta; acá se suma el teléfono, canal y cola de los
  * chats listados (una consulta por id) y los "leads" (asignaciones automáticas) del día
- * elegido desde chat_asignaciones_dia.
+ * elegido desde chat_asignaciones_dia. Un supervisor con equipo cargado
+ * (chat_supervisor_asesores) ve solo a esos asesores y sus chats en espera.
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, ERR } from "@/lib/api/responses";
 import { hoyPY } from "@/lib/fecha/paraguay";
-import { puedeSupervisar } from "@/modules/conversaciones/server";
+import { alcanceSupervision, puedeSupervisar } from "@/modules/conversaciones/server";
 import type { AgenteMonitoreo, DatosMonitoreo, Esperando, ResumenMonitoreo, SinAsignar } from "@/modules/conversaciones/supervision";
 
 export const dynamic = "force-dynamic";
@@ -45,8 +46,12 @@ export const GET = withTenant(async (ctx, req) => {
     return ERR.server();
   }
   const d = mon.data;
+  // Supervisor con equipo: solo sus asesores (y él) y los chats que esperan respuesta de
+  // ellos. Los sin asignar se ven igual (todavía no son de nadie).
+  const equipo = await alcanceSupervision(ctx);
+  const enEquipo = (id: string | null | undefined) => !equipo || (!!id && equipo.includes(id));
   const sinAsignar = d?.sin_asignar ?? [];
-  const esperando = d?.esperando ?? [];
+  const esperando = (d?.esperando ?? []).filter((x) => enEquipo(x.asignado_id));
 
   // Teléfono, canal y cola de los chats listados (una sola consulta por id).
   const ids = [...new Set([...sinAsignar.map((x) => x.id), ...esperando.map((x) => x.id)])];
@@ -82,7 +87,7 @@ export const GET = withTenant(async (ctx, req) => {
       const e = extra.get(x.id);
       return { ...x, telefono: e?.contacto?.telefono ?? null, canal: e ? canal.get(e.canal_id)?.nombre ?? null : null };
     }),
-    agentes: (d?.agentes ?? []).map((a) => ({
+    agentes: (d?.agentes ?? []).filter((a) => enEquipo(a.id)).map((a) => ({
       ...a,
       carga: Number(a.carga) || 0,
       esperando_respuesta: Number(a.esperando_respuesta) || 0,
@@ -93,6 +98,7 @@ export const GET = withTenant(async (ctx, req) => {
     })),
     fecha_leads: fecha,
     es_admin: ctx.rol === "ADMIN",
+    equipo_limitado: !!equipo,
   };
   return ok(out);
 });

@@ -1,6 +1,7 @@
 /**
  * Lo que la bandeja pide UNA vez (el navegador lo cachea): canales, equipo (para
- * transferir y filtrar por asesor), respuestas rápidas activas, plantillas y permisos.
+ * transferir y filtrar por asesor), colas activas (filtro y derivación), respuestas rápidas
+ * activas, plantillas y permisos.
  *   GET /api/conversaciones/opciones
  */
 import { withTenant } from "@/lib/api/with-tenant";
@@ -11,18 +12,20 @@ import { PLANTILLAS, type OpcionesBandeja, type RespuestaRapida } from "@/module
 export const dynamic = "force-dynamic";
 
 export const GET = withTenant(async (ctx) => {
-  const [canales, eq, resp] = await Promise.all([
+  const [canales, eq, resp, colas] = await Promise.all([
     ctx.db.select("chat_canales", "id, nombre, tipo, proveedor, activo").order("created_at"),
     leerEquipo(ctx.db, ctx.usuarioId),
     ctx.db.select("chat_respuestas_rapidas", "id, atajo, texto, orden, activo, canal_id").eq("activo", true).order("orden").order("atajo"),
+    ctx.db.select("chat_colas", "id, nombre, estrategia, solo_transferencia").eq("activo", true).order("prioridad", { ascending: false }).order("nombre"),
   ]);
-  if (canales.error || resp.error) return ERR.server();
+  if (canales.error || resp.error || colas.error) return ERR.server();
   const out: OpcionesBandeja = {
     yo: ctx.usuarioId,
     es_admin: ctx.rol === "ADMIN",
     puede_soporte: puedeCargarSoporte(ctx.rol, eq.yo),
     canales: (canales.data ?? []) as unknown as OpcionesBandeja["canales"],
     equipo: eq.equipo,
+    colas: (colas.data ?? []) as unknown as OpcionesBandeja["colas"],
     respuestas: (resp.data ?? []) as unknown as RespuestaRapida[],
     plantillas: PLANTILLAS,
   };

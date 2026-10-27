@@ -112,12 +112,17 @@ export function PanelChat({
         <ModalTransferir
           conv={conv}
           equipo={opciones.equipo}
+          colas={opciones.colas ?? []}
           yo={opciones.yo}
           onCerrar={cerrarVentana}
-          onListo={(f) => {
+          onListo={(f, cola) => {
             onFila(f);
             setVentana(null);
-            onAviso(f.asignado_nombre ? `Transferida a ${f.asignado_nombre}` : "Quedó sin asignar");
+            onAviso(
+              cola
+                ? `Derivada a ${cola}${f.asignado_nombre ? ` · la tiene ${f.asignado_nombre}` : " · queda en la cola sin asesor"}`
+                : f.asignado_nombre ? `Transferida a ${f.asignado_nombre}` : "Quedó sin asignar",
+            );
           }}
         />
       ) : null}

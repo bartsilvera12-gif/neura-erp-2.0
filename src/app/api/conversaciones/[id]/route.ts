@@ -3,6 +3,7 @@
  *   PATCH /api/conversaciones/[id]
  *     { accion: "tomar" }                          → me la asigno
  *     { accion: "transferir", asignado_id }        → a otro usuario de la empresa
+ *     { accion: "derivar", cola_id }               → a una cola (la reparte su estrategia)
  *     { accion: "soltar" }                         → queda sin asignar
  *     { accion: "reabrir" }                        → estado abierta (limpia el cierre)
  *     { accion: "pendiente" | "abierta" }          → cambia el estado (sin cerrar)
@@ -26,6 +27,7 @@ const cuerpo = z.discriminatedUnion("accion", [
   z.object({ accion: z.literal("pendiente") }),
   z.object({ accion: z.literal("abierta") }),
   z.object({ accion: z.literal("transferir"), asignado_id: z.string().uuid("Elegí a quién transferir") }),
+  z.object({ accion: z.literal("derivar"), cola_id: z.string().uuid("Elegí la cola") }),
   z.object({
     accion: z.literal("etiquetas"),
     etiquetas: z.array(z.string().trim().min(1).max(40)).max(20, "Máximo 20 etiquetas"),
@@ -36,6 +38,19 @@ export const PATCH = withTenant(
   async (ctx, req, input) => {
     const id = idConversacion(req);
     if (!id) return ERR.invalid("Conversación inválida");
+    // Derivar a una cola: la reparte chat_asignar con la estrategia de esa cola (también las
+    // "solo transferencia"); el ruteo y el mensaje automático los deja la base.
+    if (input.accion === "derivar") {
+      const { data, error } = await ctx.db.rpc<{ asignada: boolean; motivo?: string }>("chat_asignar", { p_conversacion: id, p_cola: input.cola_id });
+      if (error) {
+        console.error("[conversaciones] derivar", error.message);
+        return ERR.server();
+      }
+      if (data?.motivo === "no_existe") return ERR.notFound("Conversación");
+      if (data?.motivo === "cola_inexistente") return fail("La cola no existe o está inactiva.");
+      const fila = await leerResumen(ctx.db, id);
+      return fila ? ok(fila) : ERR.notFound("Conversación");
+    }
     const ahora = new Date().toISOString();
     const asigna = input.accion === "tomar" || input.accion === "transferir" || input.accion === "soltar";
     // Antes de reasignar: quién la tenía, su cola y si ya hubo primera respuesta.

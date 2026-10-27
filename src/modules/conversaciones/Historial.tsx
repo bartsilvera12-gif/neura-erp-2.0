@@ -5,6 +5,8 @@
  * conversaciones (cualquier canal) con su cierre, y el flujo de acciones (ingreso,
  * asignaciones, transferencias, reasignaciones por SLA, cierres). Cualquier chat se lee
  * en modo lectura. Enlace directo: /conversaciones/historial?contacto=<id>.
+ * Pestaña "Todas las cerradas" (?modo=cerradas): bandeja de solo lectura de todas las
+ * cerradas con filtro de asignación (HistorialCerradas).
  */
 import { TablaScroll } from "@/components/TablaResponsive";
 import Link from "next/link";
@@ -17,7 +19,8 @@ import { buscarContactos, pedirHistorial } from "@/modules/conversaciones/api-su
 import { ESTADO_CLASE, ESTADO_LABEL, horaLista, nombreContacto, telefonoLegible } from "@/modules/conversaciones/dominio";
 import { eventoRuteo, type ContactoBuscado, type ConversacionHistorial, type Historial as DatosHistorial } from "@/modules/conversaciones/supervision";
 import { AvatarTono, Cargando, Encabezado, VOLVER_OMNICANAL } from "@/modules/conversaciones/ui-supervision";
-import { Girando } from "@/modules/conversaciones/ui";
+import { Girando, tabClass } from "@/modules/conversaciones/ui";
+import { HistorialCerradas } from "@/modules/conversaciones/HistorialCerradas";
 
 const VisorChat = dynamic(() => import("@/modules/conversaciones/VisorChat").then((m) => m.VisorChat), { ssr: false });
 
@@ -62,6 +65,10 @@ function armarFlujo(h: DatosHistorial): Paso[] {
         p.usuario = r.de ?? "—";
         p.destino = "Sin asignar";
         break;
+      case "derivada":
+        p.usuario = r.de ?? "—";
+        p.destino = r.cola ? `Cola ${r.cola}` : "—";
+        break;
       default:
         p.destino = "—";
     }
@@ -70,9 +77,19 @@ function armarFlujo(h: DatosHistorial): Paso[] {
   return pasos.sort((a, b) => Date.parse(a.at) - Date.parse(b.at));
 }
 
+type Modo = "contacto" | "cerradas";
+
 export function Historial() {
   const sp = useSearchParams();
   const inicial = sp.get("contacto");
+  const [modo, setModo] = useState<Modo>(sp.get("modo") === "cerradas" && !inicial ? "cerradas" : "contacto");
+  const cambiarModo = (m: Modo) => {
+    setModo(m);
+    const url = new URL(window.location.href);
+    if (m === "cerradas") url.searchParams.set("modo", "cerradas");
+    else url.searchParams.delete("modo");
+    window.history.replaceState(window.history.state, "", url);
+  };
   const [texto, setTexto] = useState("");
   const [q, setQ] = useState("");
   const [resultados, setResultados] = useState<ContactoBuscado[]>([]);
@@ -144,8 +161,38 @@ export function Historial() {
 
   return (
     <div className="flex flex-col gap-4 pb-10">
-      <Encabezado volver={VOLVER_OMNICANAL} eyebrow="Omnicanal" titulo="Historial omnicanal" detalle="Auditoría por contacto: todas sus conversaciones en cualquier canal, con asignaciones, transferencias y cierres." />
+      <Encabezado
+        volver={VOLVER_OMNICANAL}
+        eyebrow="Omnicanal"
+        titulo="Historial omnicanal"
+        detalle={
+          modo === "cerradas"
+            ? "Todas las conversaciones cerradas en una bandeja de solo lectura, filtrable por asignación, cola y canal."
+            : "Auditoría por contacto: todas sus conversaciones en cualquier canal, con asignaciones, transferencias y cierres."
+        }
+      />
 
+      <div role="tablist" aria-label="Modo del historial" className="flex w-full gap-1 rounded-xl border border-slate-200 bg-slate-100/80 p-1 sm:w-fit">
+        {(
+          [
+            ["contacto", "Por contacto"],
+            ["cerradas", "Todas las cerradas"],
+          ] as [Modo, string][]
+        ).map(([m, label]) => (
+          <button
+            key={m}
+            type="button"
+            role="tab"
+            aria-selected={modo === m}
+            onClick={() => cambiarModo(m)}
+            className={`${tabClass(modo === m)} max-sm:min-h-11 max-sm:flex-1 max-sm:justify-center`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {modo === "cerradas" ? <HistorialCerradas /> : (
       <div className="flex min-h-[520px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" style={{ height: "max(520px, calc(100dvh - 15rem))" }}>
         {/* Búsqueda */}
         <aside className={`min-h-0 w-full shrink-0 flex-col border-slate-200 bg-slate-50/80 md:flex md:w-[280px] md:border-r lg:w-[320px] xl:w-[350px] ${selId ? "hidden" : "flex"}`}>
@@ -263,6 +310,7 @@ export function Historial() {
                               <strong className="text-slate-900">{c.canal}</strong>
                               <span className={`rounded border px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${ESTADO_CLASE[c.estado]}`}>{ESTADO_LABEL[c.estado]}</span>
                               {c.asignado ? <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-900">Agente · {c.asignado}</span> : null}
+                              {c.cola ? <span className="rounded border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-800">Cola · {c.cola}</span> : null}
                             </p>
                             <p className="mt-0.5 text-[11px] text-slate-500">
                               Desde {larga(c.created_at)}
@@ -335,6 +383,7 @@ export function Historial() {
           )}
         </div>
       </div>
+      )}
 
       {visor && contacto ? (
         <VisorChat

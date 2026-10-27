@@ -2,7 +2,8 @@
  * Ficha del contacto (panel lateral del chat), todo en un viaje:
  *   GET /api/conversaciones/[id]/ficha
  *   → contacto · último cierre de la conversación · cliente del ERP (código, deuda, suscripción
- *     activa, últimos tickets de Soporte, última tipificación) · prospecto del CRM.
+ *     activa, últimos tickets de Soporte, última tipificación) · prospecto del CRM ·
+ *     conversaciones previas del contacto (otros canales) · proyectos activos del cliente.
  * Si el contacto todavía no tiene cliente, se reintenta el vínculo por teléfono (últimos 9
  * dígitos) y se guarda SOLO si hay un único cliente que coincide.
  */
@@ -51,7 +52,7 @@ export const GET = withTenant(async (ctx, req) => {
   }
 
   const vacio = Promise.resolve({ data: null, error: null } as { data: unknown; error: unknown });
-  const [cierreFam, cierreSub, cierrePor, cli, saldo, susc, tks, tip, pros] = await Promise.all([
+  const [cierreFam, cierreSub, cierrePor, cli, saldo, susc, tks, tip, pros, prev, proy] = await Promise.all([
     conv.cierre_familia_id ? ctx.db.select("tipificacion_familias", "nombre").eq("id", conv.cierre_familia_id).limit(1) : vacio,
     conv.cierre_estado_id ? ctx.db.select("tipificacion_estados", "nombre").eq("id", conv.cierre_estado_id).limit(1) : vacio,
     conv.cerrada_por ? ctx.db.select("usuarios", "nombre").eq("id", conv.cerrada_por).limit(1) : vacio,
@@ -71,7 +72,40 @@ export const GET = withTenant(async (ctx, req) => {
     contacto.prospecto_id
       ? ctx.db.select("crm_prospectos", "id, numero_control, contacto, empresa, etapa, valor_estimado, responsable_usuario_id").eq("id", contacto.prospecto_id).limit(1)
       : vacio,
+    // Conversaciones previas: las otras del contacto (una por canal; la de este canal es esta misma).
+    ctx.db
+      .select(
+        "chat_conversaciones",
+        "id, estado, created_at, ultimo_mensaje_at, cerrada_at, cierre_estado_id, canal:chat_canales!canal_id(nombre, tipo), asignado:usuarios!asignado_id(nombre)",
+      )
+      .eq("contacto_id", contacto.id)
+      .neq("id", conv.id)
+      .order("ultimo_mensaje_at", { ascending: false, nullsFirst: false })
+      .limit(10),
+    clienteId
+      ? ctx.db
+          .select("proyectos", "id, numero, titulo, estado:proyecto_estados!estado_id(nombre, color)")
+          .eq("cliente_id", clienteId)
+          .eq("archivado", false)
+          .order("ultimo_movimiento_at", { ascending: false })
+          .limit(5)
+      : vacio,
   ]);
+  if (prev.error) console.error("[conversaciones] ficha previas", (prev.error as { message?: string }).message);
+  if (proy.error) console.error("[conversaciones] ficha proyectos", (proy.error as { message?: string }).message);
+  type Previa = {
+    id: string; estado: "abierta" | "pendiente" | "cerrada"; created_at: string; ultimo_mensaje_at: string | null; cerrada_at: string | null;
+    cierre_estado_id: string | null; canal: { nombre: string; tipo: string } | null; asignado: { nombre: string } | null;
+  };
+  type Proy = { id: string; numero: string; titulo: string; estado: { nombre: string; color: string | null } | null };
+  const previas = (prev.data ?? []) as unknown as Previa[];
+  // cierre_estado_id no tiene FK (es del catálogo de Tipificación): los nombres van aparte.
+  const idsCierre = [...new Set(previas.map((p) => p.cierre_estado_id).filter((x): x is string => !!x))];
+  const nombreCierre = new Map<string, string>();
+  if (idsCierre.length) {
+    const { data } = await ctx.db.select("tipificacion_estados", "id, nombre").in("id", idsCierre);
+    for (const r of (data ?? []) as unknown as { id: string; nombre: string }[]) nombreCierre.set(r.id, r.nombre);
+  }
 
   const primero = <T,>(r: { data: unknown }): T | null => ((r.data as T[] | null)?.[0] ?? null);
   const cliente = primero<Record<string, unknown>>(cli);
@@ -124,5 +158,19 @@ export const GET = withTenant(async (ctx, req) => {
         }
       : null,
     prospecto: prospecto ? { ...prospecto, valor_estimado: Number(prospecto.valor_estimado ?? 0), etapa_nombre: etapaNombre } : null,
+    previas: previas.map((p) => ({
+      id: p.id,
+      canal: p.canal?.nombre ?? "Canal",
+      canal_tipo: p.canal?.tipo ?? "whatsapp",
+      estado: p.estado,
+      created_at: p.created_at,
+      ultimo_mensaje_at: p.ultimo_mensaje_at,
+      cerrada_at: p.cerrada_at,
+      asignado: p.asignado?.nombre ?? null,
+      cierre_estado: p.cierre_estado_id ? nombreCierre.get(p.cierre_estado_id) ?? null : null,
+    })),
+    proyectos: ((proy.data ?? []) as unknown as Proy[]).map((p) => ({
+      id: p.id, numero: p.numero, titulo: p.titulo, estado: p.estado?.nombre ?? null, color: p.estado?.color ?? null,
+    })),
   });
 });

@@ -7,7 +7,7 @@ import { withTenant } from "@/lib/api/with-tenant";
 import { ok, ERR } from "@/lib/api/responses";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { UUID_RE } from "@/modules/tipificacion/server";
-import { puedeSupervisar } from "@/modules/conversaciones/server";
+import { alcanceSupervision, puedeSupervisar } from "@/modules/conversaciones/server";
 import { segundosEntre, type LeadDia } from "@/modules/conversaciones/supervision";
 
 export const dynamic = "force-dynamic";
@@ -30,6 +30,8 @@ export const GET = withTenant(async (ctx, req) => {
   const sp = new URL(req.url).searchParams;
   const agente = sp.get("agente");
   if (!agente || !UUID_RE.test(agente)) return ERR.invalid("Asesor inválido");
+  const equipo = await alcanceSupervision(ctx);
+  if (equipo && !equipo.includes(agente)) return ERR.forbidden();
   const f = sp.get("fecha");
   const fecha = f && FECHA_RE.test(f) ? f : hoyPY();
   // Paraguay es UTC-3 todo el año (ver lib/fecha/paraguay).

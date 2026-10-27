@@ -21,16 +21,22 @@ export const pedirCargaAgentes = () => apiFetch<{ agentes: AgenteCarga[] }>(`${B
 export const asignarAutomatico = (id: string) =>
   apiFetch<{ asignada: boolean; motivo?: string; usuario_id?: string; fila: FilaBandeja | null }>(`${B}/${id}/asignar`, { method: "POST", body: "{}" });
 
-export type FiltrosFinalizadas = { desde: string; hasta: string; asesor: string; estado: string; q: string };
-export function pedirFinalizadas(f: FiltrosFinalizadas, cursor: { at: string; id: string } | null, signal?: AbortSignal) {
+export type FiltrosFinalizadas = {
+  desde: string; hasta: string; asesor: string; asignado: string; cola: string; estado: string; semaforo: string; q: string;
+};
+export type AlcanceFinalizadas = "todas" | "equipo" | "propias";
+export function pedirFinalizadas(f: FiltrosFinalizadas, cursor: { at: string; id: string } | null, signal?: AbortSignal, seguimientos = false) {
   const sp = new URLSearchParams();
   for (const [k, v] of Object.entries(f)) if (v.trim()) sp.set(k, v.trim());
+  if (seguimientos) sp.set("modo", "seguimientos");
   if (cursor) {
     sp.set("cursor_at", cursor.at);
     sp.set("cursor_id", cursor.id);
   }
-  return apiFetch<PaginaFinalizadas & { alcance: "todas" | "propias" }>(`${B}/finalizadas?${sp}`, { signal });
+  return apiFetch<PaginaFinalizadas & { alcance: AlcanceFinalizadas }>(`${B}/finalizadas?${sp}`, { signal });
 }
+export const marcarSeguimiento = (id: string, hecho: boolean) =>
+  apiFetch<{ id: string; seguimiento_hecho_at: string | null }>(`${B}/${id}/seguimiento`, { method: "POST", body: JSON.stringify({ hecho }) });
 
 export const buscarContactos = (q: string, signal?: AbortSignal) =>
   apiFetch<{ contactos: ContactoBuscado[] }>(`${B}/historial?q=${encodeURIComponent(q)}`, { signal }).then((r) => r.contactos);
@@ -42,3 +48,6 @@ export type CuerpoCola = Omit<DatosColas["colas"][number], "id">;
 export const crearCola = (c: CuerpoCola) => apiFetch<{ id: string }>(`${B}/colas`, { method: "POST", body: JSON.stringify(c) });
 export const guardarCola = (id: string, c: CuerpoCola) => apiFetch<{ id: string }>(`${B}/colas/${id}`, { method: "PATCH", body: JSON.stringify(c) });
 export const borrarCola = (id: string) => apiFetch<{ id: string }>(`${B}/colas/${id}`, { method: "DELETE" });
+/** Reemplaza los asesores de UN supervisor (lista vacía = vuelve a ver a todos). */
+export const guardarSupervisor = (supervisor_id: string, asesores: string[]) =>
+  apiFetch<{ supervisor_id: string; asesores: string[] }>(`${B}/supervisores`, { method: "PUT", body: JSON.stringify({ supervisor_id, asesores }) });

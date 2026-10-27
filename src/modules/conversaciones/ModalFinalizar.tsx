@@ -3,22 +3,30 @@
 /**
  * Finalizar la conversación con su tipificación (Estado → Sub-estado del catálogo de
  * Tipificación + comentario). Si el sub-estado crea ticket, se elige la clasificación y el
- * ticket de Soporte sale junto con el cierre. El catálogo viene cacheado: el modal abre al instante.
+ * ticket de Soporte sale junto con el cierre. Opcional: "próxima acción" (fecha + nota) para
+ * Finalizadas › Seguimientos. El catálogo viene cacheado: el modal abre al instante.
  */
 import { useEffect, useMemo, useState } from "react";
-import { CheckCircle2, Headset } from "lucide-react";
+import { CalendarClock, CheckCircle2, Headset } from "lucide-react";
 import { finalizar, pedirCatalogoCierre, type CatalogoCierre } from "@/modules/conversaciones/api";
 import type { FilaBandeja } from "@/modules/conversaciones/dominio";
 import { numeroTicket } from "@/modules/tipificacion/dominio";
 import { Select } from "@/components/Select";
+import { SelectorFecha } from "@/components/SelectorFecha";
+import { hoyPY } from "@/lib/fecha/paraguay";
 import { AvisoError, Ventana, botonPrimario, botonSecundario, claseCampo, claseEtiqueta } from "@/modules/conversaciones/ui";
+import { CHIP_TOGGLE } from "@/modules/conversaciones/ui-supervision";
 
 export function ModalFinalizar({ conv, onCerrar, onListo }: { conv: FilaBandeja; onCerrar: () => void; onListo: (f: FilaBandeja | null, aviso: string) => void }) {
+  const hoy = hoyPY();
   const [cat, setCat] = useState<CatalogoCierre | null>(null);
   const [familia, setFamilia] = useState("");
   const [sub, setSub] = useState("");
   const [clas, setClas] = useState("");
   const [obs, setObs] = useState("");
+  const [conProxima, setConProxima] = useState(false);
+  const [proxFecha, setProxFecha] = useState("");
+  const [proxNota, setProxNota] = useState("");
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -37,7 +45,8 @@ export function ModalFinalizar({ conv, onCerrar, onListo }: { conv: FilaBandeja;
   const clasificaciones = useMemo(() => (tipoTicket ? (cat?.clasificaciones ?? []).filter((c) => c.tipo_codigo === tipoTicket) : []), [cat, tipoTicket]);
   const bloqueoTicket = tipoTicket ? (!conv.cliente_id ? "Ese sub-estado crea un ticket: primero vinculá un cliente (Ficha)." : !cat?.puede_soporte ? "Tu usuario no puede cargar tickets de Soporte." : null) : null;
 
-  const listo = !!familia && !!sub && !!obs.trim() && !bloqueoTicket && (!tipoTicket || !clasificaciones.length || !!clas);
+  const listo =
+    !!familia && !!sub && !!obs.trim() && !bloqueoTicket && (!tipoTicket || !clasificaciones.length || !!clas) && (!conProxima || !!proxFecha);
 
   const confirmar = async () => {
     setGuardando(true);
@@ -48,6 +57,7 @@ export function ModalFinalizar({ conv, onCerrar, onListo }: { conv: FilaBandeja;
         estado_id: sub,
         observacion: obs.trim(),
         ticket: tipoTicket ? { clasificacion_codigo: clas || null } : null,
+        proxima_accion: conProxima && proxFecha ? { fecha: proxFecha, nota: proxNota.trim() || null } : null,
       });
       onListo(r.fila, r.ticket ? `Conversación finalizada · Ticket ${numeroTicket(r.ticket.numero)} creado` : "Conversación finalizada");
     } catch (e) {
@@ -57,7 +67,7 @@ export function ModalFinalizar({ conv, onCerrar, onListo }: { conv: FilaBandeja;
   };
 
   return (
-    <Ventana titulo="Finalizar conversación" detalle="El resultado queda en el historial. Todos los campos son obligatorios." icono={CheckCircle2} onCerrar={() => !guardando && onCerrar()}>
+    <Ventana titulo="Finalizar conversación" detalle="El resultado queda en el historial. Estado, sub-estado y comentario son obligatorios." icono={CheckCircle2} onCerrar={() => !guardando && onCerrar()}>
       {!cat && !error ? (
         <div className="space-y-3">
           {[0, 1].map((i) => (
@@ -128,6 +138,39 @@ export function ModalFinalizar({ conv, onCerrar, onListo }: { conv: FilaBandeja;
               onChange={(e) => setObs(e.target.value)}
               placeholder={tipoTicket ? "Describí el pedido: la primera línea es el asunto del ticket." : "Resumí el resultado o próximos pasos para el equipo."}
             />
+          </div>
+          {/* Próxima acción (opcional): queda en Finalizadas › Seguimientos hasta marcarla hecha. */}
+          <div>
+            <label className={CHIP_TOGGLE(conProxima)}>
+              <input
+                type="checkbox"
+                checked={conProxima}
+                onChange={(e) => {
+                  setConProxima(e.target.checked);
+                  if (e.target.checked && !proxFecha) setProxFecha(hoy);
+                }}
+                className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]"
+              />
+              <CalendarClock className="h-4 w-4" aria-hidden /> Agendar próxima acción
+            </label>
+            {conProxima ? (
+              <div className="mt-2 grid gap-2 rounded-xl border border-slate-200 bg-slate-50/60 p-3 sm:grid-cols-[11rem_1fr]">
+                <div>
+                  <span className={claseEtiqueta}>Fecha</span>
+                  <SelectorFecha block compacto etiqueta="Fecha de la próxima acción" value={proxFecha} min={hoy} onChange={setProxFecha} />
+                </div>
+                <div>
+                  <span className={claseEtiqueta}>Qué hay que hacer (opcional)</span>
+                  <input
+                    className={`${claseCampo} max-sm:h-11`}
+                    value={proxNota}
+                    maxLength={1000}
+                    onChange={(e) => setProxNota(e.target.value)}
+                    placeholder="Ej. llamar para confirmar el pedido"
+                  />
+                </div>
+              </div>
+            ) : null}
           </div>
           {!conv.cliente_id ? (
             <p className="rounded-lg border border-amber-100 bg-amber-50 px-2 py-1.5 text-xs text-amber-800">

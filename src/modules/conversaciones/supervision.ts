@@ -89,6 +89,8 @@ export type DatosMonitoreo = {
   agentes: AgenteMonitoreo[];
   fecha_leads: string;
   es_admin: boolean;
+  /** Supervisor con equipo asignado: los asesores y chats en espera son solo los de su equipo. */
+  equipo_limitado?: boolean;
 };
 
 /** Chats asignados a un asesor en un día (detalle de "Leads del día"). */
@@ -133,8 +135,43 @@ export type Finalizada = {
   cierre_familia: string | null;
   cierre_estado: string | null;
   canal: string;
+  asignado_id: string | null;
+  asignado_nombre: string | null;
+  cola_id: string | null;
+  cola: string | null;
+  /** Último mensaje humano saliente y días desde ese día (America/Asuncion). */
+  ultimo_msg_asesor_at: string | null;
+  dias_asesor: number | null;
+  semaforo: Semaforo;
+  /** Próxima acción del cierre ("YYYY-MM-DD") y su nota; hecha = seguimiento cumplido. */
+  proxima_accion_fecha: string | null;
+  proxima_accion_nota: string | null;
+  seguimiento_hecho_at: string | null;
 };
-export type PaginaFinalizadas = { rows: Finalizada[]; siguiente: { at: string; id: string } | null };
+export type ConteoSeguimientos = { pendientes: number; vencidos: number };
+export type PaginaFinalizadas = {
+  rows: Finalizada[];
+  /** Cursor: cerrada_at (finalizadas) o la fecha de la próxima acción (seguimientos). */
+  siguiente: { at: string; id: string } | null;
+  seguimientos: ConteoSeguimientos;
+};
+
+// ── Semáforo del último mensaje del asesor ──────────────────────────────────
+export type Semaforo = "verde" | "ambar" | "rojo" | "sin";
+export const SEMAFORO: Record<Semaforo, { label: string; detalle: string; dot: string; pill: string }> = {
+  verde: { label: "Al día", detalle: "hasta 2 días", dot: "bg-emerald-500", pill: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+  ambar: { label: "Atención", detalle: "3 a 6 días", dot: "bg-amber-500", pill: "border-amber-200 bg-amber-50 text-amber-800" },
+  rojo: { label: "Frío", detalle: "7 días o más", dot: "bg-rose-500", pill: "border-rose-200 bg-rose-50 text-rose-800" },
+  sin: { label: "Sin mensaje", detalle: "el asesor nunca escribió", dot: "bg-slate-300", pill: "border-slate-200 bg-slate-50 text-slate-600" },
+};
+export const esSemaforo = (v: unknown): v is Semaforo => v === "verde" || v === "ambar" || v === "rojo" || v === "sin";
+/** "hoy", "ayer", "hace 5 días". */
+export function diasLegible(d: number | null | undefined): string {
+  if (d == null) return "—";
+  if (d <= 0) return "hoy";
+  if (d === 1) return "ayer";
+  return `hace ${d} días`;
+}
 export const PAGINA_FINALIZADAS = 50;
 
 // ── Historial omnicanal (chat_historial_contacto) ───────────────────────────
@@ -158,8 +195,9 @@ export type ConversacionHistorial = {
   cierre_observacion: string | null;
   ultimo_preview: string | null;
   ultimo_mensaje_at: string | null;
+  cola?: string | null;
 };
-export type EventoRuteo = { evento: string; a: string | null; de: string | null; created_at: string };
+export type EventoRuteo = { evento: string; a: string | null; de: string | null; cola?: string | null; created_at: string };
 export type Historial = {
   contacto: { id: string; nombre: string | null; telefono: string | null; cliente_id: string | null; prospecto_id: string | null; created_at: string } | null;
   conversaciones: ConversacionHistorial[];
@@ -176,11 +214,18 @@ export const EVENTO_RUTEO: Record<string, { label: string; clase: string }> = {
   transferida: { label: "Transferida", clase: "border-violet-200 bg-violet-50 text-violet-700" },
   asignada_supervisor: { label: "Asignada por supervisor", clase: "border-violet-200 bg-violet-50 text-violet-700" },
   liberada: { label: "Quedó sin asignar", clase: "border-slate-200 bg-slate-50 text-slate-600" },
+  derivada: { label: "Derivada a una cola", clase: "border-sky-200 bg-sky-50 text-sky-700" },
 };
 export const eventoRuteo = (e: string) => EVENTO_RUTEO[e] ?? { label: e, clase: "border-slate-200 bg-slate-50 text-slate-600" };
 
 // ── Colas ────────────────────────────────────────────────────────────────────
-export type Estrategia = "equitativa" | "manual";
+export type Estrategia = "equitativa" | "circular" | "menor_carga" | "manual";
+export const ESTRATEGIA_LABEL: Record<Estrategia, string> = {
+  equitativa: "Equitativa",
+  circular: "Circular (turno fijo)",
+  menor_carga: "Menor carga",
+  manual: "Manual (sin autoasignación)",
+};
 export type AgenteCola = { usuario_id: string; recibe_nuevos: boolean; max_conversaciones: number; es_supervisor: boolean };
 export type Cola = {
   id: string;
@@ -191,6 +236,10 @@ export type Cola = {
   max_reasignaciones: number;
   mismo_asesor_horas: number;
   activo: boolean;
+  /** No recibe entrantes automáticos: solo chats que le derivan. */
+  solo_transferencia: boolean;
+  /** Mensaje automático al derivar (por ahora queda como nota en el hilo). */
+  mensaje_derivacion: string | null;
   canales: string[];
   agentes: AgenteCola[];
 };
@@ -198,6 +247,8 @@ export type DatosColas = {
   colas: Cola[];
   canales: { id: string; nombre: string; tipo: string; activo: boolean }[];
   usuarios: { id: string; nombre: string; rol: string }[];
+  /** Supervisor → asesores que ve en Monitoreo y Finalizadas (sin filas = ve a todos). */
+  supervisores: { supervisor_id: string; asesores: string[] }[];
 };
 
 // ── Formatos ─────────────────────────────────────────────────────────────────

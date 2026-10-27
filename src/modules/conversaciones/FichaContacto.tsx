@@ -3,21 +3,26 @@
 /**
  * Ficha del contacto, superpuesta a la derecha del chat (cerrada no existe; abierta no mueve
  * nada de lugar). Muestra la tarjeta del cliente del 2.0 (código, deuda, suscripción activa,
- * últimos tickets, última tipificación) y el prospecto del CRM, con "Ver ficha", "Crear
- * cliente" y "Crear prospecto en CRM". Se pide una vez por conversación (cache en memoria).
+ * últimos tickets, última tipificación, proyectos activos), las conversaciones previas del
+ * contacto (otros canales, se leen sin salir del chat) y el prospecto del CRM, con "Ver
+ * ficha", "Crear cliente" y "Crear prospecto en CRM". Se pide una vez por conversación (cache en memoria).
  * Debajo de 1024 px (celular / tablet) se abre en una HOJA (inferior en celular).
  */
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import { ExternalLink, Sparkles, UserPlus, X } from "lucide-react";
+import { ExternalLink, Eye, Sparkles, UserPlus, X } from "lucide-react";
 import { HojaInferior } from "@/components/HojaInferior";
 import { useEsEscritorio } from "@/lib/ui/responsive";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
 import { crearProspecto, pedirFicha, vincularCliente, type Ficha } from "@/modules/conversaciones/api";
-import { telefonoLegible, type FilaBandeja } from "@/modules/conversaciones/dominio";
+import { ESTADO_CLASE, ESTADO_LABEL, telefonoLegible, type FilaBandeja } from "@/modules/conversaciones/dominio";
+import { IconoCanal } from "@/modules/conversaciones/ui";
 import { fechaHoraPy, numeroTicket } from "@/modules/tipificacion/dominio";
 import { CodigoChip, gs, usd } from "@/modules/clientes/ui";
 import { cacheFicha } from "@/modules/conversaciones/ficha-cache";
+
+const VisorChat = dynamic(() => import("@/modules/conversaciones/VisorChat").then((m) => m.VisorChat), { ssr: false });
 
 const cache = cacheFicha;
 
@@ -26,6 +31,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [creandoCliente, setCreandoCliente] = useState(false);
+  const [visor, setVisor] = useState<Ficha["previas"][number] | null>(null);
   const escritorio = useEsEscritorio();
 
   const cargar = useCallback(
@@ -55,10 +61,10 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
   }, [conv.id]);
 
   useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === "Escape" && !creandoCliente && onCerrar();
+    const k = (e: KeyboardEvent) => e.key === "Escape" && !creandoCliente && !visor && onCerrar();
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
-  }, [onCerrar, creandoCliente]);
+  }, [onCerrar, creandoCliente, visor]);
 
   const accion = async (clave: string, fn: () => Promise<FilaBandeja | null | undefined>) => {
     setOcupado(clave);
@@ -77,6 +83,8 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
 
   const c = ficha?.cliente ?? null;
   const p = ficha?.prospecto ?? null;
+  const previas = ficha?.previas ?? [];
+  const proyectos = ficha?.proyectos ?? [];
 
   const nuevoCliente = creandoCliente ? (
     <NuevoCliente
@@ -86,6 +94,17 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
         setCreandoCliente(false);
         void accion("vincular", () => vincularCliente(conv.id, cli.id));
       }}
+    />
+  ) : null;
+
+  // Conversación previa en lectura (encima de la ficha y de la hoja).
+  const visorPrevia = visor ? (
+    <VisorChat
+      convId={visor.id}
+      nombre={ficha?.contacto.nombre ?? conv.contacto_nombre}
+      telefono={ficha?.contacto.telefono ?? conv.contacto_telefono}
+      detalle={`${visor.canal} · ${ESTADO_LABEL[visor.estado]}${visor.cierre_estado ? ` · ${visor.cierre_estado}` : ""}`}
+      onCerrar={() => setVisor(null)}
     />
   ) : null;
 
@@ -230,6 +249,66 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                 </Seccion>
               ) : null}
 
+              {/* Proyectos del cliente */}
+              {c && proyectos.length ? (
+                <Seccion titulo={`Proyectos (${proyectos.length})`}>
+                  <ul className="flex flex-col gap-1">
+                    {proyectos.map((pr) => (
+                      <li key={pr.id}>
+                        <Link href={`/proyectos/${pr.id}`} className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] hover:border-[#4FAEB2]/50 hover:bg-slate-50 max-lg:min-h-11">
+                          <span className="font-mono font-semibold text-slate-700">{pr.numero}</span>
+                          <span className="min-w-0 flex-1 truncate text-slate-600">{pr.titulo}</span>
+                          {pr.estado ? (
+                            <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: `${pr.color ?? "#94a3b8"}22`, color: pr.color ?? "#475569" }}>
+                              {pr.estado}
+                            </span>
+                          ) : null}
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                </Seccion>
+              ) : null}
+
+              {/* Conversaciones previas (otros canales): se leen sin salir del chat */}
+              <Seccion titulo={`Conversaciones previas${previas.length ? ` (${previas.length})` : ""}`}>
+                {previas.length ? (
+                  <ul className="flex flex-col gap-1">
+                    {previas.map((v) => (
+                      <li key={v.id}>
+                        <button
+                          type="button"
+                          onClick={() => setVisor(v)}
+                          className="flex w-full items-start gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-left text-[11px] hover:border-[#4FAEB2]/50 hover:bg-slate-50 max-lg:min-h-11"
+                        >
+                          <span className="mt-0.5 text-slate-400"><IconoCanal tipo={v.canal_tipo} /></span>
+                          <span className="min-w-0 flex-1">
+                            <span className="flex items-center gap-1.5">
+                              <span className="truncate font-semibold text-slate-700">{v.canal}</span>
+                              <span className={`shrink-0 rounded border px-1 py-px text-[9px] font-semibold uppercase ${ESTADO_CLASE[v.estado]}`}>{ESTADO_LABEL[v.estado]}</span>
+                            </span>
+                            <span className="block truncate text-slate-500">
+                              {fechaHoraPy(v.cerrada_at ?? v.ultimo_mensaje_at ?? v.created_at)}
+                              {v.cierre_estado ? ` · ${v.cierre_estado}` : ""}
+                              {v.asignado ? ` · ${v.asignado}` : ""}
+                            </span>
+                          </span>
+                          <Eye className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#3F8E91]" aria-hidden />
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-[11px] text-slate-500">Sin conversaciones en otros canales.</p>
+                )}
+                <Link
+                  href={`/conversaciones/historial?contacto=${ficha.contacto.id}`}
+                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#3F8E91] hover:underline max-lg:min-h-10 max-lg:text-xs"
+                >
+                  Historial completo del contacto <ExternalLink className="h-3 w-3" />
+                </Link>
+              </Seccion>
+
               {/* CRM */}
               <Seccion titulo="CRM">
                 {p ? (
@@ -275,6 +354,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
           {cuerpo}
         </HojaInferior>
         {nuevoCliente}
+        {visorPrevia}
       </>
     );
   }
@@ -297,6 +377,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
         <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">{cuerpo}</div>
       </aside>
       {nuevoCliente}
+      {visorPrevia}
     </>
   );
 }

@@ -1,7 +1,8 @@
 /**
  * Bandeja de Conversaciones — UNA consulta keyset (chat_bandeja).
  *
- *   GET /api/conversaciones?vista=mias|sin_asignar|todas|cerradas&q=&asignado=&canal=&cursor_at=&cursor_id=&limite=
+ *   GET /api/conversaciones?vista=mias|sin_asignar|todas|cerradas&q=&asignado=&canal=&cola=&sin_asignar=1&cursor_at=&cursor_id=&limite=
+ *       (sin_asignar=1: solo las que no tienen asesor; lo usa el historial de cerradas)
  *       → { rows, contadores, siguiente: { at, id } | null }
  *   GET /api/conversaciones?solo=contadores → { contadores } (para refrescar las pestañas)
  * El vencimiento del SLA de primera respuesta se suma con una consulta por id (solo las
@@ -32,6 +33,8 @@ export const GET = withTenant(async (ctx, req) => {
     p_cursor_at: cursorAt && cursorId && Number.isFinite(Date.parse(cursorAt)) ? cursorAt : null,
     p_cursor_id: cursorAt && cursorId ? cursorId : null,
     p_limite: limite,
+    p_cola: uuidO(sp.get("cola")),
+    p_sin_asignar: sp.get("sin_asignar") === "1",
   });
   if (error) {
     console.error("[conversaciones] bandeja", error.message);

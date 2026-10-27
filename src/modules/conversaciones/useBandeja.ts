@@ -61,7 +61,7 @@ export function useBandeja({ empresaId, yo, filtros }: { empresaId: string | nul
     }
   }, [yo]);
 
-  const claveFiltros = `${filtros.vista}|${filtros.q}|${filtros.canal}|${filtros.asesor}`;
+  const claveFiltros = `${filtros.vista}|${filtros.q}|${filtros.canal}|${filtros.asesor}|${filtros.cola ?? ""}`;
   useEffect(() => {
     setFilas([]);
     setSiguiente(null);
@@ -183,7 +183,7 @@ export function useBandeja({ empresaId, yo, filtros }: { empresaId: string | nul
       const presente = filasRef.current.some((f) => f.id === id);
       const f = filtrosRef.current;
       const aprox = { estado: (p.estado as FilaBandeja["estado"]) ?? "abierta", asignado_id: (p.asignado_id as string | null) ?? null };
-      // Descarte sin red: no entra a la vista (vista y asesor se saben por el aviso; el canal no).
+      // Descarte sin red: no entra a la vista (vista y asesor se saben por el aviso; canal y cola no).
       const entraAprox = filaEnVista({ ...aprox, canal_id: "" }, f.vista, yo ?? "", { canal: "", asesor: f.asesor });
       if (id === selIdRef.current) {
         void refrescarFila(id);

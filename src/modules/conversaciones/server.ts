@@ -25,14 +25,15 @@ export const idConversacion = (req: { url: string }) => idDeRuta(req, "conversac
 // ── Fila de la lista (una sola conversación) ─────────────────────────────────
 const COLS_RESUMEN =
   "id, estado, asignado_id, canal_id, prioridad, ultimo_mensaje_at, ultimo_preview, ultimo_from_me, ultimo_tipo, no_leidos, " +
-  "ventana_expira_at, sla_vence_at, primera_respuesta_at, etiquetas, contacto_id, " +
+  "ventana_expira_at, sla_vence_at, primera_respuesta_at, etiquetas, contacto_id, cola_id, " +
   "contacto:chat_contactos!contacto_id(nombre, telefono, avatar_url, cliente_id, prospecto_id), " +
-  "canal:chat_canales!canal_id(tipo, nombre), asignado:usuarios!asignado_id(nombre)";
+  "canal:chat_canales!canal_id(tipo, nombre), asignado:usuarios!asignado_id(nombre), cola:chat_colas!cola_id(nombre)";
 
 type FilaCruda = Record<string, unknown> & {
   contacto: { nombre: string | null; telefono: string | null; avatar_url: string | null; cliente_id: string | null; prospecto_id: string | null } | null;
   canal: { tipo: string; nombre: string } | null;
   asignado: { nombre: string } | null;
+  cola: { nombre: string } | null;
 };
 
 export async function leerResumen(db: TenantDb, id: string): Promise<FilaBandeja | null> {
@@ -48,6 +49,8 @@ export async function leerResumen(db: TenantDb, id: string): Promise<FilaBandeja
     canal_id: String(r.canal_id),
     canal_tipo: r.canal?.tipo ?? "whatsapp",
     canal_nombre: r.canal?.nombre ?? "",
+    cola_id: (r.cola_id as string | null) ?? null,
+    cola_nombre: r.cola?.nombre ?? null,
     prioridad: Number(r.prioridad ?? 0),
     ultimo_mensaje_at: (r.ultimo_mensaje_at as string | null) ?? null,
     ultimo_preview: (r.ultimo_preview as string | null) ?? null,
@@ -294,6 +297,21 @@ export async function puedeSupervisar(ctx: TenantContext): Promise<boolean> {
   if (ctx.rol === "ADMIN") return true;
   const { data } = await ctx.db.select("chat_cola_agentes", "cola_id").eq("usuario_id", ctx.usuarioId).eq("es_supervisor", true).limit(1);
   return !!data?.length;
+}
+
+/**
+ * A quién ve un supervisor en Monitoreo y Finalizadas: null = a todos (ADMIN, o supervisor
+ * sin equipo cargado); si no, él mismo + sus asesores (chat_supervisor_asesores).
+ */
+export async function alcanceSupervision(ctx: TenantContext): Promise<string[] | null> {
+  if (ctx.rol === "ADMIN") return null;
+  const { data, error } = await ctx.db.select("chat_supervisor_asesores", "asesor_id").eq("supervisor_id", ctx.usuarioId);
+  if (error) {
+    console.error("[conversaciones] alcance supervisor", error.message);
+    return null;
+  }
+  const ids = ((data ?? []) as unknown as { asesor_id: string }[]).map((r) => r.asesor_id);
+  return ids.length ? [...new Set([ctx.usuarioId, ...ids])] : null;
 }
 
 /** Auditoría de ruteo (tomada / transferida / asignada_supervisor / liberada). Nunca rompe la acción. */

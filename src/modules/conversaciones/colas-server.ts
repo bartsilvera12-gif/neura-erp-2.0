@@ -1,8 +1,9 @@
 /**
  * Colas de atención (configuración, solo ADMIN) — lado servidor.
- * Una cola: nombre, estrategia (equitativa | manual), prioridad, SLA de primera respuesta,
- * tope de reasignaciones, ventana de "mismo asesor", canales vinculados y asesores
- * (recibe nuevos, máximo de conversaciones, supervisor). Se guarda todo junto.
+ * Una cola: nombre, estrategia (equitativa | circular | menor_carga | manual), prioridad, SLA
+ * de primera respuesta, tope de reasignaciones, ventana de "mismo asesor", "solo
+ * transferencia", mensaje al derivar, canales vinculados y asesores (recibe nuevos, máximo
+ * de conversaciones, supervisor). Se guarda todo junto. Aparte: el equipo de cada supervisor.
  */
 import { z } from "zod";
 import type { TenantContext } from "@/lib/api/with-tenant";
@@ -13,12 +14,14 @@ const entero = (min: number, max: number, campo: string) =>
 
 export const esquemaCola = z.object({
   nombre: z.string().trim().min(1, "Poné un nombre a la cola").max(80, "Nombre: máximo 80 caracteres"),
-  estrategia: z.enum(["equitativa", "manual"]),
+  estrategia: z.enum(["equitativa", "circular", "menor_carga", "manual"]),
   prioridad: entero(-1000, 1000, "Prioridad"),
   sla_minutos: entero(1, 1440, "SLA"),
   max_reasignaciones: entero(0, 20, "Máx. reasignaciones"),
   mismo_asesor_horas: entero(0, 720, "Mismo asesor"),
   activo: z.boolean(),
+  solo_transferencia: z.boolean(),
+  mensaje_derivacion: z.string().trim().max(1000, "Mensaje al derivar: máximo 1000 caracteres").nullish(),
   canales: z.array(z.string().uuid()).max(100),
   agentes: z
     .array(
@@ -36,18 +39,27 @@ export type EntradaCola = z.infer<typeof esquemaCola>;
 type FilaCola = Omit<Cola, "canales" | "agentes">;
 
 export async function leerColas(ctx: TenantContext): Promise<DatosColas> {
-  const [colas, canalesCola, agentesCola, canales, usuarios] = await Promise.all([
-    ctx.db.select("chat_colas", "id, nombre, estrategia, prioridad, sla_minutos, max_reasignaciones, mismo_asesor_horas, activo").order("prioridad", { ascending: false }).order("nombre"),
+  const [colas, canalesCola, agentesCola, canales, usuarios, sup] = await Promise.all([
+    ctx.db
+      .select("chat_colas", "id, nombre, estrategia, prioridad, sla_minutos, max_reasignaciones, mismo_asesor_horas, activo, solo_transferencia, mensaje_derivacion")
+      .order("prioridad", { ascending: false })
+      .order("nombre"),
     ctx.db.select("chat_cola_canales", "cola_id, canal_id"),
     ctx.db.select("chat_cola_agentes", "cola_id, usuario_id, recibe_nuevos, max_conversaciones, es_supervisor"),
     ctx.db.select("chat_canales", "id, nombre, tipo, activo").order("created_at"),
     ctx.db.select("usuarios", "id, nombre, rol, activo").order("nombre"),
+    ctx.db.select("chat_supervisor_asesores", "supervisor_id, asesor_id"),
   ]);
-  const err = colas.error ?? canalesCola.error ?? agentesCola.error ?? canales.error ?? usuarios.error;
+  const err = colas.error ?? canalesCola.error ?? agentesCola.error ?? canales.error ?? usuarios.error ?? sup.error;
   if (err) throw new Error(err.message);
   const cc = (canalesCola.data ?? []) as unknown as { cola_id: string; canal_id: string }[];
   const ca = (agentesCola.data ?? []) as unknown as (AgenteCola & { cola_id: string })[];
+  const porSupervisor = new Map<string, string[]>();
+  for (const r of (sup.data ?? []) as unknown as { supervisor_id: string; asesor_id: string }[]) {
+    porSupervisor.set(r.supervisor_id, [...(porSupervisor.get(r.supervisor_id) ?? []), r.asesor_id]);
+  }
   return {
+    supervisores: [...porSupervisor].map(([supervisor_id, asesores]) => ({ supervisor_id, asesores })),
     colas: ((colas.data ?? []) as unknown as FilaCola[]).map((c) => ({
       ...c,
       canales: cc.filter((x) => x.cola_id === c.id).map((x) => x.canal_id),
@@ -88,6 +100,8 @@ export async function guardarCola(ctx: TenantContext, id: string | null, e: Entr
     max_reasignaciones: e.max_reasignaciones,
     mismo_asesor_horas: e.mismo_asesor_horas,
     activo: e.activo,
+    solo_transferencia: e.solo_transferencia,
+    mensaje_derivacion: e.mensaje_derivacion?.trim() || null,
   };
   let colaId = id;
   if (colaId) {
@@ -133,4 +147,40 @@ export async function guardarCola(ctx: TenantContext, id: string | null, e: Entr
     return { ok: false, mensaje: "No se pudieron guardar los canales o asesores.", status: 500 };
   }
   return { ok: true, id: colaId };
+}
+
+// ── Supervisor → asesores ────────────────────────────────────────────────────
+export const esquemaSupervisor = z.object({
+  supervisor_id: z.string().uuid("Supervisor inválido"),
+  asesores: z.array(z.string().uuid()).max(500),
+});
+
+/** Reemplaza el equipo de un supervisor (sin filas = ve a todos, como antes). */
+export async function guardarSupervisor(
+  ctx: TenantContext,
+  e: z.infer<typeof esquemaSupervisor>,
+): Promise<{ ok: true; asesores: string[] } | { ok: false; mensaje: string; status: number }> {
+  const asesores = [...new Set(e.asesores)].filter((a) => a !== e.supervisor_id);
+  const ids = [e.supervisor_id, ...asesores];
+  const { data, error } = await ctx.db.select("usuarios", "id").in("id", ids);
+  if (error) return { ok: false, mensaje: "No se pudo guardar el equipo.", status: 500 };
+  if ((data?.length ?? 0) !== ids.length) return { ok: false, mensaje: "Algún usuario no existe.", status: 422 };
+  let qd = ctx.db.delete("chat_supervisor_asesores").eq("supervisor_id", e.supervisor_id);
+  if (asesores.length) qd = qd.not("asesor_id", "in", `(${asesores.join(",")})`);
+  const d = await qd;
+  if (d.error) return { ok: false, mensaje: "No se pudo guardar el equipo.", status: 500 };
+  if (asesores.length) {
+    const { error: eu } = await ctx.db
+      .unsafeRaw()
+      .from("chat_supervisor_asesores")
+      .upsert(
+        asesores.map((asesor_id) => ({ supervisor_id: e.supervisor_id, asesor_id, empresa_id: ctx.empresaId })),
+        { onConflict: "supervisor_id,asesor_id", ignoreDuplicates: true },
+      );
+    if (eu) {
+      console.error("[conversaciones] supervisores upsert", eu.message);
+      return { ok: false, mensaje: "No se pudo guardar el equipo.", status: 500 };
+    }
+  }
+  return { ok: true, asesores };
 }

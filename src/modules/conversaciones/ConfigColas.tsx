@@ -3,9 +3,10 @@
 /**
  * Colas y enrutamiento (solo ADMIN; se entra desde Monitoreo). Copia simple de
  * /configuracion/colas del sistema actual: lista de colas y editor en ventana con datos
- * generales, estrategia (equitativa | manual), canales vinculados, SLA de primera
- * respuesta y reasignaciones, ventana de "mismo asesor" y asesores de la cola
- * (recibe nuevos, máximo de conversaciones, supervisor). Se guarda todo junto.
+ * generales, estrategia (equitativa | circular | menor carga | manual), canales vinculados,
+ * derivaciones ("solo transferencias" y mensaje automático), SLA de primera respuesta y
+ * reasignaciones, ventana de "mismo asesor" y asesores de la cola (recibe nuevos, máximo
+ * de conversaciones, supervisor). Se guarda todo junto. Debajo, el equipo de cada supervisor.
  */
 import { TablaScroll } from "@/components/TablaResponsive";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
@@ -13,9 +14,9 @@ import { Select } from "@/components/Select";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Inbox, Plus, Trash2, X } from "lucide-react";
-import { borrarCola, crearCola, guardarCola, pedirColas, type CuerpoCola } from "@/modules/conversaciones/api-supervision";
-import type { AgenteCola, Cola, DatosColas, Estrategia } from "@/modules/conversaciones/supervision";
-import { Cargando, Encabezado, btnPrimario } from "@/modules/conversaciones/ui-supervision";
+import { borrarCola, crearCola, guardarCola, guardarSupervisor, pedirColas, type CuerpoCola } from "@/modules/conversaciones/api-supervision";
+import { ESTRATEGIA_LABEL, type AgenteCola, type Cola, type DatosColas, type Estrategia } from "@/modules/conversaciones/supervision";
+import { CHIP_TOGGLE, Cargando, Encabezado, btnPrimario, btnSecundario } from "@/modules/conversaciones/ui-supervision";
 import { Girando } from "@/modules/conversaciones/ui";
 
 const seccion = "space-y-4 rounded-2xl border border-[#4FAEB2]/45 bg-white p-5 shadow-sm";
@@ -28,6 +29,8 @@ const ayuda = "mt-1 text-[11px] leading-relaxed text-slate-500";
 
 const ESTRATEGIAS: { id: Estrategia; label: string; detalle: string }[] = [
   { id: "equitativa", label: "Equitativa", detalle: "Reparte los chats nuevos entre los asesores disponibles: primero los en línea, después el de menos asignaciones del día y menos carga." },
+  { id: "circular", label: "Circular (turno fijo)", detalle: "Uno tras otro, en orden alfabético, sin mirar quién tiene menos. Saltea a quien no está disponible o ya llegó a su máximo." },
+  { id: "menor_carga", label: "Menor carga", detalle: "Siempre al asesor disponible con menos chats abiertos en este momento (a igualdad, el que está en línea)." },
   { id: "manual", label: "Manual", detalle: "No autoasigna: los chats quedan en Sin asignar para que alguien los tome o un supervisor los asigne." },
 ];
 
@@ -39,6 +42,8 @@ const NUEVA: CuerpoCola = {
   max_reasignaciones: 2,
   mismo_asesor_horas: 24,
   activo: true,
+  solo_transferencia: false,
+  mensaje_derivacion: null,
   canales: [],
   agentes: [],
 };
@@ -113,10 +118,18 @@ export function ConfigColas() {
                     <div className="min-w-0">
                       <p className="font-semibold text-slate-900">{c.nombre}</p>
                       <p className="mt-0.5 text-xs text-slate-500">
-                        {c.estrategia === "manual" ? "Manual (sin autoasignación)" : "Equitativa"} · prioridad {c.prioridad} · SLA {c.sla_minutos} min · {nAg}{" "}
+                        {ESTRATEGIA_LABEL[c.estrategia] ?? c.estrategia} · prioridad {c.prioridad} · SLA {c.sla_minutos} min · {nAg}{" "}
                         {nAg === 1 ? "asesor" : "asesores"} ·{" "}
-                        {c.canales.length ? c.canales.map((id) => canales.get(id)?.nombre ?? "canal").join(", ") : "todos los canales sin cola propia"}
+                        {c.solo_transferencia
+                          ? "solo recibe chats derivados"
+                          : c.canales.length ? c.canales.map((id) => canales.get(id)?.nombre ?? "canal").join(", ") : "todos los canales sin cola propia"}
                       </p>
+                      {c.solo_transferencia || c.mensaje_derivacion ? (
+                        <p className="mt-1 flex flex-wrap gap-1">
+                          {c.solo_transferencia ? <span className="rounded-full border border-sky-200 bg-sky-50 px-2 py-0.5 text-[10px] font-semibold text-sky-700">Solo transferencias</span> : null}
+                          {c.mensaje_derivacion ? <span className="rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-semibold text-slate-600">Mensaje al derivar</span> : null}
+                        </p>
+                      ) : null}
                       {sup.length ? <p className="mt-0.5 text-[11px] text-slate-400">Supervisa: {sup.join(", ")}</p> : null}
                     </div>
                     <div className="flex items-center gap-3 max-sm:w-full max-sm:justify-between">
@@ -136,6 +149,7 @@ export function ConfigColas() {
           )}
         </div>
       ) : null}
+      {datos ? <EquiposSupervisores datos={datos} onGuardado={(msg) => (setAviso(msg), void cargar())} onError={setError} /> : null}
       <p className="text-xs text-slate-400">El Monitoreo resume la carga operativa casi en tiempo real.</p>
 
       {editando && datos ? (
@@ -152,6 +166,96 @@ export function ConfigColas() {
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Supervisor → asesores: a quién ve cada supervisor en Monitoreo y Finalizadas. Sin nadie
+ * marcado ve a todos (como antes). Se guarda por supervisor.
+ */
+function EquiposSupervisores({ datos, onGuardado, onError }: { datos: DatosColas; onGuardado: (aviso: string) => void; onError: (e: string) => void }) {
+  const supervisores = useMemo(() => {
+    const ids = new Set(datos.colas.flatMap((c) => c.agentes.filter((a) => a.es_supervisor).map((a) => a.usuario_id)));
+    return datos.usuarios.filter((u) => ids.has(u.id));
+  }, [datos]);
+  // Asesores elegibles: los que están en alguna cola (si no hay, todos los usuarios).
+  const asesores = useMemo(() => {
+    const ids = new Set(datos.colas.flatMap((c) => c.agentes.map((a) => a.usuario_id)));
+    const enColas = datos.usuarios.filter((u) => ids.has(u.id));
+    return enColas.length ? enColas : datos.usuarios;
+  }, [datos]);
+  const inicial = useMemo(() => new Map(datos.supervisores.map((s) => [s.supervisor_id, s.asesores])), [datos]);
+  const [marcados, setMarcados] = useState<Map<string, string[]>>(inicial);
+  const [guardando, setGuardando] = useState<string | null>(null);
+  useEffect(() => setMarcados(inicial), [inicial]);
+
+  const alternar = (sup: string, asesor: string) =>
+    setMarcados((m) => {
+      const n = new Map(m);
+      const act = n.get(sup) ?? [];
+      n.set(sup, act.includes(asesor) ? act.filter((x) => x !== asesor) : [...act, asesor]);
+      return n;
+    });
+  const cambiado = (sup: string) => {
+    const a = [...(marcados.get(sup) ?? [])].sort().join(",");
+    const b = [...(inicial.get(sup) ?? [])].sort().join(",");
+    return a !== b;
+  };
+  const guardar = async (sup: string, nombre: string) => {
+    setGuardando(sup);
+    try {
+      const r = await guardarSupervisor(sup, marcados.get(sup) ?? []);
+      onGuardado(r.asesores.length ? `Equipo de ${nombre} guardado (${r.asesores.length} ${r.asesores.length === 1 ? "asesor" : "asesores"}).` : `${nombre} vuelve a ver a todos los asesores.`);
+    } catch (e) {
+      onError((e as Error).message);
+    } finally {
+      setGuardando(null);
+    }
+  };
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <div className="border-b border-slate-100 px-4 py-3 sm:px-5">
+        <h2 className="text-sm font-semibold text-slate-900">Equipo de cada supervisor</h2>
+        <p className={ayuda}>
+          Marcá a qué asesores ve cada supervisor en Monitoreo y Finalizadas. Sin ninguno marcado, ve a todos. Se marca “Supervisor” dentro de cada cola.
+        </p>
+      </div>
+      {!supervisores.length ? (
+        <p className="px-4 py-6 text-center text-sm text-slate-500 sm:px-5">Ningún asesor está marcado como supervisor en una cola.</p>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {supervisores.map((s) => {
+            const lista = marcados.get(s.id) ?? [];
+            return (
+              <li key={s.id} className="space-y-2.5 px-4 py-3.5 sm:px-5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <p className="text-sm font-semibold text-slate-800">
+                    {s.nombre}{" "}
+                    <span className="text-xs font-normal text-slate-500">
+                      · {lista.length ? `ve a ${lista.length} ${lista.length === 1 ? "asesor" : "asesores"}` : "ve a todos"}
+                    </span>
+                  </p>
+                  <button type="button" disabled={!cambiado(s.id) || guardando === s.id} onClick={() => void guardar(s.id, s.nombre)} className={btnSecundario}>
+                    {guardando === s.id ? <Girando /> : null} Guardar equipo
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {asesores
+                    .filter((a) => a.id !== s.id)
+                    .map((a) => (
+                      <label key={a.id} className={CHIP_TOGGLE(lista.includes(a.id))}>
+                        <input type="checkbox" checked={lista.includes(a.id)} onChange={() => alternar(s.id, a.id)} className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]" />
+                        {a.nombre}
+                      </label>
+                    ))}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -330,6 +434,39 @@ function EditorCola({
             </p>
           </section>
 
+          {/* Derivaciones */}
+          <section className={seccion}>
+            <div>
+              <h3 className={tituloSeccion}>Derivaciones</h3>
+              <p className={ayuda}>
+                Desde el chat, “Transferir” permite derivar la conversación a una cola: sale del asesor actual y la reparte la estrategia de esa cola.
+              </p>
+            </div>
+            <label className={CHIP_TOGGLE(c.solo_transferencia)}>
+              <input type="checkbox" checked={c.solo_transferencia} onChange={(e) => set("solo_transferencia", e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]" />
+              Solo transferencias
+            </label>
+            <p className={ayuda}>
+              {c.solo_transferencia
+                ? "Esta cola NO recibe chats nuevos automáticamente (los canales asociados se ignoran): solo los que un asesor le deriva. Ej. Proyectos o Postventa."
+                : "Apagado: la cola recibe los chats nuevos de sus canales y también los que le deriven."}
+            </p>
+            <label className="block">
+              <span className={etiqueta}>Mensaje automático al derivar (opcional)</span>
+              <textarea
+                value={c.mensaje_derivacion ?? ""}
+                onChange={(e) => set("mensaje_derivacion", e.target.value)}
+                maxLength={1000}
+                rows={3}
+                placeholder="Ej. Te paso con el equipo de Proyectos, en breve te escriben."
+                className={`${campo} resize-y`}
+              />
+              <p className={ayuda}>
+                Por ahora queda como nota en el chat (todavía no hay envío real); cuando el canal esté conectado se le enviará al cliente.
+              </p>
+            </label>
+          </section>
+
           {/* SLA */}
           <section className={seccion}>
             <div>
@@ -378,7 +515,7 @@ function EditorCola({
               <h3 className={tituloSeccion}>Asesores</h3>
               <p className={ayuda}>
                 <strong>Recibe nuevos</strong>: entra en la asignación automática. <strong>Máximo</strong>: chats abiertos a la vez antes de dejar de recibir.{" "}
-                <strong>Supervisor</strong>: ve el Monitoreo y todas las finalizadas.
+                <strong>Supervisor</strong>: ve el Monitoreo y las finalizadas (todas, o solo las de su equipo si se lo cargás en “Equipo de cada supervisor”).
               </p>
             </div>
             <div className="flex flex-wrap items-end gap-2">

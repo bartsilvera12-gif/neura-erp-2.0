@@ -5,13 +5,17 @@ import type { Contadores, Cursor, FilaBandeja, Mensaje, OpcionesBandeja, PaginaB
 
 const B = "/api/conversaciones";
 
-export type FiltrosBandeja = { vista: Vista; q: string; canal: string; asesor: string };
+/** asesor: id de usuario, o SIN_ASIGNAR para las que no tienen asesor. */
+export type FiltrosBandeja = { vista: Vista; q: string; canal: string; asesor: string; cola?: string };
+export const SIN_ASIGNAR = "__sin__";
 
 export function pedirBandeja(f: FiltrosBandeja, cursor: Cursor | null, signal?: AbortSignal): Promise<PaginaBandeja> {
   const sp = new URLSearchParams({ vista: f.vista });
   if (f.q.trim()) sp.set("q", f.q.trim());
   if (f.canal) sp.set("canal", f.canal);
-  if (f.asesor) sp.set("asignado", f.asesor);
+  if (f.asesor === SIN_ASIGNAR) sp.set("sin_asignar", "1");
+  else if (f.asesor) sp.set("asignado", f.asesor);
+  if (f.cola) sp.set("cola", f.cola);
   if (cursor) {
     sp.set("cursor_at", cursor.at);
     sp.set("cursor_id", cursor.id);
@@ -62,6 +66,7 @@ export const marcarLeida = (id: string) => apiFetch(`${B}/${id}/leida`, { method
 export type AccionConversacion =
   | { accion: "tomar" | "soltar" | "reabrir" | "pendiente" | "abierta" }
   | { accion: "transferir"; asignado_id: string }
+  | { accion: "derivar"; cola_id: string }
   | { accion: "etiquetas"; etiquetas: string[] };
 export const accionConversacion = (id: string, a: AccionConversacion) =>
   apiFetch<FilaBandeja>(`${B}/${id}`, { method: "PATCH", body: JSON.stringify(a) });
@@ -73,7 +78,17 @@ export type CatalogoCierre = {
 };
 export const pedirCatalogoCierre = () => apiFetchCache<CatalogoCierre>(`${B}/cierre`, { ttlMs: 5 * 60_000 });
 
-export const finalizar = (id: string, cuerpo: { familia_id: string; estado_id: string; observacion: string; ticket?: { clasificacion_codigo: string | null } | null }) =>
+export const finalizar = (
+  id: string,
+  cuerpo: {
+    familia_id: string;
+    estado_id: string;
+    observacion: string;
+    ticket?: { clasificacion_codigo: string | null } | null;
+    /** Opcional: fecha ("YYYY-MM-DD") y nota del seguimiento. */
+    proxima_accion?: { fecha: string; nota: string | null } | null;
+  },
+) =>
   apiFetch<{ fila: FilaBandeja | null; tipificacion_id: string | null; ticket: { id: string; numero: number } | null }>(`${B}/${id}/finalizar`, {
     method: "POST",
     body: JSON.stringify(cuerpo),
@@ -93,6 +108,13 @@ export type Ficha = {
     ultima_tipificacion: { id: string; fecha: string; usuario: string; tipo_gestion: string; resultado: string; observacion: string } | null;
   } | null;
   prospecto: { id: string; numero_control: string; contacto: string; empresa: string | null; etapa: string; etapa_nombre: string | null; valor_estimado: number } | null;
+  /** Las otras conversaciones del contacto (otros canales), de la más reciente a la más vieja. */
+  previas: {
+    id: string; canal: string; canal_tipo: string; estado: "abierta" | "pendiente" | "cerrada"; created_at: string;
+    ultimo_mensaje_at: string | null; cerrada_at: string | null; asignado: string | null; cierre_estado: string | null;
+  }[];
+  /** Proyectos activos del cliente vinculado. */
+  proyectos: { id: string; numero: string; titulo: string; estado: string | null; color: string | null }[];
 };
 export const pedirFicha = (id: string) => apiFetch<Ficha>(`${B}/${id}/ficha`);
 export const vincularCliente = (id: string, clienteId: string | null) =>

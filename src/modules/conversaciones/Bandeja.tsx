@@ -2,7 +2,8 @@
 
 /**
  * Bandeja omnicanal (Conversaciones). Lista a la izquierda con pestañas (Mías / Sin asignar /
- * Todas / Cerradas), búsqueda y filtros; chat al centro; ficha del contacto superpuesta.
+ * Todas / Cerradas), búsqueda y filtros (canal, cola, asesor); chat al centro; ficha del
+ * contacto superpuesta.
  * Todo en vivo por Realtime (broadcast privado) con respaldo por sondeo si se cae.
  * Arriba, el estado del asesor (Disponible / Ocupado / En pausa): la bandeja late cada 30 s
  * con la pestaña visible (presencia para la asignación automática y el Monitoreo).
@@ -55,6 +56,7 @@ export function Bandeja() {
   const [q, setQ] = useState("");
   const [canal, setCanal] = useState("");
   const [asesor, setAsesor] = useState("");
+  const [cola, setCola] = useState("");
   const [modal, setModal] = useState<null | "respuestas" | "simular">(null);
   const [aviso, setAviso] = useState<{ texto: string; tono: "ok" | "error" } | null>(null);
 
@@ -84,7 +86,7 @@ export function Bandeja() {
     return () => window.clearTimeout(t);
   }, [texto]);
 
-  const filtros = useMemo(() => ({ vista, q, canal, asesor: vista === "todas" || vista === "cerradas" ? asesor : "" }), [vista, q, canal, asesor]);
+  const filtros = useMemo(() => ({ vista, q, canal, cola, asesor: vista === "todas" || vista === "cerradas" ? asesor : "" }), [vista, q, canal, cola, asesor]);
   const b = useBandeja({ empresaId: me?.empresaId ?? null, yo: opciones?.yo ?? null, filtros });
 
   // Enlace directo ?c=<conversación> (al entrar o desde la campanita estando acá); la URL
@@ -166,7 +168,8 @@ export function Bandeja() {
 
   const sugeridas = useMemo(() => [...new Set(b.filas.flatMap((f) => f.etiquetas))].sort(), [b.filas]);
   const yoNombre = useMemo(() => opciones?.equipo.find((u) => u.id === opciones.yo)?.nombre ?? me?.email ?? "Vos", [opciones, me]);
-  const hayFiltros = !!opciones && (opciones.canales.length > 1 || vista === "todas" || vista === "cerradas");
+  const variasColas = (opciones?.colas?.length ?? 0) > 1;
+  const hayFiltros = !!opciones && (opciones.canales.length > 1 || variasColas || vista === "todas" || vista === "cerradas");
   const contador = (v: Vista) =>
     v === "mias" ? b.contadores.mias : v === "sin_asignar" ? b.contadores.sin_asignar : v === "todas" ? b.contadores.abiertas : null;
 
@@ -210,9 +213,10 @@ export function Bandeja() {
         <BarraFiltros
           plano
           className="min-w-0 md:min-w-[18rem] md:flex-1"
-          activos={(canal ? 1 : 0) + ((vista === "todas" || vista === "cerradas") && asesor ? 1 : 0)}
+          activos={(canal ? 1 : 0) + (cola ? 1 : 0) + ((vista === "todas" || vista === "cerradas") && asesor ? 1 : 0)}
           onLimpiar={() => {
             setCanal("");
+            setCola("");
             setAsesor("");
           }}
           busqueda={
@@ -278,6 +282,17 @@ export function Bandeja() {
                   value={canal}
                   onChange={setCanal}
                   options={[["", "Todos los canales"], ...opciones.canales.map((c): [string, string] => [c.id, c.nombre])]}
+                />
+              ) : null}
+              {opciones && variasColas ? (
+                <Select
+                  compacto
+                  minWidth={150}
+                  className={claseSelect}
+                  etiqueta="Filtrar por cola"
+                  value={cola}
+                  onChange={setCola}
+                  options={[["", "Todas las colas"], ...opciones.colas.map((c): [string, string] => [c.id, c.nombre])]}
                 />
               ) : null}
               {opciones && (vista === "todas" || vista === "cerradas") ? (
