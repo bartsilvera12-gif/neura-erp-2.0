@@ -254,10 +254,12 @@ function GestionClientes() {
 
       {/* Escritorio: panel de alto fijo con scroll interno. Celular / tablet: el panel crece y
           scrollea la página (sin scroll anidado). */}
-      <div className="flex min-h-[60dvh] shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm lg:h-[max(560px,calc(100dvh-10.5rem))] lg:min-h-0"
+      {/* Sin cliente elegido la tarjeta no recorta (overflow visible) y el buscador va arriba, así la
+          lista de resultados entra completa debajo; con cliente, overflow-hidden como siempre. */}
+      <div className={`flex min-h-[60dvh] shrink-0 flex-col rounded-2xl border border-slate-200 bg-white shadow-sm lg:h-[max(560px,calc(100dvh-10.5rem))] lg:min-h-0 ${selId === null ? "overflow-visible" : "overflow-hidden"}`}
         style={{ boxShadow: `0 0 0 1px ${TEAL}26` }}>
         {selId === null ? (
-          <div className="flex flex-1 flex-col items-center justify-center gap-5 px-4 py-8">
+          <div className="flex flex-1 flex-col items-center justify-start gap-5 px-4 pb-8 pt-[8vh] sm:pt-[10vh]">
             <div className="space-y-2 text-center">
               <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border" style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}1a`, color: TEAL }}>
                 <IconoLupa className="h-5 w-5" />
