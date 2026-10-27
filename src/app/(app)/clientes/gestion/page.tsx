@@ -7,7 +7,7 @@
  * resultado, Esc cierra). Con cliente (queda en la URL: ?cliente=<id>): chip "CAMBIAR" + "×"
  * y "Filtros facturas"; tarjeta con sus datos; botones operativos (Tipificación, Contactos,
  * Facturación, Facturar venta, Servicios asociados, Cambio de plan, Cambio fecha venc.,
- * Historial cliente, Ver ficha); y sus documentos (contado, crédito y cuotas de suscripción)
+ * Historial cliente); y sus documentos (contado, crédito y cuotas de suscripción)
  * con cifras, saldo, mora, estado, último pago y las acciones Cobrar / Ver.
  */
 import Link from "next/link";
@@ -15,7 +15,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { rucParaFactura } from "@/modules/empresa/tipos";
 import {
-  Calendar, CalendarClock, ChevronDown, ChevronUp, ClipboardList, ExternalLink, History,
+  Calendar, CalendarClock, ChevronDown, ChevronUp, ClipboardList, History,
   FileText, Link2, Loader2, Receipt, RefreshCw, SlidersHorizontal, Users,
 } from "lucide-react";
 import { descargarArchivo } from "@/lib/api/client-blob";
@@ -397,7 +397,6 @@ function GestionClientes() {
                         title={puedeOperar ? undefined : "Solo un administrador o vendedor"} />
                       <BotonOperativo label="Historial cliente" icon={<History className="h-3.5 w-3.5" />} onClick={() => setModalHistorial(true)} />
                       <BotonExtracto clienteId={c.id} nombre={c.razon_social || c.nombre} />
-                      <BotonOperativo label="Ver ficha" icon={<ExternalLink className="h-3.5 w-3.5" />} href={`/clientes/${c.id}`} />
                     </div>
                   </>
                 )}
