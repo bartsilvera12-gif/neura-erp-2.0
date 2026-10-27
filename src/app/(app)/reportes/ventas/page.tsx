@@ -27,7 +27,8 @@ const TZ = "America/Asuncion";
 const POR_PAGINA = 25;
 
 const MEDIO: Record<string, string> = {
-  efectivo: "Efectivo", tarjeta: "Tarjeta", pos: "POS", transferencia: "Transferencia", cheque: "Cheque", otro: "Otros", credito: "Crédito",
+  // Receta 78: posnet (pos*) va en "Tarjeta" y QR tiene su renglón.
+  efectivo: "Efectivo", tarjeta: "Tarjeta", transferencia: "Transferencia", qr: "QR", cheque: "Cheque", otro: "Otros", credito: "Crédito",
 };
 const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
 const num = (v: number) => Number(v || 0).toLocaleString("es-PY", { maximumFractionDigits: 3 });
@@ -233,7 +234,7 @@ function Contenido() {
                 {/* Medios de pago */}
                 <Tarjeta titulo="Por medio de pago">
                   <Tabla
-                    cols={["Medio", "Ventas", "Monto", "%"]}
+                    cols={["Medio", "Ventas", "Monto", "% del total"]}
                     der={[1, 2, 3]}
                     filas={resumen.por_medio.map((m) => [MEDIO[m.medio] ?? m.medio, num(m.ventas), gs(m.monto), pct(m.monto, totalMedios)])}
                     pie={["Total", "", gs(totalMedios), "100%"]}
@@ -282,7 +283,7 @@ function Contenido() {
                 {/* Categorías */}
                 <Tarjeta titulo="Por categoría">
                   <Tabla
-                    cols={["Categoría", "Unidades", "Monto", "%", "Margen"]}
+                    cols={["Categoría", "Unidades", "Monto", "% del total", "Margen"]}
                     der={[1, 2, 3, 4]}
                     filas={resumen.por_categoria.map((c) => [c.nombre, num(c.unidades), gs(c.monto), pct(c.monto, k.ventas_netas), <span key="m" className={`font-semibold ${margenColor(c.ganancia, c.monto)}`}>{pct(c.ganancia, c.monto)}</span>])}
                   />

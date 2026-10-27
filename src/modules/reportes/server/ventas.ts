@@ -82,8 +82,8 @@ export async function detalleVentas(db: TenantDb, f: FiltrosVentas, limite: numb
 export const MEDIO_NOMBRE: Record<string, string> = {
   efectivo: "Efectivo",
   tarjeta: "Tarjeta",
-  pos: "POS",
   transferencia: "Transferencia",
+  qr: "QR",
   cheque: "Cheque",
   otro: "Otros",
   credito: "Crédito",
