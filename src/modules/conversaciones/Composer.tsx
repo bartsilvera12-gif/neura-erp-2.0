@@ -104,7 +104,8 @@ export function Composer(p: ComposerProps) {
     () => buscar(p.respuestas, filtroQr, (r) => ({ principal: r.atajo, otros: [r.texto], codigos: [r.atajo] })).slice(0, 30),
     [p.respuestas, filtroQr],
   );
-  const qrVisible = (barra && respuestasFiltradas.length > 0) || panel === "respuestas";
+  // Sin respuestas cargadas, la "/" sola igual abre el aviso (si no, parece que no anda).
+  const qrVisible = (barra && (respuestasFiltradas.length > 0 || (texto === "/" && p.respuestas.length === 0))) || panel === "respuestas";
   useEffect(() => setQrIdx(0), [filtroQr]);
 
   const usarRespuesta = (r: RespuestaRapida) => {
@@ -441,7 +442,7 @@ export function Composer(p: ComposerProps) {
               )}
               <div className="max-h-56 overflow-y-auto overscroll-contain p-1 max-sm:max-h-none">
                 {respuestasFiltradas.length === 0 ? (
-                  <p className="px-2 py-4 text-center text-xs text-slate-500">{p.respuestas.length ? "Sin coincidencias." : "No hay respuestas rápidas configuradas."}</p>
+                  <p className="px-2 py-4 text-center text-xs text-slate-500">{p.respuestas.length ? "Sin coincidencias." : "No hay respuestas rápidas todavía. Se crean desde el menú ⋯ de la bandeja → Respuestas rápidas."}</p>
                 ) : (
                   <ul className="space-y-0.5">
                     {respuestasFiltradas.map((r, i) => (
@@ -513,10 +514,10 @@ export function Composer(p: ComposerProps) {
             }`}
             placeholder={
               modoNota
-                ? tactil ? "Nota interna (el cliente no la ve)…" : "Nota interna para el equipo (el cliente no la ve)…"
+                ? tactil || esMovil ? "Nota interna (el cliente no la ve)…" : "Nota interna para el equipo (el cliente no la ve)…"
                 : bloqueado
-                  ? tactil ? "Fuera de las 24 h: usá una plantilla" : "Fuera de la ventana de 24 h: elegí una plantilla"
-                  : tactil ? "Mensaje  ( / respuestas rápidas)" : "Escribí un mensaje…  (Enter envía · Shift+Enter salto de línea · / respuestas rápidas)"
+                  ? tactil || esMovil ? "Fuera de las 24 h: usá una plantilla" : "Fuera de la ventana de 24 h: elegí una plantilla"
+                  : tactil || esMovil ? "Mensaje  ( / respuestas rápidas)" : "Escribí un mensaje…  (Enter envía · Shift+Enter salto de línea · / respuestas rápidas)"
             }
             value={texto}
             onChange={(e) => setTexto(e.target.value)}

@@ -32,7 +32,7 @@ const MEDIO: Record<string, string> = {
 };
 const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
 const num = (v: number) => Number(v || 0).toLocaleString("es-PY", { maximumFractionDigits: 3 });
-const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : "—");
+const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1).replace(".", ",")} %` : "—");
 const margenColor = (a: number, b: number) => {
   const m = b ? (a / b) * 100 : 0;
   return m >= 40 ? "text-emerald-600" : m >= 20 ? "text-amber-600" : "text-red-600";

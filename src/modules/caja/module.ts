@@ -15,9 +15,9 @@ export const moduloCaja: Modulo = {
   familia: "Caja",
   roles: ["ADMIN", "SUPERVISOR", "CAJERO", "VENDEDOR"],
   children: [
-    { label: "Nueva venta", href: "/caja/nueva" },
-    { label: "Apertura y cierre", href: "/caja/turnos" },
-    { label: "Órdenes de venta", href: "/caja" },
+    { label: "Nueva venta", href: "/caja/nueva", palabras: ["vender", "facturar", "punto de venta", "pos"] },
+    { label: "Apertura y cierre", href: "/caja/turnos", palabras: ["arqueo", "turno", "abrir caja", "cerrar caja"] },
+    { label: "Órdenes de venta", href: "/caja", palabras: ["ventas", "facturas emitidas", "anular venta"] },
     // Receta 68: pedidos por QR de las mesas (cola + cuentas abiertas) y la pantalla de cocina.
     // Receta 75: se apagan con Rubro y funciones (Mesas y QR / Cocina y estaciones).
     { label: "Pedidos de mesas", href: "/caja/mesas", permiso: "pedidos_mesas", funcion: "mesas" },

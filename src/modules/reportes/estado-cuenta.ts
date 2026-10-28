@@ -25,7 +25,7 @@ export function derivados(d: EstadoCuenta) {
 /** Renglones del estado de resultados (para Excel / PDF). */
 export function renglones(d: EstadoCuenta) {
   const x = derivados(d);
-  const p = (a: number) => (x.ventas ? `${((a / x.ventas) * 100).toFixed(1)} %` : "");
+  const p = (a: number) => (x.ventas ? `${((a / x.ventas) * 100).toFixed(1).replace(".", ",")} %` : "");
   return [
     { concepto: "Ventas netas (IVA incluido, sin anuladas)", monto: x.ventas, nota: `${d.ventas.cantidad} ventas` },
     { concepto: "(−) Costo de lo vendido", monto: -x.cmv, nota: p(x.cmv) },

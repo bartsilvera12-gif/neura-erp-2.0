@@ -15,7 +15,7 @@ import { describirFiltros, filtrosVentas, MEDIO_NOMBRE, resumenVentas } from "@/
 
 export const runtime = "nodejs";
 
-const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : "—");
+const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1).replace(".", ",")} %` : "—");
 const dia = (s: string) => `${s.slice(8, 10)}/${s.slice(5, 7)}`;
 
 export const GET = withTenant(

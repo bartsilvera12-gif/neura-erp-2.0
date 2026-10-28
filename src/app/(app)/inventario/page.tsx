@@ -7,6 +7,7 @@
  * Crear y editar siguen en el panel lateral del 2.0 (el listado queda visible atrás).
  */
 import Link from "next/link";
+import { unidadCorta } from "@/modules/inventario/recetas";
 import dynamic from "next/dynamic";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
@@ -241,7 +242,7 @@ export default function InventarioPage() {
           <div className="flex items-center gap-2.5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {p.imagen_url ? <img src={p.imagen_url} alt="" className="h-full w-full object-cover" /> : p.nombre.charAt(0).toUpperCase()}
+              {p.imagen_url ? <img src={p.imagen_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : p.nombre.charAt(0).toUpperCase()}
             </div>
             <div className="min-w-0">
               <p className="font-bold leading-snug text-slate-900">
@@ -264,7 +265,7 @@ export default function InventarioPage() {
           const bajo = !alcanceSel.deposito && !alcanceSel.sucursal && Number(p.stock_minimo) > 0 && Number(p.stock_actual) < Number(p.stock_minimo);
           return (
             <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums ${bajo ? "bg-red-50 text-red-700 ring-1 ring-red-100" : stock > 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" : "bg-slate-50 text-slate-500 ring-1 ring-slate-200"}`}>
-              Stock {formatStock(stock)} <span className="text-[10px] font-normal opacity-80">{p.unidad_medida}</span>
+              Stock {formatStock(stock)} <span className="text-[10px] font-normal opacity-80">{unidadCorta(p.unidad_medida ?? "Unidad")}</span>
             </span>
           );
         },
@@ -289,7 +290,7 @@ export default function InventarioPage() {
         celda: (p) => {
           if (p.costo_promedio == null) return "—";
           const m = margenVenta(Number(p.costo_promedio) || 0, Number(p.precio_venta));
-          return <span className={`font-semibold tabular-nums ${margenColor(m)}`}>{m.toFixed(1)}%</span>;
+          return <span className={`font-semibold tabular-nums ${margenColor(m)}`}>{m.toFixed(1).replace(".", ",")} %</span>;
         },
       },
     ];
@@ -387,7 +388,7 @@ export default function InventarioPage() {
               {cargando ? "Cargando…" : total === 0 ? "Sin resultados" : <>Mostrando <span className="font-semibold text-slate-700">{desdeIdx.toLocaleString("es-PY")}–{hastaIdx.toLocaleString("es-PY")}</span> de <span className="font-semibold text-slate-700">{total.toLocaleString("es-PY")}</span> {total === 1 ? "producto" : "productos"}</>}
             </p>
             <div className="ml-auto">
-              <button onClick={() => abrirForm(null)} onMouseEnter={() => void cargarProductoForm()} onFocus={() => void cargarProductoForm()} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 active:scale-95" style={{ backgroundColor: TEAL }}>
+              <button onClick={() => abrirForm(null)} onMouseEnter={() => void cargarProductoForm()} onFocus={() => void cargarProductoForm()} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 active:scale-95 max-md:min-h-11 max-md:px-4 max-md:text-sm" style={{ backgroundColor: TEAL }}>
                 <Plus className="h-3.5 w-3.5" /> Nuevo producto
               </button>
             </div>
@@ -656,12 +657,12 @@ const FilaProducto = memo(function FilaProducto({
             aria-expanded={expandible ? expandido : undefined}
             className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums transition ${expandible ? "cursor-pointer hover:brightness-95" : "cursor-default"} ${!alcanceDeposito && !alcanceSucursal && stockBajo ? "bg-red-50 text-red-700 ring-1 ring-red-100" : stock > 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" : "bg-slate-50 text-slate-500 ring-1 ring-slate-200"}`}>
             {formatStock(stock)}
-            <span className="text-[10px] font-normal opacity-80">{p.unidad_medida}</span>
+            <span className="text-[10px] font-normal opacity-80">{unidadCorta(p.unidad_medida ?? "Unidad")}</span>
             {expandible ? <ChevronDown className={`h-3 w-3 opacity-70 transition-transform ${expandido ? "rotate-180" : ""}`} /> : null}
           </button>
         )}
       </td>
-      <td className={`hidden px-3 py-3 text-right font-semibold tabular-nums lg:table-cell ${conCosto && p.tipo_producto !== "materia_prima" ? margenColor(margen) : "text-slate-300"}`}>{conCosto && p.tipo_producto !== "materia_prima" ? `${margen.toFixed(1)}%` : "—"}</td>
+      <td className={`hidden px-3 py-3 text-right font-semibold tabular-nums lg:table-cell ${conCosto && p.tipo_producto !== "materia_prima" ? margenColor(margen) : "text-slate-300"}`}>{conCosto && p.tipo_producto !== "materia_prima" ? `${margen.toFixed(1).replace(".", ",")} %` : "—"}</td>
       <td className="px-5 py-3">
         <div className="flex items-center justify-center gap-1">
           <button onClick={() => onEditar(p)} onMouseEnter={() => onPrecargar(p)} onFocus={() => onPrecargar(p)} title={inactivo ? "Ver producto (inactivo)" : "Editar producto"} aria-label={`${inactivo ? "Ver" : "Editar"} ${p.nombre}`} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand)]">

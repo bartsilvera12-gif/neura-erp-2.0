@@ -51,6 +51,6 @@ export const GET = withTenant(async (ctx, req) => {
     pagos: (pagos ?? []).slice().sort((a, b) => (a.created_at < b.created_at ? -1 : 1)),
     cuenta: Array.isArray(cuenta) ? (cuenta[0] ?? null) : (cuenta ?? null),
     // Receta 67: venta a cliente ocasional → "Cliente ocasional (X)".
-    cliente_nombre: cliente?.nombre || (venta.receptor_ocasional ? etiquetaOcasional(venta.receptor_nombre as string | null) : "Sin nombre"),
+    cliente_nombre: cliente?.nombre || (venta.receptor_ocasional ? etiquetaOcasional(venta.receptor_nombre as string | null) : "Consumidor final (sin cliente)"),
   });
 });

@@ -38,7 +38,7 @@ export default function HoyResumen({ onSelect, onVerDia }: { onSelect: (c: Agend
     <div className="w-80">
       <div className="mb-2 flex items-center justify-between">
         <div className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Hoy</div>
-        <div className="text-xs capitalize text-slate-500">{hoyLabel}</div>
+        <div className="text-xs first-letter:uppercase text-slate-500">{hoyLabel}</div>
       </div>
 
       {error && <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</div>}

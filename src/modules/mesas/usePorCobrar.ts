@@ -42,9 +42,16 @@ export function usePorCobrar(cajaId: string | null, onNuevas?: (c: CuentaPorCobr
     const ctrl = new AbortController();
     const hit = guardadoAlInstante<MesasPorCobrar>(url);
     if (hit) recibir(hit, true);
+    // Un solo pedido a la vez: con la red lenta (respuesta > cadaMs) no se encima otro.
+    let enCurso = false;
+    const tic = () => {
+      if (enCurso || document.visibilityState !== "visible") return;
+      enCurso = true;
+      void pedir(ctrl.signal).finally(() => { enCurso = false; });
+    };
     void pedir(ctrl.signal);
-    const id = setInterval(() => { if (document.visibilityState === "visible") void pedir(ctrl.signal); }, cadaMs);
-    const alVolver = () => { if (document.visibilityState === "visible") void pedir(ctrl.signal); };
+    const id = setInterval(tic, cadaMs);
+    const alVolver = tic;
     document.addEventListener("visibilitychange", alVolver);
     return () => { ctrl.abort(); clearInterval(id); document.removeEventListener("visibilitychange", alVolver); };
   }, [url, cadaMs, pedir, recibir]);

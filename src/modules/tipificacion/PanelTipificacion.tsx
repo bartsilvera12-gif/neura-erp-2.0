@@ -90,6 +90,15 @@ export function PanelTipificacion({ clienteId, clienteNombre, modo, resaltar, on
   const picker = useRef<ElegirSubestadoRef>(null);
   const texto = useRef<HTMLTextAreaElement>(null);
   const form = useRef<HTMLFormElement>(null);
+  const avisoExito = useRef<HTMLDivElement>(null);
+
+  // Guardado: el aviso (con "Ver ticket") queda arriba del formulario; se trae a la vista
+  // porque en celular el botón Guardar está lejos y el aviso quedaba fuera de pantalla.
+  useEffect(() => {
+    if (!exito) return;
+    const t = window.setTimeout(() => avisoExito.current?.scrollIntoView({ block: "nearest", behavior: "smooth" }), 30);
+    return () => window.clearTimeout(t);
+  }, [exito]);
 
   // Contexto (cacheado 5 min) e historial (lo último visto al instante + refresco atrás), en paralelo.
   useEffect(() => {
@@ -291,7 +300,7 @@ export function PanelTipificacion({ clienteId, clienteNombre, modo, resaltar, on
         </div>
       ) : null}
       {exito ? (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[13px] font-semibold text-emerald-800" role="status">
+        <div ref={avisoExito} className="flex scroll-mt-20 flex-wrap items-center justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-[13px] font-semibold text-emerald-800" role="status">
           <span>✓ {exito.texto}</span>
           {exito.ticket ? (
             <button type="button" onClick={() => setVerTicket(exito.ticket!.id)} className="rounded-lg bg-white px-2.5 py-1 text-[12px] font-semibold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-50 max-sm:min-h-11">

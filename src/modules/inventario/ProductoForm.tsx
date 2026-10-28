@@ -405,7 +405,7 @@ export function ProductoForm({
             {margen != null && !esMP ? (
               <p className="mt-1.5 text-right text-xs text-slate-500">
                 Ganancia por unidad <strong className="tabular-nums text-slate-700">{gs(f.precio_venta - f.costo_promedio)}</strong> ·{" "}
-                <span className={`font-semibold ${margen >= 40 ? "text-emerald-600" : margen >= 20 ? "text-amber-600" : "text-red-600"}`}>margen {margen.toFixed(1)}%</span>
+                <span className={`font-semibold ${margen >= 40 ? "text-emerald-600" : margen >= 20 ? "text-amber-600" : "text-red-600"}`}>margen {margen.toFixed(1).replace(".", ",")} %</span>
               </p>
             ) : null}
 
@@ -446,7 +446,7 @@ export function ProductoForm({
                 {desc > 0 ? (
                   <>
                     Se aplica solo en la caja. Precio final <strong className="tabular-nums text-slate-800">{gs(precioFinal)}</strong>
-                    {margenFinal != null ? <span className={`ml-1 font-semibold ${margenFinal >= 20 ? "text-slate-600" : "text-red-600"}`}>· margen {margenFinal.toFixed(1)}%</span> : null}
+                    {margenFinal != null ? <span className={`ml-1 font-semibold ${margenFinal >= 20 ? "text-slate-600" : "text-red-600"}`}>· margen {margenFinal.toFixed(1).replace(".", ",")} %</span> : null}
                   </>
                 ) : (
                   "Se aplica solo al vender en la caja."

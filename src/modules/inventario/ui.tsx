@@ -30,7 +30,7 @@ export function Cabecera({ kicker, titulo, subtitulo, volver, children }: {
     <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0">
         {volver ? (
-          <Link href={volver.href} className="-ml-1 mb-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800">
+          <Link href={volver.href} className="-ml-1 mb-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800 max-md:min-h-11 max-md:pr-2">
             <ArrowLeft className="h-3.5 w-3.5" /> {volver.label}
           </Link>
         ) : null}
@@ -52,14 +52,14 @@ export function Pestanas({ opciones, valor, onChange }: {
   onChange: (id: string) => void;
 }) {
   // Responsive: si no entran, scrollean adentro (con desvanecido en el borde), nunca se cortan
-  // ni saltan de línea; la elegida queda a la vista. En celular miden 40 px de alto.
+  // ni saltan de línea; la elegida queda a la vista. En celular y tablet miden 40 px de alto.
   return (
     <ScrollHorizontal role="tablist" className="w-fit rounded-xl bg-slate-100/80 p-1" dependencias={[valor]}>
       {opciones.map((o) => {
         const sel = valor === o.id;
         return (
           <button key={o.id} type="button" role="tab" aria-selected={sel} onClick={() => onChange(o.id)}
-            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-sm:min-h-10 max-sm:text-[13px] ${sel ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
+            className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-lg:min-h-10 max-sm:text-[13px] ${sel ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-800"}`}>
             {o.label}
             {o.badge ? (
               <span className={`inline-flex h-[18px] min-w-[18px] items-center justify-center rounded-full px-1 text-[10px] font-bold tabular-nums ${sel ? "bg-[var(--brand)] text-white" : "bg-amber-100 text-amber-700"}`}>{o.badge}</span>

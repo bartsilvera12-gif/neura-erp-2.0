@@ -68,6 +68,8 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, do
   const [aviso, setAviso] = useState<string | null>(null);
   const [cuenta, setCuenta] = useState<EstadoCuenta | null>(null);
   const recibidoRef = useRef<HTMLInputElement>(null);
+  const dialogoRef = useRef<HTMLDivElement>(null);
+  const confirmarRef = useRef<HTMLButtonElement>(null);
   const montoRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   // La primera línea, mientras no se toque, absorbe lo que falta.
@@ -176,6 +178,10 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, do
       }
       if (e.key === "Enter") {
         const tag = el?.tagName;
+        // Un botón DE ESTA VENTANA hace lo suyo (Enter = clic). Si el foco quedó atrás (p. ej. en
+        // "Aceptar y cobrar" del POS, como pasa a crédito), Enter confirma: antes no hacía nada útil.
+        const fuera = !el || !dialogoRef.current?.contains(el);
+        if (fuera) { e.preventDefault(); s.confirmar(); return; }
         if (tag === "BUTTON" || tag === "TEXTAREA" || el?.getAttribute("role") === "option" || el?.closest("[role=listbox]")) return;
         e.preventDefault();
         // Pantalla táctil: el "OK / Listo" del teclado en pantalla solo lo cierra (no cobra sin
@@ -191,14 +197,16 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, do
   useEffect(() => {
     // Con teclado / lector: directo a "lo que entrega". En táctil no (el teclado en pantalla
     // taparía los billetes rápidos y el botón de cobrar).
-    if (tipoVenta === "CONTADO" && window.matchMedia("(pointer: fine)").matches) setTimeout(() => recibidoRef.current?.focus(), 30);
+    if (!window.matchMedia("(pointer: fine)").matches) return;
+    // A crédito no hay nada que tipear: el foco va al botón de confirmar (Enter confirma).
+    setTimeout(() => (tipoVenta === "CONTADO" ? recibidoRef.current : confirmarRef.current)?.focus(), 30);
   }, [tipoVenta]);
 
   const lineaActiva = efectivas.find((l) => l.id === activa) ?? efectivas[0];
 
   return (
     <CapaModal onClose={cobrando ? undefined : onClose} fondo="bg-slate-900/50 backdrop-blur-[2px]" cerrarConEscape={false}>
-      <div role="dialog" aria-modal className={`flex w-full max-w-2xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`}
+      <div ref={dialogoRef} role="dialog" aria-modal className={`flex w-full max-w-2xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
         {/* Total */}
         <div className="flex shrink-0 items-end justify-between gap-4 px-4 pb-3 pt-3 sm:px-6 sm:pb-4 sm:pt-5" style={{ background: `linear-gradient(to right, ${TEAL}14, transparent)` }}>
@@ -219,7 +227,7 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, do
                 )
               ) : null}
             </div>
-            <p className="mt-0.5 truncate text-xs text-slate-500">{Number(cantItems).toLocaleString("es-PY", { maximumFractionDigits: 3 })} ítem{cantItems === 1 ? "" : "s"}{cliente ? ` · ${cliente.nombre}` : ""}</p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">{Number(cantItems).toLocaleString("es-PY", { maximumFractionDigits: 3 })} unidad{cantItems === 1 ? "" : "es"}{cliente ? ` · ${cliente.nombre}` : ""}</p>
           </div>
           <p className="shrink-0 text-[28px] font-extrabold leading-none tabular-nums tracking-tight text-slate-900 sm:text-3xl">{formatGs(total)}</p>
         </div>
@@ -353,7 +361,7 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, do
           </p>
           <div className="flex gap-2 max-lg:w-full lg:ml-auto">
             <button type="button" onClick={onClose} disabled={cobrando} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 max-lg:flex-1">Volver</button>
-            <button type="button" onClick={confirmar} disabled={cobrando || !!problema}
+            <button ref={confirmarRef} type="button" onClick={confirmar} disabled={cobrando || !!problema}
               className="inline-flex items-center justify-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40 max-lg:min-h-12 max-lg:flex-[2] max-lg:text-base" style={{ backgroundColor: TEAL }}>
               {cobrando ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
               {cobrando ? "Registrando…" : tipoVenta === "CREDITO" ? (imprimir ? "Confirmar crédito e imprimir" : "Confirmar crédito") : imprimir ? "Cobrar e imprimir" : "Cobrar"}

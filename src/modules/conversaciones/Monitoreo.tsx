@@ -252,9 +252,16 @@ export function Monitoreo() {
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-8">
             <Metrica label={etiquetaLeads} valor={totalLeads} icono={<Flame className="h-4 w-4" />} tono="success" />
-            <Metrica label="Chats abiertos" valor={r.abiertas} icono={<MessageSquare className="h-4 w-4" />} tono="featured" pie={`${r.nuevos_hoy} nuevos hoy`} />
+            <Metrica label="Chats abiertos" valor={r.abiertas} icono={<MessageSquare className="h-4 w-4" />} tono="featured" pie={`${r.nuevos_hoy} ${r.nuevos_hoy === 1 ? "nuevo" : "nuevos"} hoy`} />
             <Metrica label="Sin asignar" valor={r.sin_asignar} icono={<UserX className="h-4 w-4" />} tono="warning" />
-            <Metrica label="Esperando respuesta" valor={r.esperando_respuesta} icono={<Clock className="h-4 w-4" />} tono="warning" />
+            <Metrica
+              label="Esperando respuesta"
+              valor={r.esperando_respuesta}
+              icono={<Clock className="h-4 w-4" />}
+              tono="warning"
+              // El total cuenta también los sin asignar; la lista de abajo es por asesor.
+              pie={datos && datos.esperando.length !== r.esperando_respuesta ? `${datos.esperando.length} con asesor` : undefined}
+            />
             <Metrica label="SLA vencidos" valor={r.sla_vencidos} icono={<Timer className="h-4 w-4" />} tono={r.sla_vencidos > 0 ? "danger" : "neutral"} />
             <Metrica label="Fuera de 24 h" valor={r.fuera_de_ventana} icono={<WifiOff className="h-4 w-4" />} tono="neutral" pie="Solo plantillas" />
             <Metrica label="Agentes en línea" valor={r.agentes_online} icono={<Users className="h-4 w-4" />} tono="success" pie={`de ${agentes.length}`} />

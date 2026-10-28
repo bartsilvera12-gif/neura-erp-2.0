@@ -994,8 +994,8 @@ function CajaPageContenido() {
       } else {
         setVentaPresu(cuentaMesa && parteMesa
           ? venta.cuenta_cerrada
-            ? `Parte de ${parteMesa.nombre} cobrada: la cuenta de ${cuentaMesa.mesa.nombre} quedó cerrada.`
-            : `Parte de ${parteMesa.nombre} cobrada (${cuentaMesa.mesa.nombre}). ${venta.faltan ? `Falta${venta.faltan === 1 ? "" : "n"} ${venta.faltan} parte${venta.faltan === 1 ? "" : "s"}: cargalas desde Mesas por cobrar.` : ""}`.trim()
+            ? `${parteMesa.id === "resto" ? "Resto (sin asignar) cobrado" : `Parte de ${parteMesa.nombre} cobrada`}: la cuenta de ${cuentaMesa.mesa.nombre} quedó cerrada.`
+            : `${parteMesa.id === "resto" ? "Resto (sin asignar) cobrado" : `Parte de ${parteMesa.nombre} cobrada`} (${cuentaMesa.mesa.nombre}). ${venta.faltan ? `Falta${venta.faltan === 1 ? "" : "n"} ${venta.faltan} parte${venta.faltan === 1 ? "" : "s"}: ${venta.faltan === 1 ? "cargala" : "cargalas"} desde Mesas por cobrar.` : ""}`.trim()
           : cuentaMesa ? `Cuenta de ${cuentaMesa.mesa.nombre} cerrada.` : pedido ? `Pedido ${pedido.etiqueta} cobrado.` : null);
       }
       // Stock: se descuenta en pantalla lo recién vendido (antes se volvía a bajar TODO el
@@ -1238,7 +1238,7 @@ function CajaPageContenido() {
         <div className="flex min-w-0 items-center gap-1.5 xl:order-1 xl:shrink-0">
           {/* Volver al panel de Caja: discreto, en la misma línea (no le quita alto al POS). */}
           <Link href="/caja/panel" aria-label="Volver a Caja" title="Volver a Caja"
-            className="-ml-1.5 inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 lg:h-8 lg:w-8">
+            className="-ml-1.5 inline-flex h-11 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 lg:h-8 lg:w-8">
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <h1 className="text-lg font-semibold tracking-tight text-slate-900">Caja</h1>
@@ -1343,7 +1343,7 @@ function CajaPageContenido() {
                   <Receipt className="h-4 w-4 shrink-0" style={{ color: TEAL }} aria-hidden />
                   <span className="min-w-0">
                     {parteMesa
-                      ? <>Cuenta de <b>{origenPedido(cuentaMesa)}</b> · parte de <b>{parteMesa.nombre}</b> · <span className="whitespace-nowrap tabular-nums">{formatGs(parteMesa.total)}</span></>
+                      ? <>Cuenta de <b>{origenPedido(cuentaMesa)}</b> · {parteMesa.id === "resto" ? <>lo <b>sin asignar</b></> : <>parte de <b>{parteMesa.nombre}</b></>} · <span className="whitespace-nowrap tabular-nums">{formatGs(parteMesa.total)}</span></>
                       : <>Cuenta de <b>{origenPedido(cuentaMesa)}</b> · <span className="whitespace-nowrap tabular-nums">{formatGs(cuentaMesa.total)}</span></>}
                   </span>
                 </p>
@@ -1550,7 +1550,7 @@ function CajaPageContenido() {
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
               Ítems cargados: <span className="text-base font-bold tabular-nums" style={{ color: TEAL }}>{cart.length}</span>
             </p>
-            {cart.length > 0 && <p className="text-[11px] tabular-nums text-slate-500">{cantTxt(cantTotal)} unidad{cantTotal === 1 ? "" : "es"} totales</p>}
+            {cart.length > 0 && <p className="text-[11px] tabular-nums text-slate-500">{cantTotal === 1 ? "1 unidad en total" : `${cantTxt(cantTotal)} unidades en total`}</p>}
           </div>
 
           {/* Carrito */}
@@ -1738,7 +1738,7 @@ function CajaPageContenido() {
 
           <div className="space-y-2 border-t border-slate-100 px-5 py-3.5">
             <div className="flex items-baseline justify-between text-sm text-slate-500">
-              <span>Ítems</span><span className="font-medium tabular-nums text-slate-800">{cantTxt(cantTotal)}</span>
+              <span>Unidades</span><span className="font-medium tabular-nums text-slate-800">{cantTxt(cantTotal)}</span>
             </div>
             <div className="flex items-baseline justify-between text-sm text-slate-500">
               <span>IVA incluido</span><span className="tabular-nums text-slate-600">{formatGs(totalIva)}</span>
@@ -2093,7 +2093,7 @@ function ProdThumb({ url, nombre, className = "", contain, big }: { url?: string
     <div className={`shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white ${className}`}>
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={nombre} className={`h-full w-full ${contain ? "object-contain p-1" : "object-cover"}`} />
+        <img src={url} alt={nombre} loading="lazy" decoding="async" className={`h-full w-full ${contain ? "object-contain p-1" : "object-cover"}`} />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-slate-300">
           <Package className={big ? "h-24 w-24" : "h-5 w-5"} />

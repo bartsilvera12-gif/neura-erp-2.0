@@ -3,6 +3,7 @@
  * blanco para anotar a mano). Mismo diseño que los demás reportes. ADMIN.
  */
 import { datosEmpresa } from "@/modules/empresa/server";
+import { unidadCorta } from "@/modules/inventario/recetas";
 import autoTable from "jspdf-autotable";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -71,7 +72,7 @@ export const GET = withTenant(
           pdfTxt(i.categoria ?? "—"),
           cant(i.stock_actual),
           cant(i.stock_minimo),
-          pdfTxt(`${cant(i.faltante)} ${i.unidad_medida}`),
+          pdfTxt(`${cant(i.faltante)} ${unidadCorta(i.unidad_medida ?? "Unidad")}`),
           cant(i.vendido_30d),
           Number(i.costo) ? `Gs. ${gs(i.costo_reposicion)}` : "sin costo",
           "",

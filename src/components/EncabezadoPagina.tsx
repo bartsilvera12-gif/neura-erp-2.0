@@ -42,7 +42,7 @@ export function EncabezadoPagina({ kicker, titulo, subtitulo, acciones, volver, 
     <header className={`flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 ${className}`}>
       <div className="min-w-0">
         {volver && !volverDiscreto ? (
-          <Link href={volver.href} className="-ml-1 mb-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800">
+          <Link href={volver.href} className="-ml-1 mb-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs max-md:min-h-11 max-md:pr-2 font-semibold text-slate-500 transition-colors hover:text-slate-800">
             <ArrowLeft className="h-3.5 w-3.5" /> {volver.label}
           </Link>
         ) : null}

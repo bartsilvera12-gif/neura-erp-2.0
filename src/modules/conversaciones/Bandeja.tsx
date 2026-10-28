@@ -226,9 +226,11 @@ export function Bandeja() {
                 value={texto}
                 onChange={(e) => setTexto(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), setQ(texto.trim()))}
-                placeholder="Buscar por nombre, número, RUC o mensaje"
+                // La columna de chats es angosta: el texto largo quedaba cortado ("Buscar por no").
+                placeholder="Nombre, número, RUC o mensaje"
+                title="Buscá por nombre, número, RUC o lo que dice un mensaje"
                 enterKeyHint="search"
-                className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 pr-10 text-xs md:pr-24 text-slate-800 outline-none placeholder:text-slate-400 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 md:h-auto"
+                className="h-11 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 pr-10 text-xs md:pr-24 text-slate-800 placeholder:text-[13px] md:placeholder:text-xs outline-none placeholder:text-slate-400 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 md:h-auto"
                 aria-label="Buscar conversaciones"
               />
               {texto.trim() && (texto.trim() !== q || b.cargando) ? (

@@ -74,7 +74,7 @@ export default function RecetasPage() {
         <div className="flex items-center gap-2.5">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            {f.imagen_url ? <img src={f.imagen_url} alt="" className="h-full w-full object-cover" /> : f.nombre.charAt(0).toUpperCase()}
+            {f.imagen_url ? <img src={f.imagen_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : f.nombre.charAt(0).toUpperCase()}
           </div>
           <div className="min-w-0">
             <p className="font-semibold text-slate-900">{f.nombre}</p>
@@ -128,7 +128,7 @@ export default function RecetasPage() {
         if (f.tipo !== "menu" || f.costo == null) return <span className="text-slate-300">—</span>;
         // Receta 74: con opciones que cambian el costo, el margen con la opción más cara (peor caso).
         const m = margenPct(f.costo_hasta ?? f.costo, precioFinal(f.precio_venta, f.descuento_pct));
-        return <span className={colorMargen(m)} title={f.costo_hasta != null ? "Con la opción más cara" : undefined}>{m == null ? "—" : `${m.toFixed(1)}%`}</span>;
+        return <span className={colorMargen(m)} title={f.costo_hasta != null ? "Con la opción más cara" : undefined}>{m == null ? "—" : `${m.toFixed(1).replace(".", ",")} %`}</span>;
       },
     },
     {

@@ -15,6 +15,7 @@ import { ExternalLink, Eye, Sparkles, UserPlus, X } from "lucide-react";
 import { HojaInferior } from "@/components/HojaInferior";
 import { useEsEscritorio } from "@/lib/ui/responsive";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
+import { BuscadorCliente } from "@/modules/clientes/gestion/BuscadorCliente";
 import { crearProspecto, pedirFicha, vincularCliente, type Ficha } from "@/modules/conversaciones/api";
 import { ESTADO_CLASE, ESTADO_LABEL, telefonoLegible, type FilaBandeja } from "@/modules/conversaciones/dominio";
 import { IconoCanal } from "@/modules/conversaciones/ui";
@@ -31,6 +32,8 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [creandoCliente, setCreandoCliente] = useState(false);
+  // El cliente ya existe pero escribió desde otro número: se busca y se vincula a mano.
+  const [buscandoCliente, setBuscandoCliente] = useState(false);
   const [visor, setVisor] = useState<Ficha["previas"][number] | null>(null);
   const escritorio = useEsEscritorio();
 
@@ -56,15 +59,16 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
 
   useEffect(() => {
     setFicha(cache.get(conv.id) ?? null);
+    setBuscandoCliente(false);
     void cargar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conv.id]);
 
   useEffect(() => {
-    const k = (e: KeyboardEvent) => e.key === "Escape" && !creandoCliente && !visor && onCerrar();
+    const k = (e: KeyboardEvent) => e.key === "Escape" && !creandoCliente && !buscandoCliente && !visor && onCerrar();
     window.addEventListener("keydown", k);
     return () => window.removeEventListener("keydown", k);
-  }, [onCerrar, creandoCliente, visor]);
+  }, [onCerrar, creandoCliente, buscandoCliente, visor]);
 
   const accion = async (clave: string, fn: () => Promise<FilaBandeja | null | undefined>) => {
     setOcupado(clave);
@@ -205,13 +209,42 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                 ) : (
                   <div className="rounded-xl border border-dashed border-slate-200 px-3 py-2.5">
                     <p className="text-[11px] text-slate-500">Sin cliente vinculado (no hay un cliente con este teléfono).</p>
-                    <button
-                      type="button"
-                      onClick={() => setCreandoCliente(true)}
-                      className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-[#4FAEB2] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#3F8E91] max-lg:min-h-11 max-lg:px-4 max-lg:text-sm"
-                    >
-                      <UserPlus className="h-3.5 w-3.5" /> Crear cliente
-                    </button>
+                    {buscandoCliente ? (
+                      <div className="mt-2 flex flex-col gap-1.5">
+                        <BuscadorCliente
+                          variant="landing"
+                          onSelect={(cli) => {
+                            setBuscandoCliente(false);
+                            void accion("vincular", () => vincularCliente(conv.id, cli.id));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setBuscandoCliente(false)}
+                          className="self-start text-[11px] font-semibold text-slate-500 hover:text-slate-700 max-lg:min-h-10 max-lg:text-xs"
+                        >
+                          Cancelar
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="mt-2 flex flex-wrap items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setCreandoCliente(true)}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#4FAEB2] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#3F8E91] max-lg:min-h-11 max-lg:px-4 max-lg:text-sm"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" /> Crear cliente
+                        </button>
+                        <button
+                          type="button"
+                          disabled={!!ocupado}
+                          onClick={() => setBuscandoCliente(true)}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91] max-lg:min-h-11 max-lg:px-4 max-lg:text-sm"
+                        >
+                          Ya es cliente: buscarlo
+                        </button>
+                      </div>
+                    )}
                   </div>
                 )}
               </Seccion>

@@ -216,31 +216,40 @@ const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,
 /** ¿Alguna palabra de lo escrito arranca una palabra del texto? ("venta" no arranca nada en "Inventario"). */
 const arrancaPalabra = (q: string, texto: string) => norm(q).split(/[^a-z0-9]+/).filter(Boolean)
   .some((w) => new RegExp(`(^|[^a-z0-9])${w}`).test(norm(texto)));
-const puntajeMenu = (q: string, campos: { principal: string; otros?: (string | undefined)[] }) => {
+type CamposMenu = { principal: string; otros?: (string | undefined)[]; palabras?: string[] };
+const puntajeUno = (q: string, campos: CamposMenu) => {
   const p = Math.max(puntajeBusqueda(q, campos), puntajeBusqueda(singular(q), campos));
   // Metido en medio de otra palabra cuenta solo como parecido (no tapa los resultados buenos).
   const texto = [campos.principal, ...(campos.otros ?? [])].join(" ");
   return p >= 130 && !arrancaPalabra(q, texto) && !arrancaPalabra(singular(q), texto) ? 120 : p;
 };
+/**
+ * Puntaje de un ítem del menú. Las `palabras` (sinónimos: "chat" → Conversaciones, "stock" →
+ * Productos) cuentan como otro nombre de la pantalla, así lo que la gente escribe la encuentra.
+ */
+const puntajeMenu = (q: string, campos: CamposMenu) =>
+  Math.max(puntajeUno(q, campos), ...(campos.palabras ?? []).map((w) => puntajeUno(q, { principal: w, otros: [campos.principal] })));
+/** Campos de búsqueda de una sub-pantalla o atajo. */
+const camposHijo = (c: { label: string; seccion?: string; palabras?: string[] }): CamposMenu => ({ principal: c.label, otros: [c.seccion ?? ""], palabras: c.palabras });
 
 function umbralMenu(modulos: Modulo[], q: string): number {
   if (!q.trim()) return 0;
   // 130 = todas las palabras tal cual y al menos una como palabra (o comienzo) del NOMBRE; solo
   // por la sección o metida dentro de otra palabra ("venta" en "inventario") no alcanza.
-  const real = puntajeMenu(q, { principal: "Inicio" }) >= 130 || modulos.some((m) => puntajeMenu(q, { principal: m.label, otros: [m.familia] }) >= 130
-    || (m.children ?? []).some((c) => puntajeMenu(q, { principal: c.label, otros: [c.seccion ?? ""] }) >= 130));
+  const real = puntajeMenu(q, { principal: "Inicio" }) >= 130 || modulos.some((m) => puntajeMenu(q, { principal: m.label, otros: [m.familia], palabras: m.palabras }) >= 130
+    || (m.children ?? []).some((c) => puntajeMenu(q, camposHijo(c)) >= 130));
   return real ? 130 : 1;
 }
 
 /** ¿Pasa el umbral del buscador del menú? */
-const pasa = (q: string, campos: { principal: string; otros?: (string | undefined)[] }, umbral: number) =>
+const pasa = (q: string, campos: CamposMenu, umbral: number) =>
   !q.trim() || puntajeMenu(q, campos) >= umbral;
 
 function agruparPorFamilia(modulos: Modulo[], q: string, umbral = 1) {
   // Búsqueda inteligente: sin tildes, errores de tipeo; también por la familia ("finanzas").
   // Busca en el módulo, su familia y sus sub-pantallas y atajos ("existencias" → Finanzas › Existencias por depósito).
-  const visibles = !q.trim() ? modulos : modulos.filter((m) => pasa(q, { principal: m.label, otros: [m.familia] }, umbral)
-    || (m.children ?? []).some((c) => pasa(q, { principal: c.label, otros: [c.seccion ?? ""] }, umbral)));
+  const visibles = !q.trim() ? modulos : modulos.filter((m) => pasa(q, { principal: m.label, otros: [m.familia], palabras: m.palabras }, umbral)
+    || (m.children ?? []).some((c) => pasa(q, camposHijo(c), umbral)));
   const map = new Map<string, Modulo[]>();
   for (const m of visibles) {
     const fam = m.familia ?? "General";
@@ -346,7 +355,7 @@ function NavMenu({
             // ("nueva venta" → Finanzas › Nueva venta).
             // Los atajos (soloBusqueda: reportes, "nuevo…") aparecen solo buscando.
             const hijos = !m.children?.length ? [] : q.trim()
-              ? (!m.panel ? m.children.filter((c) => !c.soloBusqueda || pasa(q, { principal: c.label, otros: [c.seccion ?? ""] }, umbral)) : m.children.filter((c) => pasa(q, { principal: c.label, otros: [c.seccion ?? ""] }, umbral)))
+              ? (!m.panel ? m.children.filter((c) => !c.soloBusqueda || pasa(q, camposHijo(c), umbral)) : m.children.filter((c) => pasa(q, camposHijo(c), umbral)))
               : !m.panel ? m.children.filter((c) => !c.soloBusqueda) : [];
             const tieneHijos = hijos.length > 0;
             // Buscando, se despliegan solos para que se vea la sub-pantalla encontrada.
@@ -644,7 +653,7 @@ function BuscadorPantallas({ modulos, onCerrar }: { modulos: Modulo[]; onCerrar:
         const todos = m.children ?? [];
         const hijos = qq ? todos : todos.filter((c) => !c.soloBusqueda);
         // Con búsqueda: las sub-pantallas que coinciden (o todas, si coincide el módulo).
-        const coinciden = qq ? hijos.filter((c) => pasa(qq, { principal: c.label, otros: [c.seccion ?? ""] }, umbral)) : hijos;
+        const coinciden = qq ? hijos.filter((c) => pasa(qq, camposHijo(c), umbral)) : hijos;
         const reales = hijos.filter((c) => !c.soloBusqueda);
         // El panel (ej. Finanzas) va primero solo si lo buscado es él (o no coincide ninguna
         // pantalla): "nueva venta" + Enter abre Nueva venta, no el panel de Finanzas.

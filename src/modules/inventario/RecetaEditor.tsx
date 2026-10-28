@@ -252,7 +252,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
       return [...gs, ...nuevos];
     });
     setCopiando(false);
-    setTimeout(() => setAviso(nExt + nGr ? `Se copiaron de «${d.producto.nombre}»: ${nExt} extra(s) y ${nGr} grupo(s) de opciones (con los ingredientes de cada opción). Guardá para aplicarlos.` : `«${d.producto.nombre}» no tiene extras ni opciones nuevas para copiar.`), 0);
+    setTimeout(() => setAviso(nExt + nGr ? `Se copiaron de «${d.producto.nombre}»: ${nExt} ${nExt === 1 ? "extra" : "extras"} y ${nGr} ${nGr === 1 ? "grupo" : "grupos"} de opciones (con los ingredientes de cada opción). Guardá para aplicarlos.` : `«${d.producto.nombre}» no tiene extras ni opciones nuevas para copiar.`), 0);
   }
 
   async function guardar(items: Linea[]) {
@@ -366,7 +366,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                 {esPreparacion ? (
                   <Cifra etiqueta="Rinde" valor={`${cant(rendimiento)} ${unidadCorta(unidadProd)}`} />
                 ) : (
-                  <Cifra etiqueta="Margen" valor={margen == null ? "—" : `${margen.toFixed(1)}%`} clase={colorMargen(margen)}
+                  <Cifra etiqueta="Margen" valor={margen == null ? "—" : `${margen.toFixed(1).replace(".", ",")} %`} clase={colorMargen(margen)}
                     detalle={precio > 0 ? (rango ? `con la opción más cara · ${gs(precio - rango.hasta)}` : `ganancia ${gs(precio - costoUnidad)}`) : "sin precio de venta"} />
                 )}
                 <Cifra etiqueta={esPreparacion ? "Alcanza para" : "Porciones posibles"}
@@ -433,7 +433,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                     <span className="text-slate-500">÷ {cant(rendimiento)} = <strong className="tabular-nums text-slate-900">{gs(costoUnidad)}</strong> por {esPreparacion ? unidadCorta(unidadProd) : "porción"}</span>
                   </div>
                 ) : null}
-                {esPlato && quitables ? <p className="mt-2 text-[11px] text-slate-500">{quitables} ingrediente(s) se pueden quitar.</p> : null}
+                {esPlato && quitables ? <p className="mt-2 text-[11px] text-slate-500">{quitables === 1 ? "1 ingrediente se puede quitar." : `${quitables} ingredientes se pueden quitar.`}</p> : null}
               </section>
 
               <label className="block">
@@ -720,7 +720,7 @@ function CopiarDePlato({ excluir, onElegir, onClose }: { excluir: string; onEleg
                 <button type="button" disabled={!!cargando} onClick={() => void elegir(f.id)} className="flex min-h-12 w-full items-center gap-3 px-3 py-2 text-left text-sm hover:bg-slate-50 disabled:opacity-60">
                   <span className="min-w-0 flex-1">
                     <span className="block font-medium text-slate-900">{f.nombre}</span>
-                    <span className="block text-[11px] text-slate-500">{f.modificadores ? `${f.modificadores} modificador(es)` : "Sin modificadores"}</span>
+                    <span className="block text-[11px] text-slate-500">{f.modificadores ? `${f.modificadores} ${f.modificadores === 1 ? "modificador" : "modificadores"}` : "Sin modificadores"}</span>
                   </span>
                   {cargando === f.id ? <Loader2 className="h-4 w-4 animate-spin text-slate-400" /> : <Copy className="h-4 w-4 text-slate-400" />}
                 </button>

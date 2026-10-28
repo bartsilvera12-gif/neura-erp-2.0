@@ -3,6 +3,7 @@
  * "ver costos"), pie con unidades y valor por depósito. Mismos filtros y búsqueda que la pantalla.
  */
 import autoTable from "jspdf-autotable";
+import { unidadCorta } from "@/modules/inventario/recetas";
 import { datosEmpresa } from "@/modules/empresa/server";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
@@ -69,7 +70,7 @@ export const GET = withTenant(
       const body = items.map((i) => [
         pdfTxt(`${i.nombre}${i.sku ? `\n${i.sku}` : ""}`),
         ...deps.map((d) => (i.c[d.id] != null ? cant(i.c[d.id]) : "0")),
-        pdfTxt(`${cant(i.total)} ${i.unidad_medida}`),
+        pdfTxt(`${cant(i.total)} ${unidadCorta(i.unidad_medida ?? "Unidad")}`),
         ...(costos ? [`Gs. ${gs(i.valor ?? 0)}`] : []),
       ]);
       const foot = [[

@@ -9,7 +9,7 @@ import { filtrosProductos, resumenProductos } from "@/modules/reportes/server/pr
 export const runtime = "nodejs";
 
 const cant = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
-const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : "—");
+const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1).replace(".", ",")} %` : "—");
 const d = (s: string) => `${s.slice(8, 10)}/${s.slice(5, 7)}/${s.slice(0, 4)}`;
 
 export const GET = withTenant(

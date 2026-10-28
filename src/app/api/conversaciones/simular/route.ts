@@ -16,6 +16,9 @@ const cuerpo = z.object({
   telefono: z
     .string()
     .transform((v) => v.replace(/\D/g, ""))
+    // Número local de Paraguay ("0981 123 456") → internacional, como llega de WhatsApp: si no,
+    // la prueba abría un contacto nuevo en vez de seguir el chat del mismo cliente.
+    .transform((v) => (/^09\d{8}$/.test(v) ? `595${v.slice(1)}` : v))
     .refine((v) => v.length >= 8 && v.length <= 15, "Teléfono inválido (con código de país, ej. 595981123456)"),
   nombre: z.string().trim().max(120).nullish(),
   texto: z.string().trim().min(1, "Escribí el mensaje").max(4096),

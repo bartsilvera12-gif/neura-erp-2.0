@@ -30,6 +30,8 @@ import { AvisoTurnoViejo } from "@/modules/caja/AvisoTurnoViejo";
 type Dia = {
   fecha: string;
   totales: { turnos: number; abiertos: number; total_vendido: number; ventas_contado: number; ventas_credito: number; cobros: number; efectivo_esperado: number; diferencia: number };
+  /** Receta 92: lo vendido / cobrado en el día por la fecha de cada venta (null si falta la receta). */
+  hoy?: { total_vendido: number; ventas_contado: number; ventas_credito: number; cantidad_ventas: number; cobros: number } | null;
 };
 
 export default function TurnosPage() {
@@ -79,6 +81,8 @@ function TurnosContenido() {
 
   const sucursales = (datos?.sucursales ?? []).filter((s) => s.activa || s.cajas.some((c) => c.turno));
   const abiertas = datos?.abiertas.length ?? 0;
+  // Lo vendido en el día (receta 92); sin la receta, los totales de los turnos abiertos hoy.
+  const hoy = dia ? (dia.hoy ?? dia.totales) : null;
 
   return (
     <div className="space-y-6 pb-10">
@@ -97,12 +101,14 @@ function TurnosContenido() {
       {/* Resumen del día */}
       <section className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm sm:grid-cols-3 lg:grid-cols-5 [&>*]:bg-white">
         <Cifra label="Cajas abiertas" valor={String(abiertas)} icono={Wallet} />
-        <Cifra label="Vendido hoy" valor={dia ? formatGs(dia.totales.total_vendido) : "…"} icono={ShoppingCart} destacado />
-        <Cifra label="Contado" valor={dia ? formatGs(dia.totales.ventas_contado) : "…"} icono={Wallet} />
-        <Cifra label="Crédito" valor={dia ? formatGs(dia.totales.ventas_credito) : "…"} icono={Clock} />
-        <Cifra label="Cobros de cuentas" valor={dia ? formatGs(dia.totales.cobros) : "…"} icono={ArrowLeftRight} />
+        <Cifra label="Vendido hoy" valor={hoy ? formatGs(hoy.total_vendido) : "…"} icono={ShoppingCart} destacado />
+        <Cifra label="Contado" valor={hoy ? formatGs(hoy.ventas_contado) : "…"} icono={Wallet} />
+        <Cifra label="Crédito" valor={hoy ? formatGs(hoy.ventas_credito) : "…"} icono={Clock} />
+        <Cifra label="Cobros de cuentas" valor={hoy ? formatGs(hoy.cobros) : "…"} icono={ArrowLeftRight} />
       </section>
-      <p className="-mt-4 text-[11px] text-slate-400">Turnos abiertos hoy. El resto del detalle, en cada caja.</p>
+      <p className="-mt-4 text-[11px] text-slate-400">
+        {dia?.hoy ? `Lo vendido hoy${dia.hoy.cantidad_ventas ? ` (${dia.hoy.cantidad_ventas.toLocaleString("es-PY")} venta${dia.hoy.cantidad_ventas === 1 ? "" : "s"})` : ""}, sin las anuladas. El detalle del turno, en cada caja.` : "Turnos abiertos hoy. El resto del detalle, en cada caja."}
+      </p>
 
       {cargando ? (
         <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>

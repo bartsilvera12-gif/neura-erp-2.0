@@ -94,7 +94,8 @@ export function calcIva(tipo: TipoIva, importe: number): number {
 }
 
 export function formatGs(valor: number): string {
-  return `Gs. ${Math.round(valor).toLocaleString("es-PY")}`;
+  // `|| 0`: sin "Gs. -0" (un -0 de restar nada) ni "Gs. NaN" (un dato que no llegó).
+  return `Gs. ${(Math.round(valor) || 0).toLocaleString("es-PY")}`;
 }
 
 /** Roles que operan la caja (abrir, vender, cobrar, retirar, cerrar). */

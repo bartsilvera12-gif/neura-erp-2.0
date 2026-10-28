@@ -153,7 +153,7 @@ export function DetalleCobranzaPanel({ clienteId, onClose, onCambio, avisar }: {
                   <div className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Deuda total</div>
                   <div className="text-2xl font-bold tabular-nums text-rose-700">{gs(d.total_deuda)}</div>
                 </div>
-                <div className="pb-1 text-right text-xs text-slate-500">{d.cuotas_vencidas} cuota(s) vencida(s)</div>
+                <div className="pb-1 text-right text-xs text-slate-500">{d.cuotas_vencidas} {d.cuotas_vencidas === 1 ? "cuota vencida" : "cuotas vencidas"}</div>
               </div>
 
               <div className="grid grid-cols-2 gap-px border-t border-slate-100 bg-slate-100 text-xs">

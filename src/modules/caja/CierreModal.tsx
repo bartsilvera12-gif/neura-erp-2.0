@@ -275,7 +275,7 @@ export function ResumenTurnoPanel({ r }: { r: ResumenTurno }) {
         {r.cobros.por_metodo.length ? r.cobros.por_metodo.map((m) => <Linea key={m.metodo} label={m.label} valor={m.total} sangria />) : <p className="text-xs text-slate-400">Sin cobros en este turno.</p>}
       </Bloque>
 
-      <Bloque titulo="Salidas de efectivo" total={-(r.egresos.total + r.manuales.retiros.total + r.manuales.egresos.total)}>
+      <Bloque titulo="Salidas e ingresos de efectivo" total={r.manuales.ingresos.total - (r.egresos.total + r.manuales.retiros.total + r.manuales.egresos.total)}>
         {egresos.filter(([, v]) => v.cantidad).map(([l, v]) => <Linea key={l} label={`${l} (${v.cantidad})`} valor={-v.total} />)}
         {r.manuales.egresos.cantidad ? <Linea label={`Otros egresos (${r.manuales.egresos.cantidad})`} valor={-r.manuales.egresos.total} /> : null}
         <Linea label={`Retiros (${r.manuales.retiros.cantidad})`} valor={-r.manuales.retiros.total} />

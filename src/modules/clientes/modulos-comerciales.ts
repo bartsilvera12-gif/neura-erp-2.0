@@ -9,6 +9,7 @@ import type { Modulo } from "@/modules/types";
 export const moduloGestionClientes: Modulo = {
   id: "gestion-clientes",
   label: "Gestión Clientes",
+  palabras: ["consultas", "tipificar", "atencion al cliente"],
   href: "/clientes/gestion",
   grupo: "comercial",
   icon: "user-search",
@@ -18,6 +19,7 @@ export const moduloGestionClientes: Modulo = {
 export const moduloPlanes: Modulo = {
   id: "planes",
   label: "Planes",
+  palabras: ["suscripciones", "abonos", "planes mensuales"],
   href: "/clientes/suscripciones",
   grupo: "comercial",
   icon: "file",

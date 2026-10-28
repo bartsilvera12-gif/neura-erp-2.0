@@ -111,6 +111,12 @@ html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 a, button, input, select, textarea, label, summary, [role="button"], [role="tab"], [role="option"] { touch-action: manipulation; }
 * { -webkit-tap-highlight-color: transparent; }
 
+/* Tablet táctil (640–1023 px con dedo): las pestañas de 28 px (Mías / Sin asignar, Usuarios /
+   Perfiles, Finalizadas / Seguimientos…) se agrandan a 40 px para tocarlas sin errar. */
+@media (pointer: coarse) and (min-width: 640px) and (max-width: 1023.98px) {
+  [role="tab"] { min-height: 40px; }
+}
+
 @media (max-width: 639.98px) {
   /* iOS hace zoom al enfocar un campo con letra < 16 px: en celular todos los campos van a 16. */
   input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]),

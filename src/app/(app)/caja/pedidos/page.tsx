@@ -565,7 +565,7 @@ export default function PedidosMostradorPage() {
 
       {/* Celular / tablet angosta: pestañas */}
       <div className="flex shrink-0 overflow-hidden rounded-xl border border-slate-200 bg-white lg:hidden" role="tablist" aria-label="Pedidos">
-        {([["armar", editando ? `Editando ${editando.etiqueta}` : "Armar pedido"], ["lista", `Pedidos de hoy${pedidos.length ? ` (${pedidos.length})` : ""}`]] as const).map(([k, t]) => (
+        {([["armar", editando ? `Editando ${editando.etiqueta}` : "Armar pedido"], ["lista", `Pedidos de hoy${enCaja ? ` (${enCaja} en caja)` : ""}`]] as const).map(([k, t]) => (
           <button key={k} type="button" role="tab" aria-selected={pestana === k} onClick={() => setPestana(k)}
             className={`min-h-11 flex-1 px-3 text-sm font-semibold ${pestana === k ? "text-white" : "text-slate-600"}`}
             style={pestana === k ? { backgroundColor: TEAL } : undefined}>{t}</button>
@@ -683,7 +683,7 @@ function PieEnvio({ total, unidades, lineas, enviando, editando, error, imprimir
         </button>
       </div>
       <button type="button" role="switch" aria-checked={imprimir} onClick={() => onImprimir(!imprimir)}
-        className="inline-flex min-h-9 items-center gap-2 text-xs font-medium text-slate-600">
+        className="inline-flex min-h-10 items-center gap-2 text-xs font-medium text-slate-600">
         <span className={`relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition-colors ${imprimir ? "" : "bg-slate-300"}`} style={imprimir ? { backgroundColor: TEAL } : undefined}>
           <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${imprimir ? "translate-x-4" : "translate-x-0.5"}`} />
         </span>
@@ -698,7 +698,7 @@ function Miniatura({ url, nombre }: { url?: string | null; nombre: string }) {
     <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={url} alt={nombre} className="h-full w-full object-cover" />
+        <img src={url} alt={nombre} loading="lazy" decoding="async" className="h-full w-full object-cover" />
       ) : (
         <div className="flex h-full w-full items-center justify-center text-slate-300"><Package className="h-5 w-5" /></div>
       )}

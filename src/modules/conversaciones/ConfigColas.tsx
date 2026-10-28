@@ -81,7 +81,7 @@ export function ConfigColas() {
         <Link href="/conversaciones/monitoreo" className="hover:text-[#3F8E91] hover:underline max-sm:inline-flex max-sm:min-h-10 max-sm:items-center">Monitoreo</Link> / <span className="font-semibold text-slate-700">Colas y enrutamiento</span>
       </nav>
       <Encabezado
-        eyebrow="Omnicanal · Routing"
+        eyebrow="Omnicanal · Colas"
         titulo="Colas y enrutamiento"
         detalle="Definí colas, canales asociados, estrategia de distribución, SLA de primera respuesta y asesores por cola. Los chats entrantes se asignan solos con estas reglas."
       >

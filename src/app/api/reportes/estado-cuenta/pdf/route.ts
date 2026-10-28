@@ -16,7 +16,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const g = (n: number) => `${n < 0 ? "- " : ""}Gs. ${gs(Math.abs(n))}`;
-const pc = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)} %` : "—");
+const pc = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1).replace(".", ",")} %` : "—");
 
 export const GET = withTenant(
   async (ctx, req) => {

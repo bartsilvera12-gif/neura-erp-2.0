@@ -43,7 +43,7 @@ import {
 const TEAL = clienteConfig.color;
 type Item = Presupuesto["items"][number];
 const fechaHora = (iso: string) =>
-  new Date(iso).toLocaleString("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  new Date(iso).toLocaleString("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 export function PresupuestoDetalle({ id, onCerrar, onCambio, avisoInicial }: {
   id: string;

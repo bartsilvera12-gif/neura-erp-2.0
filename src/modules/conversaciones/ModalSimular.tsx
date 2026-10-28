@@ -20,7 +20,7 @@ export function ModalSimular({ inicial, onCerrar, onListo }: { inicial?: { telef
     setOk(null);
     try {
       const r = await simularEntrante({ telefono, nombre: nombre.trim() || undefined, texto });
-      setOk("Mensaje simulado: aparece en la bandeja por Realtime.");
+      setOk("Listo: el mensaje ya está en la bandeja. Podés simular otro o cerrar.");
       setTexto("");
       onListo(r.conversacion_id);
     } catch (e) {

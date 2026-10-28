@@ -36,7 +36,7 @@ export default function ListView({
         const fecha = new Date(`${k}T00:00:00Z`);
         return (
           <div key={k}>
-            <h3 className="mb-2 text-sm font-semibold capitalize text-slate-600">
+            <h3 className="mb-2 text-sm font-semibold first-letter:uppercase text-slate-600">
               {fechaLarga(fecha, { weekday: "long", day: "2-digit", month: "long" })}
             </h3>
             <div className="overflow-hidden rounded-xl border border-slate-200 bg-white">

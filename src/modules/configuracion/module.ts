@@ -20,12 +20,12 @@ export const moduloConfiguracion: Modulo = {
   familia: "Configuración",
   roles: ["ADMIN"],
   children: [
-    { label: "Datos de la empresa", href: "/configuracion/empresa", permiso: "configuracion" },
-    { label: "Tickets y facturación", href: "/configuracion/facturacion", permiso: "configuracion" },
+    { label: "Datos de la empresa", href: "/configuracion/empresa", permiso: "configuracion", palabras: ["ruc de la empresa", "logo", "razon social"] },
+    { label: "Tickets y facturación", href: "/configuracion/facturacion", permiso: "configuracion", palabras: ["timbrado", "impresora", "comanda", "numeracion"] },
     { label: "Mesas y QR", href: "/configuracion/mesas", permiso: "configuracion", funcion: "mesas" },
     // Receta 75: rubro (Comercio / Gastronomía) y funciones. Neura puede ocultarla (solo por SQL).
     { label: "Rubro y funciones", href: "/configuracion/funciones", permiso: "configuracion", funcion: "rubro" },
-    { label: "Usuarios", href: "/configuracion/usuarios", permiso: "administrar_usuarios" },
+    { label: "Usuarios", href: "/configuracion/usuarios", permiso: "administrar_usuarios", palabras: ["perfiles", "permisos", "empleados", "cajeros"] },
   ],
   atajos: [{ label: "Facturación electrónica (SIFEN)", href: "/configuracion/facturacion-electronica" }],
 };

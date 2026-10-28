@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Lock, Mail } from "lucide-react";
+import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { browserClient } from "@/lib/supabase/browser";
 import { clienteConfig } from "@/cliente.config";
 
@@ -12,6 +12,7 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [verClave, setVerClave] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [expirada, setExpirada] = useState(false);
@@ -27,7 +28,9 @@ export default function LoginPage() {
     const { error } = await browserClient().auth.signInWithPassword({ email: email.trim(), password });
     setBusy(false);
     if (error) {
-      setError("Credenciales incorrectas. Verificá tu email y contraseña.");
+      // Sin conexión no es "credenciales incorrectas": que no haga dudar de la contraseña.
+      const red = /fetch|network|timeout/i.test(error.message ?? "");
+      setError(red ? "No pudimos conectar con el servidor. Revisá tu internet y probá de nuevo." : "Credenciales incorrectas. Verificá tu email y contraseña.");
       return;
     }
     router.replace("/");
@@ -41,9 +44,8 @@ export default function LoginPage() {
         style={{ background: `linear-gradient(150deg, ${BRAND} 0%, var(--brand-dark) 100%)` }}
       >
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/15 text-lg font-black backdrop-blur">
-            {clienteConfig.nombre.charAt(0)}
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/brand/zentra-logo-360.webp" alt="ZENTRA" width={360} height={185} decoding="async" className="h-10 w-auto rounded-lg object-contain" />
           <span className="text-sm font-semibold tracking-wide">{clienteConfig.nombre}</span>
         </div>
 
@@ -67,11 +69,12 @@ export default function LoginPage() {
       <div className="flex flex-1 items-center justify-center px-5 pt-[max(1.5rem,env(safe-area-inset-top))] pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:p-6">
         <form onSubmit={onSubmit} className="animate-in w-full max-w-sm">
           <div className="mb-8">
-            <div
-              className="mb-5 flex h-11 w-11 items-center justify-center rounded-2xl text-lg font-black text-white lg:hidden"
-              style={{ backgroundColor: BRAND }}
-            >
-              {clienteConfig.nombre.charAt(0)}
+            {/* El mismo logo que el menú del sistema (en escritorio va en el panel de marca). */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {/* El logo es blanco: va sobre la placa oscura, igual que en la cabecera del celular. */}
+            <div className="mb-5 inline-flex h-12 items-center rounded-xl px-3 lg:hidden" style={{ backgroundColor: "var(--zentra-sidebar)" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/brand/zentra-logo-360.webp" alt="ZENTRA" width={360} height={185} decoding="async" fetchPriority="high" className="h-9 w-auto object-contain" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Iniciá sesión</h1>
             <p className="mt-1 text-sm text-slate-500">Ingresá a {clienteConfig.nombre}.</p>
@@ -97,14 +100,23 @@ export default function LoginPage() {
           <div className="relative mb-5">
             <Lock className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
-              type="password"
+              type={verClave ? "text" : "password"}
               autoComplete="current-password"
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]"
+              className="w-full rounded-xl border border-slate-200 py-2.5 pl-10 pr-12 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]"
               placeholder="••••••••"
             />
+            <button
+              type="button"
+              onClick={() => setVerClave((v) => !v)}
+              aria-label={verClave ? "Ocultar contraseña" : "Mostrar contraseña"}
+              aria-pressed={verClave}
+              className="absolute right-1 top-1/2 inline-flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+            >
+              {verClave ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
 
           {expirada && !error ? (

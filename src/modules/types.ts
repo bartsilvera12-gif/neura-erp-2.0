@@ -12,6 +12,8 @@ export type Modulo = {
   icon?: string;
   /** familia del menú (agrupamiento visual del sidebar), ej. "Finanzas", "Comercial" */
   familia?: string;
+  /** Solo para el buscador del menú: sinónimos del módulo (ej. CRM → "prospectos", "leads"). */
+  palabras?: string[];
   /** badge a la derecha del ítem (ej. "Nuevo") — estilo 21st.dev */
   badge?: string;
   /** roles que pueden verlo (vacío = todos los autenticados) */
@@ -42,6 +44,8 @@ export type Modulo = {
      * los perfiles (ej. cada reporte, Tipificaciones, "Nueva compra"). Ver `atajos`.
      */
     soloBusqueda?: boolean;
+    /** Solo para el buscador del menú: sinónimos con los que la gente busca esta pantalla (ej. "chat", "whatsapp"). */
+    palabras?: string[];
   }[];
   /**
    * Pantallas que el buscador del menú tiene que encontrar aunque no sean sub-pantallas del
@@ -49,7 +53,7 @@ export type Modulo = {
    * catálogo de perfiles ni el guard: se ven si el perfil puede abrir la pantalla dueña de la
    * ruta y, si se indican, tiene alguno de `permisos`.
    */
-  atajos?: { label: string; href: string; seccion?: string; permisos?: string[]; funcion?: FuncionPantalla }[];
+  atajos?: { label: string; href: string; seccion?: string; permisos?: string[]; funcion?: FuncionPantalla; palabras?: string[] }[];
   /**
    * El ítem del menú abre su propio panel (`href`, con tarjetas de las sub-pantallas) y las
    * sub-pantallas NO se despliegan en el menú. Igual cuentan como pantallas de los perfiles.

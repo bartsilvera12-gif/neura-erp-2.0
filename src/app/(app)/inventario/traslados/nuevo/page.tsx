@@ -25,6 +25,7 @@ import { depositosPlanos, invalidarDepositos, opcionesDepositos, useDepositos } 
 import { invalidarLista } from "@/modules/inventario/lista-cache";
 import { MOTIVOS_TRASLADO, cant, dia } from "@/modules/inventario/documentos";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, ET, INPUT, TEAL } from "@/modules/inventario/ui";
+import { unidadCorta } from "@/modules/inventario/recetas";
 import { SelectorFecha } from "@/components/SelectorFecha";
 
 type Linea = {
@@ -225,7 +226,7 @@ function NuevoTraslado() {
                       <p className="truncate font-medium text-slate-800 max-sm:whitespace-normal max-sm:[overflow-wrap:anywhere]">{l.prod.nombre}</p>
                       <p className="text-[11px] text-slate-500">
                         <span className="font-mono">{l.prod.sku}</span> ·{" "}
-                        {l.stock ? <>en {dOrigen?.nombre ?? "origen"}: <strong className={sinStock(l) ? "text-rose-600" : "text-slate-700"}>{cant(dep?.cantidad ?? 0)}</strong> {l.prod.unidad_medida}</> : <Loader2 className="inline h-3 w-3 animate-spin" />}
+                        {l.stock ? <>en {dOrigen?.nombre ?? "origen"}: <strong className={sinStock(l) ? "text-rose-600" : "text-slate-700"}>{cant(dep?.cantidad ?? 0)}</strong> {unidadCorta(l.prod.unidad_medida ?? "Unidad")}</> : <Loader2 className="inline h-3 w-3 animate-spin" />}
                       </p>
                     </div>
                     {conLotes ? (

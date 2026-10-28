@@ -22,7 +22,7 @@ import {
   Receipt, ReceiptText, Search, ShoppingBag, Split, Sun, Trash2, X, XCircle,
 } from "lucide-react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
-import type { CuentaPublica, EstadoPedidoPublico, MenuMesa, ProductoMenu } from "@/modules/mesas/publico";
+import type { CuentaPublica, EstadoPedidoPublico, ItemCuentaPublica, MenuMesa, ProductoMenu } from "@/modules/mesas/publico";
 import { ESTADOS_PEDIDO, gs, haceCuanto, horaCorta } from "@/modules/mesas/tipos";
 import { HojaModificadores, type ResultadoMods } from "@/modules/mesas/HojaModificadores";
 import { ModsDetalle } from "@/modules/mesas/ModsDetalle";
@@ -104,8 +104,25 @@ function useTema() {
   return { tema, alternar };
 }
 
-export function MenuCliente({ token, menu, color, logoInstalacion }: { token: string; menu: Menu; color: string; logoInstalacion: string }) {
+export function MenuCliente({ token, menu: menuInicial, color, logoInstalacion }: { token: string; menu: Menu; color: string; logoInstalacion: string }) {
   const { tema, alternar: alternarTema } = useTema();
+  // La carta se refresca sola (cada minuto con la pantalla a la vista, al volver a la pestaña y si un
+  // envío falla): lo que se termina desaparece sin que el cliente tenga que recargar y perder el pedido.
+  const [menu, setMenu] = useState<Menu>(menuInicial);
+  const refrescarMenu = useCallback(async (): Promise<Menu | null> => {
+    try {
+      const r = await fetch(`/api/publico/mesas/${token}`, { cache: "no-store" });
+      const b = await r.json().catch(() => null);
+      if (r.ok && b?.ok && b.data?.activa) { setMenu(b.data as Menu); return b.data as Menu; }
+    } catch { /* sin red: queda la carta que había */ }
+    return null;
+  }, [token]);
+  useEffect(() => {
+    const visible = () => { if (document.visibilityState === "visible") void refrescarMenu(); };
+    const id = setInterval(visible, 60_000);
+    document.addEventListener("visibilitychange", visible);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", visible); };
+  }, [refrescarMenu]);
   const [vista, setVista] = useState<Vista>("inicio");
   const [carrito, setCarrito] = useState<Record<string, Linea>>({});
   const [verCarrito, setVerCarrito] = useState(false);
@@ -343,7 +360,22 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
       ir("inicio");
       void cargarCuenta();
     } catch (e) {
-      setError((e as Error).message);
+      let msg = (e as Error).message;
+      // Algo se terminó mientras armaba el pedido: se trae la carta nueva y se saca lo que ya no está.
+      if (/disponible|stock|alcanza/i.test(msg)) {
+        const nuevo = await refrescarMenu();
+        if (nuevo) {
+          const hay = new Set(nuevo.productos.map((p) => p.id));
+          const fuera = [...new Set(lineas.filter(([, l]) => !hay.has(l.producto_id)).map(([, l]) => porId.get(l.producto_id)?.nombre).filter(Boolean))];
+          if (fuera.length) {
+            setCarrito((c) => Object.fromEntries(Object.entries(c).filter(([, l]) => hay.has(l.producto_id))));
+            msg = `Se terminó: ${fuera.join(", ")}. Lo sacamos de tu pedido: revisalo y envialo de nuevo.`;
+          } else if (!/extra|opci/i.test(msg)) {
+            msg = "Algo de tu pedido se terminó recién. Actualizamos la carta: revisá el pedido y envialo de nuevo.";
+          }
+        }
+      }
+      setError(msg);
     } finally {
       enviandoRef.current = false;
       setEnviando(false);
@@ -419,18 +451,18 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
                 <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm ${AVISO_OK}`}>
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                   <p className="min-w-0 flex-1">Pedido #{enviado} enviado. La caja lo confirma en un momento.</p>
-                  <button type="button" onClick={() => setEnviado(null)} aria-label="Cerrar aviso" className="-m-1 p-1"><X className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => setEnviado(null)} aria-label="Cerrar aviso" className="-my-2 -mr-2 grid h-10 w-10 shrink-0 place-items-center rounded-lg"><X className="h-4 w-4" /></button>
                 </div>
               ) : null}
               {cuentaCerrada ? (
                 <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm ${AVISO_INFO}`}>
                   <Receipt className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                   <p className="min-w-0 flex-1"><b>La cuenta se cerró.</b> ¡Gracias por venir!</p>
-                  <button type="button" onClick={() => setCuentaCerrada(false)} aria-label="Cerrar aviso" className="-m-1 p-1"><X className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => setCuentaCerrada(false)} aria-label="Cerrar aviso" className="-my-2 -mr-2 grid h-10 w-10 shrink-0 place-items-center rounded-lg"><X className="h-4 w-4" /></button>
                 </div>
               ) : null}
               {pedidosVivos.length ? <h2 className={`pt-1 text-xs font-semibold uppercase tracking-wider ${SUAVE}`}>Tus pedidos</h2> : null}
-              {pedidosVivos.map((p) => <TarjetaEstado key={p.seguimiento} p={p} />)}
+              {pedidosVivos.map((p) => <TarjetaEstado key={p.seguimiento} p={p} items={abierta?.items.filter((it) => it.pedido === p.numero)} />)}
             </section>
 
             {/* Tarjetas grandes */}
@@ -560,7 +592,7 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
                 <p className={`text-base font-semibold ${TEXTO}`}>Tu pedido</p>
                 <p className={`truncate text-xs ${SUAVE}`}>{menu.mesa}{subtitulo ? ` · ${subtitulo}` : ""}</p>
               </div>
-              <button type="button" aria-label="Cerrar" onClick={() => setVerCarrito(false)} disabled={enviando} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100"><X className="h-5 w-5" /></button>
+              <button type="button" aria-label="Cerrar" onClick={() => setVerCarrito(false)} disabled={enviando} className="-mr-1.5 grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100"><X className="h-5 w-5" /></button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
               {lineas.length === 0 ? (
@@ -804,7 +836,12 @@ function BarraProgreso({ total, actual }: { total: number; actual: number }) {
   );
 }
 
-function TarjetaEstado({ p }: { p: EstadoPedidoPublico }) {
+function TarjetaEstado({ p, items }: { p: EstadoPedidoPublico; items?: ItemCuentaPublica[] }) {
+  // Entrega por partes (una estación ya lo llevó y otra sigue): se avisa qué ya está en la mesa / listo.
+  const parcial = p.estado === "aceptado" || p.estado === "en_preparacion" || p.estado === "listo";
+  const nombres = (est: string) => (items ?? []).filter((it) => it.estado === est).map((it) => `${Number(it.cantidad)} × ${it.nombre}`);
+  const yaEntregado = parcial ? nombres("entregado") : [];
+  const yaListo = parcial && p.estado !== "listo" ? nombres("listo") : [];
   const e = ESTADOS_PEDIDO[p.estado];
   const Icono = p.estado === "rechazado" ? XCircle : p.estado === "listo" || p.estado === "entregado" ? CheckCircle2 : p.estado === "en_preparacion" ? ChefHat : Clock3;
   const pasos = ["nuevo", "aceptado", "en_preparacion", "listo"] as const;
@@ -820,6 +857,8 @@ function TarjetaEstado({ p }: { p: EstadoPedidoPublico }) {
       {p.estado === "rechazado" ? (
         <div className="mt-2 h-1.5 rounded-full bg-rose-400 dark:bg-rose-500/70" aria-hidden />
       ) : i >= 0 ? <BarraProgreso total={pasos.length} actual={i} /> : null}
+      {yaEntregado.length ? <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-300">Ya en la mesa: {yaEntregado.join(" · ")}</p> : null}
+      {yaListo.length ? <p className="mt-1 text-xs font-medium text-emerald-700 dark:text-emerald-300">Listo, ya te lo llevan: {yaListo.join(" · ")}</p> : null}
       <p className={`mt-2 text-xs ${SUAVE}`}>
         {p.items.map((it) => `${Number(it.cantidad)} × ${it.nombre}${it.modificadores_texto ? ` (${it.modificadores_texto})` : ""}`).join(" · ")} — <span className={`font-semibold ${MEDIO}`}>{gs(p.total)}</span>
       </p>

@@ -9,6 +9,7 @@
  * o el total).
  */
 import Link from "next/link";
+import { unidadCorta } from "@/modules/inventario/recetas";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import {
@@ -324,7 +325,7 @@ function Movimientos() {
               <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">{alcance.startsWith("d:") ? "Stock en el depósito" : "Stock total"}</p>
               <p className="text-lg font-semibold tabular-nums text-slate-900">
                 {cantidad(producto.stock_deposito ?? producto.stock_actual)}{" "}
-                <span className="text-xs font-normal text-slate-400">{producto.unidad_medida}</span>
+                <span className="text-xs font-normal text-slate-400">{unidadCorta(producto.unidad_medida ?? "Unidad")}</span>
               </p>
             </div>
             <button onClick={() => router.replace("/inventario/movimientos")} className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 text-xs font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 sm:min-h-0 sm:px-2.5 sm:py-1.5">

@@ -9,6 +9,7 @@
  *     valorizadas al costo. Si la carga alguien que no es ADMIN queda pendiente de aprobación.
  */
 import Link from "next/link";
+import { unidadCorta } from "@/modules/inventario/recetas";
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, ClipboardCheck, Loader2, PackageMinus, Trash2 } from "lucide-react";
@@ -246,7 +247,7 @@ function NuevoAjuste() {
                     <div className="min-w-0 flex-1 max-sm:basis-[calc(100%-3.25rem)]">
                       <p className="truncate font-medium text-slate-800 max-sm:whitespace-normal max-sm:[overflow-wrap:anywhere]">{l.prod.nombre}</p>
                       <p className="text-[11px] text-slate-500">
-                        <span className="font-mono">{l.prod.sku}</span> · en el sistema: {l.stock ? <strong className="text-slate-700">{cant(dep?.cantidad ?? 0)}</strong> : <Loader2 className="inline h-3 w-3 animate-spin" />} {l.prod.unidad_medida}
+                        <span className="font-mono">{l.prod.sku}</span> · en el sistema: {l.stock ? <strong className="text-slate-700">{cant(dep?.cantidad ?? 0)}</strong> : <Loader2 className="inline h-3 w-3 animate-spin" />} {unidadCorta(l.prod.unidad_medida ?? "Unidad")}
                       </p>
                     </div>
                     {tipo === "ajuste" ? (

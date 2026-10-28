@@ -135,19 +135,13 @@ export function Hilo({
   }, []);
   const verImagen = useCallback((url: string, nombre: string) => setVisor({ url, nombre }), []);
 
-  const filas: React.ReactNode[] = [];
-  let diaAnterior = "";
+  // Un grupo por día: la etiqueta del día queda pegada arriba solo mientras se ven SUS mensajes
+  // (sueltas en la misma lista se apilaban una encima de otra: "lune Ayer 026").
+  const grupos: { dia: string; etiqueta: string; filas: React.ReactNode[] }[] = [];
   for (const m of mensajes) {
     const d = diaPy(m.created_at);
-    if (d !== diaAnterior) {
-      diaAnterior = d;
-      filas.push(
-        <div key={`d-${d}`} className="sticky top-1 z-[5] flex justify-center py-2">
-          <span className="rounded-full border border-slate-200 bg-white/95 px-3 py-0.5 text-[11px] font-medium text-slate-500 shadow-sm">{etiquetaDia(m.created_at)}</span>
-        </div>,
-      );
-    }
-    filas.push(
+    if (grupos[grupos.length - 1]?.dia !== d) grupos.push({ dia: d, etiqueta: etiquetaDia(m.created_at), filas: [] });
+    grupos[grupos.length - 1].filas.push(
       <BurbujaMensaje
         key={m.id}
         m={m}
@@ -161,6 +155,14 @@ export function Hilo({
       />,
     );
   }
+  const filas = grupos.map((g) => (
+    <section key={`d-${g.dia}`}>
+      <div className="sticky top-1 z-[5] flex justify-center py-2">
+        <span className="rounded-full border border-slate-200 bg-white/95 px-3 py-0.5 text-[11px] font-medium text-slate-500 shadow-sm">{g.etiqueta}</span>
+      </div>
+      {g.filas}
+    </section>
+  ));
 
   return (
     <div className="relative min-h-0 flex-1">

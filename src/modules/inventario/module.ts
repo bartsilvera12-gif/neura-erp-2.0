@@ -17,18 +17,18 @@ export const moduloInventario: Modulo = {
   familia: "Operaciones",
   roles: ["ADMIN", "CAJERO", "VENDEDOR"],
   children: [
-    { label: "Productos", href: "/inventario" },
+    { label: "Productos", href: "/inventario", palabras: ["stock", "existencias", "articulos", "mercaderia", "precios"] },
     // Receta 72: recetas de los platos (Menú) y preparaciones. Muestra costos → "ver costos".
     { label: "Recetas", href: "/inventario/recetas", permiso: "ver_costos", funcion: "recetas" },
-    { label: "Movimientos", href: "/inventario/movimientos" },
+    { label: "Movimientos", href: "/inventario/movimientos", palabras: ["kardex", "stock"] },
     { label: "Traslados", href: "/inventario/traslados" },
-    { label: "Ajustes y pérdidas", href: "/inventario/ajustes" },
+    { label: "Ajustes y pérdidas", href: "/inventario/ajustes", palabras: ["merma", "inventario fisico", "conteo", "stock"] },
     // Lotes con vencimiento (perecibles). Siempre visible: sin productos con lotes muestra
     // cómo activarlos.
     { label: "Vencimientos", href: "/inventario/vencimientos" },
     { label: "Categorías", href: "/inventario/categorias" },
     // Sucursales y depósitos (configuración): solo ADMIN.
-    { label: "Depósitos", href: "/inventario/depositos", roles: ["ADMIN"] },
+    { label: "Depósitos", href: "/inventario/depositos", roles: ["ADMIN"], palabras: ["sucursales", "locales", "almacen"] },
   ],
   // Solo para el buscador del menú.
   atajos: [

@@ -132,7 +132,7 @@ export const MES_CORTO = ["", "ene", "feb", "mar", "abr", "may", "jun", "jul", "
 
 export function gs(n: number | null | undefined): string {
   if (n == null) return "—";
-  return `₲ ${Math.round(Number(n) || 0).toLocaleString("es-PY")}`;
+  return `Gs. ${Math.round(Number(n) || 0).toLocaleString("es-PY")}`; // como el resto del sistema (antes "₲")
 }
 export function fechaCorta(iso: string | null | undefined): string {
   if (!iso) return "—";

@@ -614,7 +614,7 @@ function ModalReporte({ reporte, mesLabel, onClose }: { reporte: ReporteConcilia
         <div className="flex shrink-0 items-start justify-between gap-3 border-b p-4">
           <div className="min-w-0">
             <h3 className="text-lg font-semibold text-slate-900">Conciliación del extracto</h3>
-            <p className="truncate text-xs text-slate-500">{reporte.archivo}{mesLabel ? ` · ${mesLabel}` : " · todos los meses"} · {r.creditos_extracto} crédito(s) en el extracto</p>
+            <p className="truncate text-xs text-slate-500">{reporte.archivo}{mesLabel ? ` · ${mesLabel}` : " · todos los meses"} · {r.creditos_extracto} {r.creditos_extracto === 1 ? "crédito" : "créditos"} en el extracto</p>
           </div>
           <button onClick={onClose} aria-label="Cerrar" className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button>
         </div>
@@ -636,7 +636,7 @@ function ModalReporte({ reporte, mesLabel, onClose }: { reporte: ReporteConcilia
           {r.sin_extracto === 0 && r.difieren === 0 ? (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">Todas las transferencias aprobadas tienen respaldo en el extracto.</div>
           ) : (
-            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{r.sin_extracto} aprobada(s) sin respaldo y {r.difieren} con monto distinto. Revisá abajo.</div>
+            <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{r.sin_extracto} {r.sin_extracto === 1 ? "aprobada" : "aprobadas"} sin respaldo y {r.difieren} con monto distinto. Revisá abajo.</div>
           )}
 
           {reporte.aprobados_sin_extracto.length > 0 ? (
@@ -694,7 +694,7 @@ function ModalReporte({ reporte, mesLabel, onClose }: { reporte: ReporteConcilia
           ) : null}
 
           {reporte.conciliados.length > 0 ? (
-            <p className="text-xs text-emerald-700">{reporte.conciliados.length} transferencia(s) conciliada(s) por {fmt(r.monto_conciliado)}.</p>
+            <p className="text-xs text-emerald-700">{reporte.conciliados.length} {reporte.conciliados.length === 1 ? "transferencia conciliada" : "transferencias conciliadas"} por {fmt(r.monto_conciliado)}.</p>
           ) : null}
           <p className="text-[11px] text-slate-400">El extracto se leyó directo del Excel/CSV y no modifica nada: es una verificación. Revisá los casos marcados.</p>
         </div>

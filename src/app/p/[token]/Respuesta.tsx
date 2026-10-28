@@ -12,7 +12,7 @@ import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { accionResponder, accionVisto } from "./acciones";
 
 const fechaHora = (iso: string) =>
-  new Date(iso).toLocaleString("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  new Date(iso).toLocaleString("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 export function Respuesta({ token, estado, permite, aceptadoAt, rechazadoAt, color }: {
   token: string;

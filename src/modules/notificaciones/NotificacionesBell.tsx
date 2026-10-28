@@ -42,6 +42,8 @@ type Resp = {
 };
 
 const POLL_MS = 20_000;
+/** Con el tiempo real conectado, el poll de respaldo se espacia a 1 por minuto. */
+const POLL_EN_VIVO_MS = 60_000;
 
 const ESTILO: Record<string, { icon: typeof Bell; wrap: string; label: string }> = {
   soporte: { icon: Ticket, wrap: "bg-orange-50 text-orange-600", label: "Soporte" },
@@ -69,7 +71,16 @@ export function NotificacionesBell() {
   const vistosRef = useRef<Set<string> | null>(null);
   const cargarRef = useRef<() => Promise<void>>(async () => {});
 
+  // Sin pedidos encimados: si llega otro pedido (poll, tiempo real, volver a la pestaña) mientras
+  // hay uno en curso, se repite UNA vez al terminar en vez de salir en paralelo.
+  const enCursoRef = useRef(false);
+  const repetirRef = useRef(false);
+  const ultimaCargaRef = useRef(0);
+  const enVivoRef = useRef(false);
   const cargar = useCallback(async () => {
+    if (enCursoRef.current) { repetirRef.current = true; return; }
+    enCursoRef.current = true;
+    ultimaCargaRef.current = Date.now();
     setCargando(true);
     try {
       const r = await apiFetch<Resp>("/api/notificaciones");
@@ -84,6 +95,8 @@ export function NotificacionesBell() {
       // Sin conexión el header sigue funcionando: se reintenta en el próximo poll.
     } finally {
       setCargando(false);
+      enCursoRef.current = false;
+      if (repetirRef.current) { repetirRef.current = false; void cargarRef.current(); }
     }
   }, []);
 
@@ -99,9 +112,15 @@ export function NotificacionesBell() {
     void cargar();
   }, [cargar]);
 
-  // Polling de respaldo (también al volver a la pestaña).
+  // Polling de respaldo (también al volver a la pestaña). Solo con la pestaña a la vista; con el
+  // tiempo real conectado alcanza con cada POLL_EN_VIVO_MS (los recordatorios de la agenda tienen
+  // 5 min de tolerancia).
   useEffect(() => {
-    const t = window.setInterval(() => void cargarRef.current(), POLL_MS);
+    const t = window.setInterval(() => {
+      if (document.visibilityState !== "visible") return;
+      if (enVivoRef.current && Date.now() - ultimaCargaRef.current < POLL_EN_VIVO_MS) return;
+      void cargarRef.current();
+    }, POLL_MS);
     const vis = () => document.visibilityState === "visible" && void cargarRef.current();
     document.addEventListener("visibilitychange", vis);
     return () => { window.clearInterval(t); document.removeEventListener("visibilitychange", vis); };
@@ -126,13 +145,14 @@ export function NotificacionesBell() {
             { event: "*", schema: sesion.schema, table: "usuario_notificaciones", filter: `usuario_id=eq.${sesion.usuarioId}` },
             () => void cargarRef.current(),
           )
-          .subscribe();
+          .subscribe((estado) => { enVivoRef.current = estado === "SUBSCRIBED"; });
       } catch {
         // Sólo se pierde el tiempo real; el polling cubre igual.
       }
     })();
     return () => {
       vivo = false;
+      enVivoRef.current = false;
       if (canal) void sb.removeChannel(canal);
     };
   }, [sesion]);

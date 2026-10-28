@@ -84,6 +84,22 @@ function porDia(lista: EventoHistorial[]): [string, EventoHistorial[]][] {
 
 const valor = (v: string | null | undefined) => (v == null || v === "" ? "—" : v === "true" ? "Sí" : v === "false" ? "No" : v);
 
+/** Códigos que guarda la base → lo que entiende la persona. */
+const CODIGOS: Record<string, string> = {
+  CREDITO: "Crédito", CONTADO: "Contado", GS: "Guaraníes", USD: "Dólares",
+  empresa: "Empresa", persona: "Persona física", MANUAL: "Manual", VENTA: "Desde una venta",
+};
+/** El valor de un cambio, legible: montos con separador de miles y códigos traducidos. */
+function valorCampo(campo: string, v: string | null | undefined): string {
+  const base = valor(v);
+  if (base === "—" || v == null) return base;
+  if (/crédito|valor anual/i.test(campo) && /^-?\d+(\.\d+)?$/.test(v)) {
+    const n = Number(v);
+    return /crédito/i.test(campo) ? `Gs. ${n.toLocaleString("es-PY", { maximumFractionDigits: 0 })}` : n.toLocaleString("es-PY", { maximumFractionDigits: 2 });
+  }
+  return CODIGOS[v] ?? base;
+}
+
 export function TabHistorial({ clienteId, recarga }: { clienteId: string; recarga: number }) {
   const [historial, setHistorial] = useState<EventoHistorial[]>([]);
   const [cargando, setCargando] = useState(true);
@@ -167,8 +183,8 @@ export function TabHistorial({ clienteId, recarga }: { clienteId: string; recarg
                           {cambios.map((c, i) => (
                             <div key={i} className="grid grid-cols-3 gap-2 border-t border-slate-100 px-2.5 py-1.5 text-xs">
                               <span className="font-medium text-slate-700">{c.campo}</span>
-                              <span className="text-rose-600 line-through">{valor(c.antes)}</span>
-                              <span className="text-emerald-700">{valor(c.despues)}</span>
+                              <span className="text-rose-600 line-through">{valorCampo(c.campo, c.antes)}</span>
+                              <span className="text-emerald-700">{valorCampo(c.campo, c.despues)}</span>
                             </div>
                           ))}
                         </div>

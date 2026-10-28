@@ -14,12 +14,47 @@ import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, ERR, fail } from "@/lib/api/responses";
 import type { TenantContext } from "@/lib/api/with-tenant";
-import { avisosAgendaDe } from "@/modules/agenda/avisos";
+import { avisosAgendaDe, avisosDesdeCitas, rangoAvisosAgenda, type CitaConResponsables } from "@/modules/agenda/avisos";
 
 const COLS = "id, tipo, bandeja, titulo, cuerpo, url, leida_at, created_at";
 
+type Campanita = { notificaciones: Record<string, unknown>[]; general: number; soporte: number; citas: CitaConResponsables[] };
+
+/**
+ * Receta 91: todo en UN viaje a la base (antes 3-5: lista, dos contadores, citas y sus
+ * responsables). La RPC es SECURITY INVOKER, así que la RLS manda igual. Si la base todavía no
+ * tiene la función (schema sin la receta 91), null → se arma como antes.
+ */
+const sinRpcHasta = new Map<string, number>();
+
+async function campanitaEnUnViaje(ctx: TenantContext, soloNoLeidas: boolean) {
+  const ahora = Date.now();
+  // Schema sin la función: no se la vuelve a probar en cada poll (se reintenta a los 5 min).
+  if ((sinRpcHasta.get(ctx.schema) ?? 0) > ahora) return null;
+  const { desde, hasta } = rangoAvisosAgenda(ahora);
+  const { data, error } = await ctx.db.rpc<Campanita>("notificaciones_campanita", {
+    p_usuario: ctx.usuarioId, p_solo_no_leidas: soloNoLeidas, p_desde: desde, p_hasta: hasta,
+  });
+  if (error || !data) {
+    const code = (error as { code?: string } | null)?.code;
+    if (code === "PGRST202" || code === "42883") sinRpcHasta.set(ctx.schema, ahora + 5 * 60_000);
+    return null;
+  }
+  const reuniones = avisosDesdeCitas(data.citas ?? [], ctx.usuarioId, ahora);
+  const general = Number(data.general ?? 0) + reuniones.length;
+  const soporte = Number(data.soporte ?? 0);
+  return ok({
+    notificaciones: [...reuniones, ...(data.notificaciones ?? [])],
+    no_leidas: { general, soporte, total: general + soporte },
+    usuario_id: ctx.usuarioId,
+    schema: ctx.schema,
+  });
+}
+
 export const GET = withTenant(async (ctx, req) => {
   const soloNoLeidas = new URL(req.url).searchParams.get("solo_no_leidas") === "1";
+  const rapido = await campanitaEnUnViaje(ctx, soloNoLeidas).catch(() => null);
+  if (rapido) return rapido;
   let lista = ctx.db.select("usuario_notificaciones", COLS).eq("usuario_id", ctx.usuarioId);
   if (soloNoLeidas) lista = lista.is("leida_at", null);
   const [items, gen, sop, reuniones] = await Promise.all([

@@ -25,6 +25,10 @@ const TEAL = clienteConfig.color;
 const OPCIONES_PERIODO: [string, string][] = (["todo", "hoy", "semana", "mes", "mes_anterior", "3m", "anio"] as Atajo[]).map((k) => [k, k === "todo" ? "Todas las fechas" : ATAJO_LABEL[k]]);
 const fechaVenta = (iso: string) => new Date(iso).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 
+// Suma de cantidades con coma decimal (máx. 3): "1,5" y no "1.0000339999999999".
+const cantTotal = (items: { cantidad: number }[]) =>
+  items.reduce((a, i) => a + Number(i.cantidad), 0).toLocaleString("es-PY", { maximumFractionDigits: 3 });
+
 type VentaItem = { producto_nombre: string; sku?: string | null; cantidad: number; tipo_iva: string };
 type Venta = {
   id: string;
@@ -269,15 +273,15 @@ function Ordenes({ cajas, onAnulada }: { cajas: EstadoCajas | null; onAnulada: (
               return (
                 <>
                   <span className="block">{items[0]?.producto_nombre ?? "—"}{items.length > 1 ? <span className="font-normal text-slate-400"> +{items.length - 1} más</span> : null}</span>
-                  <span className="block text-xs font-normal text-slate-400">{items.length} ítem{items.length === 1 ? "" : "s"} · {items.reduce((a, i) => a + Number(i.cantidad), 0)} u</span>
+                  <span className="block text-xs font-normal text-slate-400">{items.length} ítem{items.length === 1 ? "" : "s"} · {cantTotal(items)} u</span>
                 </>
               );
             } },
           { key: "items", titulo: "Ítems", claseTh: "text-center", claseTd: "text-center", movil: "oculto",
             celda: (v) => <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">{(v.ventas_items ?? []).length}</span>,
-            celdaMovil: (v) => { const it = v.ventas_items ?? []; return `${it.length} · ${it.reduce((a, i) => a + Number(i.cantidad), 0)} u`; } },
+            celdaMovil: (v) => { const it = v.ventas_items ?? []; return `${it.length} · ${cantTotal(it)} u`; } },
           { key: "cant", titulo: "Cant. total", claseTh: "text-right", claseTd: "text-right tabular-nums text-slate-700", movil: "oculto",
-            celda: (v) => (v.ventas_items ?? []).reduce((a, i) => a + Number(i.cantidad), 0) },
+            celda: (v) => cantTotal(v.ventas_items ?? []) },
           { key: "iva", titulo: "IVA", movil: "detalle",
             celda: (v) => { const ivas = [...new Set((v.ventas_items ?? []).map((i) => i.tipo_iva))]; return <span className="rounded-full bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">{ivas.length === 1 ? `IVA ${ivas[0]}` : "Varios"}</span>; } },
           { key: "total", titulo: "Total", claseTh: "text-right", claseTd: "text-right font-semibold tabular-nums text-slate-800", movil: "valor", celda: (v) => formatGs(v.total) },

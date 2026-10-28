@@ -1,5 +1,7 @@
 "use client";
 
+import { useRef } from "react";
+
 /** Formatea número con separador de miles (Paraguay: 1.200.000) */
 export function formatMontoDisplay(value: number | string, decimals = true): string {
   const n = typeof value === "string" ? parseMontoInput(value) : value;
@@ -46,8 +48,11 @@ export default function MontoInput({
   onChange,
   decimals = true,
   className = "",
+  onFocus,
+  onMouseUp,
   ...rest
 }: MontoInputProps) {
+  const recienEnfocado = useRef(false);
   const numValue = typeof value === "string"
     ? (value === "" ? 0 : parseMontoInput(value))
     : Number(value) || 0;
@@ -69,6 +74,18 @@ export default function MontoInput({
       value={display}
       onChange={handleChange}
       className={className}
+      // Con "0" adentro, al tocar el campo se selecciona: lo que se tipea reemplaza el 0
+      // (antes "3000" quedaba "30.000").
+      onFocus={(e) => {
+        const el = e.currentTarget;
+        if (numValue === 0 && el.value !== "") { el.select(); recienEnfocado.current = true; setTimeout(() => { recienEnfocado.current = false; }, 400); }
+        onFocus?.(e);
+      }}
+      // El mouseup del mismo clic que enfocó no debe mover el cursor (deshacía la selección).
+      onMouseUp={(e) => {
+        if (recienEnfocado.current) { e.preventDefault(); recienEnfocado.current = false; }
+        onMouseUp?.(e);
+      }}
       {...rest}
     />
   );

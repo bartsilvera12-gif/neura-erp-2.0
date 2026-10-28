@@ -208,7 +208,7 @@ export function DetalleCompra({ id, onClose, onAnulada }: { id: string; onClose:
             <div className="rounded-xl border border-rose-200 p-4">
               <p className="text-sm font-semibold text-slate-800">¿Por qué la anulás?</p>
               <p className="mt-0.5 text-xs text-slate-500">
-                {items.length ? "Se descuenta del stock lo que entró con esta compra y se recalcula el costo promedio (queda en el kardex). " : ""}
+                {items.length ? "Se descuenta del stock lo que entró con esta compra y se quita su costo (queda en el kardex). " : ""}
                 {gastos.length ? `${items.length ? "Las líneas de gasto" : "El gasto"} deja${items.length ? "n" : ""} de contar en el resumen de gastos (no tocan stock). ` : ""}
                 {c.orden_compra_id ? `Lo recibido vuelve a quedar pendiente en la ${c.oc?.numero_oc ?? "orden de compra"}. ` : ""}
                 {c.tipo_pago === "contado" && c.medio_pago === "efectivo" ? "El egreso de caja se anula (solo si esa caja sigue abierta). " : ""}

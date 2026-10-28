@@ -16,7 +16,7 @@ export default function NuevoProspectoPage() {
   }, []);
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <Link href="/crm" className="text-sm font-medium text-[var(--brand)] hover:underline">← Volver</Link>
+      <Link href="/crm" className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--brand)] hover:underline sm:min-h-0">← Volver</Link>
       <div>
         <div className="flex items-center gap-2">
           <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--brand)] shadow-[0_0_0_3px_var(--brand-100)]" />

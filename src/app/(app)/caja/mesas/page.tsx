@@ -18,7 +18,7 @@ import { BellRing, Check, CheckCircle2, ChefHat, Loader2, Receipt, RotateCcw, Se
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
-import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { tienePermiso, useFuncion, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { useEsEscritorio } from "@/lib/ui/responsive";
 import { clienteConfig } from "@/cliente.config";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, PedirMotivo, Pestanas } from "@/modules/inventario/ui";
@@ -35,6 +35,8 @@ const CLAVE_SONIDO = "neura.mesas.sonido";
 export default function PedidosMesasPage() {
   const me = useUsuario();
   const puedeAtender = tienePermiso(me, "pedidos_mesas");
+  // Sin "Cocina y estaciones" nadie marca las comandas como listas: la caja entrega directo.
+  const conCocina = useFuncion("cocina");
   const [sonido, setSonido] = useState(true);
   useEffect(() => { try { setSonido(localStorage.getItem(CLAVE_SONIDO) !== "0"); } catch { /* sin storage */ } }, []);
   const sonidoRef = useRef(sonido);
@@ -74,12 +76,14 @@ export default function PedidosMesasPage() {
   useEffect(() => { if (!piden.length) setPidieron([]); }, [piden.length]);
   const variasSucursales = new Set([...(datos?.pedidos ?? []).map((p) => p.sucursal.id), ...cuentas.map((c) => c.sucursal.id)]).size > 1;
 
-  // Contador en el título de la pestaña: pedidos sin atender.
+  // Contador en el título de la pestaña: pedidos sin atender + mesas que pidieron la cuenta.
   useEffect(() => {
     const base = "Pedidos de mesas";
-    document.title = nuevos.length ? `(${nuevos.length}) ${base}` : base;
+    const n = nuevos.length + piden.length;
+    document.title = n ? `(${n}) ${base}` : base;
     return () => { document.title = clienteConfig.nombre; };
-  }, [nuevos.length]);
+    // `datos`: se reaplica en cada actualización (Next pone el título de la ruta después de montar).
+  }, [nuevos.length, piden.length, datos]);
   useEffect(() => { if (!nuevos.length) setLlegaron(0); }, [nuevos.length]);
 
   const escritorio = useEsEscritorio();
@@ -99,6 +103,30 @@ export default function PedidosMesasPage() {
     } catch (e) {
       setAviso({ tipo: "error", texto: `${p.mesa.nombre} · ${k.estacion_nombre}: ${(e as Error).message}` });
     } finally {
+      setOcupado(null);
+    }
+  }, [recargar]);
+
+  // Sin cocina: "Marcar entregado" lleva cada parte (o el pedido) a lista y la entrega.
+  const entregarDirecto = useCallback(async (p: PedidoMesa) => {
+    setOcupado(p.id);
+    setAviso(null);
+    try {
+      const comandas = (p.comandas ?? []).filter((k) => k.estado !== "entregado");
+      if (comandas.length) {
+        for (const k of comandas) {
+          if (k.estado !== "listo") await apiFetch(`/api/mesas/comandas/${k.id}`, { method: "POST", body: JSON.stringify({ accion: "listo" }) });
+          await apiFetch(`/api/mesas/comandas/${k.id}`, { method: "POST", body: JSON.stringify({ accion: "entregar" }) });
+        }
+      } else {
+        if (p.estado !== "listo") await apiFetch(`/api/mesas/pedidos/${p.id}`, { method: "POST", body: JSON.stringify({ accion: "listo", motivo: null }) });
+        await apiFetch(`/api/mesas/pedidos/${p.id}`, { method: "POST", body: JSON.stringify({ accion: "entregar", motivo: null }) });
+      }
+    } catch (e) {
+      setAviso({ tipo: "error", texto: `${p.mesa.nombre} · #${p.numero}: ${(e as Error).message}` });
+    } finally {
+      invalidar(URL_TABLERO);
+      await recargar();
       setOcupado(null);
     }
   }, [recargar]);
@@ -182,7 +210,11 @@ export default function PedidosMesasPage() {
           <ul className="space-y-2">
             {enCurso.map((p) => (
               <TarjetaPedido key={p.id} p={p} ahora={ahora()} conSucursal={variasSucursales} compacta>
-                {p.comandas?.length ? (
+                {!conCocina ? (
+                  <button type="button" disabled={ocupado === p.id} onClick={() => void entregarDirecto(p)} className={`${BOTON_SECUNDARIO} min-h-11 w-full lg:min-h-0`}>
+                    {ocupado === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" aria-hidden />} Marcar entregado
+                  </button>
+                ) : p.comandas?.length ? (
                   <AvanceEstaciones p={p} ocupado={ocupado} onEntregar={(k) => void entregarParte(p, k)} onEntregarListos={() => void accion(p, "entregar_listos")} />
                 ) : p.estado === "listo" ? (
                   <button type="button" disabled={ocupado === p.id} onClick={() => void accion(p, "entregar")} className={`${BOTON_SECUNDARIO} min-h-10 w-full lg:min-h-0`}>
@@ -339,7 +371,7 @@ export default function PedidosMesasPage() {
               {sonido ? <Volume2 className="h-4 w-4" aria-hidden /> : <VolumeX className="h-4 w-4" aria-hidden />}
               <span className="max-sm:hidden">{sonido ? "Sonido" : "Silencio"}</span>
             </button>
-            {tienePermiso(me, "cocina") ? <Link href="/caja/cocina" className={`${BOTON_SECUNDARIO} min-h-11 no-underline lg:min-h-0`}><ChefHat className="h-4 w-4" aria-hidden /> Cocina</Link> : null}
+            {conCocina && tienePermiso(me, "cocina") ? <Link href="/caja/cocina" className={`${BOTON_SECUNDARIO} min-h-11 no-underline lg:min-h-0`}><ChefHat className="h-4 w-4" aria-hidden /> Cocina</Link> : null}
           </div>
         }
       />
@@ -348,7 +380,7 @@ export default function PedidosMesasPage() {
         <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
           <BellRing className="h-4 w-4 shrink-0" aria-hidden />
           <span className="flex-1">{llegaron === 1 ? "Llegó un pedido nuevo." : `Llegaron ${llegaron} pedidos nuevos.`}</span>
-          <button type="button" onClick={() => setLlegaron(0)} aria-label="Cerrar aviso" className="rounded p-1"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={() => setLlegaron(0)} aria-label="Cerrar aviso" className="-my-1.5 -mr-1.5 grid h-10 w-10 shrink-0 place-items-center rounded-lg hover:bg-black/5"><X className="h-4 w-4" /></button>
         </div>
       ) : null}
       {pidieron.length > 0 ? (
@@ -356,7 +388,7 @@ export default function PedidosMesasPage() {
           <Receipt className="h-4 w-4 shrink-0" aria-hidden />
           <span className="flex-1">{pidieron.length === 1 ? `${pidieron[0]} pidió la cuenta.` : `Pidieron la cuenta: ${pidieron.join(", ")}.`} Revisala en Cuentas abiertas y enviala a caja.</span>
           {!escritorio && tab !== "cuentas" ? <button type="button" onClick={() => setTab("cuentas")} className="min-h-11 shrink-0 rounded-lg px-2 font-semibold underline underline-offset-2">Ver</button> : null}
-          <button type="button" onClick={() => setPidieron([])} aria-label="Cerrar aviso" className="rounded p-1"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={() => setPidieron([])} aria-label="Cerrar aviso" className="-my-1.5 -mr-1.5 grid h-10 w-10 shrink-0 place-items-center rounded-lg hover:bg-black/5"><X className="h-4 w-4" /></button>
         </div>
       ) : null}
       {aviso ? (

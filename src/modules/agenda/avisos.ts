@@ -47,10 +47,30 @@ type CitaRow = { id: string; titulo: string; inicio_at: string; estado: string; 
  * Avisos de las reuniones próximas de un usuario. Destinatarios: los responsables de la
  * cita MÁS quien la cargó (como el actual). Una sola vez por cita aunque cumpla los dos roles.
  */
+/** Rango de inicio de las citas que pueden tener aviso ahora (de ahora a 65 min). */
+export function rangoAvisosAgenda(ahora = Date.now()): { desde: string; hasta: string } {
+  return {
+    desde: new Date(ahora).toISOString(),
+    hasta: new Date(ahora + (VENTANAS_MIN[0] + TOLERANCIA_MIN) * 60_000).toISOString(),
+  };
+}
+
+/** Cita con sus responsables extra, tal como la devuelve notificaciones_campanita (receta 91). */
+export type CitaConResponsables = CitaRow & { responsables?: string[] | null };
+
+/**
+ * Avisos a partir de citas ya leídas (vigentes o no: se vuelven a filtrar). Lo usa la campanita
+ * cuando trae todo en un solo viaje (notificaciones_campanita).
+ */
+export function avisosDesdeCitas(citas: CitaConResponsables[], usuarioId: string, ahora = Date.now()): AvisoAgenda[] {
+  const vigentes = citas.filter((c) => !ESTADOS_NO_BLOQUEAN.has(c.estado));
+  const extras = new Map(vigentes.map((c) => [c.id, c.responsables ?? []]));
+  return armarAvisos(vigentes, usuarioId, extras, ahora);
+}
+
 export async function avisosAgendaDe(db: TenantDb, usuarioId: string): Promise<AvisoAgenda[]> {
   const ahora = Date.now();
-  const desde = new Date(ahora).toISOString();
-  const hasta = new Date(ahora + (VENTANAS_MIN[0] + TOLERANCIA_MIN) * 60_000).toISOString();
+  const { desde, hasta } = rangoAvisosAgenda(ahora);
 
   const { data, error } = await db
     .select("agenda_citas", "id, titulo, inicio_at, estado, responsable_id, created_by, ubicacion")
@@ -64,6 +84,10 @@ export async function avisosAgendaDe(db: TenantDb, usuarioId: string): Promise<A
   if (vigentes.length === 0) return [];
 
   const extras = await responsablesPorCita(db, vigentes.map((c) => c.id)).catch(() => null);
+  return armarAvisos(vigentes, usuarioId, extras, ahora);
+}
+
+function armarAvisos(vigentes: CitaRow[], usuarioId: string, extras: Map<string, string[]> | null, ahora: number): AvisoAgenda[] {
   const mias = vigentes.filter(
     (c) => c.responsable_id === usuarioId || c.created_by === usuarioId || (extras?.get(c.id) ?? []).includes(usuarioId),
   );

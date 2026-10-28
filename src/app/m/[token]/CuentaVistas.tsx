@@ -551,7 +551,7 @@ function ItemAsignable({ it, a, nombres, color, onCambiar }: {
     ? entre.length === 0 ? "Sin asignar: tocá quién lo paga"
       : entre.length === 1 ? `Lo paga ${nombres[entre[0]]}`
         : `Compartido entre ${entre.length} · ${gs((q * it.precio_unitario) / entre.length)} c/u`
-    : completo ? "Repartido" : `Faltan ${cant(q - asignadas)} de ${cant(q)}`;
+    : completo ? "Repartido" : `${q - asignadas === 1 ? "Falta" : "Faltan"} ${cant(q - asignadas)} de ${cant(q)}`;
 
   return (
     <li className={`${TARJETA} px-3.5 py-3 ${completo ? "" : "ring-1 ring-amber-300 dark:ring-amber-400/40"}`}>
@@ -594,7 +594,7 @@ function ItemAsignable({ it, a, nombres, color, onCambiar }: {
         <p className={`text-xs ${completo ? SUAVE : "font-medium text-amber-700 dark:text-amber-300"}`}>{leyenda}</p>
         {q > 1 ? (
           <button type="button" onClick={() => onCambiar(compartido ? null : (entre.length ? { modo: "compartido", entre } : { modo: "compartido", entre: [] }))}
-            className={`min-h-9 text-xs font-semibold ${LINK_MARCA}`} style={{ color }}>
+            className={`-my-1 -mr-1 min-h-10 px-1 text-xs font-semibold ${LINK_MARCA}`} style={{ color }}>
             {compartido ? "Repartir por unidades" : "Compartir entre varios"}
           </button>
         ) : null}

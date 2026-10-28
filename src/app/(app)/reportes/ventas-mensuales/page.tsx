@@ -108,12 +108,12 @@ function VentasPorMes() {
                     gs(m.cantidad ? m.total / m.cantidad : 0), gs(m.contado), gs(m.credito),
                     ...(variasSuc ? d.sucursales.map((s) => gs(m.por_sucursal[s.id] ?? 0)) : []),
                     Number(m.anterior) ? gs(m.anterior) : "—",
-                    va == null ? "—" : <span key="v" className={va >= 0 ? "text-emerald-600" : "text-rose-600"}>{va >= 0 ? "▲" : "▼"} {Math.abs(va).toFixed(1)} %</span>],
+                    va == null ? "—" : <span key="v" className={va >= 0 ? "text-emerald-600" : "text-rose-600"}>{va >= 0 ? "▲" : "▼"} {Math.abs(va).toFixed(1).replace(".", ",")} %</span>],
                 };
               })}
               pie={["Total", gs(t.total), num(t.cantidad), gs(t.cantidad ? Number(t.total) / Number(t.cantidad) : 0), gs(t.contado), gs(t.credito),
                 ...(variasSuc ? d.sucursales.map((s) => gs(d.por_sucursal.find((x) => x.id === s.id)?.total ?? 0)) : []), gs(t.anterior),
-                variacion(Number(t.total), Number(t.anterior)) == null ? "—" : `${variacion(Number(t.total), Number(t.anterior))!.toFixed(1)} %`]} />
+                variacion(Number(t.total), Number(t.anterior)) == null ? "—" : `${variacion(Number(t.total), Number(t.anterior))!.toFixed(1).replace(".", ",")} %`]} />
           </Tarjeta>
         </>
       )}

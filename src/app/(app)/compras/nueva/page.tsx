@@ -827,7 +827,7 @@ function NuevaCompra() {
               {etiquetaRegistrar}
             </button>
             <p className="mt-2 text-center text-[11px] text-slate-400">
-              {merc.length ? `La mercadería suma stock${opcDepositos.length > 1 ? ` en ${opcDepositos.find(([id]) => id === depositoEf)?.[1] ?? "el depósito elegido"}` : ""} y recalcula el costo promedio. ` : ""}
+              {merc.length ? `La mercadería suma stock${opcDepositos.length > 1 ? ` en ${opcDepositos.find(([id]) => id === depositoEf)?.[1] ?? "el depósito elegido"}` : ""} con el costo de esta compra (las ventas usan primero lo más viejo). ` : ""}
               {gastos.length ? "Los gastos van al resumen de gastos por categoría y sucursal (no tocan stock)." : ""}
             </p>
           </div>

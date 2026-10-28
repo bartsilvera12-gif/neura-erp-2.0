@@ -53,6 +53,9 @@ type Venta = {
   punto: { nombre: string } | null;
   sucursal: { nombre: string } | null;
   deposito: { nombre: string } | null;
+  tipo_documento?: string | null;
+  receptor_nombre?: string | null;
+  receptor_ruc?: string | null;
 };
 type Pago = { id: string; metodo_pago: string; monto: number; referencia: string | null; banco: string | null; recibido: number | null; vuelto: number | null };
 type Cuenta = { vencimiento: string; cobrado: number; saldo: number; estado: string } | null;
@@ -111,12 +114,12 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
       const res = await fetch(`/api/ventas/${d.venta.id}/ticket?auto=1`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
-      if (!res.ok) return;
+      if (!res.ok) { setError("No se pudo abrir el comprobante. Probá de nuevo."); return; }
       const html = await res.text();
       const url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
       window.open(url, "_blank", "noopener");
       setTimeout(() => URL.revokeObjectURL(url), 15000);
-    } catch { /* best-effort */ }
+    } catch { setError("No se pudo abrir el comprobante. Probá de nuevo."); }
   }
 
   const cajaTxt = venta ? [venta.punto?.nombre, venta.sucursal?.nombre].filter(Boolean).join(" · ") : "";
@@ -133,7 +136,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
             <h2 className="text-base font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-lg">Venta {venta?.numero_control ?? "…"}</h2>
             {venta ? <p className="mt-0.5 text-xs text-slate-500">{new Date(venta.fecha).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}{venta.usuario_nombre ? ` · ${venta.usuario_nombre}` : ""}</p> : null}
           </div>
-          <button type="button" onClick={onClose} aria-label="Cerrar" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-5 w-5" /></button>
+          <button type="button" onClick={onClose} aria-label="Cerrar" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-5 w-5" /></button>
         </div>
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5">
@@ -157,6 +160,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
                 <Campo label="Caja" valor={cajaTxt ? `${cajaTxt}${venta.turno ? ` · turno N° ${venta.turno.numero_caja}${turnoCerrado ? " (cerrado)" : ""}` : ""}` : "—"} />
                 <Campo label="Salió de" valor={venta.deposito?.nombre ?? "—"} />
                 <Campo label="Precio" valor={PRECIO[d.items[0]?.tipo_precio ?? "minorista"] ?? "Minorista"} />
+                <Campo label="Documento" valor={venta.tipo_documento === "factura" ? `Factura${venta.receptor_ruc ? ` · RUC ${venta.receptor_ruc}` : ""}` : "Ticket"} />
               </div>
 
               {credito && d.cuenta ? (
@@ -197,7 +201,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
                       {i.modificadores || i.modificadores_texto ? (
                         <p className="mt-0.5 text-xs text-slate-500 [overflow-wrap:anywhere]">{textoConPrecios(i.modificadores) || i.modificadores_texto}</p>
                       ) : null}
-                      <p className="mt-0.5 text-xs text-slate-400">{i.cantidad} × {formatGs(i.precio_venta)}{i.sku ? ` · ${i.sku}` : ""}</p>
+                      <p className="mt-0.5 text-xs text-slate-400">{Number(i.cantidad).toLocaleString("es-PY", { maximumFractionDigits: 3 })} × {formatGs(i.precio_venta)}{i.sku ? ` · ${i.sku}` : ""}</p>
                     </div>
                     <div className="shrink-0 text-right">
                       <p className="text-sm font-semibold tabular-nums text-slate-900">{formatGs(i.total_linea)}</p>

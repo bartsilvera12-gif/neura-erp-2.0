@@ -136,7 +136,7 @@ export function tamanoLegible(bytes: number | null | undefined): string {
   if (bytes == null || !Number.isFinite(bytes)) return "—";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1).replace(/\.0$/, "").replace(".", ",")} MB`;
 }
 
 // ── Agenda ───────────────────────────────────────────────────────────────────

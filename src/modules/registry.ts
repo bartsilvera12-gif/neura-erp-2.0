@@ -161,10 +161,10 @@ function agruparEnMenu(mods: Modulo[]): Modulo[] {
     const reales = (m.children ?? []).filter((c) => !c.soloBusqueda);
     const atajos = (m.children ?? []).filter((c) => c.soloBusqueda);
     if (reales.length) {
-      if (m.panel) item.children!.push({ label: m.label, href: m.href });
+      if (m.panel) item.children!.push({ label: m.label, href: m.href, palabras: m.palabras });
       item.children!.push(...reales.map((c) => ({ ...c, seccion: m.label })));
     } else {
-      item.children!.push({ label: m.label, href: m.href });
+      item.children!.push({ label: m.label, href: m.href, palabras: m.palabras });
     }
     item.children!.push(...atajos.map((c) => ({ ...c, seccion: c.seccion ?? m.label })));
   }
@@ -235,7 +235,7 @@ function conAtajos(mods: Modulo[], rol: string | undefined, perfil: PerfilSesion
       return true;
     });
     if (!atajos.length) return m;
-    return { ...m, children: [...(m.children ?? []), ...atajos.map((a) => ({ label: a.label, href: a.href, seccion: a.seccion, soloBusqueda: true }))] };
+    return { ...m, children: [...(m.children ?? []), ...atajos.map((a) => ({ label: a.label, href: a.href, seccion: a.seccion, palabras: a.palabras, soloBusqueda: true }))] };
   });
 }
 

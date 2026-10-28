@@ -25,9 +25,9 @@ export const moduloOmnicanal: Modulo = {
   icon: "messages",
   familia: "Omnicanal",
   children: [
-    { label: "Conversaciones", href: "/conversaciones" },
-    { label: "Finalizadas", href: "/conversaciones/finalizadas" },
-    { label: "Monitoreo", href: "/conversaciones/monitoreo", roles: ["ADMIN"], accesoPropio: true },
-    { label: "Historial omnicanal", href: "/conversaciones/historial" },
+    { label: "Conversaciones", href: "/conversaciones", palabras: ["chat", "chats", "whatsapp", "mensajes", "bandeja"] },
+    { label: "Finalizadas", href: "/conversaciones/finalizadas", palabras: ["chats cerrados", "seguimientos", "proxima accion"] },
+    { label: "Monitoreo", href: "/conversaciones/monitoreo", roles: ["ADMIN"], accesoPropio: true, palabras: ["colas", "supervisor", "agentes", "asesores"] },
+    { label: "Historial omnicanal", href: "/conversaciones/historial", palabras: ["historial de chats", "auditoria"] },
   ],
 };

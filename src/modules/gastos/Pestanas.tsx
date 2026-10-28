@@ -20,7 +20,7 @@ export function PestanasGastos() {
   const activa = PESTANAS_GASTOS.filter((t) => coincide(t.href)).sort((a, b) => b.href.length - a.href.length)[0]?.href;
   return (
     <div className="mb-4 sm:mb-6">
-      <Link href="/gastos-empresariales/panel" className="-ml-1 mb-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800">
+      <Link href="/gastos-empresariales/panel" className="-ml-1 mb-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800 max-md:min-h-11 max-md:pr-2">
         <ArrowLeft className="h-3.5 w-3.5" /> Gastos empresariales
       </Link>
       <div className="flex items-center gap-2">

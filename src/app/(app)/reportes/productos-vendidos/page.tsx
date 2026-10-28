@@ -7,6 +7,7 @@
  * inmovilizado, atajos de fecha, Excel y PDF.
  */
 import { Suspense, useEffect, useMemo, useState } from "react";
+import { unidadCorta } from "@/modules/inventario/recetas";
 import { useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, Boxes, ChevronLeft, ChevronRight, FileSpreadsheet, FileText, Loader2, Search, X } from "lucide-react";
 import { filtrar } from "@/lib/busqueda";
@@ -27,7 +28,7 @@ const TZ = "America/Asuncion";
 const POR_PAGINA = 50;
 const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
 const num = (v: number) => Number(v || 0).toLocaleString("es-PY", { maximumFractionDigits: 3 });
-const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1)}%` : "—");
+const pct = (a: number, b: number) => (b ? `${((a / b) * 100).toFixed(1).replace(".", ",")} %` : "—");
 const margenColor = (a: number, b: number) => {
   const m = b ? (a / b) * 100 : 0;
   return m >= 40 ? "text-emerald-600" : m >= 20 ? "text-amber-600" : "text-red-600";
@@ -274,7 +275,7 @@ function Contenido() {
                             <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-500 max-sm:hidden">
                               {i.imagen_url ? (
                                 // eslint-disable-next-line @next/next/no-img-element
-                                <img src={i.imagen_url} alt="" className="h-full w-full object-cover" />
+                                <img src={i.imagen_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                               ) : (
                                 i.nombre.charAt(0).toUpperCase()
                               )}
@@ -298,7 +299,7 @@ function Contenido() {
                         <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-slate-700">{sinV ? "—" : gs(i.ganancia)}</td>
                         <td className={`px-3 py-2.5 text-right font-semibold tabular-nums ${sinV ? "text-slate-300" : margenColor(Number(i.ganancia), Number(i.total))}`}>{sinV ? "—" : pct(Number(i.ganancia), Number(i.total))}</td>
                         <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums text-slate-600">
-                          {i.controla_stock ? <>{num(Number(i.stock_actual))} <span className="text-[10px] text-slate-400">{i.unidad_medida}</span></> : "—"}
+                          {i.controla_stock ? <>{num(Number(i.stock_actual))} <span className="text-[10px] text-slate-400">{unidadCorta(i.unidad_medida ?? "Unidad")}</span></> : "—"}
                           {sinV && Number(i.valor_stock) ? <p className="text-[10px] text-amber-600">{gs(i.valor_stock)} inmov.</p> : null}
                         </td>
                       </tr>

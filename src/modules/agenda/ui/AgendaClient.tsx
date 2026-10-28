@@ -304,7 +304,7 @@ export default function AgendaClient() {
               <ChevronRight className="h-5 w-5" />
             </button>
           </div>
-          <span className="ml-1 min-w-0 truncate text-sm font-medium capitalize text-slate-700">{tituloPeriodo(view, anchor)}</span>
+          <span className="ml-1 min-w-0 truncate text-sm font-medium first-letter:uppercase text-slate-700">{tituloPeriodo(view, anchor)}</span>
         </div>
 
         <div className="flex items-center gap-2 max-sm:w-full">

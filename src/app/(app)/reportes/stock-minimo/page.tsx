@@ -7,6 +7,7 @@
  * panel lateral para ajustar mínimo o stock sin salir del reporte.
  */
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react";
+import { unidadCorta } from "@/modules/inventario/recetas";
 import { FileSpreadsheet, FileText, Loader2, PackageMinus, RefreshCw, Search, X } from "lucide-react";
 import { filtrar } from "@/lib/busqueda";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -166,7 +167,7 @@ export default function ReporteStockMinimoPage() {
                     <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
                       {r.imagen_url ? (
                         // eslint-disable-next-line @next/next/no-img-element
-                        <img src={r.imagen_url} alt="" className="h-full w-full object-cover" />
+                        <img src={r.imagen_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
                       ) : (
                         r.nombre.charAt(0).toUpperCase()
                       )}
@@ -191,8 +192,8 @@ export default function ReporteStockMinimoPage() {
                 ) },
               { key: "min", titulo: "Mínimo", movil: "dato", claseTh: "text-right", claseTd: "text-right tabular-nums text-slate-600", celda: (r) => num(r.stock_minimo) },
               { key: "f", titulo: "Faltante", movil: "valor", claseTh: "text-right", claseTd: "text-right font-bold tabular-nums text-amber-700",
-                celda: (r) => <>{num(r.faltante)} <span className="text-[10px] font-normal text-slate-400">{r.unidad_medida}</span></>,
-                celdaMovil: (r) => <span className="text-amber-700">Faltan {num(r.faltante)} <span className="text-[11px] font-normal text-slate-400">{r.unidad_medida}</span></span> },
+                celda: (r) => <>{num(r.faltante)} <span className="text-[10px] font-normal text-slate-400">{unidadCorta(r.unidad_medida ?? "Unidad")}</span></>,
+                celdaMovil: (r) => <span className="text-amber-700">Faltan {num(r.faltante)} <span className="text-[11px] font-normal text-slate-400">{unidadCorta(r.unidad_medida ?? "Unidad")}</span></span> },
               { key: "v30", titulo: <span title="Unidades vendidas en los últimos 30 días">Vendido 30 días</span>, etiquetaMovil: "Vendido 30 días", movil: "dato",
                 claseTh: "text-right", claseTd: "text-right tabular-nums text-slate-600", celda: (r) => num(r.vendido_30d) },
               { key: "cr", titulo: "Costo reposición", movil: "dato", etiquetaMovil: "Reposición", claseTh: "pr-4 text-right", claseTd: "pr-4 text-right tabular-nums text-slate-700",

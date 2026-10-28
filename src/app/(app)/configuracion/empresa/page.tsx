@@ -39,7 +39,7 @@ const deDatos = (d: DatosEmpresa): FormEmpresa =>
   Object.fromEntries(CAMPOS_EMPRESA.map((k) => [k, (d[k] as string | null) ?? ""])) as FormEmpresa;
 
 const fechaHora = (iso: string) =>
-  new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso));
 
 export default function DatosEmpresaPage() {
   const [datos, setDatos] = useState<DatosEmpresa | null>(null);

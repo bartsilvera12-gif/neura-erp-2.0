@@ -4,6 +4,7 @@ import type { Modulo } from "@/modules/types";
 export const moduloCrm: Modulo = {
   id: "crm",
   label: "CRM Funnel",
+  palabras: ["prospectos", "leads", "embudo", "oportunidades"],
   href: "/crm",
   grupo: "comercial",
   icon: "sparkles",

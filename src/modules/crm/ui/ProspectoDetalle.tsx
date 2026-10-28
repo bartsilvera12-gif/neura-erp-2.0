@@ -144,7 +144,7 @@ export function ProspectoDetalle({
     cuerpo = (
       <div className="flex h-full flex-col items-center justify-center gap-3 p-8">
         <h2 className="text-lg font-semibold text-slate-800">Prospecto no encontrado</h2>
-        <button onClick={onClose} className="text-sm font-medium text-[var(--brand)] hover:underline">← Volver</button>
+        <button onClick={onClose} className="inline-flex min-h-11 items-center text-sm font-medium text-[var(--brand)] hover:underline sm:min-h-0">← Volver</button>
       </div>
     );
   } else {
