@@ -280,6 +280,7 @@ export function VistaSeparar({ cuenta, color, accion, onListo, aviso, pidiendo, 
   function setAsigItem(id: string, a: Asig | null) {
     setAsig((s) => { const c = { ...s }; if (a) c[id] = a; else delete c[id]; return c; });
     setOk(null);
+    setError(null);
   }
   function agregarPersona() {
     if (nombres.length >= 20) return;
@@ -419,7 +420,7 @@ export function VistaSeparar({ cuenta, color, accion, onListo, aviso, pidiendo, 
                 </li>
               ))}
             </ul>
-            <p className={`mt-2 text-xs ${TENUE}`}>Tocá un nombre para cambiarlo.</p>
+            <p className={`mt-2 text-xs ${TENUE}`}>Tocá un nombre para cambiarlo o sacar a esa persona.</p>
           </section>
 
           {/* Productos */}
@@ -464,7 +465,6 @@ export function VistaSeparar({ cuenta, color, accion, onListo, aviso, pidiendo, 
         <p className={`mt-2 border-t pt-2 text-xs ${LINEA} ${SUAVE}`}>Total de la cuenta {gs(cuenta.total)}. Cada parte se cobra por separado en la caja, con su ticket o factura.</p>
       </section>
 
-      {error ? <p className={`rounded-xl px-3 py-2 text-sm ${AVISO_ERROR}`} role="alert">{error}</p> : null}
       {ok && (!sucio || !cuenta.division) ? (
         <p className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm ${AVISO_OK}`} role="status">
           <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
@@ -492,13 +492,15 @@ export function VistaSeparar({ cuenta, color, accion, onListo, aviso, pidiendo, 
 
       {/* Pie fijo: con cambios, guardar; ya guardada, el paso que sigue. */}
       <div className={`fixed inset-x-0 bottom-0 z-20 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] ${BARRA_PIE}`}>
+        {error ? <p className={`mx-auto mb-2 max-w-2xl rounded-xl px-3 py-2 text-sm ${AVISO_ERROR}`} role="alert">{error}</p> : null}
         <div className="mx-auto flex max-w-2xl gap-2">
           {sucio ? (
             <>
               {cuenta.division ? (
                 <button type="button" onClick={descartar} disabled={guardando} className={`${BOTON_SEC} h-12 shrink-0`}>Descartar</button>
               ) : null}
-              <button type="button" onClick={() => void guardar()} disabled={guardando || (modo === "productos" && (vacias.length > 0 || (faltan.length > 0 && !conResto)))}
+              {/* Activo aunque falte algo: al tocarlo dice qué falta (un botón gris sin motivo confunde). */}
+              <button type="button" onClick={() => void guardar()} disabled={guardando}
                 className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base font-semibold text-white shadow-sm disabled:opacity-50 ${ACENTO}`} style={{ backgroundColor: color }}>
                 {guardando ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Check className="h-5 w-5" aria-hidden />}
                 {cuenta.division ? "Guardar cambios" : "Separar cuenta"}
@@ -580,10 +582,10 @@ function ItemAsignable({ it, a, nombres, color, onCambiar }: {
             <li key={i} className={`flex items-center gap-1 rounded-xl py-0.5 pr-0.5 pl-3 border border-slate-200 dark:border-white/10 dark:bg-white/[0.03]`}>
               <span className={`min-w-0 flex-1 truncate text-sm ${TEXTO}`}>{nm}</span>
               <button type="button" aria-label={`Una menos para ${nm}`} disabled={por[i] <= 0} onClick={() => sumar(i, -1)}
-                className={`grid h-9 w-9 place-items-center rounded-full disabled:opacity-30 ${BOTON_ICONO}`}><Minus className="h-4 w-4" /></button>
+                className={`grid h-11 w-11 place-items-center rounded-full disabled:opacity-30 ${BOTON_ICONO}`}><Minus className="h-4 w-4" /></button>
               <span className={`w-5 text-center text-sm font-bold tabular-nums ${TEXTO}`}>{por[i]}</span>
               <button type="button" aria-label={`Una más para ${nm}`} disabled={q - asignadas < 1} onClick={() => sumar(i, 1)}
-                className={`grid h-9 w-9 place-items-center rounded-full text-white disabled:opacity-30 ${ACENTO}`} style={{ backgroundColor: color }}><Plus className="h-4 w-4" /></button>
+                className={`grid h-11 w-11 place-items-center rounded-full text-white disabled:opacity-30 ${ACENTO}`} style={{ backgroundColor: color }}><Plus className="h-4 w-4" /></button>
             </li>
           ))}
         </ul>
@@ -735,7 +737,7 @@ export function VistaFacturacion({ cuenta, color, accion, onListo }: {
         {mensajeRuc ? (
           <p className="mt-1.5 flex flex-wrap items-center gap-x-2 text-xs text-rose-600 dark:text-rose-400" role="alert">
             {mensajeRuc}
-            {sugerido ? <button type="button" onClick={() => setRuc(sugerido)} className="min-h-8 font-semibold underline underline-offset-2">Usar {sugerido}</button> : null}
+            {sugerido ? <button type="button" onClick={() => setRuc(sugerido)} className="min-h-10 font-semibold underline underline-offset-2">Usar {sugerido}</button> : null}
           </p>
         ) : (
           <p className={`mt-1.5 text-xs ${TENUE}`}>Con la cédula sola no se puede facturar: va el RUC con su dígito verificador.</p>

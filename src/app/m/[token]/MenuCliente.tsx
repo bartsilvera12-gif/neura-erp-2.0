@@ -579,7 +579,7 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
                             {conMods && l.sel ? <ModsDetalle mods={partesSel(p.mods!, l.sel)} className="mt-0.5" /> : null}
                             <p className={`text-xs tabular-nums ${SUAVE}`}>{gs(unit)} c/u · <span className={`font-semibold ${MEDIO}`}>{gs(unit * l.cantidad)}</span></p>
                             {conMods ? (
-                              <button type="button" onClick={() => setHoja({ p, editar: clave })} className={`mt-1 inline-flex min-h-8 items-center text-xs font-semibold ${LINK_MARCA}`} style={{ color }}>
+                              <button type="button" onClick={() => setHoja({ p, editar: clave })} className={`mt-0.5 inline-flex min-h-10 items-center px-1 -ml-1 text-sm font-semibold ${LINK_MARCA}`} style={{ color }}>
                                 Cambiar
                               </button>
                             ) : null}
@@ -746,12 +746,12 @@ function Contador({ cantidad, color, onCambiar }: { cantidad: number; color: str
   return (
     <div className={`flex shrink-0 items-center gap-1 rounded-full p-0.5 ${CONTROL}`}>
       <button type="button" onClick={() => onCambiar(-1)} aria-label={cantidad === 1 ? "Quitar" : "Uno menos"}
-        className={`grid h-9 w-9 place-items-center rounded-full ${BOTON_ICONO}`}>
+        className={`grid h-11 w-11 place-items-center rounded-full ${BOTON_ICONO}`}>
         {cantidad === 1 ? <Trash2 className="h-4 w-4" aria-hidden /> : <Minus className="h-4 w-4" aria-hidden />}
       </button>
       <span className={`min-w-6 text-center text-sm font-bold tabular-nums ${TEXTO}`}>{cantidad}</span>
       <button type="button" onClick={() => onCambiar(1)} aria-label="Uno más" disabled={cantidad >= 50}
-        className={`grid h-9 w-9 place-items-center rounded-full text-white disabled:opacity-40 ${ACENTO}`} style={{ backgroundColor: color }}>
+        className={`grid h-11 w-11 place-items-center rounded-full text-white disabled:opacity-40 ${ACENTO}`} style={{ backgroundColor: color }}>
         <Plus className="h-4 w-4" aria-hidden />
       </button>
     </div>
@@ -762,7 +762,7 @@ function NotaLinea({ valor, onCambiar }: { valor: string; onCambiar: (v: string)
   const [abierta, setAbierta] = useState(!!valor);
   if (!abierta) {
     return (
-      <button type="button" onClick={() => setAbierta(true)} className={`mt-1.5 inline-flex items-center gap-1 text-xs font-medium ${SUAVE}`}>
+      <button type="button" onClick={() => setAbierta(true)} className={`mt-0.5 -ml-1 inline-flex min-h-10 items-center gap-1 px-1 text-sm font-medium ${SUAVE}`}>
         <MessageSquareText className="h-3.5 w-3.5" aria-hidden /> Agregar aclaración
       </button>
     );
