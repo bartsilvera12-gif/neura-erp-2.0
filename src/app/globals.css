@@ -3,7 +3,36 @@
 /* Modo oscuro SOLO del menú QR (/m/<token>): lo prende la página con data-tema="oscuro" en
    <html> (sigue al celular o a lo que eligió el cliente). El resto del ERP no usa `dark:`. */
 @custom-variant dark (&:where([data-tema=oscuro], [data-tema=oscuro] *));
-html[data-tema=oscuro] body { background: #020617; color: #e2e8f0; color-scheme: dark; }
+/* Escala oscura neutra del QR (una sola familia de superficies, bordes hairline). Las clases
+   viven en src/app/m/[token]/estilos.ts; acá solo los tokens y los acentos con degradé. */
+html[data-tema=oscuro] {
+  --qr-bg: #0a0c10;          /* página */
+  --qr-surface: #12151a;     /* tarjetas */
+  --qr-raised: #181c22;      /* inputs, productos, controles */
+  --qr-panel: #14171c;       /* modales y hojas */
+  --qr-brand-texto: color-mix(in srgb, var(--brand) 55%, #c4f5f1); /* turquesa claro legible sobre oscuro */
+  --qr-borde-control: rgb(255 255 255 / 0.22);
+  --qr-brillo: color-mix(in srgb, var(--qr-brand-texto) 28%, transparent);
+}
+html[data-tema=oscuro] body { background: var(--qr-bg); color: #e4e4e7; color-scheme: dark; }
+html[data-tema=oscuro] * { scrollbar-color: rgb(255 255 255 / 0.14) transparent; }
+html[data-tema=oscuro] *::-webkit-scrollbar-thumb { background: rgb(255 255 255 / 0.14); }
+/* Acento de marca en oscuro: degradé más profundo, brillo interno y un halo suave (en claro no
+   aplica: queda el color plano del style). Sin capa: gana sobre las utilidades de sombra. */
+html[data-tema=oscuro] .qr-acento {
+  background-image: linear-gradient(160deg, color-mix(in srgb, var(--brand) 92%, #fff 8%), color-mix(in srgb, var(--brand) 68%, #000 32%));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.14), 0 0 0 1px color-mix(in srgb, var(--brand) 45%, transparent), 0 8px 24px -12px color-mix(in srgb, var(--brand) 70%, transparent);
+}
+html[data-tema=oscuro] .qr-acento-grande {
+  background-image:
+    radial-gradient(120% 140% at 0% 0%, rgb(255 255 255 / 0.10), transparent 55%),
+    linear-gradient(150deg, color-mix(in srgb, var(--brand) 94%, #fff 6%), color-mix(in srgb, var(--brand) 74%, #000 26%));
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), 0 0 0 1px color-mix(in srgb, var(--brand) 40%, transparent), 0 16px 36px -22px color-mix(in srgb, var(--brand) 70%, transparent);
+}
+html[data-tema=oscuro] .qr-ok-grande {
+  background-image: radial-gradient(120% 140% at 0% 0%, rgb(255 255 255 / 0.10), transparent 55%), linear-gradient(150deg, #10b981, #047857);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.16), 0 0 0 1px rgb(16 185 129 / 0.35), 0 18px 40px -20px rgb(16 185 129 / 0.6);
+}
 
 /* Identidad Neura: blanco + turquesa. El acento es un solo token para que cada
    clon lo re-tematice; el resto es blanco y escala slate. */

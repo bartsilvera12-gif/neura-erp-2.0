@@ -11,6 +11,7 @@ import { clienteConfig } from "@/cliente.config";
 import { LOGO_INSTALACION } from "@/modules/empresa/tipos";
 import { menuPorToken } from "@/modules/mesas/publico";
 import { MenuCliente } from "./MenuCliente";
+import { CABECERA, CHIP_NEUTRO, FONDO, LOGO, SUAVE, TARJETA, TEXTO } from "./estilos";
 
 export const dynamic = "force-dynamic";
 
@@ -30,7 +31,7 @@ export const viewport: Viewport = { width: "device-width", initialScale: 1, view
  */
 const SCRIPT_TEMA =
   "(function(){try{var t=localStorage.getItem('neura.qr.tema');var o=t?t==='oscuro':matchMedia('(prefers-color-scheme: dark)').matches;" +
-  "document.documentElement.setAttribute('data-tema',o?'oscuro':'claro');var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',o?'#020617':'#ffffff')}catch(e){}})()";
+  "document.documentElement.setAttribute('data-tema',o?'oscuro':'claro');var m=document.querySelector('meta[name=theme-color]');if(m)m.setAttribute('content',o?'#0a0c10':'#ffffff')}catch(e){}})()";
 const Tema = () => <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />;
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
@@ -69,22 +70,22 @@ export default async function MenuMesaPage({ params }: { params: Promise<{ token
 
 function Aviso({ titulo, texto, logo, empresa }: { titulo: string; texto: string; logo?: string | null; empresa?: string }) {
   return (
-    <div className="flex min-h-dvh flex-col bg-slate-50 dark:bg-slate-950">
+    <div className={`flex min-h-dvh flex-col ${FONDO}`}>
       <Tema />
-      <header className="pt-safe border-b border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900">
+      <header className={`${CABECERA} border-b border-slate-200`}>
         <div className="mx-auto flex max-w-xl items-center gap-3 px-4 py-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={logo || LOGO_INSTALACION} alt="" className="h-8 w-auto max-w-[120px] object-contain" />
-          <p className="truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{empresa ?? clienteConfig.nombre}</p>
+          <img src={logo || LOGO_INSTALACION} alt="" className={`h-8 w-auto max-w-[120px] object-contain ${LOGO}`} />
+          <p className={`truncate text-sm font-semibold ${TEXTO}`}>{empresa ?? clienteConfig.nombre}</p>
         </div>
       </header>
       <main className="mx-auto w-full max-w-xl flex-1 px-4 py-10">
-        <div className="rounded-2xl border border-slate-200 bg-white px-6 py-12 text-center shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-400 dark:bg-slate-800">
+        <div className={`${TARJETA} px-6 py-12 text-center`}>
+          <span className={`mx-auto flex h-12 w-12 items-center justify-center rounded-full ${CHIP_NEUTRO}`}>
             <QrCode className="h-6 w-6" aria-hidden />
           </span>
-          <h1 className="mt-4 text-lg font-semibold text-slate-900 dark:text-slate-100">{titulo}</h1>
-          <p className="mx-auto mt-2 max-w-sm text-sm text-slate-500 dark:text-slate-400">{texto}</p>
+          <h1 className={`mt-4 text-lg font-semibold ${TEXTO}`}>{titulo}</h1>
+          <p className={`mx-auto mt-2 max-w-sm text-sm ${SUAVE}`}>{texto}</p>
         </div>
       </main>
     </div>

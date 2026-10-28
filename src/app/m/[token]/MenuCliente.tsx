@@ -18,7 +18,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowLeft, BookOpen, CheckCircle2, ChefHat, ChevronDown, ChevronRight, Clock3, FileText, Loader2, MessageSquareText, Minus, Moon, Plus,
+  ArrowLeft, BookOpen, CheckCircle2, ChefHat, ChevronDown, ChevronRight, Clock3, FileText, Loader2, Lock, MessageSquareText, Minus, Moon, Plus,
   Receipt, ReceiptText, Search, ShoppingBag, Split, Sun, Trash2, X, XCircle,
 } from "lucide-react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
@@ -28,7 +28,13 @@ import { HojaModificadores, type ResultadoMods } from "@/modules/mesas/HojaModif
 import { ModsDetalle } from "@/modules/mesas/ModsDetalle";
 import { modsParaEnviar, partesSel, tieneMods, type ModsSeleccion } from "@/modules/mesas/modificadores";
 import { SinConsumo, VistaConsumo, VistaFacturacion, VistaSeparar, type AccionCuenta } from "./CuentaVistas";
-import { AVISO_ERROR, AVISO_INFO, AVISO_OK, FONDO, INPUT, LINEA, PANEL_MODAL, SUAVE, TARJETA, TENUE, TEXTO } from "./estilos";
+import {
+  ACENTO, ACENTO_GRANDE, AVISO_ERROR, AVISO_INFO, AVISO_OK, BARRA_PIE, BARRA_STICKY, BOTON_ICONO, CABECERA, CHIP_MARCA, CHIP_NEUTRO, CONTROL, DIVIDE,
+  ESTADO_OSCURO, FONDO, FONDO_MODAL, FOTO_VACIA, INPUT, LINEA, LINK_MARCA, LOGO, MEDIO, PANEL_MODAL, SUAVE, TARJETA, TENUE, TEXTO,
+} from "./estilos";
+
+/** Color de la barra del navegador del celular (igual al fondo de cada tema). */
+const META_TEMA = { claro: "#ffffff", oscuro: "#0a0c10" } as const;
 
 type Menu = Extract<MenuMesa, { activa: true }>;
 /** Línea del carrito. Clave = `${producto_id}|${clave de modificadores}` (misma combinación = misma línea). */
@@ -73,7 +79,7 @@ function useTema() {
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const aplicar = (t: "claro" | "oscuro") => {
       raiz.setAttribute("data-tema", t);
-      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t === "oscuro" ? "#020617" : "#ffffff");
+      document.querySelector('meta[name="theme-color"]')?.setAttribute("content", META_TEMA[t]);
       setTema(t);
     };
     aplicar(guardado === "oscuro" || guardado === "claro" ? guardado : mq.matches ? "oscuro" : "claro");
@@ -88,7 +94,7 @@ function useTema() {
   const alternar = useCallback(() => {
     const t = tema === "oscuro" ? "claro" : "oscuro";
     document.documentElement.setAttribute("data-tema", t);
-    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", t === "oscuro" ? "#020617" : "#ffffff");
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", META_TEMA[t]);
     try { localStorage.setItem(CLAVE_TEMA, t); } catch { /* sin storage: vale mientras siga abierta */ }
     setTema(t);
   }, [tema]);
@@ -328,19 +334,19 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
   return (
     <div className={`min-h-dvh ${FONDO} ${conBarraCarrito || soloVer ? "pb-[calc(6rem+env(safe-area-inset-bottom))]" : "pb-[calc(2rem+env(safe-area-inset-bottom))]"}`} style={{ ["--brand" as string]: color }}>
       {/* Cabecera */}
-      <header className="pt-safe bg-white dark:bg-slate-900">
+      <header className={CABECERA}>
         <div className="mx-auto flex max-w-2xl items-center gap-3 px-4 pt-3 pb-2">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={menu.logo_url || logoInstalacion} alt="" className="h-9 w-auto max-w-[120px] shrink-0 object-contain dark:rounded-md dark:bg-white dark:px-1" />
+          <img src={menu.logo_url || logoInstalacion} alt="" className={`h-9 w-auto max-w-[120px] shrink-0 object-contain ${LOGO}`} />
           <p className={`min-w-0 flex-1 truncate text-sm font-semibold ${TEXTO}`}>{menu.empresa}</p>
           <button type="button" onClick={alternarTema} aria-label={tema === "oscuro" ? "Usar modo claro" : "Usar modo oscuro"} title={tema === "oscuro" ? "Modo claro" : "Modo oscuro"}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 active:scale-95 dark:text-slate-300 dark:hover:bg-slate-800">
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-slate-500 transition hover:bg-slate-100 active:scale-95 dark:text-zinc-300 dark:ring-1 dark:ring-inset dark:ring-white/[0.08] dark:hover:bg-white/[0.06] dark:hover:text-zinc-100">
             {tema === "oscuro" ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
           </button>
         </div>
         <div className="mx-auto max-w-2xl px-4 pb-3">
-          <div className="flex items-center gap-3 rounded-2xl px-4 py-3 text-white" style={{ backgroundColor: color }}>
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-base font-bold">
+          <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-white ${ACENTO_GRANDE}`} style={{ backgroundColor: color }}>
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-base font-bold dark:bg-white/15 dark:ring-1 dark:ring-inset dark:ring-white/20">
               {menu.mesa.replace(/^mesa\s*/i, "").slice(0, 3) || "•"}
             </span>
             <div className="min-w-0 flex-1">
@@ -358,9 +364,9 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
       </header>
 
       {vista !== "inicio" ? (
-        <div className={`sticky top-0 z-10 border-b ${LINEA} bg-white/95 backdrop-blur dark:bg-slate-900/95`}>
+        <div className={`sticky top-0 z-10 border-b ${LINEA} ${BARRA_STICKY}`}>
           <div className="mx-auto flex max-w-2xl items-center gap-2 px-2 py-1.5">
-            <button type="button" onClick={volver} className={`inline-flex h-11 items-center gap-1 rounded-xl px-2.5 text-sm font-semibold ${TEXTO} active:bg-slate-100 dark:active:bg-slate-800`}>
+            <button type="button" onClick={volver} className={`inline-flex h-11 items-center gap-1 rounded-xl px-2.5 text-sm font-semibold ${TEXTO} active:bg-slate-100 dark:active:bg-white/[0.08]`}>
               <ArrowLeft className="h-5 w-5" aria-hidden /> Volver
             </button>
             <h1 className={`min-w-0 flex-1 truncate text-base font-bold ${TEXTO}`}>{TITULOS[vista]}</h1>
@@ -395,8 +401,8 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
             {/* Tarjetas grandes */}
             <div className="mt-3 space-y-2.5">
               <button type="button" onClick={() => ir("pedir")}
-                className="flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-white shadow-sm transition active:scale-[0.99]" style={{ backgroundColor: color }}>
-                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/20"><ShoppingBag className="h-6 w-6" aria-hidden /></span>
+                className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left text-white shadow-sm transition active:scale-[0.99] ${ACENTO_GRANDE}`} style={{ backgroundColor: color }}>
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/20 dark:bg-white/15 dark:ring-1 dark:ring-inset dark:ring-white/20"><ShoppingBag className="h-6 w-6" aria-hidden /></span>
                 <span className="min-w-0 flex-1">
                   <span className="block text-lg font-bold leading-tight">Hacer pedido</span>
                   <span className="block text-sm text-white/85">{unidades ? `Tenés ${unidades} producto${unidades === 1 ? "" : "s"} sin enviar` : "Elegí de la carta y mandalo a la cocina"}</span>
@@ -422,12 +428,12 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
             {/* Buscador chico */}
             <div className={`sticky top-[57px] z-10 -mx-4 ${FONDO} px-4 pt-2 pb-2`}>
               <label className="relative block">
-                <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+                <Search className="pointer-events-none absolute top-1/2 left-3 z-[1] h-4 w-4 -translate-y-1/2 text-slate-400 dark:text-zinc-500" aria-hidden />
                 <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar en la carta" enterKeyHint="search"
                   className={`${INPUT} h-11 pr-10 pl-9`} />
                 {q ? (
                   <button type="button" onClick={() => setQ("")} aria-label="Limpiar búsqueda"
-                    className="absolute top-1/2 right-0.5 grid h-10 w-10 -translate-y-1/2 place-items-center text-slate-400"><X className="h-4 w-4" /></button>
+                    className="absolute top-1/2 right-0.5 grid h-10 w-10 -translate-y-1/2 place-items-center text-slate-400 dark:text-zinc-400"><X className="h-4 w-4" /></button>
                 ) : null}
               </label>
             </div>
@@ -447,21 +453,21 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
                     <section key={nombreCat} className={`${TARJETA} overflow-hidden`}>
                       <h2>
                         <button type="button" onClick={() => alternar(nombreCat)} disabled={buscando} aria-expanded={abiertaCat} aria-controls={idPanel}
-                          className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-slate-50 disabled:cursor-default dark:active:bg-slate-800">
+                          className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors active:bg-slate-50 disabled:cursor-default dark:hover:bg-white/[0.02] dark:active:bg-white/[0.05]">
                           <span className="min-w-0 flex-1">
                             <span className={`block text-base font-bold leading-snug ${TEXTO} [overflow-wrap:anywhere]`}>{nombreCat}</span>
                             <span className={`block text-xs ${SUAVE}`}>{prods.length} producto{prods.length === 1 ? "" : "s"}</span>
                           </span>
                           {enPedido > 0 && !soloVer ? (
-                            <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold text-white tabular-nums" style={{ backgroundColor: color }}>{enPedido} en tu pedido</span>
+                            <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-bold text-white tabular-nums ${ACENTO}`} style={{ backgroundColor: color }}>{enPedido} en tu pedido</span>
                           ) : null}
-                          <ChevronDown className={`h-5 w-5 shrink-0 text-slate-400 transition-transform duration-300 motion-reduce:transition-none ${abiertaCat ? "rotate-180" : ""}`} aria-hidden />
+                          <ChevronDown className={`h-5 w-5 shrink-0 text-slate-400 dark:text-zinc-500 transition-transform duration-300 motion-reduce:transition-none ${abiertaCat ? "rotate-180" : ""}`} aria-hidden />
                         </button>
                       </h2>
                       <div id={idPanel} inert={!abiertaCat}
                         className={`grid transition-[grid-template-rows] duration-300 ease-out motion-reduce:transition-none ${abiertaCat ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}>
                         <div className="min-h-0 overflow-hidden">
-                          <ul className={`grid grid-cols-1 gap-2.5 border-t ${LINEA} bg-slate-50/60 p-2.5 min-[480px]:grid-cols-2 dark:bg-slate-950/40`}>
+                          <ul className={`grid grid-cols-1 gap-2.5 border-t ${LINEA} bg-slate-50/60 p-2.5 min-[480px]:grid-cols-2 dark:bg-black/25`}>
                             {prods.map((p) => (
                               <TarjetaProducto key={p.id} p={p} soloVer={soloVer} cantidad={tieneMods(p.mods) ? cantidadDe(p.id) : carrito[claveLinea(p.id)]?.cantidad ?? 0} color={color}
                                 onCambiar={(d) => cambiar(claveLinea(p.id), d, p.id)} onElegir={tieneMods(p.mods) ? () => setHoja({ p }) : undefined} />
@@ -479,7 +485,7 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
         ) : !abierta ? (
           cuenta ? <SinConsumo color={color} onPedir={() => ir("pedir")}
             texto={vista === "facturacion" ? "Los datos de facturación se cargan sobre la cuenta de la mesa: hacé tu pedido primero." : "Todavía no hay una cuenta abierta en esta mesa. Hacé tu pedido y la vas a ver acá."} />
-            : <div className="grid place-items-center py-16"><Loader2 className="h-6 w-6 animate-spin text-slate-400" aria-label="Cargando" /></div>
+            : <div className="grid place-items-center py-16"><Loader2 className="h-6 w-6 animate-spin text-slate-400 dark:text-zinc-500" aria-label="Cargando" /></div>
         ) : vista === "consumo" ? (
           <VistaConsumo cuenta={abierta} color={color} pidiendo={pidiendo} onSeparar={() => ir("separar")} onPedirCuenta={() => { void pedirCuenta(true); }} />
         ) : vista === "separar" ? (
@@ -492,18 +498,18 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
 
       {/* Barra del carrito */}
       {conBarraCarrito ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+        <div className={`fixed inset-x-0 bottom-0 z-20 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] ${BARRA_PIE}`}>
           <button type="button" onClick={() => { setError(null); setVerCarrito(true); }}
-            className="mx-auto flex h-12 w-full max-w-2xl items-center gap-3 rounded-xl px-4 text-white shadow-sm active:scale-[0.99]" style={{ backgroundColor: color }}>
-            <span className="grid h-7 min-w-7 place-items-center rounded-full bg-white/25 px-1.5 text-sm font-bold">{unidades}</span>
+            className={`mx-auto flex h-12 w-full max-w-2xl items-center gap-3 rounded-xl px-4 text-white shadow-sm active:scale-[0.99] ${ACENTO}`} style={{ backgroundColor: color }}>
+            <span className="grid h-7 min-w-7 place-items-center rounded-full bg-white/25 px-1.5 text-sm font-bold dark:bg-white/20">{unidades}</span>
             <span className="flex-1 text-left text-base font-semibold">Ver pedido</span>
             <span className="text-base font-bold tabular-nums">{gs(total)}</span>
           </button>
         </div>
       ) : soloVer ? (
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-slate-200 bg-white/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur dark:border-slate-800 dark:bg-slate-950/95">
+        <div className={`fixed inset-x-0 bottom-0 z-20 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] ${BARRA_PIE}`}>
           <button type="button" onClick={() => ir("pedir")}
-            className="mx-auto flex h-12 w-full max-w-2xl items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold text-white shadow-sm active:scale-[0.99]" style={{ backgroundColor: color }}>
+            className={`mx-auto flex h-12 w-full max-w-2xl items-center justify-center gap-2 rounded-xl px-4 text-base font-semibold text-white shadow-sm active:scale-[0.99] ${ACENTO}`} style={{ backgroundColor: color }}>
             <ShoppingBag className="h-5 w-5" aria-hidden /> Hacer pedido
           </button>
         </div>
@@ -511,20 +517,20 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
 
       {/* Carrito */}
       {verCarrito ? (
-        <CapaModal onClose={() => !enviando && setVerCarrito(false)}>
+        <CapaModal onClose={() => !enviando && setVerCarrito(false)} fondo={FONDO_MODAL}>
           <div className={`flex w-full max-w-lg flex-col overflow-hidden rounded-2xl ${PANEL_MODAL} shadow-xl ${ALTO_MAX_MODAL}`}>
             <div className={`flex shrink-0 items-center justify-between gap-3 border-b ${LINEA} px-4 py-3`}>
               <div className="min-w-0">
                 <p className={`text-base font-semibold ${TEXTO}`}>Tu pedido</p>
                 <p className={`truncate text-xs ${SUAVE}`}>{menu.mesa}{subtitulo ? ` · ${subtitulo}` : ""}</p>
               </div>
-              <button type="button" aria-label="Cerrar" onClick={() => setVerCarrito(false)} disabled={enviando} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800"><X className="h-5 w-5" /></button>
+              <button type="button" aria-label="Cerrar" onClick={() => setVerCarrito(false)} disabled={enviando} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 dark:text-zinc-400 dark:hover:bg-white/[0.06] dark:hover:text-zinc-100"><X className="h-5 w-5" /></button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
               {lineas.length === 0 ? (
                 <p className={`py-8 text-center text-sm ${SUAVE}`}>No hay productos en el pedido.</p>
               ) : (
-                <ul className="divide-y divide-slate-100 dark:divide-slate-800">
+                <ul className={`divide-y ${DIVIDE}`}>
                   {lineas.map(([clave, l]) => {
                     const p = porId.get(l.producto_id)!;
                     const unit = p.precio + (l.precio_mods ?? 0);
@@ -535,9 +541,9 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
                           <div className="min-w-0 flex-1">
                             <p className={`text-sm font-medium ${TEXTO}`}>{p.nombre}</p>
                             {conMods && l.sel ? <ModsDetalle mods={partesSel(p.mods!, l.sel)} className="mt-0.5" /> : null}
-                            <p className={`text-xs tabular-nums ${SUAVE}`}>{gs(unit)} c/u · <span className="font-semibold text-slate-700 dark:text-slate-200">{gs(unit * l.cantidad)}</span></p>
+                            <p className={`text-xs tabular-nums ${SUAVE}`}>{gs(unit)} c/u · <span className={`font-semibold ${MEDIO}`}>{gs(unit * l.cantidad)}</span></p>
                             {conMods ? (
-                              <button type="button" onClick={() => setHoja({ p, editar: clave })} className="mt-1 inline-flex min-h-8 items-center text-xs font-semibold" style={{ color }}>
+                              <button type="button" onClick={() => setHoja({ p, editar: clave })} className={`mt-1 inline-flex min-h-8 items-center text-xs font-semibold ${LINK_MARCA}`} style={{ color }}>
                                 Cambiar
                               </button>
                             ) : null}
@@ -570,7 +576,7 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
                 <span className={`text-xl font-bold tabular-nums ${TEXTO}`}>{gs(total)}</span>
               </div>
               <button type="button" onClick={() => void enviar()} disabled={enviando || !lineas.length}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold text-white shadow-sm disabled:opacity-50" style={{ backgroundColor: color }}>
+                className={`flex h-12 w-full items-center justify-center gap-2 rounded-xl text-base font-semibold text-white shadow-sm disabled:opacity-50 ${ACENTO}`} style={{ backgroundColor: color }}>
                 {enviando ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <ShoppingBag className="h-5 w-5" aria-hidden />}
                 {enviando ? "Enviando…" : "Enviar pedido"}
               </button>
@@ -601,8 +607,9 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
 
 function TarjetaInicio({ icono: Icono, titulo, texto, color, onClick }: { icono: typeof BookOpen; titulo: string; texto: string; color: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className={`${TARJETA} flex min-h-[7.5rem] flex-col items-start gap-2 px-3.5 py-3.5 text-left transition active:scale-[0.98]`}>
-      <span className="grid h-10 w-10 place-items-center rounded-xl" style={{ backgroundColor: `color-mix(in srgb, ${color} 14%, transparent)`, color }}><Icono className="h-5 w-5" aria-hidden /></span>
+    <button type="button" onClick={onClick} style={{ ["--brand" as string]: color }}
+      className={`${TARJETA} flex min-h-[7.5rem] flex-col items-start gap-2 px-3.5 py-3.5 text-left transition active:scale-[0.98] dark:hover:border-white/[0.12] dark:hover:bg-[var(--qr-raised)]`}>
+      <span className={`grid h-10 w-10 place-items-center rounded-xl ${CHIP_MARCA}`}><Icono className="h-5 w-5" aria-hidden /></span>
       <span className="min-w-0">
         <span className={`block text-[15px] font-bold leading-tight ${TEXTO}`}>{titulo}</span>
         <span className={`mt-0.5 block text-xs leading-snug ${SUAVE} [overflow-wrap:anywhere]`}>{texto}</span>
@@ -618,7 +625,7 @@ function PedirCuenta({ cuenta, ahora, pidiendo, onPedir }: {
   const hayAlgo = !!cuenta && cuenta.items.length > 0;
   if (cuenta?.en_caja) {
     return (
-      <div className="flex w-full items-center gap-4 rounded-2xl bg-emerald-600 px-4 py-4 text-white shadow-sm dark:bg-emerald-700">
+      <div className="qr-ok-grande flex w-full items-center gap-4 rounded-2xl bg-emerald-600 px-4 py-4 text-white shadow-sm">
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/20"><Receipt className="h-6 w-6" aria-hidden /></span>
         <span className="min-w-0 flex-1">
           <span className="block text-lg font-bold leading-tight">Tu cuenta está en caja</span>
@@ -630,7 +637,7 @@ function PedirCuenta({ cuenta, ahora, pidiendo, onPedir }: {
   if (cuenta?.solicitada_at) {
     return (
       <button type="button" onClick={() => onPedir(false)} disabled={pidiendo}
-        className="flex w-full items-center gap-4 rounded-2xl bg-emerald-600 px-4 py-4 text-left text-white shadow-sm transition active:scale-[0.99] disabled:opacity-70 dark:bg-emerald-700">
+        className="qr-ok-grande flex w-full items-center gap-4 rounded-2xl bg-emerald-600 px-4 py-4 text-left text-white shadow-sm transition active:scale-[0.99] disabled:opacity-70">
         <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/20">
           {pidiendo ? <Loader2 className="h-6 w-6 animate-spin" aria-hidden /> : <CheckCircle2 className="h-6 w-6" aria-hidden />}
         </span>
@@ -643,15 +650,16 @@ function PedirCuenta({ cuenta, ahora, pidiendo, onPedir }: {
   }
   return (
     <button type="button" onClick={() => onPedir(true)} disabled={pidiendo || !hayAlgo}
-      className={`${TARJETA} flex w-full items-center gap-4 px-4 py-4 text-left transition active:scale-[0.99] disabled:active:scale-100`}>
-      <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${hayAlgo ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300" : "bg-slate-100 text-slate-400 dark:bg-slate-800 dark:text-slate-500"}`}>
+      className={`${TARJETA} flex w-full items-center gap-4 px-4 py-4 text-left transition active:scale-[0.99] disabled:active:scale-100 ${hayAlgo ? "dark:hover:border-white/[0.12]" : "dark:border-dashed dark:border-white/[0.09] dark:bg-transparent dark:shadow-none"}`}>
+      <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-2xl ${hayAlgo ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300 dark:ring-1 dark:ring-inset dark:ring-emerald-400/25" : CHIP_NEUTRO}`}>
         {pidiendo ? <Loader2 className="h-6 w-6 animate-spin" aria-hidden /> : <Receipt className="h-6 w-6" aria-hidden />}
       </span>
       <span className="min-w-0 flex-1">
-        <span className={`block text-lg font-bold leading-tight ${hayAlgo ? TEXTO : "text-slate-400 dark:text-slate-500"}`}>Pedir la cuenta</span>
-        <span className={`block text-sm ${SUAVE}`}>{hayAlgo ? "Avisamos a la caja que quieren pagar" : "Cuando confirmen tu pedido vas a poder pedirla"}</span>
+        <span className={`block text-lg font-bold leading-tight ${hayAlgo ? TEXTO : "text-slate-400 dark:text-zinc-400"}`}>Pedir la cuenta</span>
+        <span className={`block text-sm ${hayAlgo ? SUAVE : "text-slate-500 dark:text-zinc-500"}`}>{hayAlgo ? "Avisamos a la caja que quieren pagar" : "Cuando confirmen tu pedido vas a poder pedirla"}</span>
       </span>
-      {hayAlgo ? <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden /> : null}
+      {hayAlgo ? <ChevronRight className="h-5 w-5 shrink-0 text-slate-400 dark:text-zinc-500" aria-hidden />
+        : <Lock className="hidden h-4 w-4 shrink-0 text-zinc-600 dark:block" aria-hidden />}
     </button>
   );
 }
@@ -661,10 +669,10 @@ function TarjetaProducto({ p, cantidad, color, onCambiar, onElegir, soloVer }: {
 }) {
   const [sinFoto, setSinFoto] = useState(!p.imagen_url);
   return (
-    <li className={`flex gap-3 rounded-2xl border bg-white p-2.5 shadow-sm transition dark:bg-slate-900 dark:shadow-none ${cantidad && !soloVer ? "border-[var(--brand)]" : "border-slate-200 dark:border-slate-800"}`}>
-      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-slate-100 dark:bg-slate-800">
+    <li className={`flex gap-3 rounded-2xl border bg-white p-2.5 shadow-sm transition dark:bg-[var(--qr-raised)] dark:shadow-[inset_0_1px_0_rgb(255_255_255/0.04)] ${cantidad && !soloVer ? "border-[var(--brand)] dark:shadow-[0_0_0_1px_var(--brand),0_8px_24px_-14px_var(--brand)]" : "border-slate-200 dark:border-white/[0.06]"}`}>
+      <div className={`h-24 w-24 shrink-0 overflow-hidden rounded-xl ${FOTO_VACIA} dark:ring-1 dark:ring-inset dark:ring-white/[0.06]`}>
         {sinFoto ? (
-          <div className="grid h-full w-full place-items-center text-2xl font-bold text-slate-300 dark:text-slate-600">{p.nombre.slice(0, 1)}</div>
+          <div className="grid h-full w-full place-items-center text-2xl font-bold text-slate-300 dark:text-zinc-600">{p.nombre.slice(0, 1)}</div>
         ) : (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={p.imagen_url!} alt="" loading="lazy" className="h-full w-full object-cover" onError={() => setSinFoto(true)} />
@@ -675,20 +683,20 @@ function TarjetaProducto({ p, cantidad, color, onCambiar, onElegir, soloVer }: {
         {p.descripcion ? <p className={`mt-0.5 ${soloVer ? "line-clamp-4" : "line-clamp-2"} text-xs ${SUAVE}`}>{p.descripcion}</p> : null}
         <div className="mt-auto flex items-end justify-between gap-2 pt-2">
           <div className="min-w-0">
-            {p.precio_lista ? <p className="text-[11px] tabular-nums text-slate-400 line-through">{gs(p.precio_lista)}</p> : null}
+            {p.precio_lista ? <p className={`text-[11px] tabular-nums line-through ${TENUE}`}>{gs(p.precio_lista)}</p> : null}
             <p className={`text-sm font-bold tabular-nums ${TEXTO}`}>{gs(p.precio)}</p>
           </div>
           {soloVer ? null : onElegir ? (
             <button type="button" onClick={onElegir} aria-label={`Elegir y agregar ${p.nombre}`}
-              className="relative inline-flex h-10 shrink-0 items-center gap-1 rounded-full pl-3 pr-3.5 text-sm font-semibold text-white shadow-sm active:scale-95" style={{ backgroundColor: color }}>
+              className={`relative inline-flex h-10 shrink-0 items-center gap-1 rounded-full pl-3 pr-3.5 text-sm font-semibold text-white shadow-sm active:scale-95 ${ACENTO}`} style={{ backgroundColor: color }}>
               <Plus className="h-4 w-4" aria-hidden /> {cantidad > 0 ? "Otro" : "Elegir"}
-              {cantidad > 0 ? <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-slate-900 px-1 text-[11px] font-bold tabular-nums dark:bg-white dark:text-slate-900">{cantidad}</span> : null}
+              {cantidad > 0 ? <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-slate-900 px-1 text-[11px] font-bold tabular-nums dark:bg-zinc-100 dark:text-zinc-900 dark:ring-2 dark:ring-[var(--qr-raised)]">{cantidad}</span> : null}
             </button>
           ) : cantidad > 0 ? (
             <Contador cantidad={cantidad} color={color} onCambiar={onCambiar} />
           ) : (
             <button type="button" onClick={() => onCambiar(1)} aria-label={`Agregar ${p.nombre}`}
-              className="grid h-10 w-10 place-items-center rounded-full text-white shadow-sm active:scale-95" style={{ backgroundColor: color }}>
+              className={`grid h-10 w-10 place-items-center rounded-full text-white shadow-sm active:scale-95 ${ACENTO}`} style={{ backgroundColor: color }}>
               <Plus className="h-5 w-5" aria-hidden />
             </button>
           )}
@@ -700,14 +708,14 @@ function TarjetaProducto({ p, cantidad, color, onCambiar, onElegir, soloVer }: {
 
 function Contador({ cantidad, color, onCambiar }: { cantidad: number; color: string; onCambiar: (d: number) => void }) {
   return (
-    <div className="flex shrink-0 items-center gap-1 rounded-full border border-slate-200 bg-white p-0.5 dark:border-slate-700 dark:bg-slate-900">
+    <div className={`flex shrink-0 items-center gap-1 rounded-full p-0.5 ${CONTROL}`}>
       <button type="button" onClick={() => onCambiar(-1)} aria-label={cantidad === 1 ? "Quitar" : "Uno menos"}
-        className="grid h-9 w-9 place-items-center rounded-full text-slate-700 active:bg-slate-100 dark:text-slate-200 dark:active:bg-slate-800">
+        className={`grid h-9 w-9 place-items-center rounded-full ${BOTON_ICONO}`}>
         {cantidad === 1 ? <Trash2 className="h-4 w-4" aria-hidden /> : <Minus className="h-4 w-4" aria-hidden />}
       </button>
       <span className={`min-w-6 text-center text-sm font-bold tabular-nums ${TEXTO}`}>{cantidad}</span>
       <button type="button" onClick={() => onCambiar(1)} aria-label="Uno más" disabled={cantidad >= 50}
-        className="grid h-9 w-9 place-items-center rounded-full text-white disabled:opacity-40" style={{ backgroundColor: color }}>
+        className={`grid h-9 w-9 place-items-center rounded-full text-white disabled:opacity-40 ${ACENTO}`} style={{ backgroundColor: color }}>
         <Plus className="h-4 w-4" aria-hidden />
       </button>
     </div>
@@ -741,13 +749,14 @@ function BarraProgreso({ total, actual }: { total: number; actual: number }) {
       {Array.from({ length: total }, (_, n) => {
         const lleno = n <= actual;
         return (
-          <span key={n} className="relative h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-slate-700">
-            <span className="absolute inset-y-0 left-0 rounded-full bg-[var(--brand)] transition-[width] duration-1000 ease-out motion-reduce:transition-none"
+          <span key={n} className="relative h-1.5 overflow-hidden rounded-full bg-slate-200 dark:bg-white/[0.08]">
+            <span className="absolute inset-y-0 left-0 rounded-full bg-[var(--brand)] transition-[width] duration-1000 ease-out motion-reduce:transition-none dark:bg-[linear-gradient(90deg,var(--brand),var(--qr-brand-texto))] dark:shadow-[0_0_10px_color-mix(in_srgb,var(--brand)_60%,transparent)]"
               style={{ width: lleno ? "100%" : "0%" }} />
             {!lleno ? (
               <span className="absolute inset-0 motion-reduce:hidden"
                 style={{
-                  background: "linear-gradient(90deg, transparent, color-mix(in srgb, var(--brand) 22%, transparent), transparent)",
+                  // En oscuro el brillo usa --qr-brillo (turquesa claro, globals.css); en claro, el 22 % de marca.
+                  background: "linear-gradient(90deg, transparent, var(--qr-brillo, color-mix(in srgb, var(--brand) 22%, transparent)), transparent)",
                   animation: "neuraEsperaPaso 3.2s ease-in-out infinite",
                   animationDelay: `${(n - actual - 1) * 0.35}s`,
                 }} />
@@ -767,16 +776,16 @@ function TarjetaEstado({ p }: { p: EstadoPedidoPublico }) {
   return (
     <div className={`${TARJETA} px-3.5 py-3`}>
       <div className="flex items-center gap-2">
-        <Icono className={`h-5 w-5 shrink-0 ${p.estado === "rechazado" ? "text-rose-600" : p.estado === "nuevo" ? "text-amber-600" : "text-emerald-600"}`} aria-hidden />
+        <Icono className={`h-5 w-5 shrink-0 ${p.estado === "rechazado" ? "text-rose-600 dark:text-rose-400" : p.estado === "nuevo" ? "text-amber-600 dark:text-amber-400" : "text-emerald-600 dark:text-emerald-400"}`} aria-hidden />
         <p className={`min-w-0 flex-1 text-sm font-semibold ${TEXTO}`}>Pedido #{p.numero} <span className={`font-normal ${TENUE}`}>· {horaCorta(p.creado_at)}</span></p>
-        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${e.clase}`}>{e.texto}</span>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${e.clase} ${ESTADO_OSCURO[p.estado] ?? ""}`}>{e.texto}</span>
       </div>
-      <p className="mt-1 text-sm text-slate-600 dark:text-slate-300">{e.cliente}{p.estado === "rechazado" && p.motivo_rechazo ? `: ${p.motivo_rechazo}` : ""}</p>
+      <p className="mt-1 text-sm text-slate-600 dark:text-zinc-300">{e.cliente}{p.estado === "rechazado" && p.motivo_rechazo ? `: ${p.motivo_rechazo}` : ""}</p>
       {p.estado === "rechazado" ? (
-        <div className="mt-2 h-1.5 rounded-full bg-rose-400" aria-hidden />
+        <div className="mt-2 h-1.5 rounded-full bg-rose-400 dark:bg-rose-500/70" aria-hidden />
       ) : i >= 0 ? <BarraProgreso total={pasos.length} actual={i} /> : null}
       <p className={`mt-2 text-xs ${SUAVE}`}>
-        {p.items.map((it) => `${Number(it.cantidad)} × ${it.nombre}${it.modificadores_texto ? ` (${it.modificadores_texto})` : ""}`).join(" · ")} — <span className="font-semibold text-slate-700 dark:text-slate-200">{gs(p.total)}</span>
+        {p.items.map((it) => `${Number(it.cantidad)} × ${it.nombre}${it.modificadores_texto ? ` (${it.modificadores_texto})` : ""}`).join(" · ")} — <span className={`font-semibold ${MEDIO}`}>{gs(p.total)}</span>
       </p>
     </div>
   );
