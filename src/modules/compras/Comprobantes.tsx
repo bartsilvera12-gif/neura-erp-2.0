@@ -35,7 +35,7 @@ export const tamano = (b: number | null | undefined) => {
   return `${(n / (1024 * 1024)).toLocaleString("es-PY", { maximumFractionDigits: 1 })} MB`;
 };
 const fechaHora = (iso: string) =>
-  new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const esPdf = (mime: string | null | undefined, nombre: string) => mime === "application/pdf" || /\.pdf$/i.test(nombre);
 
 export function subirComprobante(compraId: string, f: File) {

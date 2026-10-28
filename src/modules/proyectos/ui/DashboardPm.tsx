@@ -51,7 +51,7 @@ export function DashboardPm({ esAdmin, config, version, onAbrir }: {
       const r = await apiFetch<PmResp>(`/api/proyectos/dashboard/pm${esAdmin && pm ? `?pm=${pm}` : ""}`);
       setData(r);
       setError(null);
-      setActualizado(new Date().toLocaleTimeString("es-PY", { timeZone: "America/Asuncion", hour: "2-digit", minute: "2-digit", hour12: false }));
+      setActualizado(new Date().toLocaleTimeString("es-PY", { timeZone: "America/Asuncion", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }));
     } catch (e) {
       setError((e as Error).message);
     } finally {

@@ -23,7 +23,7 @@ const diaPY = (iso: string) => {
   const d = new Date(iso);
   return Number.isFinite(d.getTime()) ? d.toLocaleDateString("en-CA", { timeZone: TZ_PY }) : "";
 };
-const horaPY = (iso: string) => new Date(iso).toLocaleTimeString("es-PY", { timeZone: TZ_PY, hour: "2-digit", minute: "2-digit", hour12: false });
+const horaPY = (iso: string) => new Date(iso).toLocaleTimeString("es-PY", { timeZone: TZ_PY, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 function etiquetaDia(clave: string): string {
   const hoy = diaPY(new Date().toISOString());

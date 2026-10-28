@@ -36,7 +36,7 @@ const TABS: { key: EstadoCobroPendiente | ""; label: string }[] = [
   { key: "", label: "Todas" },
 ];
 const CONTROL = "rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-600 outline-none focus:ring-2 focus:ring-[#4FAEB2]/40";
-const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" });
+const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const fmt = (v: number | string) => Math.round(Number(v) || 0).toLocaleString("es-PY");
 
 function mesesRecientes(): { value: string; label: string }[] {

@@ -10,6 +10,7 @@
  */
 import { useEffect, useState } from "react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { fechaHora as fechaHoraPY, hora as horaPY } from "@/lib/fecha/paraguay";
 import { apiFetchSWR, guardadoAlInstante, invalidar } from "@/lib/api/cache-cliente";
 
 export type TurnoEnCurso = {
@@ -352,10 +353,10 @@ export const etiquetaCaja = (c: { punto_nombre: string; sucursal_nombre: string 
 
 export function fechaHora(iso: string | null | undefined) {
   if (!iso) return "—";
-  return new Date(iso).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  return fechaHoraPY(iso);
 }
 export function hora(iso: string) {
-  return new Date(iso).toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit" });
+  return horaPY(iso);
 }
 
 // ── Turnos viejos: la fecha se muestra si no es de hoy y se avisa pasadas 24 h ──

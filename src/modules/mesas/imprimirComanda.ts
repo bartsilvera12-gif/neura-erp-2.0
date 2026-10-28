@@ -30,7 +30,7 @@ function configComanda(): Promise<ConfigComanda> {
 }
 
 const fechaCorta = (iso: string) =>
-  new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit" })
+  new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
     .format(new Date(iso)).replace(",", "");
 
 /** Receta 73: modificadores de la línea para la comanda (opciones, SIN …, + EXTRA …). */

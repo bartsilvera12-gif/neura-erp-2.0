@@ -36,7 +36,7 @@ const campo =
 const etiqueta = "flex flex-col gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#2F6E71]";
 const tarjeta = "overflow-hidden rounded-2xl border border-[#4FAEB2]/20 bg-white shadow-[0_2px_12px_rgba(47,110,113,0.08)]";
 
-const F_FECHA = new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+const F_FECHA = new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const fechaHora = (iso: string | null | undefined) => (iso ? F_FECHA.format(new Date(iso)).replace(",", "") : "—");
 /** "YYYY-MM-DD" → "dd/mm/aaaa". */
 const dia = (d: string | null | undefined) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : "—");

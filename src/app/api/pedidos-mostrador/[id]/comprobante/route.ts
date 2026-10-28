@@ -40,7 +40,7 @@ export const GET = withTenant(async (ctx, req) => {
     empresa: m.nombre,
     ancho,
     letra: cfg.letra,
-    fecha: new Date(data.creado_at).toLocaleString("es-PY", { timeZone: TZ_PY, dateStyle: "short", timeStyle: "short" }),
+    fecha: new Date(data.creado_at).toLocaleString("es-PY", { timeZone: TZ_PY, dateStyle: "short", timeStyle: "short", hourCycle: "h23" }),
     anulado: data.estado === "anulado",
     auto: sp.get("auto") === "1",
     acciones: sp.get("acciones") !== "0",

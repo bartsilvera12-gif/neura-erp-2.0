@@ -18,7 +18,7 @@ import { ESTADO_CXP } from "@/modules/compras/pagos";
 import { ESTADO_GASTO, fechaCorta, gs, monto, nombreMedioGasto, type DetalleGasto as Detalle } from "@/modules/gastos/tipos";
 
 const fechaHora = (iso: string | null | undefined) =>
-  iso ? new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "—";
+  iso ? new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }) : "—";
 
 export function DetalleGasto({ id, onClose, onEditar, onEliminar, onAnular, onCambio }: {
   id: string;

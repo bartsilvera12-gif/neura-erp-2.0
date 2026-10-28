@@ -201,7 +201,7 @@ export function haceCuanto(iso: string, ahora: number = Date.now()): string {
 }
 
 export const horaCorta = (iso: string) =>
-  new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso));
 
 export const gs = (n: number) => `Gs. ${Math.round(Number(n) || 0).toLocaleString("es-PY")}`;
 

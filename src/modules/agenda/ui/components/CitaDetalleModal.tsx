@@ -39,7 +39,7 @@ const MSJ_TERMINAL: Record<string, string> = {
 function fmtHora(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("es-PY", { timeZone: TZ_PY, hour: "2-digit", minute: "2-digit", hour12: false });
+  return d.toLocaleString("es-PY", { timeZone: TZ_PY, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 }
 
 /** "30 min" / "1 h 30 min" — se lee más rápido que restar dos horarios. */

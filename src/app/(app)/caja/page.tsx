@@ -19,11 +19,11 @@ import { TablaTarjetas } from "@/components/TablaResponsive";
 import { formatGs } from "@/modules/caja/lib";
 import { desdeTurno, etiquetaCaja, haceDias, metodoLabel, invalidarCajas, turnoViejo, METODOS_VENTA, useEstadoCajas, type EstadoCajas } from "@/modules/caja/turno";
 import { rangoAtajo, SelectorPeriodo, ATAJO_LABEL, type Atajo } from "@/modules/reportes/ui";
-import { hoyPY } from "@/lib/fecha/paraguay";
+import { fechaHora, hoyPY } from "@/lib/fecha/paraguay";
 
 const TEAL = clienteConfig.color;
 const OPCIONES_PERIODO: [string, string][] = (["todo", "hoy", "semana", "mes", "mes_anterior", "3m", "anio"] as Atajo[]).map((k) => [k, k === "todo" ? "Todas las fechas" : ATAJO_LABEL[k]]);
-const fechaVenta = (iso: string) => new Date(iso).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const fechaVenta = (iso: string) => fechaHora(iso);
 
 // Suma de cantidades con coma decimal (máx. 3): "1,5" y no "1.0000339999999999".
 const cantTotal = (items: { cantidad: number }[]) =>

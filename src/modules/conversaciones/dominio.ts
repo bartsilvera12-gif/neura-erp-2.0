@@ -198,7 +198,7 @@ export function telefonoLegible(t: string | null | undefined): string {
 }
 
 // ── Fechas (America/Asuncion) ────────────────────────────────────────────────
-const F_HORA = new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, hour: "2-digit", minute: "2-digit", hour12: false });
+const F_HORA = new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const F_DIA = new Intl.DateTimeFormat("en-CA", { timeZone: TZ_PY, year: "numeric", month: "2-digit", day: "2-digit" });
 const F_SEMANA = new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, weekday: "long" });
 const F_SEMANA_CORTA = new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, weekday: "short" });

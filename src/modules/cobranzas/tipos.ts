@@ -153,7 +153,7 @@ export const esOperacionPlaceholder = (op: string) => /^0*$/.test(op.replace(/[^
 /** Referencia para un banco sin comprobante: PREFIJO-YYMMDD-HHMMSS-RR (hora de Paraguay). */
 export function generarReferencia(prefijo: string | null | undefined, ahora = new Date()): string {
   const p = Object.fromEntries(
-    new Intl.DateTimeFormat("en-GB", { timeZone: "America/Asuncion", year: "2-digit", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })
+    new Intl.DateTimeFormat("en-GB", { timeZone: "America/Asuncion", year: "2-digit", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23" })
       .formatToParts(ahora).map((x) => [x.type, x.value]),
   );
   const rand = Math.random().toString(36).slice(2, 4).toUpperCase().padEnd(2, "X");

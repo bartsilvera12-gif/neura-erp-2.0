@@ -178,7 +178,7 @@ export default function VentasCreditoPage() {
             vacio={<p className="py-12 text-center text-sm text-slate-400">{periodo === "turno" && !turno ? "Elegí un turno abierto." : "No hay ventas a crédito con estos filtros."}</p>}
             columnas={[
               { key: "venta", titulo: "Venta", movil: "subtitulo",
-                celda: (f) => <><span className="font-mono text-xs text-slate-600">{f.numero_control}</span><span className="block text-[11px] text-slate-400 max-md:ml-1.5 max-md:inline">{new Date(f.fecha).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span></> },
+                celda: (f) => <><span className="font-mono text-xs text-slate-600">{f.numero_control}</span><span className="block text-[11px] text-slate-400 max-md:ml-1.5 max-md:inline">{new Date(f.fecha).toLocaleString("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" })}</span></> },
               { key: "cliente", titulo: "Cliente", movil: "titulo",
                 celda: (f) => <><span className="text-slate-800">{f.cliente_nombre ?? "—"}</span>{f.cliente_ruc ? <span className="block text-[11px] font-normal text-slate-400">{f.cliente_ruc}</span> : null}</> },
               { key: "caja", titulo: "Caja", claseTd: "text-xs text-slate-600", movil: "detalle",

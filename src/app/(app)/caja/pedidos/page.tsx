@@ -21,6 +21,7 @@ import { buscar, buscarEnIndice, exactosPrimero, indexar } from "@/lib/busqueda"
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { QtyInput } from "@/components/ui/QtyInput";
 import { clienteConfig } from "@/cliente.config";
+import { hora } from "@/lib/fecha/paraguay";
 import { formatGs, type Cliente, type Producto } from "@/modules/caja/lib";
 import { HojaModificadores, type ResultadoMods } from "@/modules/mesas/HojaModificadores";
 import { ModsDetalle } from "@/modules/mesas/ModsDetalle";
@@ -47,7 +48,6 @@ type Linea = {
 };
 
 const precioBase = (p: Producto) => Math.round(Number(p.precio_venta) * (1 - Math.max(0, Math.min(Number(p.descuento_pct) || 0, 100)) / 100));
-const hora = (iso: string) => new Intl.DateTimeFormat("es-PY", { timeZone: "America/Asuncion", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
 const cantTxt = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
 
 export default function PedidosMostradorPage() {

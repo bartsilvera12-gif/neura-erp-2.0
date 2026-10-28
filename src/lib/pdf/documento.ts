@@ -28,7 +28,7 @@ export const W = 210 - M * 2; // ancho útil
 
 export const gs = (v: number) => Math.round(Number(v) || 0).toLocaleString("es-PY");
 export const fechaHoraPY = (iso: string) =>
-  new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(iso));
+  new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(iso));
 /** Helvetica de jsPDF es WinAnsi: el signo menos tipográfico y similares no existen. */
 export const pdfTxt = (s: string) => s.replace(/−/g, "-").replace(/→/g, "->").replace(/ | /g, " ");
 

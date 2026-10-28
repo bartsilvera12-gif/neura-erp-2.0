@@ -12,7 +12,7 @@ import { asegurarEspacio, COLOR, encabezado, fechaHoraPY, gs, M, nuevoDocumento,
 import type { ResumenTurno } from "@/modules/caja/turno";
 
 const hora = (iso: string, conDia: boolean) =>
-  new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, ...(conDia ? { day: "2-digit", month: "2-digit" } : {}), hour: "2-digit", minute: "2-digit" })
+  new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, ...(conDia ? { day: "2-digit", month: "2-digit" } : {}), hour: "2-digit", minute: "2-digit", hourCycle: "h23" })
     .format(new Date(iso))
     .replace(",", "");
 const dia = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: TZ_PY });

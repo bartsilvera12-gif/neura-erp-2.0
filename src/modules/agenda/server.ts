@@ -63,7 +63,7 @@ export function mensajeConflicto(c: CitaConflicto): string {
     const d = new Date(iso);
     return Number.isNaN(d.getTime())
       ? "?"
-      : d.toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
+      : d.toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   };
   return `El responsable ya tiene una cita en ese horario: "${c.titulo?.trim() || "otra cita"}" (${fmt(c.inicio_at)} – ${fmt(c.fin_at)}).`;
 }

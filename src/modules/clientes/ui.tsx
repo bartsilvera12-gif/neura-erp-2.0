@@ -36,7 +36,7 @@ export function fechaHora(iso: string | null | undefined): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   const f = d.toLocaleDateString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "numeric" });
-  const h = d.toLocaleTimeString("es-PY", { timeZone: TZ_PY, hour: "2-digit", minute: "2-digit", hour12: false });
+  const h = d.toLocaleTimeString("es-PY", { timeZone: TZ_PY, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
   return `${f} ${h}`;
 }
 

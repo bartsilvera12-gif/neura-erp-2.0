@@ -69,7 +69,7 @@ export const GET = withTenant(async (ctx, req) => {
   const clienteRuc = (v.receptor_ruc as string | null) || (ocasional ? "X" : rucParaFactura(cli));
   const clienteDoc = clienteRuc ? `RUC: ${clienteRuc}` : cli?.documento ? `CI: ${cli.documento}` : "";
 
-  const fecha = v.fecha ? new Date(v.fecha as string).toLocaleString("es-PY", { timeZone: TZ_PY, dateStyle: "short", timeStyle: "short" }) : "";
+  const fecha = v.fecha ? new Date(v.fecha as string).toLocaleString("es-PY", { timeZone: TZ_PY, dateStyle: "short", timeStyle: "short", hourCycle: "h23" }) : "";
   const metodo = v.tipo_venta === "CREDITO" ? `Crédito${v.plazo_dias ? ` (${v.plazo_dias} días)` : ""}` : etiquetaMetodoPago(String(v.metodo_pago ?? "efectivo"));
   const pagos = ((v.pagos ?? []) as { metodo_pago: string; monto: number; referencia: string | null; recibido: number | null; vuelto: number | null; created_at: string }[])
     .slice()

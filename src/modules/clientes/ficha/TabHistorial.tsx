@@ -74,7 +74,7 @@ const ZONA = "America/Asuncion";
 /** "22 de octubre de 2026" (día en hora de Paraguay). */
 const diaLargo = (iso: string) => new Date(iso).toLocaleDateString("es-PY", { timeZone: ZONA, day: "numeric", month: "long", year: "numeric" });
 /** "14:18". */
-const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-PY", { timeZone: ZONA, hour: "2-digit", minute: "2-digit", hour12: false });
+const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-PY", { timeZone: ZONA, hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 /** Eventos agrupados por día, en el orden que vienen (más nuevo primero). */
 function porDia(lista: EventoHistorial[]): [string, EventoHistorial[]][] {
   const m = new Map<string, EventoHistorial[]>();

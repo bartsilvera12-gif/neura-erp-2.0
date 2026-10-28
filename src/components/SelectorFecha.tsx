@@ -63,7 +63,7 @@ function etiquetaDia(iso: string) {
 }
 /** hora actual de Paraguay redondeada hacia arriba al paso ("HH:mm"). */
 function horaAhoraPY(paso: number) {
-  const [h, m] = new Date().toLocaleTimeString("en-GB", { timeZone: TZ_PY, hour: "2-digit", minute: "2-digit", hour12: false }).split(":").map(Number);
+  const [h, m] = new Date().toLocaleTimeString("en-GB", { timeZone: TZ_PY, hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).split(":").map(Number);
   let total = Math.ceil(((h % 24) * 60 + m) / paso) * paso;
   if (total >= 24 * 60) total = 24 * 60 - paso;
   return `${pad(Math.floor(total / 60))}:${pad(total % 60)}`;

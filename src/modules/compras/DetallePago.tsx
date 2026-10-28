@@ -13,7 +13,7 @@ import { TZ_PY } from "@/lib/fecha/paraguay";
 import { dinero, hrefOrigenCxp, nombreMetodoPago, type PagoProveedor } from "@/modules/compras/pagos";
 import { imprimirOrdenPago } from "@/modules/compras/RegistrarPagoProveedor";
 
-const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 
 export function DetallePago({ id, puedeAnular, onClose, onAnular }: { id: string; puedeAnular: boolean; onClose: () => void; onAnular: (p: PagoProveedor) => void }) {
   const [p, setP] = useState<PagoProveedor | null>(null);

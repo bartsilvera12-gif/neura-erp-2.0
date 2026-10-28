@@ -27,7 +27,7 @@ import { AnularPago, DetallePago } from "@/modules/compras/DetallePago";
 const TEAL = clienteConfig.color;
 const POR_PAGINA = 50;
 const dia = (d: string) => new Date(`${d}T12:00:00`).toLocaleDateString("es-PY", { day: "2-digit", month: "short", year: "numeric" });
-const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const TH = "whitespace-nowrap px-3 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-[var(--brand)]";
 const BUSCADOR = "h-11 w-full rounded-xl border border-slate-200 pl-9 pr-3 text-sm outline-none md:h-auto md:py-2.5 transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 

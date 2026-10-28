@@ -17,6 +17,7 @@ import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
 import { formatGs } from "@/modules/caja/lib";
 import { metodoLabel, invalidarCajas } from "@/modules/caja/turno";
+import { fechaHora } from "@/lib/fecha/paraguay";
 import { SelectorCaja } from "@/modules/caja/SelectorCaja";
 import { textoConPrecios, type ModsSnapshot } from "@/modules/mesas/modificadores";
 
@@ -134,7 +135,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
         <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 py-3 pl-4 pr-2 sm:px-6 sm:py-4">
           <div className="min-w-0">
             <h2 className="text-base font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-lg">Venta {venta?.numero_control ?? "…"}</h2>
-            {venta ? <p className="mt-0.5 text-xs text-slate-500">{new Date(venta.fecha).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}{venta.usuario_nombre ? ` · ${venta.usuario_nombre}` : ""}</p> : null}
+            {venta ? <p className="mt-0.5 text-xs text-slate-500">{fechaHora(venta.fecha)}{venta.usuario_nombre ? ` · ${venta.usuario_nombre}` : ""}</p> : null}
           </div>
           <button type="button" onClick={onClose} aria-label="Cerrar" className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"><X className="h-5 w-5" /></button>
         </div>

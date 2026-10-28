@@ -25,8 +25,8 @@ import { HistorialCerradas } from "@/modules/conversaciones/HistorialCerradas";
 const VisorChat = dynamic(() => import("@/modules/conversaciones/VisorChat").then((m) => m.VisorChat), { ssr: false });
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const F_CORTA = new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false });
-const F_LARGA = new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+const F_CORTA = new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+const F_LARGA = new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const corta = (iso: string | null | undefined) => (iso ? F_CORTA.format(new Date(iso)).replace(",", "") : "—");
 const larga = (iso: string | null | undefined) => (iso ? F_LARGA.format(new Date(iso)).replace(",", "") : "—");
 

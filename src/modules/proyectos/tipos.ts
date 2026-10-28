@@ -246,7 +246,7 @@ export function fechaHoraPY(v: string | null | undefined): string {
   if (!v) return "—";
   const d = new Date(v);
   if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: false });
+  return d.toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 }
 
 /** "Hace 5 min" · "Hace 3 h" · "Hace 2 d". */

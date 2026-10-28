@@ -47,7 +47,7 @@ const BADGE_ANULACION = "bg-rose-50 text-rose-700 ring-1 ring-rose-200";
 const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
 const cantidad = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
 const fecha = (iso: string) =>
-  new Date(iso).toLocaleString("es-PY", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).replace(",", " ·");
+  new Date(iso).toLocaleString("es-PY", { timeZone: TZ, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).replace(",", " ·");
 
 type ProductoFiltro = { id: string; nombre: string; sku: string; stock_actual: number; unidad_medida: string; stock_deposito?: number };
 type PaginaMov = { rows: Movimiento[]; total: number; producto: ProductoFiltro | null };
