@@ -373,7 +373,8 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
           <>
             {/* Avisos y "Tus pedidos" (la barra de avance queda a la vista) */}
             <section className="mt-3 space-y-2" aria-live="polite">
-              {enviado != null ? (
+              {/* El aviso se va solo cuando la caja ya lo respondió (o se cerró la cuenta). */}
+              {enviado != null && !cuentaCerrada && (pedidos.find((x) => x.numero === enviado)?.estado ?? "nuevo") === "nuevo" ? (
                 <div className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm ${AVISO_OK}`}>
                   <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                   <p className="min-w-0 flex-1">Pedido #{enviado} enviado. La caja lo confirma en un momento.</p>

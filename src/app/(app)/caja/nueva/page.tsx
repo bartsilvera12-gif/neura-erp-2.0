@@ -64,6 +64,8 @@ import {
 import { analizarConversion, type AnalisisConversion, type ConversionPresupuesto } from "@/modules/presupuestos/caja";
 
 const TEAL = clienteConfig.color;
+// Cantidades con coma (una pizza compartida entre 3 → "0,333").
+const cantTxt = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
 
 /** Presupuesto que se está cobrando (?presupuesto=<id>): líneas precargadas y sus avisos. */
 type PresupuestoEnCaja =
@@ -1547,7 +1549,7 @@ function CajaPageContenido() {
             <p className="text-xs font-semibold uppercase tracking-wide text-slate-600">
               Ítems cargados: <span className="text-base font-bold tabular-nums" style={{ color: TEAL }}>{cart.length}</span>
             </p>
-            {cart.length > 0 && <p className="text-[11px] tabular-nums text-slate-500">{cantTotal} unidad{cantTotal === 1 ? "" : "es"} totales</p>}
+            {cart.length > 0 && <p className="text-[11px] tabular-nums text-slate-500">{cantTxt(cantTotal)} unidad{cantTotal === 1 ? "" : "es"} totales</p>}
           </div>
 
           {/* Carrito */}
@@ -1607,11 +1609,11 @@ function CajaPageContenido() {
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <p className="min-w-0 flex-1 text-sm font-medium leading-snug text-slate-900 [overflow-wrap:anywhere] @lg:truncate">{l.producto.nombre}</p>
-                            {l.mesa_min ? <span className="rounded-full border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">Mesa · {l.mesa_min}</span> : null}
+                            {l.mesa_min ? <span className="rounded-full border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">Mesa · {cantTxt(l.mesa_min)}</span> : null}
                             {l.pedido_cant != null ? (
                               <span className={`rounded-full border px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide ${l.cantidad !== l.pedido_cant ? "border-amber-300 bg-amber-50 text-amber-800" : "border-violet-200 bg-violet-50 text-violet-800"}`}
                                 title={l.cantidad !== l.pedido_cant ? `En el pedido: ${l.pedido_cant}` : "Del pedido"}>
-                                Pedido · {l.pedido_cant}
+                                Pedido · {cantTxt(l.pedido_cant)}
                               </span>
                             ) : null}
                             {sinStockLinea && <span className="rounded-full border border-rose-300 bg-rose-100 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-rose-800">❌ Sin stock</span>}
@@ -1735,7 +1737,7 @@ function CajaPageContenido() {
 
           <div className="space-y-2 border-t border-slate-100 px-5 py-3.5">
             <div className="flex items-baseline justify-between text-sm text-slate-500">
-              <span>Ítems</span><span className="font-medium tabular-nums text-slate-800">{cantTotal}</span>
+              <span>Ítems</span><span className="font-medium tabular-nums text-slate-800">{cantTxt(cantTotal)}</span>
             </div>
             <div className="flex items-baseline justify-between text-sm text-slate-500">
               <span>IVA incluido</span><span className="tabular-nums text-slate-600">{formatGs(totalIva)}</span>
@@ -1763,7 +1765,7 @@ function CajaPageContenido() {
           <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2.5 sm:px-4">
             <div className="min-w-0 flex-1">
               <p className="truncate text-[11px] text-slate-500">
-                {cantTotal} unidad{cantTotal === 1 ? "" : "es"} · IVA incl. {formatGs(totalIva)}
+                {cantTxt(cantTotal)} unidad{cantTotal === 1 ? "" : "es"} · IVA incl. {formatGs(totalIva)}
               </p>
               <p className="truncate text-2xl font-bold leading-tight tabular-nums text-slate-900">{formatGs(total)}</p>
             </div>

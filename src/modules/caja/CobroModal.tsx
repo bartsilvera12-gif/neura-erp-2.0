@@ -219,7 +219,7 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, do
                 )
               ) : null}
             </div>
-            <p className="mt-0.5 truncate text-xs text-slate-500">{cantItems} ítem{cantItems === 1 ? "" : "s"}{cliente ? ` · ${cliente.nombre}` : ""}</p>
+            <p className="mt-0.5 truncate text-xs text-slate-500">{Number(cantItems).toLocaleString("es-PY", { maximumFractionDigits: 3 })} ítem{cantItems === 1 ? "" : "s"}{cliente ? ` · ${cliente.nombre}` : ""}</p>
           </div>
           <p className="shrink-0 text-[28px] font-extrabold leading-none tabular-nums tracking-tight text-slate-900 sm:text-3xl">{formatGs(total)}</p>
         </div>
