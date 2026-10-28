@@ -69,6 +69,9 @@ function guardarSeguimientos(token: string, segs: string[]) {
   } catch { /* sin storage: el estado se ve mientras la página siga abierta */ }
 }
 
+/** Un pedido entregado ("¡Todo listo!") sigue a la vista 10 minutos desde la entrega. */
+const VISIBLE_ENTREGADO_MS = 10 * 60 * 1000;
+
 /** Tema del menú QR: data-tema en <html> (lo pone antes de pintar el script de page.tsx). */
 function useTema() {
   const [tema, setTema] = useState<"claro" | "oscuro">("claro");
@@ -278,6 +281,29 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
   const enCursoRef = useRef(enCurso);
   enCursoRef.current = enCurso;
   useEffect(() => { void consultar(segs); }, [segs, consultar]);
+
+  // Cuándo se entregó cada pedido (con el reloj del servidor, pasado a este celular) y un reloj
+  // que lo saca de la vista a los 10 minutos.
+  const [entregas, setEntregas] = useState<Record<string, number>>({});
+  const [reloj, setReloj] = useState(() => Date.now());
+  useEffect(() => {
+    const ahora = Date.now();
+    setEntregas((cur) => {
+      const sig: Record<string, number> = {};
+      for (const p of pedidos) {
+        if (p.estado !== "entregado") continue;
+        sig[p.seguimiento] = cur[p.seguimiento] ?? ahora - (p.entregado_hace_s ?? 0) * 1000;
+      }
+      return sig;
+    });
+    setReloj(ahora);
+  }, [pedidos]);
+  const hayEntregadoVisible = pedidos.some((p) => p.estado === "entregado" && entregas[p.seguimiento] != null && reloj - entregas[p.seguimiento] < VISIBLE_ENTREGADO_MS);
+  useEffect(() => {
+    if (!hayEntregadoVisible) return;
+    const id = setInterval(() => setReloj(Date.now()), 15000);
+    return () => clearInterval(id);
+  }, [hayEntregadoVisible]);
   const hayQueSeguir = segs.length > 0;
   useEffect(() => {
     if (!hayQueSeguir) return;
@@ -329,7 +355,9 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
   const ahora = cuenta ? Date.parse(cuenta.ahora) : Date.now();
   const nPartes = abierta?.division?.partes.filter((p) => !p.es_resto).length ?? 0;
   const nFact = abierta ? (abierta.facturacion ? 1 : 0) + (abierta.division?.partes.filter((p) => p.facturacion).length ?? 0) : 0;
-  const pedidosVivos = pedidos.filter((p) => p.estado !== "entregado");
+  const pedidosVivos = pedidos.filter(
+    (p) => p.estado !== "entregado" || (entregas[p.seguimiento] != null && reloj - entregas[p.seguimiento] < VISIBLE_ENTREGADO_MS),
+  );
 
   return (
     <div className={`min-h-dvh ${FONDO} ${conBarraCarrito || soloVer ? "pb-[calc(6rem+env(safe-area-inset-bottom))]" : "pb-[calc(2rem+env(safe-area-inset-bottom))]"}`} style={{ ["--brand" as string]: color }}>

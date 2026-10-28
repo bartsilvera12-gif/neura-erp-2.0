@@ -41,6 +41,8 @@ export type EstadoPedidoPublico = {
   total: number;
   creado_at: string;
   cuenta_cerrada: boolean;
+  /** Receta 90: segundos desde la entrega (solo si está entregado). */
+  entregado_hace_s?: number | null;
   /** Receta 69: la cuenta se envió a caja (la mesa pidió la cuenta). */
   cuenta_en_caja?: boolean;
   items: { nombre: string; cantidad: number; total: number; modificadores_texto?: string | null }[];
