@@ -23,7 +23,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" className={jakarta.variable}>
+    // suppressHydrationWarning: el menú QR (/m/<token>) pone data-tema="oscuro" en <html> antes de hidratar.
+    <html lang="es" className={jakarta.variable} suppressHydrationWarning>
       <body>{children}</body>
     </html>
   );

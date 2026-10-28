@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* Modo oscuro SOLO del menú QR (/m/<token>): lo prende la página con data-tema="oscuro" en
+   <html> (sigue al celular o a lo que eligió el cliente). El resto del ERP no usa `dark:`. */
+@custom-variant dark (&:where([data-tema=oscuro], [data-tema=oscuro] *));
+html[data-tema=oscuro] body { background: #020617; color: #e2e8f0; color-scheme: dark; }
+
 /* Identidad Neura: blanco + turquesa. El acento es un solo token para que cada
    clon lo re-tematice; el resto es blanco y escala slate. */
 :root {

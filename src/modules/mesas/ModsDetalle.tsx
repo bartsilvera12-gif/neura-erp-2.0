@@ -13,11 +13,11 @@ export function ModsDetalle({ mods, texto, variante = "chico", className = "" }:
 }) {
   const p = partesParaMostrar(mods);
   const hay = p.quitar.length + p.extras.length + p.opciones.length > 0;
-  if (!hay) return texto ? <span className={`block text-xs text-slate-500 ${className}`}>{texto}</span> : null;
+  if (!hay) return texto ? <span className={`block text-xs text-slate-500 dark:text-slate-400 ${className}`}>{texto}</span> : null;
   if (variante === "cocina") {
     return (
       <span className={`mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5 text-base leading-snug ${className}`}>
-        {p.opciones.map((o, i) => <span key={`o${i}`} className="font-extrabold text-slate-900">{o.opcion}</span>)}
+        {p.opciones.map((o, i) => <span key={`o${i}`} className="font-extrabold text-slate-900 dark:text-slate-100">{o.opcion}</span>)}
         {p.quitar.map((q, i) => <span key={`q${i}`} className="font-extrabold uppercase text-rose-600">SIN {q}</span>)}
         {p.extras.map((e, i) => (
           <span key={`e${i}`} className="font-extrabold uppercase text-emerald-700">+ {e.nombre}{e.cantidad > 1 ? ` ×${e.cantidad}` : ""}</span>
@@ -28,12 +28,12 @@ export function ModsDetalle({ mods, texto, variante = "chico", className = "" }:
   return (
     <span className={`block text-xs leading-snug ${className}`}>
       {[
-        ...p.opciones.map((o, i) => <span key={`o${i}`} className="font-semibold text-slate-700">{o.opcion}</span>),
+        ...p.opciones.map((o, i) => <span key={`o${i}`} className="font-semibold text-slate-700 dark:text-slate-200">{o.opcion}</span>),
         ...p.quitar.map((q, i) => <span key={`q${i}`} className="font-medium text-rose-600">sin {q.toLowerCase()}</span>),
         ...p.extras.map((e, i) => (
           <span key={`e${i}`} className="font-medium text-emerald-700">+ {e.nombre.toLowerCase()}{e.cantidad > 1 ? ` ×${e.cantidad}` : ""}</span>
         )),
-      ].flatMap((el, i) => (i ? [<span key={`s${i}`} className="text-slate-300"> · </span>, el] : [el]))}
+      ].flatMap((el, i) => (i ? [<span key={`s${i}`} className="text-slate-300 dark:text-slate-600"> · </span>, el] : [el]))}
     </span>
   );
 }

@@ -20,9 +20,9 @@
 import Link from "next/link";
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ChevronRight, ClipboardList, FileSignature, Info, Lock, Package, Printer, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronRight, ClipboardList, FileSignature, Info, Loader2, Lock, Package, Printer, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
 import { usePorCobrar } from "@/modules/mesas/usePorCobrar";
-import { haceCuanto, origenPedido, pitido, type CuentaPorCobrar } from "@/modules/mesas/tipos";
+import { haceCuanto, origenPedido, pitido, type CuentaPorCobrar, type FacturacionPropuesta, type LineaPorCobrar } from "@/modules/mesas/tipos";
 import { HojaModificadores, type ResultadoMods } from "@/modules/mesas/HojaModificadores";
 import { ModsDetalle } from "@/modules/mesas/ModsDetalle";
 import { usePedidosPorCobrar } from "@/modules/pedidos-mostrador/cliente";
@@ -568,10 +568,16 @@ function CajaPageContenido() {
   const cuentaMesaCambio = !!cuentaMesa && !!cuentaMesaAhora && cuentaMesaAhora.version !== cuentaMesa.version;
   const cuentaMesaSeFue = !!cuentaMesa && porCobrarFresco && !cuentaMesaAhora;
 
-  function lineasDeMesa(c: CuentaPorCobrar): CartLine[] | string {
+  // Receta 88: cuenta separada desde el QR → se carga UNA parte (o el resto) y se cobra sola.
+  const [parteMesa, setParteMesa] = useState<{ id: string; nombre: string; total: number } | null>(null);
+  // Datos de facturación que propuso la mesa y que todavía no son un cliente (la caja confirma crearlo).
+  const [factPropuesta, setFactPropuesta] = useState<FacturacionPropuesta | null>(null);
+  const [creandoCliente, setCreandoCliente] = useState(false);
+
+  function lineasDeMesa(c: CuentaPorCobrar, lista: LineaPorCobrar[] = c.items): CartLine[] | string {
     const t = Date.now();
     const out: CartLine[] = [];
-    for (const [i, it] of c.items.entries()) {
+    for (const [i, it] of lista.entries()) {
       const prod = it.producto_id ? productos.find((p) => p.id === it.producto_id) : undefined;
       if (!prod) return `"${it.nombre}" no está en el catálogo de esta caja: no se puede cargar la cuenta.`;
       // Receta 73: la línea conserva sus modificadores (el servidor los vuelve a validar y cobrar).
@@ -597,10 +603,63 @@ function CajaPageContenido() {
     return out;
   }
 
-  function cargarCuentaMesa(c: CuentaPorCobrar) {
+  /** Cliente de la factura propuesta por la mesa: si ya existe se elige (y factura); si no, se ofrece crearlo. */
+  function aplicarFactPropuesta(f: FacturacionPropuesta | null | undefined) {
+    setFactPropuesta(null);
+    setOcasional(false);
+    setClienteId("");
+    setClienteQuery("");
+    setTipoDocumento("ticket");
+    if (!f) return;
+    if (!f.cliente) { setFactPropuesta(f); return; }
+    const cid = f.cliente.id;
+    apiFetch<{ cliente: Cliente }>(`/api/clientes/${encodeURIComponent(cid)}`)
+      .then(({ cliente: cl }) => {
+        if (!cl?.id) return;
+        setClientes((prev) => (prev.some((x) => x.id === cl.id) ? prev.map((x) => (x.id === cl.id ? { ...x, ...cl } : x)) : [cl, ...prev]));
+        setClienteId(cl.id);
+        setTipoDocumento("factura");
+      })
+      .catch(() => setFactPropuesta(f));
+  }
+
+  async function crearClientePropuesto() {
+    const f = factPropuesta;
+    if (!f || creandoCliente) return;
+    setCreandoCliente(true);
     setErrorMesa(null);
-    const lineas = lineasDeMesa(c);
+    try {
+      const cl = await apiFetch<Cliente>("/api/clientes", {
+        method: "POST",
+        body: JSON.stringify({
+          nombre: f.razon_social, razon_social: f.razon_social, tipo_cliente: /^80\d{6}-\d$/.test(f.ruc) ? "empresa" : "persona",
+          documento: f.ruc, ruc: f.ruc, ...(f.email ? { email: f.email } : {}), condicion_pago: "CONTADO",
+        }),
+      });
+      setClientes((prev) => [cl, ...prev.filter((x) => x.id !== cl.id)]);
+      setClienteId(cl.id);
+      setOcasional(false);
+      setTipoDocumento("factura");
+      setFactPropuesta(null);
+    } catch (e) {
+      setErrorMesa(`No se pudo crear el cliente: ${(e as Error).message}`);
+    } finally {
+      setCreandoCliente(false);
+    }
+  }
+
+  function cargarCuentaMesa(c: CuentaPorCobrar, parteId?: string | null) {
+    setErrorMesa(null);
+    // Receta 88: una parte (o el resto) de la cuenta separada.
+    const parte = parteId && parteId !== "resto" ? c.division?.partes.find((x) => x.id === parteId) ?? null : null;
+    if (parteId && parteId !== "resto" && (!parte || parte.cobrada)) { setErrorMesa(parte ? `La parte de "${parte.nombre}" ya se cobró.` : "Esa parte ya no está en la cuenta: elegila de nuevo."); return; }
+    if (parteId === "resto" && !c.division?.resto) { setErrorMesa("No queda nada sin asignar en esa cuenta."); return; }
+    if (!parteId && c.division?.partes.some((x) => x.cobrada)) { setErrorMesa("Ya se cobró una parte de esa cuenta: cobrá las partes que faltan."); return; }
+    const lista = parte ? parte.items : parteId === "resto" ? c.division!.resto!.items : c.items;
+    const lineas = lineasDeMesa(c, lista);
     if (typeof lineas === "string") { setErrorMesa(lineas); return; }
+    setParteMesa(parte ? { id: parte.id, nombre: parte.nombre, total: parte.total } : parteId === "resto" ? { id: "resto", nombre: "Resto", total: c.division!.resto!.total } : null);
+    aplicarFactPropuesta(parte ? parte.facturacion : c.facturacion);
     // Receta 77: una mesa o un pedido por venta (cargar la mesa suelta el pedido).
     setCart((prev) => [...lineas, ...prev.filter((l) => !l.mesa_min && l.pedido_cant == null)]);
     setPedido(null);
@@ -615,6 +674,8 @@ function CajaPageContenido() {
   function soltarCuentaMesa() {
     setCart((prev) => prev.filter((l) => !l.mesa_min));
     setCuentaMesa(null);
+    setParteMesa(null);
+    setFactPropuesta(null);
     setErrorMesa(null);
     idempotencyKeyRef.current = null;
   }
@@ -678,7 +739,7 @@ function CajaPageContenido() {
     if (typeof lineas === "string") { setErrorPedido(lineas); return; }
     // Un pedido o una mesa por venta: cargar el pedido suelta la cuenta de mesa (y el pedido anterior).
     setCart((prev) => [...lineas, ...prev.filter((l) => !l.mesa_min && l.pedido_cant == null)]);
-    if (cuentaMesa) { setCuentaMesa(null); setErrorMesa(null); }
+    if (cuentaMesa) { setCuentaMesa(null); setParteMesa(null); setFactPropuesta(null); setErrorMesa(null); }
     setUltimo(lineas.length ? lineas[lineas.length - 1].producto : null);
     setPedido(pd);
     setBandejaPedidos(false);
@@ -804,6 +865,8 @@ function CajaPageContenido() {
     setCart([]);
     setUltimo(null);
     setCuentaMesa(null);
+    setParteMesa(null);
+    setFactPropuesta(null);
     setPedido(null);
   }, []);
 
@@ -893,7 +956,7 @@ function CajaPageContenido() {
           ...(modsParaEnviar(l.mods) ? { mods: modsParaEnviar(l.mods) } : {}),
         };
       });
-      const venta = await apiFetch<{ venta_id: string; numero_control: string; total: number; vuelto?: number; aviso_presupuesto?: string }>("/api/caja/venta", {
+      const venta = await apiFetch<{ venta_id: string; numero_control: string; total: number; vuelto?: number; aviso_presupuesto?: string; cuenta_cerrada?: boolean; faltan?: number }>("/api/caja/venta", {
         method: "POST",
         body: JSON.stringify({
           caja_id: caja.id,
@@ -911,6 +974,8 @@ function CajaPageContenido() {
           // Receta 69: la venta cierra la cuenta de la mesa (misma transacción en la base).
           mesa_cuenta_id: cuentaMesa?.id,
           mesa_version: cuentaMesa?.version,
+          // Receta 88: una parte de la cuenta separada (o el resto), con su propia venta.
+          mesa_parte: cuentaMesa && parteMesa ? parteMesa.id : undefined,
           // Receta 77: la venta deja el pedido de mostrador cobrado (misma transacción en la base).
           pedido_id: pedido?.id,
           pedido_version: pedido?.version,
@@ -924,7 +989,11 @@ function CajaPageContenido() {
         setPresu(null);
         router.replace("/caja/nueva", { scroll: false });
       } else {
-        setVentaPresu(cuentaMesa ? `Cuenta de ${cuentaMesa.mesa.nombre} cerrada.` : pedido ? `Pedido ${pedido.etiqueta} cobrado.` : null);
+        setVentaPresu(cuentaMesa && parteMesa
+          ? venta.cuenta_cerrada
+            ? `Parte de ${parteMesa.nombre} cobrada: la cuenta de ${cuentaMesa.mesa.nombre} quedó cerrada.`
+            : `Parte de ${parteMesa.nombre} cobrada (${cuentaMesa.mesa.nombre}). ${venta.faltan ? `Falta${venta.faltan === 1 ? "" : "n"} ${venta.faltan} parte${venta.faltan === 1 ? "" : "s"}: cargalas desde Mesas por cobrar.` : ""}`.trim()
+          : cuentaMesa ? `Cuenta de ${cuentaMesa.mesa.nombre} cerrada.` : pedido ? `Pedido ${pedido.etiqueta} cobrado.` : null);
       }
       // Stock: se descuenta en pantalla lo recién vendido (antes se volvía a bajar TODO el
       // catálogo después de cada venta). La base igual valida el stock al vender.
@@ -1269,15 +1338,35 @@ function CajaPageContenido() {
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <p className="flex min-w-0 items-center gap-2 text-slate-800">
                   <Receipt className="h-4 w-4 shrink-0" style={{ color: TEAL }} aria-hidden />
-                  <span className="min-w-0">Cuenta de <b>{origenPedido(cuentaMesa)}</b> · <span className="whitespace-nowrap tabular-nums">{formatGs(cuentaMesa.total)}</span></span>
+                  <span className="min-w-0">
+                    {parteMesa
+                      ? <>Cuenta de <b>{origenPedido(cuentaMesa)}</b> · parte de <b>{parteMesa.nombre}</b> · <span className="whitespace-nowrap tabular-nums">{formatGs(parteMesa.total)}</span></>
+                      : <>Cuenta de <b>{origenPedido(cuentaMesa)}</b> · <span className="whitespace-nowrap tabular-nums">{formatGs(cuentaMesa.total)}</span></>}
+                  </span>
                 </p>
                 <button type="button" onClick={soltarCuentaMesa} className="min-h-11 rounded-lg px-2 py-1 text-xs font-semibold text-slate-500 hover:bg-white/70 hover:text-slate-800 lg:min-h-0">Soltar cuenta</button>
               </div>
-              <p className="text-[11px] text-slate-500">Lo que pidió la mesa no se puede quitar ni bajar; podés agregar otros productos. Al cobrar, la cuenta queda cerrada.</p>
+              <p className="text-[11px] text-slate-500">
+                {parteMesa
+                  ? "Lo de esta parte no se puede quitar ni bajar; podés agregar otros productos. Al cobrar, la parte queda pagada (la cuenta se cierra con la última)."
+                  : "Lo que pidió la mesa no se puede quitar ni bajar; podés agregar otros productos. Al cobrar, la cuenta queda cerrada."}
+              </p>
+              {factPropuesta ? (
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-lg border border-sky-200 bg-sky-50 px-2.5 py-2 text-xs text-sky-900">
+                  <span className="min-w-0 flex-1">La mesa pidió factura a <b>{factPropuesta.razon_social}</b> · RUC <b>{factPropuesta.ruc}</b>{factPropuesta.email ? ` · ${factPropuesta.email}` : ""}. No es cliente todavía.</span>
+                  <span className="flex shrink-0 gap-1.5">
+                    <button type="button" onClick={() => void crearClientePropuesto()} disabled={creandoCliente}
+                      className="inline-flex min-h-11 items-center gap-1 rounded-lg px-3 font-semibold text-white disabled:opacity-50 lg:min-h-8" style={{ backgroundColor: TEAL }}>
+                      {creandoCliente ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <UserRoundPlus className="h-3.5 w-3.5" aria-hidden />} Crear cliente y facturar
+                    </button>
+                    <button type="button" onClick={() => setFactPropuesta(null)} className="min-h-11 rounded-lg px-2 font-semibold text-sky-800 hover:bg-white/70 lg:min-h-8">Ticket</button>
+                  </span>
+                </div>
+              ) : null}
               {cuentaMesaCambio && cuentaMesaAhora ? (
                 <p className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-900" role="status">
                   La cuenta cambió (ahora {formatGs(cuentaMesaAhora.total)}).
-                  <button type="button" onClick={() => cargarCuentaMesa(cuentaMesaAhora)} className="inline-flex min-h-11 items-center gap-1 font-semibold underline underline-offset-2 lg:min-h-0">
+                  <button type="button" onClick={() => cargarCuentaMesa(cuentaMesaAhora, parteMesa?.id)} className="inline-flex min-h-11 items-center gap-1 font-semibold underline underline-offset-2 lg:min-h-0">
                     <RotateCw className="h-3.5 w-3.5" aria-hidden /> Recargar
                   </button>
                 </p>
@@ -1772,6 +1861,57 @@ function CajaPageContenido() {
                 <ul className="space-y-2">
                   {porCobrar.map((c) => {
                     const cargada = cuentaMesa?.id === c.id;
+                    // Receta 88: separada desde el QR → una fila por parte (cada una su venta).
+                    if (c.division) {
+                      const d = c.division;
+                      const algunaCobrada = d.partes.some((x) => x.cobrada);
+                      const filas = [
+                        ...d.partes.map((x) => ({ id: x.id, nombre: x.nombre, total: x.total, cobrada: x.cobrada, fact: x.facturacion, items: x.items.length })),
+                        ...(d.resto ? [{ id: "resto", nombre: "Resto (sin asignar)", total: d.resto.total, cobrada: false, fact: c.facturacion ?? null, items: d.resto.items.length }] : []),
+                      ];
+                      return (
+                        <li key={c.id} className={`rounded-xl border px-3 py-2.5 ${cargada ? "border-[var(--brand)]" : "border-slate-200"}`}>
+                          <div className="flex items-start gap-3">
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-semibold text-slate-900 [overflow-wrap:anywhere]">{origenPedido(c)}</span>
+                              <span className="block text-xs text-slate-500">
+                                Separada {d.modo === "iguales" ? "en partes iguales" : "por productos"} · {haceCuanto(c.en_caja_at, ahoraMesas())}
+                                {c.cobrado ? ` · cobrado ${formatGs(c.cobrado)}` : ""}
+                              </span>
+                              {c.pendientes > 0 ? <span className="mt-1 block text-[11px] font-medium text-amber-700">Tiene un pedido nuevo sin atender</span> : null}
+                            </span>
+                            <span className="shrink-0 text-base font-bold tabular-nums text-slate-900">{formatGs(c.total)}</span>
+                          </div>
+                          <ul className="mt-2 divide-y divide-slate-100 rounded-lg border border-slate-100">
+                            {filas.map((x) => {
+                              const esta = cargada && parteMesa?.id === x.id;
+                              return (
+                                <li key={x.id}>
+                                  <button type="button" disabled={x.cobrada || !productos.length || !x.items} onClick={() => cargarCuentaMesa(c, x.id)}
+                                    className="flex min-h-12 w-full items-center gap-2 px-2.5 py-1.5 text-left text-sm transition hover:bg-slate-50 disabled:cursor-default disabled:hover:bg-transparent">
+                                    <span className="min-w-0 flex-1">
+                                      <span className={`block truncate font-medium ${x.cobrada ? "text-slate-400 line-through" : "text-slate-800"}`}>{x.nombre}</span>
+                                      <span className="block truncate text-[11px] text-slate-500">
+                                        {x.cobrada ? "Cobrada" : x.fact ? `Factura · ${x.fact.razon_social} · RUC ${x.fact.ruc}` : "Ticket (sin datos de factura)"}
+                                        {esta ? <b className="ml-1" style={{ color: TEAL }}>· en el carrito</b> : null}
+                                      </span>
+                                    </span>
+                                    <span className="shrink-0 tabular-nums font-semibold text-slate-900">{formatGs(x.total)}</span>
+                                    {!x.cobrada ? <span className="w-14 shrink-0 text-right text-xs font-semibold" style={{ color: TEAL }}>{esta ? "Recargar" : "Cobrar"}</span> : <span className="w-14 shrink-0 text-right text-[11px] font-semibold text-emerald-700">Pagada</span>}
+                                  </button>
+                                </li>
+                              );
+                            })}
+                          </ul>
+                          {!algunaCobrada ? (
+                            <button type="button" disabled={!productos.length} onClick={() => cargarCuentaMesa(c)}
+                              className="mt-1.5 min-h-10 text-xs font-semibold text-slate-500 underline-offset-2 hover:underline disabled:opacity-50">
+                              Cobrar todo junto ({formatGs(c.total)})
+                            </button>
+                          ) : null}
+                        </li>
+                      );
+                    }
                     return (
                       <li key={c.id}>
                         <button type="button" disabled={!productos.length} onClick={() => cargarCuentaMesa(c)}
@@ -1782,6 +1922,7 @@ function CajaPageContenido() {
                               {haceCuanto(c.en_caja_at, ahoraMesas())}{c.en_caja_por_nombre ? ` · la envió ${c.en_caja_por_nombre}` : ""}
                               {cargada ? <b className="ml-1 font-semibold" style={{ color: TEAL }}>· en el carrito</b> : null}
                             </span>
+                            {c.facturacion ? <span className="mt-0.5 block truncate text-[11px] text-sky-800">Factura · {c.facturacion.razon_social} · RUC {c.facturacion.ruc}</span> : null}
                             {c.pendientes > 0 ? <span className="mt-1 block text-[11px] font-medium text-amber-700">Tiene un pedido nuevo sin atender</span> : null}
                           </span>
                           <span className="shrink-0 text-right">

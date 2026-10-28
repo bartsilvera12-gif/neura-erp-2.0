@@ -88,6 +88,94 @@ export async function crearPedido(
   return { ok: true as const, pedido: data as { seguimiento: string; numero: number; estado: EstadoPedido; total: number } };
 }
 
+// ── Receta 88: la cuenta desde el celular ───────────────────────────────────
+
+/** Estado de un ítem de la cuenta (el de su estación si el pedido se dividió en comandas). */
+export type EstadoItemCuenta = "aceptado" | "en_preparacion" | "listo" | "entregado";
+
+export type FacturacionPublica = { ruc: string; razon_social: string; email: string | null } | null;
+
+export type ParteCuentaPublica = {
+  numero: number;
+  nombre: string;
+  es_resto: boolean;
+  total: number;
+  cobrada: boolean;
+  cobrada_at: string | null;
+  items: { item_id: string; cantidad: number }[];
+  facturacion: FacturacionPublica;
+};
+
+export type DivisionPublica = {
+  modo: "productos" | "iguales";
+  personas: number;
+  actualizada_at: string;
+  partes: ParteCuentaPublica[];
+  /** Lo que no tiene ninguna parte (no se asignó o se pidió después): se cobra aparte. */
+  resto: { total: number; items: { item_id: string; cantidad: number }[] } | null;
+};
+
+export type ItemCuentaPublica = {
+  id: string;
+  pedido: number;
+  nombre: string;
+  cantidad: number;
+  precio_unitario: number;
+  total: number;
+  modificadores_texto: string | null;
+  estado: EstadoItemCuenta;
+};
+
+export type CuentaPublica =
+  | { abierta: false; ahora: string }
+  | {
+      abierta: true;
+      ahora: string;
+      abierta_at: string;
+      total: number;
+      pendientes: number;
+      solicitada_at: string | null;
+      en_caja: boolean;
+      cobrado: number;
+      items: ItemCuentaPublica[];
+      division: DivisionPublica | null;
+      facturacion: FacturacionPublica;
+    };
+
+export type DivisionEnviar =
+  | { modo: "iguales"; personas: number; partes?: { nombre: string }[] }
+  | { modo: "productos"; partes: { nombre: string }[]; asignaciones: { item_id: string; reparto: { parte: number; cantidad: number }[] }[] };
+
+export async function cuentaPublica(token: string): Promise<CuentaPublica | null> {
+  if (!TOKEN_MESA_RE.test(token)) return null;
+  const { data, error } = await clientePublico().rpc("mesa_publico_cuenta", { p_token: token });
+  if (error) {
+    console.error("[mesa_publico_cuenta]", error.message);
+    throw new Error("No se pudo cargar la cuenta");
+  }
+  return (data as CuentaPublica | null) ?? null;
+}
+
+type Resultado<T> = { ok: true; data: T } | { ok: false; error: string };
+
+async function rpcPublica<T>(fn: string, args: Record<string, unknown>): Promise<Resultado<T>> {
+  const { data, error } = await clientePublico().rpc(fn, args);
+  if (error) return { ok: false, error: limpio(error.message) };
+  return { ok: true, data: data as T };
+}
+
+export const pedirCuenta = (token: string, pedir: boolean) =>
+  rpcPublica<CuentaPublica>("mesa_publico_pedir_cuenta", { p_token: token, p_pedir: pedir });
+
+export const dividirCuenta = (token: string, division: DivisionEnviar | null) =>
+  rpcPublica<CuentaPublica>("mesa_publico_dividir", { p_token: token, p_division: division });
+
+export const guardarFacturacion = (token: string, parte: number | null, ruc: string | null, razon: string | null, email: string | null) =>
+  rpcPublica<CuentaPublica>("mesa_publico_facturacion", { p_token: token, p_parte: parte, p_ruc: ruc, p_razon: razon, p_email: email });
+
+export const buscarRuc = (token: string, documento: string) =>
+  rpcPublica<{ encontrado: boolean; razon_social?: string; ruc?: string | null }>("mesa_publico_buscar_ruc", { p_token: token, p_doc: documento });
+
 export async function estadoPedidos(token: string, seguimientos: string[]): Promise<EstadoPedidoPublico[]> {
   const segs = seguimientos.filter((s) => SEGUIMIENTO_RE.test(s)).slice(0, 20);
   if (!TOKEN_MESA_RE.test(token) || !segs.length) return [];

@@ -114,6 +114,24 @@ export type CuentaMesa = {
   pedidos: number;
   pendientes: number;
   items: { nombre: string; cantidad: number; precio_unitario: number; total: number; modificadores_texto?: string | null }[];
+  /** Receta 88: la mesa pidió la cuenta desde el QR (null = no / ya se canceló). */
+  solicitada_at?: string | null;
+  /** Receta 88: la cuenta separada desde el celular (null = se cobra junta). */
+  division?: DivisionCuenta | null;
+  /** Receta 88: datos de facturación propuestos para la cuenta entera. */
+  facturacion?: FacturacionPropuesta | null;
+};
+
+/** Datos de facturación que propuso la mesa (receta 88). `cliente` = el que ya tiene ese RUC. */
+export type FacturacionPropuesta = { ruc: string; razon_social: string; email: string | null; cliente: { id: string; nombre: string } | null };
+
+/** División de la cuenta como la ve el tablero (receta 88). */
+export type DivisionCuenta = {
+  modo: "productos" | "iguales";
+  personas: number;
+  actualizada_at: string;
+  partes: { id: string; numero: number; nombre: string; es_resto: boolean; total: number; cobrada: boolean; cobrada_at: string | null; facturacion: FacturacionPropuesta | null }[];
+  resto: { total: number } | null;
 };
 
 export type TableroMesas = {
@@ -145,6 +163,22 @@ export type CuentaPorCobrar = {
     /** Receta 73: modificadores de la línea; precio_base = precio_unitario sin los modificadores. */
     modificadores?: ModsSnapshot | null; modificadores_texto?: string | null; precio_mods?: number; precio_base?: number;
   }[];
+  /** Receta 88: facturación propuesta por la mesa, lo ya cobrado por partes y la división. */
+  facturacion?: FacturacionPropuesta | null;
+  cobrado?: number;
+  division?: {
+    modo: "productos" | "iguales";
+    partes: ParteParaCobrar[];
+    resto: { total: number; items: LineaPorCobrar[] } | null;
+  } | null;
+};
+
+export type LineaPorCobrar = CuentaPorCobrar["items"][number];
+
+/** Una parte de la cuenta separada (receta 88): se cobra sola, con su venta. */
+export type ParteParaCobrar = {
+  id: string; numero: number; nombre: string; es_resto: boolean; cobrada: boolean; total: number;
+  items: LineaPorCobrar[]; facturacion: FacturacionPropuesta | null;
 };
 
 export type MesasPorCobrar = { ahora: string; caja_id?: string; cuentas: CuentaPorCobrar[] };

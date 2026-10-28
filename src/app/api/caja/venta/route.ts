@@ -42,6 +42,9 @@ const ventaSchema = z.object({
   // de la cuenta que se cargó en el carrito (si cambió, la base no cobra y pide recargar).
   mesa_cuenta_id: z.string().uuid().nullish(),
   mesa_version: z.string().trim().max(64).nullish(),
+  // Receta 88: cuenta separada desde el QR → se cobra UNA parte (su id) o "resto" (lo no asignado),
+  // cada una con su venta (mesa_cuenta_parte_cobrar_caja); la cuenta se cierra con la última.
+  mesa_parte: z.union([z.string().uuid(), z.literal("resto")]).nullish(),
   // Receta 77: cobro de un pedido de mostrador (Pedidos por cobrar / escaneo). La venta y el pedido
   // "cobrado" van en una sola transacción (pedido_mostrador_cobrar_caja); `pedido_version` es la
   // versión que se cargó en el carrito (si lo editaron o anularon, la base no cobra).
@@ -111,7 +114,11 @@ export const POST = withTenant(
 
     if (input.mesa_cuenta_id && input.presupuesto_id) return fail("Una venta no puede ser de una mesa y de un presupuesto a la vez.", 400);
     if (input.mesa_cuenta_id && !input.mesa_version) return fail("Falta la versión de la cuenta de la mesa: recargala.", 400);
-    const deMesa = input.mesa_cuenta_id ? { p_cuenta_id: input.mesa_cuenta_id, p_version: input.mesa_version } : null;
+    if (input.mesa_parte && !input.mesa_cuenta_id) return fail("Falta la cuenta de la mesa de esa parte: recargala.", 400);
+    const parte = input.mesa_parte
+      ? { p_parte_id: input.mesa_parte === "resto" ? null : input.mesa_parte, p_resto: input.mesa_parte === "resto" }
+      : null;
+    const deMesa = input.mesa_cuenta_id ? { p_cuenta_id: input.mesa_cuenta_id, p_version: input.mesa_version, ...(parte ?? {}) } : null;
     if (input.pedido_id && (input.mesa_cuenta_id || input.presupuesto_id)) return fail("Una venta de un pedido no puede ser también de una mesa o de un presupuesto.", 400);
     if (input.pedido_id && !input.pedido_version) return fail("Falta la versión del pedido: recargalo.", 400);
     const dePedido = input.pedido_id ? { p_pedido_id: input.pedido_id, p_version: input.pedido_version } : null;
@@ -126,7 +133,10 @@ export const POST = withTenant(
       caja_id?: string;
       mesa?: string;
       pedido?: string;
-    }>(deMesa ? "mesa_cuenta_cobrar_caja" : dePedido ? "pedido_mostrador_cobrar_caja" : "crear_venta", {
+      parte?: string;
+      cuenta_cerrada?: boolean;
+      faltan?: number;
+    }>(deMesa ? (parte ? "mesa_cuenta_parte_cobrar_caja" : "mesa_cuenta_cobrar_caja") : dePedido ? "pedido_mostrador_cobrar_caja" : "crear_venta", {
       ...(conDatos ?? {}),
       p_cliente_id: input.cliente_id ?? null,
       p_tipo_venta: input.tipo_venta,

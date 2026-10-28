@@ -14,7 +14,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { BellRing, Check, CheckCircle2, ChefHat, Loader2, Receipt, RotateCcw, Send, Volume2, VolumeX, X } from "lucide-react";
+import { BellRing, Check, CheckCircle2, ChefHat, Loader2, Receipt, RotateCcw, Send, Users, Volume2, VolumeX, X } from "lucide-react";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
@@ -50,7 +50,28 @@ export default function PedidosMesasPage() {
   const nuevos = useMemo(() => (datos?.pedidos ?? []).filter((p) => p.estado === "nuevo"), [datos]);
   const enCurso = useMemo(() => (datos?.pedidos ?? []).filter((p) => ["aceptado", "en_preparacion", "listo"].includes(p.estado)), [datos]);
   const cerrados = useMemo(() => (datos?.pedidos ?? []).filter((p) => p.estado === "entregado" || p.estado === "rechazado").slice(-8).reverse(), [datos]);
-  const cuentas = datos?.cuentas ?? [];
+  // Receta 88: las mesas que pidieron la cuenta desde el QR van primero.
+  const cuentas = useMemo(() => {
+    const l = datos?.cuentas ?? [];
+    const pide = (c: CuentaMesa) => (c.estado !== "en_caja" && c.solicitada_at ? 0 : 1);
+    return [...l].sort((a, b) => pide(a) - pide(b));
+  }, [datos]);
+  const piden = useMemo(() => cuentas.filter((c) => c.estado !== "en_caja" && c.solicitada_at), [cuentas]);
+  // Aviso (pitido + cartel) cuando una mesa pide la cuenta; la primera carga no avisa.
+  const vistasSolicitud = useRef<Set<string> | null>(null);
+  const [pidieron, setPidieron] = useState<string[]>([]);
+  useEffect(() => {
+    if (!datos) return;
+    const claves = piden.map((c) => `${c.id}|${c.solicitada_at}`);
+    if (vistasSolicitud.current === null) { vistasSolicitud.current = new Set(claves); return; }
+    const nuevas = piden.filter((c) => !vistasSolicitud.current!.has(`${c.id}|${c.solicitada_at}`));
+    vistasSolicitud.current = new Set(claves);
+    if (nuevas.length) {
+      setPidieron((x) => [...new Set([...x, ...nuevas.map((c) => c.mesa.nombre)])]);
+      if (sonidoRef.current) pitido();
+    }
+  }, [datos, piden]);
+  useEffect(() => { if (!piden.length) setPidieron([]); }, [piden.length]);
   const variasSucursales = new Set([...(datos?.pedidos ?? []).map((p) => p.sucursal.id), ...cuentas.map((c) => c.sucursal.id)]).size > 1;
 
   // Contador en el título de la pestaña: pedidos sin atender.
@@ -204,8 +225,20 @@ export default function PedidosMesasPage() {
           {cuentas.map((c) => {
             const enCaja = c.estado === "en_caja";
             const lugar = [c.mesa.zona, variasSucursales ? c.sucursal.nombre : null].filter(Boolean).join(" · ");
+            // Receta 88: la mesa pidió la cuenta desde el QR y todavía no se envió a caja.
+            const pidio = !enCaja && !!c.solicitada_at;
             return (
-              <li key={c.id} className={`rounded-2xl border bg-white shadow-sm ${enCaja ? "border-sky-300" : "border-slate-200"}`}>
+              <li key={c.id} className={`rounded-2xl border bg-white shadow-sm ${pidio ? "border-emerald-400 ring-2 ring-emerald-200" : enCaja ? "border-sky-300" : "border-slate-200"}`}>
+                {pidio ? (
+                  <p className="flex items-center gap-2 rounded-t-2xl bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800" role="status">
+                    <span className="relative flex h-2.5 w-2.5 shrink-0" aria-hidden>
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75 motion-reduce:hidden" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                    </span>
+                    <span className="min-w-0 flex-1">Pidió la cuenta · {haceCuanto(c.solicitada_at!, ahora())}</span>
+                    <span className="shrink-0 text-xs font-medium text-emerald-700">Enviala a caja</span>
+                  </p>
+                ) : null}
                 <div className="flex items-start gap-3 px-4 pt-3">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-base font-bold text-slate-900">{c.mesa.nombre}{lugar ? ` · ${lugar}` : ""}</p>
@@ -237,6 +270,32 @@ export default function PedidosMesasPage() {
                 ) : (
                   <p className="px-4 pt-2 pb-2.5 text-sm text-slate-400">Sin pedidos aceptados</p>
                 )}
+                {c.division ? (
+                  <div className="mx-4 mb-2.5 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2 text-xs">
+                    <p className="flex items-center gap-1.5 font-semibold text-slate-700"><Users className="h-3.5 w-3.5" aria-hidden /> Separada {c.division.modo === "iguales" ? "en partes iguales" : "por productos"} (desde el QR)</p>
+                    <ul className="mt-1 space-y-0.5">
+                      {c.division.partes.map((x) => (
+                        <li key={x.id} className="flex items-center gap-2">
+                          <span className={`min-w-0 flex-1 truncate ${x.cobrada ? "text-slate-400 line-through" : "text-slate-700"}`}>{x.nombre}</span>
+                          {x.facturacion ? <span className="max-w-[45%] truncate text-sky-700" title={`${x.facturacion.razon_social} · RUC ${x.facturacion.ruc}`}>Factura · RUC {x.facturacion.ruc}</span> : null}
+                          {x.cobrada ? <span className="font-semibold text-emerald-700">Pagada</span> : null}
+                          <span className="shrink-0 font-semibold tabular-nums text-slate-800">{gs(x.total)}</span>
+                        </li>
+                      ))}
+                      {c.division.resto ? (
+                        <li className="flex items-center gap-2 text-amber-800">
+                          <span className="min-w-0 flex-1">Sin asignar (se cobra aparte)</span>
+                          <span className="shrink-0 font-semibold tabular-nums">{gs(c.division.resto.total)}</span>
+                        </li>
+                      ) : null}
+                    </ul>
+                  </div>
+                ) : null}
+                {c.facturacion ? (
+                  <p className="mx-4 mb-2.5 truncate rounded-lg bg-sky-50 px-2.5 py-1.5 text-xs text-sky-900">
+                    Factura propuesta: <b>{c.facturacion.razon_social}</b> · RUC {c.facturacion.ruc}{c.facturacion.cliente ? "" : " (cliente nuevo)"}
+                  </p>
+                ) : null}
                 {c.pendientes ? (
                   <p className="mx-4 mb-2.5 rounded-lg bg-amber-50 px-2.5 py-1.5 text-xs font-medium text-amber-800">
                     {c.pendientes} pedido{c.pendientes === 1 ? "" : "s"} sin atender: aceptá o rechazá {enCaja ? "para que la caja pueda cobrar." : "antes de enviar la cuenta a caja."}
@@ -292,6 +351,14 @@ export default function PedidosMesasPage() {
           <button type="button" onClick={() => setLlegaron(0)} aria-label="Cerrar aviso" className="rounded p-1"><X className="h-4 w-4" /></button>
         </div>
       ) : null}
+      {pidieron.length > 0 ? (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900" role="status">
+          <Receipt className="h-4 w-4 shrink-0" aria-hidden />
+          <span className="flex-1">{pidieron.length === 1 ? `${pidieron[0]} pidió la cuenta.` : `Pidieron la cuenta: ${pidieron.join(", ")}.`} Revisala en Cuentas abiertas y enviala a caja.</span>
+          {!escritorio && tab !== "cuentas" ? <button type="button" onClick={() => setTab("cuentas")} className="min-h-11 shrink-0 rounded-lg px-2 font-semibold underline underline-offset-2">Ver</button> : null}
+          <button type="button" onClick={() => setPidieron([])} aria-label="Cerrar aviso" className="rounded p-1"><X className="h-4 w-4" /></button>
+        </div>
+      ) : null}
       {aviso ? (
         <p className={`rounded-xl px-3 py-2 text-sm ${aviso.tipo === "ok" ? "bg-emerald-50 text-emerald-800" : "bg-rose-50 text-rose-700"}`} role={aviso.tipo === "error" ? "alert" : "status"}>{aviso.texto}</p>
       ) : null}
@@ -306,7 +373,7 @@ export default function PedidosMesasPage() {
         <>
           <Pestanas valor={tab} onChange={(v) => setTab(v as "cola" | "cuentas")} opciones={[
             { id: "cola", label: "Pedidos", badge: nuevos.length || undefined },
-            { id: "cuentas", label: "Cuentas abiertas", badge: cuentas.length || undefined },
+            { id: "cuentas", label: piden.length ? `Cuentas · ${piden.length} pidió` : "Cuentas abiertas", badge: cuentas.length || undefined },
           ]} />
           {tab === "cola" ? cola : listaCuentas}
         </>
