@@ -124,7 +124,8 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
   // ── Navegación entre pantallas (#hash: el botón atrás del celular vuelve al inicio) ──
   useEffect(() => {
     setVista(vistaDeHash());
-    const alVolver = () => setVista(vistaDeHash());
+    // Atrás del celular: además de cambiar de pantalla, se cierran el carrito y la hoja del plato.
+    const alVolver = () => { setVista(vistaDeHash()); setVerCarrito(false); setHoja(null); };
     window.addEventListener("popstate", alVolver);
     return () => window.removeEventListener("popstate", alVolver);
   }, []);
@@ -372,7 +373,9 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
             {tema === "oscuro" ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
           </button>
         </div>
-        <div className="mx-auto max-w-2xl px-4 pb-3">
+        {/* La tarjeta grande de la mesa va solo en el inicio: adentro de cada pantalla, la barra de
+            "Volver" la resume (así en el celular queda lugar para lo importante). */}
+        {vista === "inicio" ? <div className="mx-auto max-w-2xl px-4 pb-3">
           <div className={`flex items-center gap-3 rounded-2xl px-4 py-3 text-white ${ACENTO_GRANDE}`} style={{ backgroundColor: color }}>
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-white/20 text-base font-bold dark:bg-white/15 dark:ring-1 dark:ring-inset dark:ring-white/20">
               {menu.mesa.replace(/^mesa\s*/i, "").slice(0, 3) || "•"}
@@ -388,7 +391,7 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
               </div>
             ) : null}
           </div>
-        </div>
+        </div> : null}
       </header>
 
       {vista !== "inicio" ? (
@@ -398,6 +401,10 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
               <ArrowLeft className="h-5 w-5" aria-hidden /> Volver
             </button>
             <h1 className={`min-w-0 flex-1 truncate text-base font-bold ${TEXTO}`}>{TITULOS[vista]}</h1>
+            <span className={`mr-1 inline-flex min-w-0 max-w-[45%] shrink items-center gap-1.5 truncate rounded-full px-2.5 py-1 text-xs font-semibold text-white ${ACENTO}`} style={{ backgroundColor: color }}>
+              <span className="truncate">{menu.mesa}</span>
+              {abierta && abierta.total > 0 ? <span className="shrink-0 tabular-nums text-white/85">· {gs(abierta.total)}</span> : null}
+            </span>
           </div>
         </div>
       ) : null}
