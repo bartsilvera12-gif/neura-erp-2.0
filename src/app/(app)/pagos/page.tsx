@@ -283,7 +283,7 @@ function TablaPendientes({ filas, cargando, recargando, hayFiltros, onLimpiar, t
       ),
       celdaMovil: (f) => (
         <>
-          <Link href={`/clientes/${f.cliente_id}`} className="text-[#3F8E91] hover:underline">{f.cliente_nombre}</Link>
+          <Link href={`/clientes/${f.cliente_id}`} className="-my-2.5 inline-block py-2.5 text-[#3F8E91] hover:underline">{f.cliente_nombre}</Link>
           {f.plan_nombre ? <span className="block text-[11px] font-normal text-slate-400">{f.plan_nombre}</span> : null}
         </>
       ),
@@ -399,7 +399,7 @@ function TablaCobrados({ filas, cargando, recargando, hayFiltros, onLimpiar, tot
     {
       key: "cliente", titulo: "Cliente", movil: "titulo", claseTd: "min-w-[12rem] lg:min-w-[16rem]",
       celda: (f) => <Link href={`/clientes/${f.cliente_id}`} className="block min-w-0 break-words font-medium text-slate-900 hover:text-[#3F8E91] hover:underline" title={f.cliente_nombre}>{f.cliente_nombre}</Link>,
-      celdaMovil: (f) => <Link href={`/clientes/${f.cliente_id}`} className="hover:text-[#3F8E91] hover:underline">{f.cliente_nombre}</Link>,
+      celdaMovil: (f) => <Link href={`/clientes/${f.cliente_id}`} className="-my-2.5 inline-block py-2.5 hover:text-[#3F8E91] hover:underline">{f.cliente_nombre}</Link>,
     },
     { key: "tipo", titulo: "Tipo de servicio", celda: (f) => <span className="inline-block max-w-[16rem] truncate align-bottom">{f.plan_nombre ?? f.categoria_nombre ?? "Sin clasificar"}</span>, celdaMovil: (f) => f.plan_nombre ?? f.categoria_nombre ?? "Sin clasificar" },
     { key: "vendedor", titulo: "Vendedor", celda: (f) => <span className="inline-block max-w-[12rem] truncate align-bottom">{f.vendedor ?? "—"}</span>, celdaMovil: (f) => f.vendedor ?? "—" },

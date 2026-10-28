@@ -156,7 +156,7 @@ function Movimientos() {
         ),
         celdaMovil: (m) => (
           <>
-            <Link href={`/inventario/movimientos?producto=${m.producto_id}`} className="block text-slate-900 active:text-[var(--brand)]" title="Ver el historial de este producto">
+            <Link href={`/inventario/movimientos?producto=${m.producto_id}`} className="-my-2.5 block py-2.5 text-slate-900 active:text-[var(--brand)]" title="Ver el historial de este producto">
               {m.producto_nombre ?? "—"}
             </Link>
             {m.producto_sku ? <span className="block font-mono text-[12px] font-normal text-slate-400">{m.producto_sku}</span> : null}

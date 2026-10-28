@@ -352,7 +352,7 @@ function Formulario() {
                   ) : (
                     <BuscadorCliente variant="toolbar" onSelect={(c) => void elegirCliente(c.id)} />
                   )}
-                  <p className="mt-1 text-[11px] text-slate-500">¿Todavía no es cliente? Usá <button type="button" onClick={() => setModo("prospecto")} className="font-semibold text-[var(--brand)] hover:underline">Prospecto</button> y cargá sus datos a mano.</p>
+                  <p className="mt-1 text-[11px] text-slate-500">¿Todavía no es cliente? Usá <button type="button" onClick={() => setModo("prospecto")} className="font-semibold text-[var(--brand)] hover:underline [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3">Prospecto</button> y cargá sus datos a mano.</p>
                 </div>
                 {cliente ? (
                   <div className="grid gap-3 sm:grid-cols-2">

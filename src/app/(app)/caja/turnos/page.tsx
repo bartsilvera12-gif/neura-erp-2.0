@@ -146,7 +146,7 @@ function TurnosContenido() {
         <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Últimos cierres</h2>
-            <Link href="/reportes/cajas" className="text-xs font-semibold text-[var(--brand)] hover:underline">Todos los cierres →</Link>
+            <Link href="/reportes/cajas" className="text-xs font-semibold text-[var(--brand)] hover:underline [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center">Todos los cierres →</Link>
           </div>
           {/* Celular: cada cierre es una tarjeta (caja + diferencia; ver / PDF al pie). */}
           <TablaTarjetas
