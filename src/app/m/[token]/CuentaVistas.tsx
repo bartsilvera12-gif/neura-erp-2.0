@@ -149,6 +149,34 @@ function repartoMilesimos(q: number, k: number, desde = 0): number[] {
   return Array.from({ length: k }, (_, i) => (base + ((((i - desde) % k) + k) % k < rem ? 1 : 0)) / 1000);
 }
 
+/**
+ * Partes iguales (misma cuenta que mesa_repartir_iguales, receta 89): el importe de cada producto
+ * se reparte en guaraníes enteros y el que sobra va a quien está más lejos de su parte justa.
+ */
+function montosIguales(items: ItemCuentaPublica[], n: number): number[] {
+  const lineas = items
+    .map((it) => ({ id: it.id, importe: Math.round(Number(it.cantidad) * it.precio_unitario) }))
+    .sort((a, b) => b.importe - a.importe || (a.id < b.id ? -1 : 1));
+  const total = lineas.reduce((s, l) => s + l.importe, 0);
+  const base = Math.floor(total / n);
+  const obj = Array.from({ length: n }, (_, k) => base + (k < total - base * n ? 1 : 0));
+  const lleva = Array.from({ length: n }, () => 0);
+  for (const l of lineas) {
+    const b = Math.floor(l.importe / n);
+    const monto = Array.from({ length: n }, () => b);
+    for (let j = 0; j < l.importe - b * n; j++) {
+      let k = -1;
+      for (let x = 0; x < n; x++) {
+        if (monto[x] !== b) continue;
+        if (k < 0 || obj[x] - lleva[x] - monto[x] > obj[k] - lleva[k] - monto[k]) k = x;
+      }
+      monto[k] += 1;
+    }
+    monto.forEach((m, k) => { lleva[k] += m; });
+  }
+  return lleva;
+}
+
 const esEntero = (n: number) => Math.abs(n - Math.round(n)) < 1e-9;
 
 function asigInicial(cuenta: CuentaAbierta): { nombres: string[]; asig: Record<string, Asig>; modo: "productos" | "iguales"; n: number } {
@@ -183,9 +211,11 @@ function cantidadesDe(a: Asig | undefined, q: number, n: number): number[] {
   return out;
 }
 
-export function VistaSeparar({ cuenta, color, accion, onListo, aviso }: {
+export function VistaSeparar({ cuenta, color, accion, onListo, aviso, pidiendo, onPedirCuenta, onVolver }: {
   /** `onListo(c, aviso)`: la pantalla se vuelve a armar con la división nueva; el aviso lo guarda el padre. */
   cuenta: CuentaAbierta; color: string; accion: AccionCuenta; onListo: (c: CuentaPublica, aviso?: string) => void; aviso?: string | null;
+  /** Con la división guardada, el paso que sigue es pedir la cuenta (o volver al inicio si ya se pidió). */
+  pidiendo: boolean; onPedirCuenta: () => void; onVolver: () => void;
 }) {
   const ini = useMemo(() => asigInicial(cuenta), [cuenta.division?.actualizada_at]); // eslint-disable-line react-hooks/exhaustive-deps
   const [modo, setModo] = useState<"productos" | "iguales">(ini.modo);
@@ -197,6 +227,30 @@ export function VistaSeparar({ cuenta, color, accion, onListo, aviso }: {
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(aviso ?? null);
   const [editando, setEditando] = useState<number | null>(null);
+  const [confirmarQuitar, setConfirmarQuitar] = useState(false);
+
+  // ¿Hay cambios sin guardar? Sin división guardada, siempre hay algo para guardar.
+  const firma = (f: { modo: string; nombres: string[]; n: number; asig: Record<string, Asig>; resto: boolean }) =>
+    JSON.stringify(f.modo === "iguales" ? { m: f.modo, n: f.n } : {
+      m: f.modo, nombres: f.nombres.map((x) => x.trim()), resto: f.resto,
+      asig: Object.keys(f.asig).sort().map((k) => [k, f.asig[k]]),
+    });
+  const firmaGuardada = useMemo(
+    () => firma({ modo: ini.modo, nombres: ini.nombres, n: ini.n, asig: ini.asig, resto: !!cuenta.division?.resto }),
+    [ini], // eslint-disable-line react-hooks/exhaustive-deps
+  );
+  const sucio = !cuenta.division || firma({ modo, nombres, n: nIguales, asig, resto: conResto }) !== firmaGuardada;
+  const yaPedida = !!cuenta.solicitada_at || cuenta.en_caja;
+
+  function descartar() {
+    setModo(ini.modo);
+    setNombres(ini.nombres);
+    setNIguales(ini.modo === "iguales" ? ini.n : 2);
+    setAsig(ini.asig);
+    setConResto(!!cuenta.division?.resto);
+    setEditando(null);
+    setError(null);
+  }
 
   const bloqueada = !!cuenta.division?.partes.some((p) => p.cobrada);
   const items = cuenta.items;
@@ -209,12 +263,7 @@ export function VistaSeparar({ cuenta, color, accion, onListo, aviso }: {
     let sin = 0;
     const falt: { it: ItemCuentaPublica; q: number }[] = [];
     if (modo === "iguales") {
-      let idx = 0;
-      for (const it of [...items].sort((a, b) => (a.id < b.id ? -1 : 1))) {
-        const r = repartoMilesimos(Number(it.cantidad), n, idx);
-        r.forEach((c, i) => { m[i] += Math.round(c * it.precio_unitario); });
-        idx += Math.round(Number(it.cantidad) * 1000) - Math.floor(Math.round(Number(it.cantidad) * 1000) / n) * n;
-      }
+      montosIguales(items, n).forEach((v, i) => { m[i] = v; });
     } else {
       for (const it of items) {
         const c = cantidadesDe(asig[it.id], Number(it.cantidad), n);
@@ -416,21 +465,54 @@ export function VistaSeparar({ cuenta, color, accion, onListo, aviso }: {
       </section>
 
       {error ? <p className={`rounded-xl px-3 py-2 text-sm ${AVISO_ERROR}`} role="alert">{error}</p> : null}
-      {ok ? <p className={`rounded-xl px-3 py-2 text-sm ${AVISO_OK}`} role="status">{ok}</p> : null}
+      {ok && (!sucio || !cuenta.division) ? (
+        <p className={`flex items-start gap-2 rounded-xl px-3 py-2.5 text-sm ${AVISO_OK}`} role="status">
+          <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+          <span>{ok}{cuenta.division && !yaPedida ? " Cuando terminen, pedí la cuenta." : ""}</span>
+        </p>
+      ) : null}
 
-      {/* Pie fijo */}
+      {/* Quitar la división: discreto y con confirmación (no compite con el paso siguiente). */}
+      {cuenta.division && !sucio ? (
+        <div className="text-center">
+          {confirmarQuitar ? (
+            <p className={`text-sm ${SUAVE}`}>
+              ¿La cuenta va junta, sin separar?{" "}
+              <button type="button" onClick={() => void dejarDeSeparar()} disabled={guardando} className="font-semibold text-rose-600 underline-offset-2 hover:underline disabled:opacity-50 dark:text-rose-400">Sí, quitar</button>
+              {" · "}
+              <button type="button" onClick={() => setConfirmarQuitar(false)} className={`font-semibold underline-offset-2 hover:underline ${TEXTO}`}>No</button>
+            </p>
+          ) : (
+            <button type="button" onClick={() => setConfirmarQuitar(true)} className={`inline-flex min-h-10 items-center gap-1 text-sm ${SUAVE} underline-offset-2 hover:underline`}>
+              <X className="h-3.5 w-3.5" aria-hidden /> Quitar la división
+            </button>
+          )}
+        </div>
+      ) : null}
+
+      {/* Pie fijo: con cambios, guardar; ya guardada, el paso que sigue. */}
       <div className={`fixed inset-x-0 bottom-0 z-20 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] ${BARRA_PIE}`}>
         <div className="mx-auto flex max-w-2xl gap-2">
-          {cuenta.division ? (
-            <button type="button" onClick={() => void dejarDeSeparar()} disabled={guardando} className={`${BOTON_SEC} h-12 shrink-0`}>
-              <X className="h-4 w-4" aria-hidden /> No separar
+          {sucio ? (
+            <>
+              {cuenta.division ? (
+                <button type="button" onClick={descartar} disabled={guardando} className={`${BOTON_SEC} h-12 shrink-0`}>Descartar</button>
+              ) : null}
+              <button type="button" onClick={() => void guardar()} disabled={guardando || (modo === "productos" && (vacias.length > 0 || (faltan.length > 0 && !conResto)))}
+                className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base font-semibold text-white shadow-sm disabled:opacity-50 ${ACENTO}`} style={{ backgroundColor: color }}>
+                {guardando ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Check className="h-5 w-5" aria-hidden />}
+                {cuenta.division ? "Guardar cambios" : "Separar cuenta"}
+              </button>
+            </>
+          ) : yaPedida ? (
+            <button type="button" onClick={onVolver} className={`${BOTON_SEC} h-12 flex-1`}>Volver al inicio</button>
+          ) : (
+            <button type="button" onClick={onPedirCuenta} disabled={pidiendo}
+              className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base font-semibold text-white shadow-sm disabled:opacity-50 ${ACENTO}`} style={{ backgroundColor: color }}>
+              {pidiendo ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <FileText className="h-5 w-5" aria-hidden />}
+              Pedir la cuenta
             </button>
-          ) : null}
-          <button type="button" onClick={() => void guardar()} disabled={guardando || (modo === "productos" && (vacias.length > 0 || (faltan.length > 0 && !conResto)))}
-            className={`flex h-12 flex-1 items-center justify-center gap-2 rounded-xl text-base font-semibold text-white shadow-sm disabled:opacity-50 ${ACENTO}`} style={{ backgroundColor: color }}>
-            {guardando ? <Loader2 className="h-5 w-5 animate-spin" aria-hidden /> : <Check className="h-5 w-5" aria-hidden />}
-            {cuenta.division ? "Guardar cambios" : "Separar cuenta"}
-          </button>
+          )}
         </div>
       </div>
     </div>

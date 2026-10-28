@@ -518,7 +518,8 @@ export function MenuCliente({ token, menu, color, logoInstalacion }: { token: st
           <VistaConsumo cuenta={abierta} color={color} pidiendo={pidiendo} onSeparar={() => ir("separar")} onPedirCuenta={() => { void pedirCuenta(true); }} />
         ) : vista === "separar" ? (
           <VistaSeparar key={abierta.division?.actualizada_at ?? "sin"} cuenta={abierta} color={color} accion={accion} aviso={avisoSeparar}
-            onListo={(c, a) => { setAvisoSeparar(a ?? null); recibirCuenta(c); }} />
+            onListo={(c, a) => { setAvisoSeparar(a ?? null); recibirCuenta(c); }}
+            pidiendo={pidiendo} onPedirCuenta={() => { void pedirCuenta(true).then(() => ir("inicio")); }} onVolver={() => ir("inicio")} />
         ) : (
           <VistaFacturacion cuenta={abierta} color={color} accion={accion} onListo={recibirCuenta} />
         )}
