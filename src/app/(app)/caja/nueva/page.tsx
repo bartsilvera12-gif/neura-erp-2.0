@@ -415,7 +415,8 @@ function CajaPageContenido() {
   // Receta 73: + extras y opciones (sin el descuento del producto, como en crear_venta).
   const totalLinea = useCallback((l: CartLine) => l.cantidad * (precioConDesc(l) + (l.precio_mods ?? 0)), [precioConDesc]);
 
-  const cantTotal = useMemo(() => cart.reduce((s, l) => s + l.cantidad, 0), [cart]);
+  // Redondeado a 3 decimales: tres tercios de una cuenta separada suman 1, no 1,000002.
+  const cantTotal = useMemo(() => Math.round(cart.reduce((s, l) => s + l.cantidad, 0) * 1000) / 1000, [cart]);
   const total = useMemo(() => cart.reduce((s, l) => s + totalLinea(l), 0), [cart, totalLinea]);
   // IVA CONTENIDO en el total (Paraguay: el precio ya lo incluye).
   const totalIva = useMemo(() => cart.reduce((s, l) => s + calcIva(l.tipo_iva, totalLinea(l)), 0), [cart, totalLinea]);

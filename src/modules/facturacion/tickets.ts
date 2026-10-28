@@ -286,8 +286,10 @@ export function papelTicketVenta(cfg: ConfigTicketVenta, d: DatosTicketVenta): s
       const conDesc = lista > it.precio + 0.5;
       const desc = conDesc ? Math.round((lista - it.precio) * it.cantidad) : 0;
       const pct = conDesc ? Math.round((1 - it.precio / lista) * 1000) / 10 : 0;
-      return `<tr><td class="qty"><strong>${it.cantidad}×</strong></td><td>${escHtml(it.nombre)}</td><td class="amt">${gs(it.total)}</td></tr>
-        <tr class="sub"><td></td><td colspan="2">${it.cantidad} × ${conDesc ? `<s>${gs(lista)}</s> ` : ""}${gs(it.precio)}</td></tr>${conDesc ? `
+      // Con coma y hasta 3 decimales (cuenta separada: 0,333 de pizza).
+      const cant = Number(it.cantidad).toLocaleString("es-PY", { maximumFractionDigits: 3 });
+      return `<tr><td class="qty"><strong>${cant}×</strong></td><td>${escHtml(it.nombre)}</td><td class="amt">${gs(it.total)}</td></tr>
+        <tr class="sub"><td></td><td colspan="2">${cant} ×${conDesc ? `<s>${gs(lista)}</s> ` : ""}${gs(it.precio)}</td></tr>${conDesc ? `
         <tr class="sub"><td></td><td colspan="2">Desc. ${pct.toLocaleString("es-PY")} %: −${gs(desc)}</td></tr>` : ""}${(it.detalle ?? "").trim() ? `
         <tr class="sub"><td></td><td colspan="2">${escHtml((it.detalle ?? "").trim())}</td></tr>` : ""}`;
     })
