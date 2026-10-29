@@ -6,9 +6,12 @@
  * del usuario y estado (completa / sin receta / falta ingrediente). Tocar una fila abre el editor
  * (CapaModal). "Nueva preparación" elige una materia prima para cargarle su receta.
  * /inventario/recetas?producto=<id> abre directo el editor de ese producto (desde la ficha).
+ * Receta 97: también los productos Fabricados y las preparaciones por tanda (stock propio, se
+ * fabrican en Inventario › Producción): muestran su stock y cuánto se puede fabricar.
  */
 import { useEffect, useMemo, useState } from "react";
-import { ChefHat, Loader2, Plus, Search, X } from "lucide-react";
+import { ChefHat, Factory, Loader2, Plus, Search, X } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { clienteConfig } from "@/cliente.config";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { buscar } from "@/lib/busqueda";
@@ -30,6 +33,8 @@ const TEAL = clienteConfig.color;
 export default function RecetasPage() {
   const me = useUsuario();
   const puedeEditar = tienePermiso(me, "editar_productos");
+  const puedeFabricar = tienePermiso(me, "fabricar");
+  const router = useRouter();
   const [recarga, setRecarga] = useState(0);
   const { datos, cargando, error } = useListaCacheada<ListaRecetas>("/api/inventario/recetas", recarga);
   const [busqueda, setBusqueda] = useState("");
@@ -89,8 +94,8 @@ export default function RecetasPage() {
     {
       key: "tipo", titulo: "Tipo", movil: "chip",
       celda: (f) => (
-        <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${f.tipo === "menu" ? "bg-orange-50 text-orange-700 ring-orange-200" : "bg-lime-50 text-lime-800 ring-lime-200"}`}>
-          {f.tipo === "menu" ? "Menú" : `Preparación · ${unidadCorta(f.unidad_medida)}`}
+        <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${f.tipo === "menu" ? "bg-orange-50 text-orange-700 ring-orange-200" : f.tipo === "fabricado" ? "bg-violet-50 text-violet-700 ring-violet-200" : "bg-lime-50 text-lime-800 ring-lime-200"}`}>
+          {f.tipo === "menu" ? "Menú" : f.tipo === "fabricado" ? `Fabricado · ${unidadCorta(f.unidad_medida)}` : `Preparación · ${unidadCorta(f.unidad_medida)}${f.por_tanda ? " · por tanda" : ""}`}
         </span>
       ),
     },
@@ -120,12 +125,12 @@ export default function RecetasPage() {
     },
     {
       key: "precio", titulo: "Precio", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-semibold tabular-nums text-slate-900",
-      celda: (f) => (f.tipo === "menu" ? gs(precioFinal(f.precio_venta, f.descuento_pct)) : <span className="text-xs font-medium text-slate-400">No se vende</span>),
+      celda: (f) => (f.tipo !== "preparacion" ? gs(precioFinal(f.precio_venta, f.descuento_pct)) : <span className="text-xs font-medium text-slate-400">No se vende</span>),
     },
     {
       key: "margen", titulo: "Margen", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-semibold tabular-nums max-md:text-left",
       celda: (f) => {
-        if (f.tipo !== "menu" || f.costo == null) return <span className="text-slate-300">—</span>;
+        if (f.tipo === "preparacion" || f.costo == null) return <span className="text-slate-300">—</span>;
         // Receta 74: con opciones que cambian el costo, el margen con la opción más cara (peor caso).
         const m = margenPct(f.costo_hasta ?? f.costo, precioFinal(f.precio_venta, f.descuento_pct));
         return <span className={colorMargen(m)} title={f.costo_hasta != null ? "Con la opción más cara" : undefined}>{m == null ? "—" : `${m.toFixed(1).replace(".", ",")} %`}</span>;
@@ -135,6 +140,16 @@ export default function RecetasPage() {
       key: "porciones", titulo: "Alcanza para", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums max-md:text-left",
       celda: (f) => {
         if (f.estado === "sin_receta") return <span className="text-xs text-slate-400">Cargá su receta</span>;
+        // Receta 97: por tanda → su stock y cuánto más se puede fabricar.
+        if (f.por_tanda) {
+          const dec = f.unidad_medida === "Unidad" ? 0 : 3;
+          return (
+            <span title={f.faltan ? `Falta: ${f.faltan}` : undefined}>
+              <span className={(f.stock ?? 0) <= 0 ? "font-semibold text-rose-600" : "text-slate-700"}>{cant(f.stock ?? 0, dec)} {unidadCorta(f.unidad_medida)} en stock</span>
+              <span className="block text-[10px] text-slate-400">{f.alcanza == null ? "fabricás sin límite" : `fabricás ${cant(f.alcanza, dec)} más`}</span>
+            </span>
+          );
+        }
         if (f.porciones == null) return <span className="text-xs text-slate-400">sin límite</span>;
         return (
           <span className={f.porciones <= 0 ? "font-semibold text-rose-600" : "text-slate-700"} title={f.faltan ? `Falta: ${f.faltan}` : undefined}>
@@ -159,9 +174,9 @@ export default function RecetasPage() {
       : (
         <>
           <ChefHat className="mx-auto h-8 w-8 text-slate-300" />
-          <p className="mt-3 text-sm font-medium text-slate-700">{hayFiltros ? "Ninguna receta coincide con los filtros" : "Todavía no hay platos ni preparaciones"}</p>
+          <p className="mt-3 text-sm font-medium text-slate-700">{hayFiltros ? "Ninguna receta coincide con los filtros" : "Todavía no hay recetas"}</p>
           <p className="mx-auto mt-1 max-w-md text-xs text-slate-500">
-            {hayFiltros ? "Probá con otra búsqueda o cambiá los filtros." : "Creá tus platos en Productos con el tipo «Menú» y tus insumos como «Materia prima»; después cargá acá la receta de cada plato."}
+            {hayFiltros ? "Probá con otra búsqueda o cambiá los filtros." : "Creá tus platos en Productos con el tipo «Menú» (o lo que fabricás como «Fabricado») y tus insumos como «Materia prima»; después cargá acá la receta de cada uno."}
           </p>
         </>
       )}
@@ -172,11 +187,14 @@ export default function RecetasPage() {
     <div className="space-y-5 pb-10 sm:space-y-6">
       <EncabezadoPagina
         volver={{ href: "/inventario/panel", label: "Inventario" }}
-        kicker="Inventario · Cocina"
+        kicker="Inventario · Recetas"
         titulo="Recetas"
-        subtitulo="Ingredientes, merma y costo de cada plato. Al vender se descuentan los ingredientes; si falta uno, no se vende."
-        acciones={puedeEditar && vista === "recetas" ? (
-          <AccionesPagina acciones={[{ etiqueta: "Nueva preparación", icono: <Plus />, onClick: () => setEligiendo(true) }]} />
+        subtitulo="Ingredientes, merma y costo de cada plato o producto fabricado. Los platos descuentan sus ingredientes al venderse; los fabricados, al fabricarlos."
+        acciones={vista === "recetas" && (puedeEditar || puedeFabricar) ? (
+          <AccionesPagina acciones={[
+            ...(puedeFabricar ? [{ etiqueta: "Fabricar", icono: <Factory />, onClick: () => router.push("/inventario/produccion?fabricar=1") }] : []),
+            ...(puedeEditar ? [{ etiqueta: "Nueva preparación", icono: <Plus />, onClick: () => setEligiendo(true) }] : []),
+          ]} />
         ) : undefined}
       />
 
@@ -196,7 +214,7 @@ export default function RecetasPage() {
             <Kpi color="bg-slate-400" etiqueta="Sin receta" valor={cuenta.sin_receta} onClick={() => setEstado(estado === "sin_receta" ? "" : "sin_receta")} activo={estado === "sin_receta"} />
           </GrillaKpis>
           <p className="mt-2 text-[11px] text-slate-400">
-            Porciones con el stock de {datos?.deposito ? <strong className="font-semibold text-slate-500">{datos.deposito}</strong> : "tu depósito"} · costos con IVA incluido
+            Porciones y fabricación con el stock de {datos?.deposito ? <strong className="font-semibold text-slate-500">{datos.deposito}</strong> : "tu depósito"} · costos con IVA incluido
           </p>
         </div>
 
@@ -208,7 +226,7 @@ export default function RecetasPage() {
             busqueda={
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input type="search" enterKeyHint="search" aria-label="Buscar recetas" placeholder="Buscar plato o preparación..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className={`${input} w-full pl-9 pr-10`} />
+                <input type="search" enterKeyHint="search" aria-label="Buscar recetas" placeholder="Buscar plato, fabricado o preparación..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className={`${input} w-full pl-9 pr-10`} />
                 {busqueda ? (
                   <button onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700">
                     <X className="h-3.5 w-3.5" />
@@ -217,7 +235,7 @@ export default function RecetasPage() {
               </div>
             }
           >
-            <Select value={tipo} onChange={setTipo} minWidth={180} etiqueta="Tipo" options={[["", "Platos y preparaciones"], ["menu", "Solo platos (Menú)"], ["preparacion", "Solo preparaciones"]]} />
+            <Select value={tipo} onChange={setTipo} minWidth={180} etiqueta="Tipo" options={[["", "Todas las recetas"], ["menu", "Solo platos (Menú)"], ["fabricado", "Solo fabricados"], ["preparacion", "Solo preparaciones"]]} />
             <Select value={estado} onChange={setEstado} minWidth={180} etiqueta="Estado" options={[["", "Todos los estados"], ["completa", "Completas"], ["faltante", "Falta ingrediente"], ["sin_receta", "Sin receta"]]} />
           </BarraFiltros>
         </div>
@@ -240,7 +258,7 @@ export default function RecetasPage() {
         )}
         {filas.length ? (
           <p className="border-t border-slate-100 px-3 py-2.5 text-[11px] text-slate-500 sm:px-5">
-            {filas.length} {filas.length === 1 ? "receta" : "recetas"}. Tocá una para ver o editar sus ingredientes, extras y opciones. Una preparación (ej. salsa) se usa como ingrediente y se descuenta en sus materias primas.
+            {filas.length} {filas.length === 1 ? "receta" : "recetas"}. Tocá una para ver o editar sus ingredientes, extras y opciones. Una preparación (ej. salsa) se usa como ingrediente: se descuenta en sus materias primas o, si se fabrica por tanda, de su stock.
           </p>
         ) : null}
       </section>
@@ -255,8 +273,8 @@ export default function RecetasPage() {
           <div className="space-y-3 pb-2">
             <BuscadorProductos tipo="materia_prima" onElegir={(p) => { setEligiendo(false); setAbierto(p.id); }} />
             <p className="text-[11px] leading-relaxed text-slate-500">
-              Si todavía no existe, creala en <strong>Productos</strong> como «Materia prima» con su unidad (kg, l, unidad) y stock en 0: una preparación con receta no lleva stock propio.
-              Para un plato nuevo, creá el producto con el tipo «Menú»: aparece acá para cargarle la receta.
+              Si todavía no existe, creala en <strong>Productos</strong> como «Materia prima» con su unidad (kg, l, unidad) y stock en 0: si se descuenta al vender no lleva stock propio (si se fabrica por tanda, sí).
+              Para un plato nuevo, creá el producto con el tipo «Menú»; para algo que fabricás y vendés (ej. Bolsa de maní 250 g), con el tipo «Fabricado»: aparecen acá para cargarles la receta.
             </p>
           </div>
         </ModalDocumento>

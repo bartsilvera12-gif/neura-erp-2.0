@@ -7,6 +7,8 @@
  *        La base valida tipos, unidades, merma (0–90 %), ciclos y profundidad (5).
  *        Receta 73: extras y grupos de opciones; receta 74: cada opción con sus `items`
  *        (ingredientes por plato: insumo, cantidad neta, unidad, merma %).
+ *        Receta 97: `por_tanda` (preparaciones: se fabrica por tanda en vez de descontarse al
+ *        vender). Un Fabricado siempre va por tanda.
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
@@ -25,6 +27,8 @@ export const GET = withTenant(async (ctx, req) => {
 const guardar = z.object({
   rendimiento: z.coerce.number().positive("El rendimiento tiene que ser mayor a 0").max(100000),
   notas: z.string().trim().max(1000).nullish(),
+  // Receta 97 (solo preparaciones): true = se fabrica por tanda (tiene stock). Si no viene, no se toca.
+  por_tanda: z.boolean().optional(),
   items: z
     .array(
       z.object({

@@ -100,10 +100,12 @@ export function ProductoForm({
   const [tipo, setTipo] = useState<TipoProducto>(producto?.tipo_producto ?? "reventa");
   const esMenu = tipo === "menu";
   const esMP = tipo === "materia_prima";
+  // Receta 97: Fabricado = receta + stock propio (siempre controla stock).
+  const esFab = tipo === "fabricado";
   function cambiarTipo(t: TipoProducto) {
     setTipo(t);
     if (t === "materia_prima") setF((p) => ({ ...p, unidad_medida: unidadMP(p.unidad_medida) }));
-    if (t !== "menu" && tipo === "menu") setF((p) => ({ ...p, controla_stock: true }));
+    if ((t !== "menu" && tipo === "menu") || t === "fabricado") setF((p) => ({ ...p, controla_stock: true }));
   }
   // Alta: stock con el que arranca → ajuste de inventario inicial (AJ-) en un depósito.
   const deps = useDepositos();
@@ -174,7 +176,7 @@ export function ProductoForm({
 
   const set = <K extends keyof typeof f>(k: K, v: (typeof f)[K]) => setF((p) => ({ ...p, [k]: v }));
   const num = (v: string) => (v === "" ? undefined : Number(v));
-  const conStock = !esMenu && f.controla_stock;
+  const conStock = !esMenu && (esFab || f.controla_stock);
   const cantInicial = !editando && conStock ? Number(stockIni.cantidad) || 0 : 0;
   const faltaInicial = cantInicial > 0 && (!depositoInicial || (f.controla_lotes && !stockIni.vencimiento));
   const puede = !soloLectura && f.nombre.trim() !== "" && f.sku.trim() !== "" && !faltaInicial;
@@ -271,7 +273,7 @@ export function ProductoForm({
           {/* ── Tipo de producto (receta 72) ─────────────────────────────── */}
           {mostrarTipo ? (
           <Bloque titulo="Tipo de producto">
-            <div role="radiogroup" aria-label="Tipo de producto" className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <div role="radiogroup" aria-label="Tipo de producto" className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
               {TIPOS_PRODUCTO.map((t) => {
                 const sel = tipo === t.id;
                 return (
@@ -283,12 +285,14 @@ export function ProductoForm({
                 );
               })}
             </div>
-            {!conRecetas ? null : editando && (esMenu || esMP) ? (
+            {!conRecetas ? null : editando && (esMenu || esMP || esFab) ? (
               <Link href={`/inventario/recetas?producto=${producto!.id}`} className="mt-2 inline-flex min-h-9 items-center gap-1.5 text-xs font-semibold text-[var(--brand)] hover:underline">
-                <ChefHat className="h-3.5 w-3.5" /> {esMenu ? "Ver / cargar su receta" : "Cargarle receta (preparación)"}
+                <ChefHat className="h-3.5 w-3.5" /> {esMenu || esFab ? "Ver / cargar su receta" : "Cargarle receta (preparación)"}
               </Link>
             ) : !editando && esMenu ? (
               <p className="mt-2 text-[11px] text-slate-500">Después de crearlo, cargá su receta en Inventario › Recetas: sin receta no se puede vender.</p>
+            ) : !editando && esFab ? (
+              <p className="mt-2 text-[11px] text-slate-500">Después de crearlo, cargá su receta en Inventario › Recetas y fabricalo en Inventario › Producción: ahí descuenta las materias primas y suma su stock.</p>
             ) : null}
           </Bloque>
           ) : null}
@@ -469,6 +473,10 @@ export function ProductoForm({
               {esMenu ? (
                 <p className="rounded-xl border border-orange-200 bg-orange-50 px-3 py-2.5 text-xs text-orange-800">
                   <strong>Sin stock propio.</strong> Al venderse descuenta los ingredientes de su receta del depósito de la caja; si falta alguno, no se vende.
+                </p>
+              ) : esFab ? (
+                <p className="rounded-xl border border-violet-200 bg-violet-50 px-3 py-2.5 text-xs text-violet-800">
+                  <strong>Controla stock.</strong> Sube al fabricarlo (descuenta las materias primas de su receta) y baja al venderlo.
                 </p>
               ) : (
                 <Interruptor checked={f.controla_stock} onChange={(v) => setF((p) => ({ ...p, controla_stock: v, controla_lotes: v ? p.controla_lotes : false }))} label="Controla stock"

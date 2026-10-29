@@ -1,5 +1,7 @@
 /**
  * Recetas (receta 72): tipos y cálculos compartidos por la pantalla /inventario/recetas y su editor.
+ * Receta 97: productos Fabricados y preparaciones "por tanda" (tienen stock; se fabrican en
+ * Inventario › Producción).
  *
  * Merma: la cantidad de cada ingrediente es la NETA (lo que va al plato); se descuenta la BRUTA:
  *   bruto = neto / (1 − merma %)   (150 g de carne con 10 % de merma descuenta 166,7 g)
@@ -13,7 +15,13 @@ export type FilaReceta = {
   id: string;
   nombre: string;
   sku: string;
-  tipo: "menu" | "preparacion";
+  tipo: "menu" | "preparacion" | "fabricado";
+  /** Receta 97: se fabrica por tanda (Fabricado, o preparación con stock propio). */
+  por_tanda?: boolean;
+  /** Receta 97: stock propio en el depósito del usuario (por tanda). */
+  stock?: number;
+  /** Receta 97: cuánto se puede fabricar con las materias primas del depósito (null = sin límite). */
+  alcanza?: number | null;
   unidad_medida: string;
   precio_venta: number;
   descuento_pct: number | null;
@@ -46,6 +54,8 @@ export type IngredienteReceta = {
   stock: number;
   controla_stock: boolean;
   activo: boolean;
+  /** Receta 97: el ingrediente se fabrica por tanda (se usa su stock, no su receta). */
+  por_tanda?: boolean;
   /** Receta 73: el cliente lo puede pedir "sin …" (no se descuenta). */
   se_puede_quitar?: boolean;
 };
@@ -74,10 +84,17 @@ export type ExtraComun = {
 
 export type DetalleReceta = {
   producto: {
-    id: string; nombre: string; sku: string; tipo_producto: "menu" | "materia_prima" | "reventa"; unidad_medida: string;
+    id: string; nombre: string; sku: string; tipo_producto: "menu" | "materia_prima" | "reventa" | "fabricado"; unidad_medida: string;
     precio_venta: number; descuento_pct: number | null; imagen_url: string | null; stock_actual: number; activo: boolean;
+    controla_lotes?: boolean;
   };
   tiene_receta: boolean;
+  /** Receta 97: se fabrica por tanda (Fabricado siempre; preparación a elección). */
+  por_tanda?: boolean;
+  /** Receta 97: stock propio en el depósito del usuario. */
+  stock?: number;
+  /** Receta 97: cuánto se puede fabricar con las materias primas del depósito (solo por tanda). */
+  alcanza_fabricar?: number | null;
   rendimiento: number;
   notas: string | null;
   costo: number;

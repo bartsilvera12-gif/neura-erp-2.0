@@ -47,8 +47,8 @@ const editar = z.object({
   stock_minimo: z.coerce.number().optional(),
   unidad_medida: z.string().trim().optional(),
   tipo_iva: z.enum(["EXENTA", "5%", "10%"]).optional(),
-  /** receta 72: reventa · menu · materia_prima (la base ajusta stock / vendible según el tipo) */
-  tipo_producto: z.enum(["reventa", "menu", "materia_prima"]).optional(),
+  /** receta 72: reventa · menu · materia_prima · fabricado (97) (la base ajusta stock / vendible según el tipo) */
+  tipo_producto: z.enum(["reventa", "menu", "materia_prima", "fabricado"]).optional(),
   controla_stock: z.boolean().optional(),
   controla_lotes: z.boolean().optional(),
   es_vendible: z.boolean().optional(),

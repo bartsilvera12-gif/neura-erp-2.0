@@ -67,9 +67,9 @@ export const GET = withTenant(async (ctx, req) => {
     const q = (sp.get("q") ?? "").trim().slice(0, 200);
     const categoria = sp.get("categoria") ?? "";
     const desde = (pagina - 1) * porPagina;
-    // Receta 72: &tipo=reventa|menu|materia_prima|stock (todo menos Menú)|vendible (todo menos Materia prima).
+    // Receta 72: &tipo=reventa|menu|materia_prima|fabricado (97)|stock (todo menos Menú)|vendible (todo menos Materia prima).
     const tipoSp = sp.get("tipo") ?? "";
-    const tipo = ["reventa", "menu", "materia_prima", "stock", "vendible"].includes(tipoSp) ? tipoSp : null;
+    const tipo = ["reventa", "menu", "materia_prima", "fabricado", "stock", "vendible"].includes(tipoSp) ? tipoSp : null;
 
     if (q) {
       const { data, error } = await ctx.db.rpc<{ rows: unknown[]; total: number }>("buscar_productos", {
@@ -217,8 +217,8 @@ const crearProducto = z.object({
   stock_minimo: z.coerce.number().min(0).default(0),
   unidad_medida: z.string().trim().default("Unidad"),
   tipo_iva: z.enum(["EXENTA", "5%", "10%"]).default("10%"),
-  /** receta 72: reventa · menu (sin stock, descuenta su receta) · materia_prima (no se vende) */
-  tipo_producto: z.enum(["reventa", "menu", "materia_prima"]).default("reventa"),
+  /** receta 72: reventa · menu (sin stock, descuenta su receta) · materia_prima (no se vende) · fabricado (97: receta + stock propio) */
+  tipo_producto: z.enum(["reventa", "menu", "materia_prima", "fabricado"]).default("reventa"),
   controla_stock: z.boolean().default(true),
   controla_lotes: z.boolean().default(false),
   es_vendible: z.boolean().default(true),
@@ -235,6 +235,7 @@ export const POST = withTenant(
     // Menú: sin stock propio (descuenta su receta). Materia prima: no se vende (la base lo asegura igual).
     if (campos.tipo_producto === "menu") { campos.controla_stock = false; campos.controla_lotes = false; }
     if (campos.tipo_producto === "materia_prima") { campos.es_vendible = false; campos.en_menu_qr = false; campos.estacion_id = null; }
+    if (campos.tipo_producto === "fabricado") campos.controla_stock = true;
     if (stock_inicial && !campos.controla_stock) return fail("Un producto que no controla stock no lleva stock inicial.", 400);
     // Lotes solo tiene sentido si controla stock.
     const { data, error } = await ctx.db.insert("productos", {

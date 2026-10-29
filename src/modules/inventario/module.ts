@@ -20,6 +20,8 @@ export const moduloInventario: Modulo = {
     { label: "Productos", href: "/inventario", palabras: ["stock", "existencias", "articulos", "mercaderia", "precios"] },
     // Receta 72: recetas de los platos (Menú) y preparaciones. Muestra costos → "ver costos".
     { label: "Recetas", href: "/inventario/recetas", permiso: "ver_costos", funcion: "recetas" },
+    // Receta 97: fabricar por tanda (descuenta materias primas, suma stock del fabricado).
+    { label: "Producción", href: "/inventario/produccion", permiso: "fabricar", funcion: "recetas", palabras: ["fabricar", "fabricacion", "elaborar", "tanda", "lote de produccion"] },
     { label: "Movimientos", href: "/inventario/movimientos", palabras: ["kardex", "stock"] },
     { label: "Traslados", href: "/inventario/traslados" },
     { label: "Ajustes y pérdidas", href: "/inventario/ajustes", palabras: ["merma", "inventario fisico", "conteo", "stock"] },
@@ -33,6 +35,7 @@ export const moduloInventario: Modulo = {
   // Solo para el buscador del menú.
   atajos: [
     { label: "Nuevo ajuste o pérdida", href: "/inventario/ajustes/nuevo" },
+    { label: "Fabricar", href: "/inventario/produccion?fabricar=1", permisos: ["fabricar"], funcion: "recetas" },
     { label: "Nuevo traslado", href: "/inventario/traslados/nuevo" },
     { label: "Importación inicial de productos", href: "/inventario/import-inicial" },
   ],

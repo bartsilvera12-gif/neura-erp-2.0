@@ -17,7 +17,7 @@ export type CapaCosto = {
   id: string;
   tipo: "capa" | "lote";
   fecha: string;
-  origen: "compra" | "stock_inicial" | "ajuste" | "traslado" | "anulacion" | "lote";
+  origen: "compra" | "stock_inicial" | "ajuste" | "traslado" | "anulacion" | "lote" | "produccion";
   compra_numero: string | null;
   proveedor: string | null;
   documento_numero: string | null;
@@ -68,6 +68,8 @@ export function origenTexto(
       return { titulo: "Devolución", detalle: c.documento_numero ? `anulación ${c.documento_numero}` : c.referencia };
     case "lote":
       return { titulo: "Lote", detalle: c.referencia };
+    case "produccion":
+      return { titulo: `Producción ${c.documento_numero ?? ""}`.trim(), detalle: "costo de las materias primas" };
     default:
       return { titulo: `Ajuste ${c.documento_numero ?? ""}`.trim(), detalle: c.referencia };
   }

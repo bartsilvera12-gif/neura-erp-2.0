@@ -216,7 +216,7 @@ export default function RubroFuncionesPage() {
             disabled={soloLectura || guardando}
             onChange={(v) => tocar({ recetas: v })}
             etiqueta={<span className="inline-flex items-center gap-1.5"><BookOpen className="h-4 w-4 text-slate-400" aria-hidden /> Recetas e ingredientes</span>}
-            descripcion="Tipos de producto Menú y Materia prima, recetas con merma, extras y opciones de los platos."
+            descripcion="Tipos de producto Menú, Materia prima y Fabricado, recetas con merma, extras y opciones de los platos, y Producción (fabricar por tanda)."
           />
           <Interruptor
             activo={b.pedidos}
@@ -258,7 +258,7 @@ export default function RubroFuncionesPage() {
             </div>
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-5 py-4 text-sm text-slate-600">
               <p>
-                Tenés <span className="font-semibold text-slate-800">{plural(confirmarRecetas, "producto activo", "productos activos")}</span> de tipo Menú o Materia prima.
+                Tenés <span className="font-semibold text-slate-800">{plural(confirmarRecetas, "producto activo", "productos activos")}</span> de tipo Menú, Materia prima o Fabricado.
               </p>
               <p>Siguen existiendo y se pueden vender y editar con su tipo; solo se ocultan la pantalla de Recetas y el selector de tipo en los productos nuevos. Si la volvés a prender, todo queda como estaba.</p>
             </div>

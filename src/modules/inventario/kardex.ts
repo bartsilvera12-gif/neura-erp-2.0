@@ -3,8 +3,8 @@ export type TipoMovimiento = "ENTRADA" | "SALIDA";
 export type OrigenMovimiento =
   | "inventario_inicial" | "ajuste_manual" | "venta" | "anulacion_venta" | "compra" | "anulacion_compra"
   | "traslado_salida" | "traslado_entrada" | "anulacion_traslado" | "ajuste" | "perdida"
-  | "anulacion_ajuste" | "anulacion_perdida" | "apertura";
-export type DocumentoTipo = "compra" | "venta" | "traslado" | "ajuste" | "perdida";
+  | "anulacion_ajuste" | "anulacion_perdida" | "apertura" | "produccion" | "anulacion_produccion";
+export type DocumentoTipo = "compra" | "venta" | "traslado" | "ajuste" | "perdida" | "produccion";
 
 export type Movimiento = {
   id: string;
@@ -47,6 +47,8 @@ export const ORIGEN_LABEL: Record<string, string> = {
   anulacion_perdida: "Anulación de pérdida",
   apertura: "Saldo de apertura",
   ajuste_manual: "Ajuste manual (anterior)",
+  produccion: "Producción",
+  anulacion_produccion: "Anulación de producción",
 };
 
 /** Pestañas del kardex: cada una es un grupo de orígenes (se mandan separados por coma). */
@@ -57,7 +59,8 @@ export const GRUPOS_ORIGEN: { id: string; label: string; origenes: OrigenMovimie
   { id: "traslados", label: "Traslados", origenes: ["traslado_salida", "traslado_entrada", "anulacion_traslado"] },
   { id: "ajustes", label: "Ajustes", origenes: ["ajuste", "inventario_inicial", "ajuste_manual", "apertura"] },
   { id: "perdidas", label: "Pérdidas", origenes: ["perdida"] },
-  { id: "anulaciones", label: "Anulaciones", origenes: ["anulacion_venta", "anulacion_compra", "anulacion_ajuste", "anulacion_perdida"] },
+  { id: "produccion", label: "Producción", origenes: ["produccion"] },
+  { id: "anulaciones", label: "Anulaciones", origenes: ["anulacion_venta", "anulacion_compra", "anulacion_ajuste", "anulacion_perdida", "anulacion_produccion"] },
 ];
 
 /** Adónde lleva el número de documento de un movimiento. */
@@ -68,6 +71,7 @@ export function hrefDocumento(m: Pick<Movimiento, "documento_tipo" | "documento_
     case "ajuste":
     case "perdida": return `/inventario/ajustes?ver=${m.documento_id}`;
     case "compra": return `/compras?ver=${m.documento_id}`;
+    case "produccion": return `/inventario/produccion?ver=${m.documento_id}`;
     default: return null;
   }
 }

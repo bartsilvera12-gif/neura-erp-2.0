@@ -1,12 +1,13 @@
 import type { TipoIva } from "@/modules/caja/lib";
 
-/** Tipo de producto (receta 72). */
-export type TipoProducto = "reventa" | "menu" | "materia_prima";
+/** Tipo de producto (receta 72; 'fabricado' desde la 97). */
+export type TipoProducto = "reventa" | "menu" | "materia_prima" | "fabricado";
 
 export const TIPOS_PRODUCTO: { id: TipoProducto; label: string; corto: string; ayuda: string; chip: string }[] = [
   { id: "reventa", label: "Reventa", corto: "Reventa", ayuda: "Se compra y se vende tal cual, con stock propio (bebidas, almacén).", chip: "bg-slate-100 text-slate-600 ring-slate-200" },
   { id: "menu", label: "Menú", corto: "Menú", ayuda: "Plato o elaborado: no lleva stock; al venderse descuenta los ingredientes de su receta.", chip: "bg-orange-50 text-orange-700 ring-orange-200" },
-  { id: "materia_prima", label: "Materia prima", corto: "Materia prima", ayuda: "Insumo de cocina: se compra y tiene stock, pero no se vende. Con receta es una preparación.", chip: "bg-lime-50 text-lime-800 ring-lime-200" },
+  { id: "materia_prima", label: "Materia prima", corto: "Materia prima", ayuda: "Insumo: se compra y tiene stock, pero no se vende. Con receta es una preparación.", chip: "bg-lime-50 text-lime-800 ring-lime-200" },
+  { id: "fabricado", label: "Fabricado", corto: "Fabricado", ayuda: "Lo fabricás vos con una receta: al fabricar descuenta las materias primas y suma su stock. Se vende con su stock.", chip: "bg-violet-50 text-violet-700 ring-violet-200" },
 ];
 export const tipoProducto = (t: string | null | undefined) => TIPOS_PRODUCTO.find((x) => x.id === t) ?? TIPOS_PRODUCTO[0];
 

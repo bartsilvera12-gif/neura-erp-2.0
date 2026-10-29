@@ -41,6 +41,7 @@ const ORIGEN_BADGE: Record<string, string> = {
   inventario_inicial: "bg-orange-50 text-orange-700 ring-1 ring-orange-200",
   perdida: "bg-red-50 text-red-700 ring-1 ring-red-200",
   apertura: "bg-slate-50 text-slate-500 ring-1 ring-slate-200",
+  produccion: "bg-fuchsia-50 text-fuchsia-700 ring-1 ring-fuchsia-200",
 };
 const BADGE_ANULACION = "bg-rose-50 text-rose-700 ring-1 ring-rose-200";
 

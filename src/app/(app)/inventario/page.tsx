@@ -41,10 +41,10 @@ const POR_PAGINA = [25, 50, 100, 200] as const;
 type Pagina = { rows: ProductoInventario[]; total: number };
 
 /** URL de una página del listado (misma forma siempre: es la clave del cache). */
-/** Chip "Tipo": arranca en "De venta" (Reventa + Menú); las materias primas se eligen aparte. */
+/** Chip "Tipo": arranca en "De venta" (Reventa, Menú y Fabricado); las materias primas se eligen aparte. */
 const OPCIONES_TIPO: [string, string][] = [
-  ["", "De venta (Reventa y Menú)"],
-  ...TIPOS_PRODUCTO.map((t): [string, string] => [t.id, t.id === "materia_prima" ? "Materias primas" : t.label]),
+  ["", "De venta (Reventa, Menú y Fabricado)"],
+  ...TIPOS_PRODUCTO.map((t): [string, string] => [t.id, t.id === "materia_prima" ? "Materias primas" : t.id === "fabricado" ? "Fabricados" : t.label]),
   ["todos", "Todos los tipos"],
 ];
 

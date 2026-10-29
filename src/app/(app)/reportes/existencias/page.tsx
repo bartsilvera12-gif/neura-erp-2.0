@@ -149,7 +149,7 @@ export default function ReporteExistenciasPage() {
           options={[["", "Todas las categorías"], ["__sin__", "— Sin categoría —"], ...opcionesFiltroCategoria(categorias)]} />
         {d?.recetas ? (
           <Select chip prefijo="Tipo" textoVacio="Todos" value={tipo} onChange={setTipo} minWidth={200} etiqueta="Tipo de producto"
-            options={[["", "Reventa y materias primas"], ["reventa", "Reventa"], ["materia_prima", "Materias primas"]]} />
+            options={[["", "Reventa, fabricados y materias primas"], ["reventa", "Reventa"], ["fabricado", "Fabricados"], ["materia_prima", "Materias primas"]]} />
         ) : null}
         <label className={CHIP_TOGGLE(soloStock)}>
           <input type="checkbox" checked={soloStock} onChange={(e) => setSoloStock(e.target.checked)} className="h-4 w-4 rounded border-slate-300 accent-[var(--brand)]" />

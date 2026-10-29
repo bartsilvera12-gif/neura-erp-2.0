@@ -15,11 +15,16 @@
  *     obligatorios con ingredientes el costo del plato se muestra "desde … hasta …".
  *   · "Copiar de otro plato": suma los extras y los grupos de opciones de otro plato (con los
  *     ingredientes de cada opción).
+ *
+ * Receta 97 — Fabricado (receta + stock propio): costo por unidad, precio, margen y cuánto se
+ * puede fabricar; botón "Fabricar" (Inventario › Producción). Una preparación elige su modo:
+ * "Se descuenta al vender" (sin stock, como siempre) o "Se fabrica por tanda" (tiene stock).
  */
 import Link from "next/link";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { AlertTriangle, ChefHat, ChevronDown, Copy, Loader2, Plus, Search, Trash2, X } from "lucide-react";
+import { AlertTriangle, ChefHat, ChevronDown, Copy, Factory, Loader2, Plus, Search, Trash2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { buscar } from "@/lib/busqueda";
 import { clienteConfig } from "@/cliente.config";
 import { BuscadorProductos } from "@/modules/compras/partes";
@@ -116,9 +121,14 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
   const [aviso, setAviso] = useState<string | null>(null);
   const [confirmarQuitar, setConfirmarQuitar] = useState(false);
   const [copiando, setCopiando] = useState(false);
+  // Receta 97: la preparación se fabrica por tanda (tiene stock) o se descuenta al vender.
+  const [tanda, setTanda] = useState(false);
+  const me = useUsuario();
+  const puedeFabricar = tienePermiso(me, "fabricar");
 
   function cargarDetalle(d: DetalleReceta) {
     setDet(d);
+    setTanda(!!d.por_tanda);
     setRend(String(d.rendimiento ?? 1).replace(".", ","));
     setNotas(d.notas ?? "");
     setLineas(d.items.map(lineaDeItem));
@@ -136,6 +146,10 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
 
   const esPreparacion = det?.producto.tipo_producto === "materia_prima";
   const esPlato = det?.producto.tipo_producto === "menu";
+  const esFabricado = det?.producto.tipo_producto === "fabricado";
+  // Se mide en su unidad (kg, l, unidades) en vez de porciones.
+  const porUnidad = esPreparacion || esFabricado;
+  const porTanda = esFabricado || (esPreparacion && tanda);
   const unidadProd = det?.producto.unidad_medida ?? "Unidad";
   const rendimiento = Math.max(0, numero(rend));
   const costos = useMemo(() => lineas.map((l) => {
@@ -169,7 +183,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
   // lo que devolvió al abrir.)
   const porcionesVivo = useMemo((): number | null => {
     if (rendimiento <= 0) return null;
-    if (lineas.some((l) => l.es_preparacion) || rango) return det?.porciones ?? null;
+    if (lineas.some((l) => l.es_preparacion) || rango) return (det?.por_tanda ? det?.alcanza_fabricar : det?.porciones) ?? null;
     let min: number | null = null;
     for (let i = 0; i < lineas.length; i++) {
       const l = lineas[i];
@@ -265,6 +279,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
         body: JSON.stringify({
           rendimiento: rendimiento || 1,
           notas: notas.trim() || null,
+          ...(esPreparacion ? { por_tanda: tanda } : {}),
           items: items.map((l) => ({
             insumo_id: l.insumo_id, cantidad: numero(l.cantidad), unidad: l.unidad, merma_pct: numero(l.merma),
             se_puede_quitar: esPlato ? l.quitar : false,
@@ -296,14 +311,18 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
     <ModalDocumento
       ancho="max-w-3xl"
       titulo={<><ChefHat className="h-5 w-5 shrink-0" style={{ color: TEAL }} /> <span className="min-w-0 truncate">{titulo}</span></>}
-      subtitulo={det ? (esPreparacion ? `Preparación · se mide en ${unidadCorta(unidadProd)} · no lleva stock propio` : `Plato del menú · ${det.producto.sku}`) : "Cargando…"}
+      subtitulo={det ? (
+        esFabricado ? `Fabricado · ${det.producto.sku} · se fabrica por tanda y se vende con su stock`
+        : esPreparacion ? `Preparación · se mide en ${unidadCorta(unidadProd)} · ${porTanda ? "se fabrica por tanda (tiene stock)" : "no lleva stock propio"}`
+        : `Plato del menú · ${det.producto.sku}`
+      ) : "Cargando…"}
       onClose={busy ? undefined : onClose}
       footer={det ? (
         <>
           {det.tiene_receta && puedeEditar ? (
             confirmarQuitar ? (
               <span className="mr-auto flex flex-wrap items-center gap-2 text-xs text-rose-700">
-                ¿Quitar la receta?{esPreparacion ? " Vuelve a ser materia prima con stock." : " El plato no se podrá vender."}
+                ¿Quitar la receta?{esFabricado ? " No se podrá fabricar." : esPreparacion ? " Vuelve a ser materia prima con stock." : " El plato no se podrá vender."}
                 <button type="button" disabled={busy} onClick={() => void guardar([])} className="rounded-lg bg-rose-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50 max-sm:min-h-11">Sí, quitar</button>
                 <button type="button" disabled={busy} onClick={() => setConfirmarQuitar(false)} className="rounded-lg px-2 py-1.5 font-semibold text-slate-500 max-sm:min-h-11">No</button>
               </span>
@@ -312,6 +331,12 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                 <Trash2 className="h-3.5 w-3.5" /> Quitar receta
               </button>
             )
+          ) : null}
+          {det.por_tanda && det.tiene_receta && puedeFabricar && !confirmarQuitar ? (
+            <Link href={`/inventario/produccion?fabricar=${det.producto.id}`}
+              className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:w-full`}>
+              <Factory className="h-4 w-4" /> Fabricar
+            </Link>
           ) : null}
           <button type="button" onClick={onClose} disabled={busy} className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:flex-1`}>{puedeEditar ? "Cancelar" : "Cerrar"}</button>
           {puedeEditar ? (
@@ -356,7 +381,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                   <Cifra etiqueta="Costo por porción" valor={`desde ${gs(rango.desde)}`}
                     detalle={`base ${gs(costoUnidad)}${rango.hasta !== rango.desde ? ` · hasta ${gs(rango.hasta)}` : ""}`} />
                 ) : (
-                  <Cifra etiqueta={esPreparacion ? `Costo por ${unidadCorta(unidadProd)}` : "Costo por porción"} valor={gs(costoUnidad)} />
+                  <Cifra etiqueta={porUnidad ? `Costo por ${unidadCorta(unidadProd)}` : "Costo por porción"} valor={gs(costoUnidad)} />
                 )}
                 {esPreparacion ? (
                   <Cifra etiqueta="Costo de la tanda" valor={gs(costoTanda)} />
@@ -369,10 +394,40 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                   <Cifra etiqueta="Margen" valor={margen == null ? "—" : `${margen.toFixed(1).replace(".", ",")} %`} clase={colorMargen(margen)}
                     detalle={precio > 0 ? (rango ? `con la opción más cara · ${gs(precio - rango.hasta)}` : `ganancia ${gs(precio - costoUnidad)}`) : "sin precio de venta"} />
                 )}
-                <Cifra etiqueta={esPreparacion ? "Alcanza para" : "Porciones posibles"}
-                  valor={porcionesVivo == null ? "—" : `${cant(porcionesVivo, 0)} ${esPreparacion ? unidadCorta(unidadProd) : "porc."}`}
-                  clase={porcionesVivo === 0 ? "text-rose-600" : undefined} detalle="con el stock de tu depósito" />
+                <Cifra etiqueta={porTanda ? "Se pueden fabricar" : esPreparacion ? "Alcanza para" : "Porciones posibles"}
+                  valor={porcionesVivo == null ? "—" : `${cant(porcionesVivo, porUnidad && unidadProd !== "Unidad" ? 3 : 0)} ${porUnidad ? unidadCorta(unidadProd) : "porc."}`}
+                  clase={porcionesVivo === 0 ? "text-rose-600" : undefined}
+                  detalle={porTanda && det.por_tanda ? `con tu depósito · hay ${cant(det.stock ?? 0)} ${unidadCorta(unidadProd)} en stock` : "con el stock de tu depósito"} />
               </div>
+
+              {/* Receta 97: cómo se usa la preparación */}
+              {esPreparacion ? (
+                <div role="radiogroup" aria-label="Cómo se usa la preparación" className="grid gap-2 sm:grid-cols-2">
+                  {([
+                    [false, "Se descuenta al vender", "No lleva stock propio: al vender un plato que la usa se descuentan sus ingredientes."],
+                    [true, "Se fabrica por tanda", "Tiene stock: la fabricás en Producción (descuenta sus ingredientes) y los platos usan ese stock."],
+                  ] as const).map(([v, t, d]) => (
+                    <button key={t} type="button" role="radio" aria-checked={tanda === v} disabled={!puedeEditar}
+                      onClick={() => setTanda(v)}
+                      className={`rounded-xl border px-3 py-2.5 text-left transition disabled:cursor-default ${tanda === v ? "border-[var(--brand)] bg-[var(--brand-50)] ring-2 ring-[var(--brand-100)]" : "border-slate-200 bg-white hover:border-slate-300"}`}>
+                      <span className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                        <span className={`inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full border-2 ${tanda === v ? "border-[var(--brand)]" : "border-slate-300"}`}>
+                          {tanda === v ? <span className="h-2 w-2 rounded-full bg-[var(--brand)]" /> : null}
+                        </span>
+                        {t}
+                      </span>
+                      <span className="mt-0.5 block pl-6 text-[11px] leading-relaxed text-slate-500">{d}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+              {esPreparacion && tanda !== !!det.por_tanda && det.tiene_receta ? (
+                <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                  {tanda
+                    ? "Al guardar pasa a tener stock propio (empieza en 0): fabricala en Producción antes de vender platos que la usen."
+                    : "Al guardar deja de tener stock propio: tiene que estar en 0 (si tiene, hacé un ajuste antes)."}
+                </p>
+              ) : null}
 
               {/* Rendimiento */}
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-[180px_1fr] sm:items-start">
@@ -380,11 +435,13 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                   <span className={ET}>Rendimiento *</span>
                   <div className="relative">
                     <input inputMode="decimal" enterKeyHint="next" disabled={!puedeEditar} value={rend} onChange={(e) => setRend(e.target.value.replace(/[^\d.,]/g, ""))} className={`${NUM} pr-16`} />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{esPreparacion ? unidadCorta(unidadProd) : "porciones"}</span>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{porUnidad ? unidadCorta(unidadProd) : "porciones"}</span>
                   </div>
                 </label>
                 <p className="text-[11px] leading-relaxed text-slate-500 sm:pt-6">
-                  {esPreparacion
+                  {porTanda
+                    ? `Cuánto sale con estas cantidades (ej. 1 ${unidadCorta(unidadProd)}, o 40 de una tanda). Al fabricar se descuentan los ingredientes en proporción a lo que vas a fabricar.`
+                    : esPreparacion
                     ? `Cuánto produce esta receta (ej. 1 kg de salsa). Al vender un plato que la usa se descuentan sus ingredientes en proporción.`
                     : "Cuántas porciones salen con estas cantidades (ej. un flan entero = 8 porciones). Al vender se descuenta la parte de una porción."}
                   {" "}La cantidad de cada ingrediente es la <strong>neta</strong> (lo que va al plato); con merma se descuenta la bruta = neta ÷ (1 − merma).
@@ -417,7 +474,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                       return (
                         <FilaIngrediente key={l.key} l={l} bruto={c.bruto} costo={c.costo} puedeEditar={puedeEditar}
                           onCambiar={(campo, v) => cambiar(l.key, campo, v)} onQuitar={() => setLineas((ls) => ls.filter((x) => x.key !== l.key))}
-                          sinStock={sinStock ? `No alcanza para una ${esPreparacion ? "tanda" : "porción"} con el stock de tu depósito.` : null}>
+                          sinStock={sinStock ? `No alcanza para una ${porUnidad ? "tanda" : "porción"} con el stock de tu depósito.` : null}>
                           {esPlato ? (
                             <Interruptor activo={l.quitar} disabled={!puedeEditar} onChange={(v) => setLineas((ls) => ls.map((x) => (x.key === l.key ? { ...x, quitar: v } : x)))}
                               texto="Se puede quitar" detalle={l.quitar ? `El cliente lo puede pedir "sin ${l.nombre.toLowerCase()}" (no se descuenta)` : undefined} />
@@ -430,7 +487,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                 {lineas.length ? (
                   <div className="mt-3 flex flex-wrap items-center justify-end gap-x-4 gap-y-1 rounded-xl bg-slate-50 px-3 py-2.5 text-sm">
                     <span className="text-slate-500">Total de la receta <strong className="tabular-nums text-slate-900">{gs(costoTanda)}</strong></span>
-                    <span className="text-slate-500">÷ {cant(rendimiento)} = <strong className="tabular-nums text-slate-900">{gs(costoUnidad)}</strong> por {esPreparacion ? unidadCorta(unidadProd) : "porción"}</span>
+                    <span className="text-slate-500">÷ {cant(rendimiento)} = <strong className="tabular-nums text-slate-900">{gs(costoUnidad)}</strong> por {porUnidad ? unidadCorta(unidadProd) : "porción"}</span>
                   </div>
                 ) : null}
                 {esPlato && quitables ? <p className="mt-2 text-[11px] text-slate-500">{quitables === 1 ? "1 ingrediente se puede quitar." : `${quitables} ingredientes se pueden quitar.`}</p> : null}
@@ -446,7 +503,11 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                   Se usa en: {det.usado_en.map((u, i) => <span key={u.id}>{i ? ", " : ""}<strong className="text-slate-700">{u.nombre}</strong></span>)}.
                 </p>
               ) : null}
-              {!esPreparacion ? (
+              {esFabricado ? (
+                <p className="text-[11px] text-slate-400">
+                  El precio se cambia en <Link href="/inventario" className="font-semibold text-[var(--brand)] hover:underline">Productos</Link>. Se vende con su stock: el stock sube cuando lo fabricás en <Link href="/inventario/produccion" className="font-semibold text-[var(--brand)] hover:underline">Producción</Link> (descuenta estos ingredientes). Los costos de arriba son estimados con el costo promedio; al fabricar se usa el costo real de cada compra.
+                </p>
+              ) : !esPreparacion ? (
                 <p className="text-[11px] text-slate-400">
                   El precio se cambia en <Link href="/inventario" className="font-semibold text-[var(--brand)] hover:underline">Productos</Link>. Sin receta el plato no se puede vender; si falta un ingrediente, tampoco (y sale del menú QR).
                 </p>

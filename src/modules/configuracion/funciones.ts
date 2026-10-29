@@ -71,6 +71,7 @@ export function funcionDeRutaApi(pathname: string): FuncionId | null {
   if (en("/api/mesas/estaciones")) return "cocina";
   if (en("/api/mesas")) return "mesas";
   if (en("/api/inventario/recetas")) return "recetas";
+  if (en("/api/inventario/produccion")) return "recetas";
   if (en("/api/pedidos-mostrador")) return "pedidos";
   return null;
 }

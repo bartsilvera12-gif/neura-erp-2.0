@@ -31,7 +31,7 @@ export function BuscadorProductos({ onElegir, onCrear, mostrarPrecio = false, ti
    * Receta 72: qué tipos busca. Por defecto, con precio (Presupuestos) "vendible" (sin materias
    * primas) y si no "stock" (compras, traslados, ajustes: sin productos Menú, que no llevan stock).
    */
-  tipo?: "reventa" | "menu" | "materia_prima" | "stock" | "vendible";
+  tipo?: "reventa" | "menu" | "materia_prima" | "fabricado" | "stock" | "vendible";
 }) {
   const filtroTipo = tipo ?? (mostrarPrecio ? "vendible" : "stock");
   const [q, setQ] = useState("");

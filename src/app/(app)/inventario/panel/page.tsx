@@ -14,6 +14,8 @@ const TARJETAS: TarjetaPanel[] = [
   { href: "/inventario", titulo: "Productos", imagen: "/inventario/productos-gondola.webp", color: hslDeMarca(clienteConfig.color), posicion: "50% 35%" },
   // Receta 72. FALTA FOTO PROPIA (cocina / ingredientes): por ahora reusa la del canasto de Compras.
   { href: "/inventario/recetas", titulo: "Recetas", imagen: "/inventario/recetas-chef-tabla-picado.webp", color: "24 60% 26%", posicion: "50% 55%" },
+  // Receta 97. FALTA FOTO PROPIA (envasado / producción): por ahora reusa la de cajas de Categorías.
+  { href: "/inventario/produccion", titulo: "Producción", imagen: "/inventario/categorias-cajas.webp", color: "268 38% 28%", posicion: "35% 60%" },
   { href: "/inventario/movimientos", titulo: "Movimientos", imagen: "/inventario/movimientos-escaner.webp", color: "214 42% 26%", posicion: "55% 45%" },
   { href: "/inventario/traslados", titulo: "Traslados", imagen: "/inventario/traslados-autoelevador.webp", color: "26 55% 24%", posicion: "45% 60%" },
   { href: "/inventario/ajustes", titulo: "Ajustes y pérdidas", imagen: "/inventario/ajustes-cajas-danadas.webp", color: "352 42% 27%", posicion: "30% 42%" },
