@@ -223,8 +223,8 @@ function ComprasYGastos() {
         subtitulo="Facturas de mercadería, gastos de la empresa y compras mixtas en una sola lista. La mercadería suma stock; los gastos van al resumen por categoría."
         acciones={<AccionesPagina acciones={[
           { etiqueta: "Catálogos", icono: <FolderCog />, onClick: () => setCatalogos(true) },
-          { etiqueta: "Nuevo gasto", icono: <Receipt />, href: "/compras/nueva?tipo=gasto" },
-          { etiqueta: "Nueva compra", icono: <Plus />, href: "/compras/nueva", primaria: true },
+          // Un solo botón: el tipo (mercadería / gasto / mixta) se elige adentro (receta 59).
+          { etiqueta: "Nueva compra o gasto", icono: <Plus />, href: "/compras/nueva", primaria: true },
         ]} />} />
 
       {/* Tipo: un toque (en celular, 4 botones de 44 px en una fila) */}

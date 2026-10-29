@@ -100,7 +100,7 @@ function ResumenGastos() {
         subtitulo={<>Todo lo que salió de plata: compras de mercadería y gastos operativos de <span className="capitalize">{titulo}</span>.</>}
         acciones={<AccionesPagina acciones={[
           { etiqueta: "Presupuesto", icono: <Target />, onClick: () => setPresupuesto(true) },
-          { etiqueta: "Nuevo gasto", icono: <Plus />, href: "/compras/nueva?tipo=gasto", primaria: true },
+          { etiqueta: "Nueva compra o gasto", icono: <Plus />, href: "/compras/nueva", primaria: true },
         ]} />} />
 
       {/* Filtros: atajos (scroll horizontal en celular) + rango + sucursal */}
