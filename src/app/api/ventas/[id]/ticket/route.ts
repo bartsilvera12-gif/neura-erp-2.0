@@ -7,6 +7,7 @@
  * de src/modules/facturacion/tickets.ts (el mismo de la vista previa). ?w=58|80 fuerza el ancho.
  */
 import { TZ_PY } from "@/lib/fecha/paraguay";
+import { textoCredito } from "@/modules/caja/cuotas";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR } from "@/lib/api/responses";
 import { clienteConfig } from "@/cliente.config";
@@ -45,7 +46,7 @@ export const GET = withTenant(async (ctx, req) => {
   const consulta = (mods: boolean) => ctx.db
     .select(
       "ventas",
-      "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, metodo_pago, cliente_id, usuario_nombre, " +
+      "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, cuotas, cuotas_cada, metodo_pago, cliente_id, usuario_nombre, " +
         "tipo_documento, receptor_nombre, receptor_ruc, receptor_ocasional, " +
         `ventas_items(producto_nombre, sku, cantidad, precio_venta, precio_venta_original, tipo_iva, monto_iva, total_linea${mods ? ", modificadores, modificadores_texto, precio_mods" : ""}), ` +
         "pagos:ventas_pagos_detalle(metodo_pago, monto, referencia, recibido, vuelto, created_at), " +
@@ -70,7 +71,7 @@ export const GET = withTenant(async (ctx, req) => {
   const clienteDoc = clienteRuc ? `RUC: ${clienteRuc}` : cli?.documento ? `CI: ${cli.documento}` : "";
 
   const fecha = v.fecha ? new Date(v.fecha as string).toLocaleString("es-PY", { timeZone: TZ_PY, dateStyle: "short", timeStyle: "short", hourCycle: "h23" }) : "";
-  const metodo = v.tipo_venta === "CREDITO" ? `Crédito${v.plazo_dias ? ` (${v.plazo_dias} días)` : ""}` : etiquetaMetodoPago(String(v.metodo_pago ?? "efectivo"));
+  const metodo = v.tipo_venta === "CREDITO" ? textoCredito(v.plazo_dias as number | null, v.cuotas as number | null, v.cuotas_cada as string | null) : etiquetaMetodoPago(String(v.metodo_pago ?? "efectivo"));
   const pagos = ((v.pagos ?? []) as { metodo_pago: string; monto: number; referencia: string | null; recibido: number | null; vuelto: number | null; created_at: string }[])
     .slice()
     .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));

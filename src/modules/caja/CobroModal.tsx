@@ -7,7 +7,8 @@
  *     20.000" y el efectivo pasa a ser el resto); si la editás a mano, queda fija.
  *     Efectivo: lo que entrega el cliente → vuelto (solo sobre el efectivo). Tarjeta /
  *     transferencia / QR: referencia (y banco) opcionales.
- *   · Crédito: cliente, plazo, vencimiento y cuánto le queda de su límite.
+ *   · Crédito: cliente, plazo, vencimiento (o las cuotas con sus vencimientos, receta 98) y cuánto
+ *     le queda de su límite.
  * Teclado: Alt+1…6 cambia la forma de pago de la línea activa · Alt+M agrega otra forma
  * (pago mixto) · Enter confirma · Esc cancela.
  */
@@ -17,6 +18,7 @@ import MontoInput from "@/components/ui/MontoInput";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { formatGs, type Cliente } from "@/modules/caja/lib";
+import { fechaCorta, planCuotas, type CadaCuota } from "@/modules/caja/cuotas";
 import { METODOS_VENTA, type MetodoVenta } from "@/modules/caja/turno";
 import type { EstadoCuenta } from "@/modules/clientes/cobros";
 import { clienteConfig } from "@/cliente.config";
@@ -47,11 +49,15 @@ function sugerencias(monto: number): number[] {
   return [...out].sort((a, b) => a - b).slice(0, 4);
 }
 
-export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, documento, imprimir = true, cobrando, error, onClose, onConfirmar }: {
+export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1, cuotasCada = "mes", cliente, documento, imprimir = true, cobrando, error, onClose, onConfirmar }: {
   total: number;
   cantItems: number;
   tipoVenta: "CONTADO" | "CREDITO";
+  /** días hasta el vencimiento (con cuotas: de la 1ª) */
   plazoDias: number;
+  /** Receta 98: en cuántas cuotas y cada cuánto */
+  cuotas?: number;
+  cuotasCada?: CadaCuota;
   cliente: Cliente | null;
   /** qué se emite: factura (a nombre de… con RUC) o solo ticket; se muestra como chip arriba */
   documento?: { tipo: "factura"; nombre: string; ruc: string | null } | { tipo: "ticket" };
@@ -92,11 +98,8 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, do
   const deuda = Number(cuenta?.deuda ?? 0);
   const disponible = limite > 0 ? limite - deuda : null;
   const superaLimite = tipoVenta === "CREDITO" && disponible != null && cuenta != null && total > disponible;
-  const vence = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + (plazoDias || 0));
-    return d.toLocaleDateString("es-PY", { day: "2-digit", month: "2-digit", year: "numeric" });
-  }, [plazoDias]);
+  const plan = useMemo(() => planCuotas(total, cuotas, plazoDias, cuotasCada), [total, cuotas, plazoDias, cuotasCada]);
+  const vence = fechaCorta(plan[0].vence);
 
   const problema =
     tipoVenta === "CREDITO"
@@ -237,9 +240,28 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cliente, do
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
                 <div className="col-span-2 sm:col-span-1"><Dato label="Cliente" valor={cliente?.nombre ?? "—"} /></div>
-                <Dato label="Plazo" valor={`${plazoDias} día${plazoDias === 1 ? "" : "s"}`} />
-                <Dato label="Vence" valor={vence} />
+                {plan.length > 1 ? (
+                  <>
+                    <Dato label="Cuotas" valor={`${plan.length} × ${formatGs(plan[0].monto)}`} />
+                    <Dato label="1ª vence" valor={vence} />
+                  </>
+                ) : (
+                  <>
+                    <Dato label="Plazo" valor={`${plazoDias} día${plazoDias === 1 ? "" : "s"}`} />
+                    <Dato label="Vence" valor={vence} />
+                  </>
+                )}
               </div>
+              {plan.length > 1 ? (
+                <ul className="max-h-40 divide-y divide-slate-100 overflow-y-auto rounded-xl border border-slate-200 text-sm">
+                  {plan.map((c) => (
+                    <li key={c.n} className="flex items-center justify-between gap-3 px-3 py-1.5">
+                      <span className="text-slate-500">Cuota {c.n} · vence {fechaCorta(c.vence)}</span>
+                      <span className="font-semibold tabular-nums text-slate-900">{formatGs(c.monto)}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
               {limite > 0 ? (
                 <div className={`rounded-xl border px-4 py-3 text-sm ${superaLimite ? "border-rose-200 bg-rose-50 text-rose-800" : "border-slate-200 bg-slate-50 text-slate-700"}`}>
                   <div className="flex justify-between"><span>Límite de crédito</span><span className="font-semibold tabular-nums">{formatGs(limite)}</span></div>

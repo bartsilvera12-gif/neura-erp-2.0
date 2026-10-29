@@ -21,6 +21,8 @@ import Link from "next/link";
 import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, ChevronRight, ClipboardList, FileSignature, Info, Loader2, Lock, Package, Printer, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
+import { Select } from "@/components/Select";
+import { MAX_CUOTAS, OPCIONES_CADA, fechaCorta, planCuotas, textoCredito, type CadaCuota } from "@/modules/caja/cuotas";
 import { usePorCobrar } from "@/modules/mesas/usePorCobrar";
 import { haceCuanto, origenPedido, pitido, type CuentaPorCobrar, type FacturacionPropuesta, type LineaPorCobrar } from "@/modules/mesas/tipos";
 import { HojaModificadores, type ResultadoMods } from "@/modules/mesas/HojaModificadores";
@@ -189,6 +191,9 @@ function CajaPageContenido() {
   // ── Datos de la venta ──────────────────────────────────────────────────────
   const [tipoVenta, setTipoVenta] = useState<"CONTADO" | "CREDITO">("CONTADO");
   const [plazoDias, setPlazoDias] = useState("");
+  // Receta 98: crédito en cuotas (1 = un solo vencimiento a plazoDias).
+  const [cuotas, setCuotas] = useState("1");
+  const [cuotasCada, setCuotasCada] = useState<CadaCuota>("mes");
   const [tipoDocumento, setTipoDocumento] = useState<"factura" | "ticket">("ticket");
   const [clienteId, setClienteId] = useState("");
   // Receta 67: "Cliente ocasional (X)" — consumidor final sin datos; sin cliente, solo contado, se puede facturar.
@@ -305,6 +310,7 @@ function CajaPageContenido() {
         }
         if (p.condicion === "credito") { setTipoVenta("CREDITO"); setPlazoDias(p.plazo_dias ? String(p.plazo_dias) : ""); }
         else { setTipoVenta("CONTADO"); setPlazoDias(""); }
+        setCuotas("1"); setCuotasCada("mes");
         setPresu({ id: p.id, etiqueta, prospecto: conv.cliente ? null : `${p.cliente_nombre}${p.cliente_ruc ? ` (${p.cliente_ruc})` : ""}`, a, lineaDe });
       })
       .catch((e) => setPresu({ error: `No se pudo cargar el presupuesto: ${(e as Error).message}` }));
@@ -497,7 +503,7 @@ function CajaPageContenido() {
     setClienteOpen(false);
     setOcasional(true);
     // El crédito necesita un cliente real: el ocasional es solo al contado.
-    if (tipoVenta === "CREDITO") { setTipoVenta("CONTADO"); setPlazoDias(""); }
+    if (tipoVenta === "CREDITO") { setTipoVenta("CONTADO"); setPlazoDias(""); setCuotas("1"); setCuotasCada("mes"); }
     if (facturar) setTipoDocumento("factura");
     if (cobroError) setCobroError(null);
   }
@@ -542,6 +548,8 @@ function CajaPageContenido() {
 
   const clienteObligatorio = !ocasional && (tipoDocumento === "factura" || tipoVenta === "CREDITO");
   const plazoDiasNum = parseInt(plazoDias) || 0;
+  const cuotasNum = parseInt(cuotas) || 0;
+  const cuotasOk = cuotasNum >= 1 && cuotasNum <= MAX_CUOTAS;
 
   // Presupuesto: se liga a la venta solo si en el carrito queda alguna de sus líneas.
   const presuOk = presu && !("error" in presu) ? presu : null;
@@ -919,7 +927,12 @@ function CajaPageContenido() {
       return;
     }
     if (tipoVenta === "CREDITO" && plazoDiasNum < 1) {
-      setCobroError("Ingresá un plazo de crédito de al menos 1 día.");
+      setCobroError("Ingresá en cuántos días vence (al menos 1).");
+      if (!esEscritorio) setHojaOpciones(true);
+      return;
+    }
+    if (tipoVenta === "CREDITO" && !cuotasOk) {
+      setCobroError(`Las cuotas van de 1 a ${MAX_CUOTAS}.`);
       if (!esEscritorio) setHojaOpciones(true);
       return;
     }
@@ -970,6 +983,8 @@ function CajaPageContenido() {
           moneda: "GS",
           idempotency_key: idempotencyKeyRef.current,
           plazo_dias: tipoVenta === "CREDITO" ? plazoDiasNum : undefined,
+          cuotas: tipoVenta === "CREDITO" ? cuotasNum : undefined,
+          cuotas_cada: tipoVenta === "CREDITO" && cuotasNum > 1 ? cuotasCada : undefined,
           items,
           // Formas de pago (solo contado). La base valida que sumen el total.
           pagos: tipoVenta === "CREDITO" ? undefined : pagos,
@@ -1024,6 +1039,8 @@ function CajaPageContenido() {
       setOcasional(false);
       setTipoVenta("CONTADO");
       setPlazoDias("");
+      setCuotas("1");
+      setCuotasCada("mes");
       enfocarBuscador();
     } catch (e) {
       const msg = (e as Error).message;
@@ -1158,10 +1175,8 @@ function CajaPageContenido() {
           <p className="mt-1 text-[11px] text-slate-500">Cliente ocasional: solo contado. Para vender a crédito elegí un cliente.</p>
         ) : null}
         {tipoVenta === "CREDITO" && (
-          <div className="mt-2">
-            <input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" min={1} value={plazoDias} onChange={(e) => setPlazoDias(e.target.value)} placeholder="Plazo (días)"
-              className={`min-h-11 w-full rounded-lg border px-3 py-2 text-sm outline-none lg:min-h-0 ${plazoDiasNum < 1 ? "border-rose-300 bg-rose-50" : "border-slate-200"}`} />
-          </div>
+          <CamposCredito total={total} cuotas={cuotas} setCuotas={setCuotas} plazoDias={plazoDias} setPlazoDias={setPlazoDias}
+            cada={cuotasCada} setCada={setCuotasCada} />
         )}
       </div>
 
@@ -1536,7 +1551,7 @@ function CajaPageContenido() {
                   {clienteSel ? clienteSel.nombre : ocasional ? `Cliente ocasional — ${nombreOcasional}` : faltaCliente ? "Elegí el cliente *" : "Sin cliente (consumidor final)"}
                 </span>
                 <span className="block truncate text-xs text-slate-500">
-                  {tipoVenta === "CREDITO" ? `Crédito${plazoDiasNum > 0 ? ` · ${plazoDiasNum} día${plazoDiasNum === 1 ? "" : "s"}` : " · sin plazo"}` : "Contado"} · {tipoDocumento === "factura" ? "Factura" : "Solo ticket"}
+                  {tipoVenta === "CREDITO" ? (plazoDiasNum > 0 ? textoCredito(plazoDiasNum, cuotasNum, cuotasCada) : "Crédito · sin plazo") : "Contado"} · {tipoDocumento === "factura" ? "Factura" : "Solo ticket"}
                 </span>
               </span>
               <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold" style={{ color: TEAL }}>
@@ -1795,7 +1810,7 @@ function CajaPageContenido() {
 
       {/* Cobro: formas de pago (mixto, vuelto) o crédito */}
       {cobroOpen && (
-        <CobroModal total={total} cantItems={cantTotal} tipoVenta={tipoVenta} plazoDias={plazoDiasNum} cliente={clienteSel}
+        <CobroModal total={total} cantItems={cantTotal} tipoVenta={tipoVenta} plazoDias={plazoDiasNum} cuotas={cuotasOk ? cuotasNum : 1} cuotasCada={cuotasCada} cliente={clienteSel}
           documento={tipoDocumento === "factura"
             ? { tipo: "factura", nombre: ocasional ? nombreOcasional : clienteSel?.nombre ?? "", ruc: ocasional ? rucOcasional : rucFactura }
             : { tipo: "ticket" }}
@@ -2055,6 +2070,64 @@ function Atajo({ k, t }: { k: string; t: string }) {
   );
 }
 
+/**
+ * Receta 98: crédito en cuotas. Cuotas (1 = un solo vencimiento) · en cuántos días vence la 1ª ·
+ * cada cuánto (mensual / quincenal / semanal) y debajo el plan: montos y vencimientos.
+ */
+function CamposCredito({ total, cuotas, setCuotas, plazoDias, setPlazoDias, cada, setCada }: {
+  total: number;
+  cuotas: string; setCuotas: (v: string) => void;
+  plazoDias: string; setPlazoDias: (v: string) => void;
+  cada: CadaCuota; setCada: (v: CadaCuota) => void;
+}) {
+  const n = parseInt(cuotas) || 0;
+  const dias = parseInt(plazoDias) || 0;
+  const nOk = n >= 1 && n <= MAX_CUOTAS;
+  const plan = nOk && dias >= 1 ? planCuotas(total, n, dias, cada) : null;
+  const campo = (mal: boolean) =>
+    `h-9 w-full rounded-lg border px-2.5 text-sm tabular-nums outline-none transition focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)] [@media(pointer:coarse)]:h-11 ${mal ? "border-rose-300 bg-rose-50" : "border-slate-200 bg-white"}`;
+  const etq = "mb-0.5 block text-[11px] font-medium text-slate-500";
+  const ultima = plan?.[plan.length - 1];
+  return (
+    <div className="mt-2 space-y-1.5">
+      <div className={`grid gap-2 ${n > 1 ? "grid-cols-3" : "grid-cols-2"}`}>
+        <label className="min-w-0">
+          <span className={etq}>Cuotas</span>
+          <input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" min={1} max={MAX_CUOTAS} value={cuotas}
+            onChange={(e) => setCuotas(e.target.value.replace(/\D/g, "").slice(0, 2))} className={campo(!nOk)} />
+        </label>
+        <label className="min-w-0">
+          <span className={etq}>{n > 1 ? "1ª vence en" : "Vence en"}</span>
+          <span className="relative block">
+            <input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="done" min={1} value={plazoDias}
+              onChange={(e) => setPlazoDias(e.target.value.replace(/\D/g, "").slice(0, 4))} className={`${campo(dias < 1)} pr-10`} />
+            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400">días</span>
+          </span>
+        </label>
+        {n > 1 ? (
+          // div y no label: un <label> le repite el click al botón del Select (abre y cierra).
+          <div className="min-w-0">
+            <span className={etq}>Cada</span>
+            <Select chico block value={cada} onChange={(v) => setCada(v as CadaCuota)} options={OPCIONES_CADA} etiqueta="Cada cuánto se paga" />
+          </div>
+        ) : null}
+      </div>
+      <p className="text-[11px] leading-snug text-slate-500">
+        {!nOk ? `Las cuotas van de 1 a ${MAX_CUOTAS}.`
+          : !plan ? "Cargá en cuántos días vence."
+          : plan.length === 1 ? <>Un solo pago: vence el <strong className="font-semibold text-slate-700">{fechaCorta(plan[0].vence)}</strong>.</>
+          : (
+            <>
+              <strong className="font-semibold text-slate-700">{plan.length} cuotas de {formatGs(plan[0].monto)}</strong>
+              {ultima && ultima.monto !== plan[0].monto ? ` (la última ${formatGs(ultima.monto)})` : ""}
+              {" "}· del {fechaCorta(plan[0].vence)} al {fechaCorta(ultima!.vence)}
+            </>
+          )}
+      </p>
+    </div>
+  );
+}
+
 function Segmented<T extends string>({ value, options, onChange }: { value: T; options: { value: T; label: string; disabled?: boolean; title?: string }[]; onChange: (v: T) => void }) {
   return (
     <div className="flex overflow-hidden rounded-lg border border-slate-200">
@@ -2062,7 +2135,7 @@ function Segmented<T extends string>({ value, options, onChange }: { value: T; o
         const sel = value === opt.value;
         return (
           <button key={opt.value} type="button" onClick={() => onChange(opt.value)} disabled={opt.disabled && !sel} title={opt.disabled ? opt.title : undefined}
-            className={`min-h-11 flex-1 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:text-slate-300 lg:min-h-0 lg:py-1.5 ${sel ? "text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
+            className={`flex-1 py-1.5 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:text-slate-300 [@media(pointer:coarse)]:min-h-11 ${sel ? "text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
             style={sel ? { backgroundColor: TEAL } : undefined}>
             {opt.label}
           </button>

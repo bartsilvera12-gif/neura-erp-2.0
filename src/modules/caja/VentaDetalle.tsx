@@ -16,6 +16,7 @@ import { browserClient } from "@/lib/supabase/browser";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
 import { formatGs } from "@/modules/caja/lib";
+import { textoCredito } from "@/modules/caja/cuotas";
 import { metodoLabel, invalidarCajas } from "@/modules/caja/turno";
 import { fechaHora } from "@/lib/fecha/paraguay";
 import { SelectorCaja } from "@/modules/caja/SelectorCaja";
@@ -46,6 +47,9 @@ type Venta = {
   estado: string;
   tipo_venta: string;
   plazo_dias: number | null;
+  /** Receta 98 */
+  cuotas?: number | null;
+  cuotas_cada?: string | null;
   metodo_pago: string | null;
   usuario_nombre: string | null;
   anulada_at: string | null;
@@ -155,7 +159,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
                 <Campo label="Condición">
                   <span className="mt-0.5 flex items-center gap-1.5 text-sm text-slate-800">
                     <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: credito ? "#ea580c" : "#16a34a" }} />
-                    {credito ? `Crédito${venta.plazo_dias ? ` a ${venta.plazo_dias} días` : ""}` : "Contado"}
+                    {credito ? textoCredito(venta.plazo_dias, venta.cuotas, venta.cuotas_cada) : "Contado"}
                   </span>
                 </Campo>
                 <Campo label="Caja" valor={cajaTxt ? `${cajaTxt}${venta.turno ? ` · turno N° ${venta.turno.numero_caja}${turnoCerrado ? " (cerrado)" : ""}` : ""}` : "—"} />

@@ -25,6 +25,9 @@ type Fila = {
   fecha: string;
   total: number;
   plazo_dias: number | null;
+  /** Receta 98: cuotas de la venta y cuántas ya se pagaron (vencimiento = el de la próxima cuota impaga) */
+  cuotas?: number;
+  cuotas_pagadas?: number;
   cliente_nombre: string | null;
   cliente_ruc: string | null;
   vencimiento: string | null;
@@ -184,7 +187,7 @@ export default function VentasCreditoPage() {
               { key: "caja", titulo: "Caja", claseTd: "text-xs text-slate-600", movil: "detalle",
                 celda: (f) => <>{f.punto_nombre ?? "—"}{f.numero_caja ? <span className="text-slate-400"> · N° {f.numero_caja}</span> : null}<span className="block text-[11px] text-slate-400">{[f.sucursal_nombre, f.cajero_nombre ?? f.usuario_nombre].filter(Boolean).join(" · ")}</span></> },
               { key: "vence", titulo: "Vence", claseTd: "text-xs", movil: "dato",
-                celda: (f) => <><span className="tabular-nums text-slate-700">{fechaCorta(f.vencimiento)}</span>{f.plazo_dias ? <span className="text-slate-400"> · {f.plazo_dias} d</span> : null}{f.vencida ? <span className="block text-[11px] font-semibold text-rose-600">vencida hace {f.dias_vencida} día{f.dias_vencida === 1 ? "" : "s"}</span> : null}</> },
+                celda: (f) => <><span className="tabular-nums text-slate-700">{fechaCorta(f.vencimiento)}</span>{(f.cuotas ?? 1) > 1 ? <span className="block text-[11px] text-slate-500">cuota {Math.min((f.cuotas_pagadas ?? 0) + 1, f.cuotas ?? 1)} de {f.cuotas} · {f.cuotas_pagadas ?? 0} pagada{f.cuotas_pagadas === 1 ? "" : "s"}</span> : f.plazo_dias ? <span className="text-slate-400"> · {f.plazo_dias} d</span> : null}{f.vencida ? <span className="block text-[11px] font-semibold text-rose-600">vencida hace {f.dias_vencida} día{f.dias_vencida === 1 ? "" : "s"}</span> : null}</> },
               { key: "total", titulo: "Total", claseTh: "!text-right", claseTd: "text-right font-semibold tabular-nums text-slate-800", movil: "dato", celda: (f) => formatGs(f.total) },
               { key: "cobrado", titulo: "Cobrado", claseTh: "!text-right", claseTd: "text-right tabular-nums text-slate-600", movil: "detalle", celda: (f) => formatGs(f.cobrado) },
               { key: "saldo", titulo: "Saldo", claseTh: "!text-right", movil: "valor",

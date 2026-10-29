@@ -462,7 +462,7 @@ function GestionClientes() {
                         ) : null}
                       </div>
                     ) : rows.length > 0 ? (
-                      <TablaTarjetas filas={rows} columnas={columnasDocs} claveFila={(d) => d.id} minAncho={980}
+                      <TablaTarjetas filas={rows} columnas={columnasDocs} claveFila={(d) => d.cxc_id ?? d.id} minAncho={980}
                         onFila={vistaTarjetas ? (d) => setViendoVenta(d.id) : undefined}
                         claseThead="border-b border-slate-200 bg-slate-50 shadow-sm"
                         claseFila={claseFilaDocumento} thBase={TH_DOC} tdBase="px-2 py-2 sm:px-3" />

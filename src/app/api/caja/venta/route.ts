@@ -34,6 +34,10 @@ const ventaSchema = z.object({
   descuento_pct: z.coerce.number().min(0).max(100).default(0),
   // Plazo de crédito (días). Solo se usa cuando tipo_venta === "CREDITO".
   plazo_dias: z.coerce.number().int().positive().nullish(),
+  // Receta 98: crédito en cuotas (cada una es una cuenta por cobrar con su vencimiento; la 1ª a
+  // plazo_dias, las siguientes cada mes / quincena / semana).
+  cuotas: z.coerce.number().int().min(1, "Las cuotas van de 1 a 60").max(60, "Las cuotas van de 1 a 60").default(1),
+  cuotas_cada: z.enum(["mes", "quincena", "semana"]).default("mes"),
   // Venta que sale de un presupuesto (Presupuestos → "Convertir a venta"): al registrarse,
   // el presupuesto queda "convertido" y la venta guarda presupuesto_id.
   presupuesto_id: z.string().uuid().nullish(),
@@ -148,6 +152,8 @@ export const POST = withTenant(
       p_idempotency_key: input.idempotency_key ?? null,
       p_descuento_pct: input.descuento_pct ?? 0,
       p_plazo_dias: input.tipo_venta === "CREDITO" ? (input.plazo_dias ?? null) : null,
+      p_cuotas: input.tipo_venta === "CREDITO" ? input.cuotas : 1,
+      p_cuotas_cada: input.cuotas_cada,
       ...(conDatos ? {} : { p_deposito_id: null }),
       p_caja_id: input.caja_id ?? null,
       p_tipo_documento: input.tipo_documento,
