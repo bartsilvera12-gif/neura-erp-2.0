@@ -25,8 +25,8 @@ import { pantallaConFuncionVisible, type FuncionPantalla, type Funciones } from 
 // El orden de acá es el orden dentro de cada familia del menú (igual que sistemas-propio):
 // Comercial: Clientes, CRM Funnel, Presupuestos, Gestión Clientes, Planes, Agenda, Proyectos — en el menú son UN ítem
 // "Comercial" (grupo, panel /comercial; todos van directo a su pantalla) · Caja: ítem propio con panel (/caja/panel) · Finanzas: Cobranzas, Conciliación, Pagos,
-// Gastos empresariales (compras + gastos operativos), Reportes — en el menú son UN ítem "Finanzas" (grupo, panel /finanzas;
-// Gastos con panel propio) · Operaciones: Inventario · Omnicanal: Omnicanal (panel: Conversaciones, Finalizadas, Monitoreo, Historial omnicanal) ·
+// Gastos empresariales (compras + gastos operativos) — en el menú son UN ítem "Finanzas" (grupo, panel /finanzas;
+// Gastos con panel propio) · Operaciones: Inventario · Reportes: ítem propio (/reportes) · Omnicanal: Omnicanal (panel: Conversaciones, Finalizadas, Monitoreo, Historial omnicanal) ·
 // Soporte: Soporte · Configuración: Configuración (panel: Datos de la empresa, Facturación, Usuarios).
 const TODOS: Modulo[] = [
   moduloClientes,
@@ -72,7 +72,7 @@ export function moduloEstaActivo(id: string): boolean {
 // entero si no tiene. Se identifica por su href (es lo que guarda perfil_pantallas).
 
 /** Orden de las familias del menú (y del editor de perfiles). */
-export const ORDEN_FAMILIAS = ["Comercial", "Caja", "Finanzas", "Operaciones", "Omnicanal", "Soporte", "Configuración", "Administración", "General"];
+export const ORDEN_FAMILIAS = ["Comercial", "Caja", "Finanzas", "Operaciones", "Reportes", "Omnicanal", "Soporte", "Configuración", "Administración", "General"];
 
 export type Pantalla = {
   href: string;
@@ -135,7 +135,7 @@ export type GrupoMenu = { id: string; label: string; href: string; icon: string;
 export const GRUPOS_MENU: GrupoMenu[] = [
   // Clientes · CRM Funnel · Presupuestos · Gestión Clientes · Planes · Agenda · Proyectos
   { id: "comercial", label: "Comercial", href: "/comercial", icon: "briefcase", familia: "Comercial" },
-  // Caja · Cobranzas · Conciliación · Pagos · Gastos empresariales · Reportes
+  // Cobranzas · Conciliación · Pagos · Gastos empresariales
   { id: "finanzas", label: "Finanzas", href: "/finanzas", icon: "landmark", familia: "Finanzas" },
 ];
 

@@ -38,7 +38,7 @@ export default function ReportesPage() {
 
   return (
     <div className="space-y-6 pb-10 sm:space-y-8">
-      <EncabezadoReporte kicker="Análisis" titulo="Reportes" subtitulo="Todos los números de la empresa en un solo lugar: elegí un reporte para ver el detalle, filtrarlo y bajarlo en Excel o PDF." volver={{ href: "/finanzas", label: "Finanzas" }} />
+      <EncabezadoReporte kicker="Análisis" titulo="Reportes" subtitulo="Todos los números de la empresa en un solo lugar: elegí un reporte para ver el detalle, filtrarlo y bajarlo en Excel o PDF." volver={null} />
 
       {!me ? (
         <div className={GRILLA_PANEL} aria-busy="true">{[0, 1, 2].map((i) => <div key={i} className="h-[150px] animate-pulse rounded-2xl bg-slate-200/80" />)}</div>
