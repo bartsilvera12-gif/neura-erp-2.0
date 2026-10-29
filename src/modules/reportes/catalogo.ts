@@ -1,4 +1,4 @@
-import { Boxes, CalendarClock, CalendarRange, CreditCard, HandCoins, Landmark, Lock, PackageMinus, PackageX, Receipt, ShoppingCart, Truck, Wallet, Warehouse, type LucideIcon } from "lucide-react";
+import { Boxes, CalendarClock, CalendarRange, CreditCard, FileCheck2, HandCoins, Landmark, Lock, PackageMinus, PackageX, Receipt, ShoppingCart, Truck, Wallet, Warehouse, type LucideIcon } from "lucide-react";
 
 /**
  * Catálogo de reportes: alimenta la pantalla /reportes (tarjetas agrupadas por sección).
@@ -34,6 +34,15 @@ export const REPORTES: Reporte[] = [
     subtitulo: "Todo lo que salió de plata",
     descripcion: "Compras de mercadería y gastos operativos del período: evolución por mes contra el presupuesto, fijo vs. variable, por categoría, por sucursal y proveedores principales.",
     icono: Receipt,
+    seccion: "Finanzas",
+  },
+  {
+    // Receta 100: archivo de importación del Registro de Comprobantes de Marangatu.
+    href: "/reportes/rg90",
+    titulo: "Registro de comprobantes (RG 90)",
+    subtitulo: "El archivo para Marangatu",
+    descripcion: "Las compras y gastos del mes con comprobante en el formato de importación de la SET (ZIP con TXT): marca los que tienen datos faltantes y lo que no se registra.",
+    icono: FileCheck2,
     seccion: "Finanzas",
   },
   {
