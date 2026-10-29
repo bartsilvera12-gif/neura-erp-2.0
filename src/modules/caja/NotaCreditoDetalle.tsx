@@ -132,16 +132,16 @@ export function NotaCreditoDetalle({ notaId, onClose, onCambio, onVerVenta }: {
               <div className="flex items-center justify-between border-t border-slate-200 pt-1.5"><span className="font-semibold text-slate-900">Total</span><span className="text-lg font-bold tabular-nums text-slate-900">{formatGs(n.total)}</span></div>
               <div className="space-y-1 border-t border-slate-200 pt-2 text-xs text-slate-600">
                 {n.a_cuenta > 0 ? (
-                  <div className="flex justify-between gap-3"><span>Bajó la deuda de la venta{d.aplicaciones.length > 1 ? ` (${d.aplicaciones.length} cuotas)` : ""}</span><span className="font-semibold tabular-nums">{formatGs(n.a_cuenta)}</span></div>
+                  <div className="flex justify-between gap-3"><span>Bajó la deuda de la venta{d.aplicaciones.length > 1 ? ` (${d.aplicaciones.length} cuotas)` : ""}</span><span className="shrink-0 whitespace-nowrap font-semibold tabular-nums">{formatGs(n.a_cuenta)}</span></div>
                 ) : null}
                 {n.devuelto > 0 ? (
                   <div className="flex justify-between gap-3">
                     <span>Devuelto en {metodoDevolucionLabel(n.metodo_devolucion).toLowerCase()}{d.caja ? ` · ${d.caja.etiqueta}${d.caja.numero_caja ? `, turno N° ${d.caja.numero_caja}` : ""}` : ""}{n.referencia_devolucion ? ` · ref. ${n.referencia_devolucion}` : ""}</span>
-                    <span className="font-semibold tabular-nums">{formatGs(n.devuelto)}</span>
+                    <span className="shrink-0 whitespace-nowrap font-semibold tabular-nums">{formatGs(n.devuelto)}</span>
                   </div>
                 ) : null}
                 {n.a_favor > 0 ? (
-                  <div className="flex justify-between gap-3"><span>Quedó a favor del cliente{d.saldo_favor_usado ? " (ya lo usó)" : ""}</span><span className="font-semibold tabular-nums">{formatGs(n.a_favor)}</span></div>
+                  <div className="flex justify-between gap-3"><span>Quedó a favor del cliente{d.saldo_favor_usado ? " (ya lo usó)" : ""}</span><span className="shrink-0 whitespace-nowrap font-semibold tabular-nums">{formatGs(n.a_favor)}</span></div>
                 ) : null}
               </div>
             </div>

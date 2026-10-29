@@ -156,7 +156,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada, onCambio }: {
   return (
     <CapaModal onClose={onClose} z="z-[120]" fondo="bg-slate-900/30">
       <div
-        className={`flex ${ALTO_MAX_MODAL} w-full max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white`}
+        className={`flex ${ALTO_MAX_MODAL} w-full max-w-xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)", boxShadow: "0 24px 50px -24px rgba(2,48,71,0.35)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -294,7 +294,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada, onCambio }: {
           ) : null}
         </div>
 
-        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 sm:flex-nowrap sm:gap-3 sm:px-6 sm:py-4">
+        <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 sm:flex-nowrap sm:px-6 sm:py-4">
           {!anulada && venta ? (
             motivoNoAnula ? (
               <span className="text-[11px] text-slate-400 max-sm:w-full sm:max-w-[45%]">{motivoNoAnula}</span>
@@ -318,7 +318,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada, onCambio }: {
               <ReceiptText className="h-4 w-4" /> Nota de crédito
             </button>
           ) : null}
-          <button onClick={verComprobante} className="inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-5 max-sm:h-11 max-sm:flex-1 text-sm font-semibold text-white transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
+          <button onClick={verComprobante} className="inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 max-sm:h-11 max-sm:flex-1 text-sm font-semibold text-white transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
             <FileText className="h-4 w-4" /> Ver comprobante
           </button>
         </div>
