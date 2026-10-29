@@ -13,8 +13,9 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import {
   ChevronDown, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Download, Eye, EyeOff, Loader2,
-  Package, Pencil, Plus, RotateCcw, Search, Trash2, Upload, Warehouse, X,
+  MoreHorizontal, Package, Pencil, Plus, RotateCcw, Search, Trash2, Upload, Warehouse, X,
 } from "lucide-react";
+import { MenuAcciones } from "@/components/MenuAcciones";
 import { depositosPlanos, hayVariosDepositos, invalidarDepositos, opcionesAlcance, opcionesDepositos, partesAlcance, useDepositos, type DepositoPlano } from "@/modules/inventario/depositos";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
@@ -235,66 +236,62 @@ export default function InventarioPage() {
   // Tarjeta de producto (celular): nombre + SKU, precio arriba a la derecha, stock y categoría
   // como chips, costo y margen a la vista; stock por depósito plegado; acciones al pie.
   const columnasMovil = useMemo<ColumnaTabla<ProductoInventario>[]>(() => {
+    // Renglón compacto: foto · nombre y precio · código, tipo y categoría en la línea gris · stock
+    // a la derecha. Tocar abre la ficha; editar / desactivar / eliminar en "⋯". Costo y margen
+    // quedan en la ficha (y en la tabla de compu).
     const cols: ColumnaTabla<ProductoInventario>[] = [
       {
-        key: "producto", titulo: "Producto", movil: "titulo",
+        key: "foto", titulo: "", movil: "imagen",
         celda: (p) => (
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-100 text-xs font-semibold text-slate-500">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              {p.imagen_url ? <img src={p.imagen_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : p.nombre.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="font-bold leading-snug text-slate-900">
-                {p.nombre}
-                {p.activo === false ? <span className="ml-2 rounded-full bg-amber-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-700">Inactivo</span> : null}
-              </p>
-              {p.sku ? <p className="font-mono text-[12px] font-normal text-slate-500">{p.sku}</p> : null}
-            </div>
+          <div className="flex h-10 w-10 items-center justify-center overflow-hidden rounded-xl bg-slate-100 text-sm font-semibold text-slate-500">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            {p.imagen_url ? <img src={p.imagen_url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" /> : p.nombre.charAt(0).toUpperCase()}
           </div>
         ),
       },
+      {
+        key: "producto", titulo: "Producto", movil: "titulo",
+        celda: (p) => (
+          <span>
+            {p.nombre}
+            {p.activo === false ? <span className="ml-1.5 rounded-full bg-amber-100 px-1.5 py-0.5 align-middle text-[10px] font-semibold text-amber-700">Inactivo</span> : null}
+          </span>
+        ),
+      },
       { key: "precio", titulo: "Precio", movil: "valor", celda: (p) => (p.tipo_producto === "materia_prima" ? <span className="text-xs font-medium text-slate-400">No se vende</span> : gs(Number(p.precio_venta))) },
-      { key: "tipo", titulo: "Tipo", movil: "chip", celda: (p) => (!conRecetas && (p.tipo_producto ?? "reventa") === "reventa" ? null : <ChipTipo tipo={p.tipo_producto} />) },
       {
         key: "stock", titulo: "Stock", movil: "chip",
         celda: (p) => {
-          if (p.tipo_producto === "menu") return <span className="text-xs font-medium text-slate-500">Stock: por receta</span>;
-          if (p.controla_stock === false) return <span className="text-xs font-medium text-slate-500">{p.tipo_producto === "materia_prima" ? "Stock: preparación" : "Stock: sin control"}</span>;
+          if (p.tipo_producto === "menu") return <span className="text-xs font-medium text-slate-500">Por receta</span>;
+          if (p.controla_stock === false) return <span className="text-xs font-medium text-slate-500">{p.tipo_producto === "materia_prima" ? "Preparación" : "Sin control"}</span>;
           const stock = stockMostrado(p, alcanceSel.deposito, alcanceSel.sucursal, depPorId);
           const bajo = !alcanceSel.deposito && !alcanceSel.sucursal && Number(p.stock_minimo) > 0 && Number(p.stock_actual) < Number(p.stock_minimo);
           return (
-            <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums ${bajo ? "bg-red-50 text-red-700 ring-1 ring-red-100" : stock > 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" : "bg-slate-50 text-slate-500 ring-1 ring-slate-200"}`}>
-              Stock {formatStock(stock)} <span className="text-[10px] font-normal opacity-80">{unidadCorta(p.unidad_medida ?? "Unidad")}</span>
+            <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold tabular-nums ${bajo ? "bg-red-50 text-red-700 ring-1 ring-red-100" : stock > 0 ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100" : "bg-slate-50 text-slate-500 ring-1 ring-slate-200"}`}>
+              {formatStock(stock)} <span className="text-[10px] font-normal opacity-80">{unidadCorta(p.unidad_medida ?? "Unidad")}</span>
             </span>
           );
         },
       },
+      { key: "sku", titulo: "Código", movil: "subtitulo", celda: (p) => p.sku || null },
+      { key: "tipo", titulo: "Tipo", movil: "dato", celda: (p) => (!conRecetas && (p.tipo_producto ?? "reventa") === "reventa" ? null : tipoProducto(p.tipo_producto).corto) },
       {
-        key: "categoria", titulo: "Categoría", movil: "chip",
+        key: "categoria", titulo: "Categoría", movil: "dato",
         celda: (p) => {
           const { madre, sub } = partesCategoria(p.categoria_principal_id, categoriaPorId);
-          if (!madre) return <span className="text-xs text-slate-400">Sin categoría</span>;
-          const c = colores.get(madre.id) ?? colorCategoria(madre.nombre);
-          return (
-            <span className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-slate-200/70 bg-white px-2 py-0.5 text-[11px] font-semibold text-slate-700">
-              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: c.dot }} />
-              <span className="truncate">{madre.nombre}{sub ? <span className="font-medium text-slate-500"> › {sub.nombre}</span> : null}</span>
-            </span>
-          );
+          return madre ? `${madre.nombre}${sub ? ` › ${sub.nombre}` : ""}` : null;
         },
       },
-      { key: "costo", titulo: "Costo", movil: "dato", celda: (p) => (p.costo_promedio != null ? gs(Number(p.costo_promedio) || 0) : "—") },
+      { key: "costo", titulo: "Costo", movil: "detalle", celda: (p) => (p.costo_promedio != null ? gs(Number(p.costo_promedio) || 0) : "—") },
       {
-        key: "margen", titulo: "Margen", movil: "dato",
+        key: "margen", titulo: "Margen", movil: "detalle",
         celda: (p) => {
           if (p.costo_promedio == null) return "—";
           const m = margenVenta(Number(p.costo_promedio) || 0, Number(p.precio_venta));
           return <span className={`font-semibold tabular-nums ${margenColor(m)}`}>{m.toFixed(1).replace(".", ",")} %</span>;
         },
       },
-    ];
-    if (variosDepositos) {
+    ];    if (variosDepositos) {
       cols.push({
         key: "depositos", titulo: "Por depósito", movil: "detalle",
         celda: (p) => p.controla_stock === false || !(p.stock_depositos ?? []).length ? "—" : (
@@ -317,22 +314,17 @@ export default function InventarioPage() {
       celda: (p) => {
         const inactivo = p.activo === false;
         return (
-          <>
-            <button onClick={() => abrirForm(p)} onFocus={() => precargarFicha(p)} aria-label={`${inactivo ? "Ver" : "Editar"} ${p.nombre}`} className="inline-flex items-center justify-center rounded-lg text-slate-500 active:bg-[var(--brand-50)]">
-              {inactivo ? <Eye className="h-[18px] w-[18px]" /> : <Pencil className="h-[18px] w-[18px]" />}
-            </button>
-            <button onClick={() => toggleActivo(p)} disabled={togglingId === p.id} aria-label={`${inactivo ? "Reactivar" : "Desactivar"} ${p.nombre}`}
-              className={`inline-flex items-center justify-center rounded-lg disabled:opacity-40 ${inactivo ? "text-emerald-600" : "text-slate-500"}`}>
-              {togglingId === p.id ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : inactivo ? <RotateCcw className="h-[18px] w-[18px]" /> : <EyeOff className="h-[18px] w-[18px]" />}
-            </button>
-            <button onClick={() => setEliminando(p)} aria-label={`Eliminar ${p.nombre}`} className="inline-flex items-center justify-center rounded-lg text-slate-500 active:bg-red-50 active:text-red-600">
-              <Trash2 className="h-[18px] w-[18px]" />
-            </button>
-          </>
+          <MenuAcciones etiqueta={`Acciones de ${p.nombre}`} className="inline-flex items-center justify-center rounded-lg text-slate-400 active:bg-slate-100"
+            items={[
+              { etiqueta: inactivo ? "Ver" : "Editar", icono: inactivo ? <Eye className="h-4 w-4" /> : <Pencil className="h-4 w-4" />, onClick: () => abrirForm(p) },
+              { etiqueta: inactivo ? "Reactivar" : "Desactivar", icono: inactivo ? <RotateCcw className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />, onClick: () => toggleActivo(p), tono: inactivo ? "exito" : "normal" },
+              { etiqueta: "Eliminar", icono: <Trash2 className="h-4 w-4" />, onClick: () => setEliminando(p), tono: "peligro" },
+            ]}>
+            {togglingId === p.id ? <Loader2 className="h-[18px] w-[18px] animate-spin" /> : <MoreHorizontal className="h-5 w-5" />}
+          </MenuAcciones>
         );
       },
-    });
-    return cols;
+    });    return cols;
   }, [alcanceSel.deposito, alcanceSel.sucursal, depPorId, variosDepositos, categoriaPorId, colores, togglingId, abrirForm, toggleActivo, precargarFicha, conRecetas]);
 
   const opcionesCategoria: [string, string][] = [
@@ -442,6 +434,7 @@ export default function InventarioPage() {
             filas={productos}
             columnas={columnasMovil}
             claveFila={claveProducto}
+            onFila={(p) => abrirForm(p)}
             cargando={cargando}
             vacio={
               <div className="px-5 py-14 text-center">

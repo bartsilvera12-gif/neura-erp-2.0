@@ -17,11 +17,11 @@ export function PestanasGastos() {
   const pathname = usePathname() ?? "";
   if (/\/nueva$/.test(pathname) || pathname === "/gastos-empresariales/panel") return null;
   return (
-    <div className="mb-3 sm:mb-4">
+    <div className="mb-1 sm:mb-4">
       <Link href="/gastos-empresariales/panel" className="-ml-1 mb-1 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800 max-md:min-h-11 max-md:pr-2">
         <ArrowLeft className="h-3.5 w-3.5" /> Gastos empresariales
       </Link>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 max-md:hidden">
         <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4FAEB2]">Gastos empresariales</p>
       </div>

@@ -29,17 +29,26 @@ export function Cabecera({ kicker, titulo, subtitulo, volver, children }: {
     // Responsive: en celular el título baja a 20 px y las acciones van debajo, a todo el ancho.
     <header className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-start sm:justify-between sm:gap-4">
       <div className="min-w-0">
+        {/* Celular: una sola fila (flecha + título); kicker y subtítulo solo en tablet/compu. */}
         {volver ? (
-          <Link href={volver.href} className="-ml-1 mb-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800 max-md:min-h-11 max-md:pr-2">
+          <Link href={volver.href} className="-ml-1 mb-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800 max-md:hidden">
             <ArrowLeft className="h-3.5 w-3.5" /> {volver.label}
           </Link>
         ) : null}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 max-md:hidden">
           <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: TEAL, boxShadow: `0 0 0 3px ${TEAL}2e` }} />
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>{kicker}</p>
         </div>
-        <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{titulo}</h1>
-        {subtitulo ? <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">{subtitulo}</p> : null}
+        <div className="mt-1 flex min-w-0 items-center gap-1 max-md:mt-0">
+          {volver ? (
+            <Link href={volver.href} aria-label={`Volver a ${volver.label}`} title={`Volver a ${volver.label}`}
+              className="-my-2 -ml-2 inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 md:hidden">
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          ) : null}
+          <h1 className="min-w-0 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{titulo}</h1>
+        </div>
+        {subtitulo ? <p className="mt-1 text-[13px] text-slate-500 max-md:hidden sm:text-sm">{subtitulo}</p> : null}
       </div>
       {children ? <div className="flex flex-wrap items-center gap-2 max-sm:[&>*]:min-h-11">{children}</div> : null}
     </header>

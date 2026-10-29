@@ -256,7 +256,8 @@ function Ordenes({ cajas, onAnulada }: { cajas: EstadoCajas | null; onAnulada: (
         columnas={[
           { key: "num", titulo: "Número", claseTd: "font-mono text-xs text-slate-500", movil: "subtitulo",
             celda: (v) => v.numero_control,
-            celdaMovil: (v) => <span className="font-mono text-xs">{v.numero_control} · {fechaVenta(v.fecha)}</span> },
+            // Celular: número · fecha · forma de pago en la línea gris.
+            celdaMovil: (v) => <>{v.numero_control} · {fechaVenta(v.fecha).replace(/\/\d{4},?/, "")}{v.tipo_venta !== "CREDITO" ? ` · ${(v.pagos ?? []).length ? [...new Set((v.pagos ?? []).map((pg) => metodoLabel(pg.metodo_pago)))].join(" + ") : metodoLabel(v.metodo_pago)}` : ""}</> },
           { key: "prod", titulo: "Productos", movil: "titulo",
             celda: (v) => {
               const items = v.ventas_items ?? [];
@@ -273,7 +274,6 @@ function Ordenes({ cajas, onAnulada }: { cajas: EstadoCajas | null; onAnulada: (
               return (
                 <>
                   <span className="block">{items[0]?.producto_nombre ?? "—"}{items.length > 1 ? <span className="font-normal text-slate-400"> +{items.length - 1} más</span> : null}</span>
-                  <span className="block text-xs font-normal text-slate-400">{items.length} ítem{items.length === 1 ? "" : "s"} · {cantTotal(items)} u</span>
                 </>
               );
             } },
@@ -286,19 +286,25 @@ function Ordenes({ cajas, onAnulada }: { cajas: EstadoCajas | null; onAnulada: (
             celda: (v) => { const ivas = [...new Set((v.ventas_items ?? []).map((i) => i.tipo_iva))]; return <span className="rounded-full bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">{ivas.length === 1 ? `IVA ${ivas[0]}` : "Varios"}</span>; } },
           { key: "total", titulo: "Total", claseTh: "text-right", claseTd: "text-right font-semibold tabular-nums text-slate-800", movil: "valor", celda: (v) => formatGs(v.total) },
           { key: "cond", titulo: "Condición / pago", movil: "chip",
+            // Celular: solo lo que no es lo habitual (crédito o anulada); "Contado" no se repite en cada renglón.
+            celdaMovil: (v) => (v.tipo_venta === "CREDITO" || v.estado === "anulada" ? (
+              <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={v.estado === "anulada" ? { backgroundColor: "#fff1f2", color: "#e11d48" } : { backgroundColor: "#fff7ed", color: "#ea580c" }}>
+                {v.estado === "anulada" ? "Anulada" : "Crédito"}
+              </span>
+            ) : null),
             celda: (v) => (
               <span className="inline-flex flex-col items-start">
                 <span className="rounded-full px-2 py-1 text-xs font-semibold" style={v.tipo_venta === "CREDITO" ? { backgroundColor: "#fff7ed", color: "#ea580c" } : { backgroundColor: "#f1f5f9", color: "#475569" }}>
                   {v.tipo_venta === "CREDITO" ? "Crédito" : "Contado"}{v.estado === "anulada" ? " · anulada" : ""}
                 </span>
                 {v.tipo_venta !== "CREDITO" ? (
-                  <span className="mt-1 block max-w-[180px] truncate text-[11px] text-slate-500 max-md:max-w-full" title={(v.pagos ?? []).map((pg) => `${metodoLabel(pg.metodo_pago)} ${formatGs(pg.monto)}`).join(" + ")}>
+                  <span className="mt-1 block max-w-[180px] truncate text-[11px] text-slate-500 max-md:hidden" title={(v.pagos ?? []).map((pg) => `${metodoLabel(pg.metodo_pago)} ${formatGs(pg.monto)}`).join(" + ")}>
                     {(v.pagos ?? []).length ? [...new Set((v.pagos ?? []).map((pg) => metodoLabel(pg.metodo_pago)))].join(" + ") : metodoLabel(v.metodo_pago)}
                   </span>
                 ) : null}
               </span>
             ) },
-          { key: "caja", titulo: "Caja", claseTd: "text-xs text-slate-600", movil: "dato",
+          { key: "caja", titulo: "Caja", claseTd: "text-xs text-slate-600", movil: "detalle",
             celda: (v) => <>{v.punto?.nombre ?? "—"}{v.sucursal?.nombre ? <span className="block text-[11px] text-slate-400">{v.sucursal.nombre}</span> : null}</> },
           { key: "fecha", titulo: "Fecha", claseTd: "text-xs tabular-nums text-slate-500", movil: "oculto", celda: (v) => fechaVenta(v.fecha) },
         ]}

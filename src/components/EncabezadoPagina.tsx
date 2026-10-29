@@ -41,26 +41,27 @@ export function EncabezadoPagina({ kicker, titulo, subtitulo, acciones, volver, 
   return (
     <header className={`flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 ${className}`}>
       <div className="min-w-0">
+        {/* Celular: una sola fila (flecha + título); el kicker y el subtítulo solo en tablet/compu. */}
         {volver && !volverDiscreto ? (
-          <Link href={volver.href} className="-ml-1 mb-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs max-md:min-h-11 max-md:pr-2 font-semibold text-slate-500 transition-colors hover:text-slate-800">
+          <Link href={volver.href} className="-ml-1 mb-1.5 inline-flex min-h-9 items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 transition-colors hover:text-slate-800 max-md:hidden">
             <ArrowLeft className="h-3.5 w-3.5" /> {volver.label}
           </Link>
         ) : null}
         {kicker ? (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 max-md:hidden">
             <span aria-hidden className="inline-block h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: "var(--brand)", boxShadow: "0 0 0 3px var(--brand-100)" }} />
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand)]">{kicker}</p>
           </div>
         ) : null}
-        {volver && volverDiscreto ? (
-          <div className="mt-1 flex min-w-0 items-center gap-1">
-            <VolverIcono href={volver.href} label={volver.label} />
+        {volver ? (
+          <div className="mt-1 flex min-w-0 items-center gap-1 max-md:mt-0">
+            <span className={volverDiscreto ? "contents" : "contents md:hidden"}><VolverIcono href={volver.href} label={volver.label} /></span>
             <h1 className="min-w-0 text-xl font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{titulo}</h1>
           </div>
         ) : (
-          <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{titulo}</h1>
+          <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] max-md:mt-0 sm:text-2xl">{titulo}</h1>
         )}
-        {subtitulo ? <p className="mt-1 max-w-3xl text-[13px] text-slate-500 sm:text-sm">{subtitulo}</p> : null}
+        {subtitulo ? <p className="mt-1 max-w-3xl text-[13px] text-slate-500 max-md:hidden sm:text-sm">{subtitulo}</p> : null}
       </div>
       {acciones ? <div className="min-w-0 sm:shrink-0">{acciones}</div> : null}
     </header>

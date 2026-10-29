@@ -4,9 +4,10 @@
  * Tablas responsive del ERP. Dos patrones — CUÁNDO USAR CADA UNO:
  *
  * 1) `TablaTarjetas` — LISTAS de registros (clientes, productos, ventas, compras, usuarios,
- *    tickets…): en < 768 px cada fila es una TARJETA con los 3–4 datos clave arriba (título,
- *    subtítulo, valor destacado, chips) y el resto plegado en "Ver más"; en tablet/escritorio
- *    es la tabla de siempre. Úsala cuando la persona busca UN registro y lo abre / actúa sobre él.
+ *    tickets…): en < 768 px cada fila es un RENGLÓN compacto, como una app de banco: (foto),
+ *    título y valor arriba; abajo una línea gris con subtítulo y datos separados por " · " y el
+ *    estado (primer chip) a la derecha; acciones ("⋯") en el mismo renglón. Tocarlo abre la
+ *    ficha; sin `onFila`, el detalle se pliega en "Ver más". En tablet/escritorio es la tabla. Úsala cuando la persona busca UN registro y lo abre / actúa sobre él.
  *
  *      <TablaTarjetas
  *        filas={rows} claveFila={(r) => r.id} onFila={(r) => abrir(r.id)}
@@ -20,9 +21,10 @@
  *          { key: "acc", titulo: "", celda: (r) => <Acciones …/>, movil: "acciones" },
  *        ]}
  *      />
- *    Roles en la tarjeta (`movil`): titulo · subtitulo · valor (arriba a la derecha) · chip (fila
- *    de chips) · dato (grilla 2 col. siempre visible, máx. 4) · detalle (plegado, por defecto) ·
- *    acciones (pie de la tarjeta, no abre la fila) · oculto.
+ *    Roles en el renglón (`movil`): imagen (a la izquierda) · titulo (una línea) · subtitulo y dato
+ *    (la línea gris, máx. 4 datos, sin etiqueta) · valor (arriba a la derecha) · chip (el primero
+ *    abajo a la derecha, el resto en la línea gris) · detalle (plegado, por defecto) · acciones
+ *    (a la derecha, no abren la fila) · oculto.
  *
  * 2) `TablaScroll` — tablas NATURALMENTE ANCHAS y numéricas (reportes, estados de cuenta,
  *    kardex, comparativos por mes): se mantiene la tabla en todas las pantallas, con scroll
@@ -37,14 +39,14 @@
  *    hay que ENCONTRAR una fila y abrirla → TablaTarjetas.
  */
 import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight } from "lucide-react";
 import { useMediaQuery } from "@/lib/ui/responsive";
 
 /** Debajo de este ancho las listas se ven como tarjetas (tablet vertical ya ve la tabla). */
 export const MQ_TARJETAS = "(max-width: 767.98px)";
 export const useVistaTarjetas = () => useMediaQuery(MQ_TARJETAS);
 
-export type RolMovil = "titulo" | "subtitulo" | "valor" | "chip" | "dato" | "detalle" | "acciones" | "oculto";
+export type RolMovil = "imagen" | "titulo" | "subtitulo" | "valor" | "chip" | "dato" | "detalle" | "acciones" | "oculto";
 
 export type ColumnaTabla<T> = {
   key: string;
@@ -167,6 +169,7 @@ const TarjetaFila = memo(function TarjetaFila<T>({ fila, columnas, onFila, onInt
   const rol = (c: ColumnaTabla<T>) => c.movil ?? "detalle";
   const ver = (c: ColumnaTabla<T>) => (c.celdaMovil ?? c.celda)(fila);
   const de = (r: RolMovil) => columnas.filter((c) => rol(c) === r);
+  const imagen = de("imagen")[0];
   const titulo = de("titulo")[0];
   const subtitulo = de("subtitulo");
   const valor = de("valor")[0];
@@ -174,6 +177,13 @@ const TarjetaFila = memo(function TarjetaFila<T>({ fila, columnas, onFila, onInt
   const datos = de("dato").slice(0, 4);
   const detalle = [...de("dato").slice(4), ...de("detalle")];
   const acciones = de("acciones");
+
+  // Renglón compacto (como una app de banco): título y valor arriba; abajo UNA línea gris con el
+  // subtítulo y los datos clave separados por " · ", y el estado (primer chip) a la derecha.
+  // Tocar abre la ficha: con `onFila` no hay "Ver más" (el detalle ya muestra todo).
+  const meta = [...subtitulo, ...datos];
+  const [chip, ...otrosChips] = chips;
+  const conVerMas = detalle.length > 0 && !onFila;
 
   return (
     <li className={`relative ${clase ?? ""}`}>
@@ -183,27 +193,36 @@ const TarjetaFila = memo(function TarjetaFila<T>({ fila, columnas, onFila, onInt
         onClick={onFila ? () => onFila(fila) : undefined}
         onKeyDown={onFila ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onFila(fila); } } : undefined}
         onPointerDown={onIntencion ? () => onIntencion(fila, true) : undefined}
-        className={`block px-3.5 py-3 ${onFila ? "cursor-pointer active:bg-slate-50" : ""}`}
+        className={`flex min-h-[64px] items-center gap-2.5 px-3.5 py-2.5 ${onFila ? "cursor-pointer active:bg-slate-50" : ""}`}
       >
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            {titulo ? <div className="min-w-0 text-[15px] font-semibold leading-snug text-slate-900 [overflow-wrap:anywhere]">{ver(titulo)}</div> : null}
-            {subtitulo.map((c) => <div key={c.key} className="mt-0.5 min-w-0 text-[13px] text-slate-500 [overflow-wrap:anywhere]">{ver(c)}</div>)}
+        {imagen ? <div className="shrink-0">{ver(imagen)}</div> : null}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline justify-between gap-3">
+            {/* Título en UNA línea: si la celda trae varias (nombre + detalle), queda la primera. */}
+            {titulo ? <div className="min-w-0 truncate text-[15px] font-semibold leading-snug text-slate-900 [&>*:not(:first-child)]:hidden [&_.block]:inline">{ver(titulo)}</div> : <span />}
+            {valor ? <div className="shrink-0 text-right text-[15px] font-semibold tabular-nums text-slate-900">{ver(valor)}</div> : null}
           </div>
-          {valor ? <div className="shrink-0 text-right text-[15px] font-semibold tabular-nums text-slate-900">{ver(valor)}</div> : null}
-        </div>
-        {chips.length ? <div className="mt-2 flex flex-wrap items-center gap-1.5">{chips.map((c) => <span key={c.key} className="inline-flex max-w-full">{ver(c)}</span>)}</div> : null}
-        {datos.length ? (
-          <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
-            {datos.map((c) => (
-              <div key={c.key} className="min-w-0">
-                <dt className="text-[11px] font-medium uppercase tracking-wide text-slate-400">{etiqueta(c)}</dt>
-                <dd className="min-w-0 text-[13px] text-slate-700 [overflow-wrap:anywhere]">{ver(c)}</dd>
+          {meta.length || chip ? (
+            <div className="mt-0.5 flex items-center justify-between gap-3">
+              <div className="line-clamp-2 min-w-0 text-[13px] leading-snug text-slate-500 [overflow-wrap:anywhere] [&_.block]:inline [&_.font-mono]:font-sans [&_div]:inline [&_p]:inline">
+                {meta.map((c, i) => (
+                  <span key={c.key}>{i > 0 ? <span aria-hidden className="text-slate-300"> · </span> : null}{ver(c)}</span>
+                ))}
+                {otrosChips.map((c) => <span key={c.key} className="ml-1.5 inline-flex align-middle">{ver(c)}</span>)}
               </div>
-            ))}
-          </dl>
-        ) : null}
-        {abierta && detalle.length ? (
+              {chip ? <span className="inline-flex max-w-[45%] shrink-0 justify-end text-right [&_.flex-col]:items-end">{ver(chip)}</span> : null}
+            </div>
+          ) : null}
+        </div>
+        {/* Acciones (ej. "⋯") en el mismo renglón; no abren la fila. Sin acciones, la flecha. */}
+        {acciones.length ? (
+          <div className="-mr-2 flex shrink-0 items-center [&_button]:min-h-11 [&_button]:min-w-11" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+            {acciones.map((c) => <span key={c.key} className="contents">{ver(c)}</span>)}
+          </div>
+        ) : onFila ? <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-slate-300" /> : null}
+      </div>
+      <div className="px-3.5">
+        {abierta && conVerMas ? (
           <dl className="mt-2 space-y-1.5 rounded-lg bg-slate-50 px-3 py-2.5">
             {detalle.map((c) => (
               <div key={c.key} className="flex items-start justify-between gap-3">
@@ -214,20 +233,15 @@ const TarjetaFila = memo(function TarjetaFila<T>({ fila, columnas, onFila, onInt
           </dl>
         ) : null}
       </div>
-      {detalle.length || acciones.length ? (
+      {conVerMas ? (
         <div className="flex items-center justify-between gap-2 px-2 pb-1.5">
-          {detalle.length ? (
+          {conVerMas ? (
             <button type="button" onClick={() => setAbierta((v) => !v)} aria-expanded={abierta}
               className="inline-flex min-h-11 items-center gap-1 rounded-lg px-2 text-[13px] font-medium text-[var(--brand)]">
               {abierta ? "Ver menos" : `Ver más (${detalle.length})`}
               <ChevronDown className={`h-4 w-4 transition-transform ${abierta ? "rotate-180" : ""}`} />
             </button>
           ) : <span />}
-          {acciones.length ? (
-            <div className="flex items-center gap-1 [&_button]:min-h-11 [&_button]:min-w-11" onClick={(e) => e.stopPropagation()}>
-              {acciones.map((c) => <span key={c.key} className="contents">{ver(c)}</span>)}
-            </div>
-          ) : null}
         </div>
       ) : null}
     </li>
