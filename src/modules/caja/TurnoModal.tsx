@@ -6,8 +6,8 @@
  * PDF del cierre (o arqueo parcial si sigue abierta).
  */
 import { useCallback, useEffect, useState } from "react";
-import { Download, Loader2, Lock, Undo2 } from "lucide-react";
-import { descargarArchivo } from "@/lib/api/client-blob";
+import { Loader2, Lock, Printer, Undo2 } from "lucide-react";
+import { imprimirArchivo } from "@/lib/api/client-blob";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Dato, ModalDocumento, Pestanas, PedirMotivo } from "@/modules/inventario/ui";
 import { anularMovimiento, fechaHora, getResumenTurno, hora, metodoLabel, type MovimientoTurno, type ResumenTurno } from "@/modules/caja/turno";
 import { ResumenTurnoPanel } from "@/modules/caja/CierreModal";
@@ -38,7 +38,7 @@ export function TurnoModal({ turnoId, onClose, onCerrar, onCambio }: {
   useEffect(cargar, [cargar]);
 
   const abierta = r?.caja.estado === "abierta";
-  const pdf = () => descargarArchivo(`/api/caja/turnos/${turnoId}/pdf`, `cierre-caja-${r?.caja.numero_caja ?? ""}.pdf`).catch((e) => setError((e as Error).message));
+  const pdf = () => imprimirArchivo(`/api/caja/turnos/${turnoId}/pdf`, `cierre-caja-${r?.caja.numero_caja ?? ""}.pdf`).catch((e) => setError((e as Error).message));
 
   return (
     <>
@@ -49,7 +49,7 @@ export function TurnoModal({ turnoId, onClose, onCerrar, onCambio }: {
         footer={
           <>
             {error ? <p className="mr-auto text-xs text-rose-600 max-sm:w-full">{error}</p> : null}
-            <button type="button" onClick={pdf} disabled={!r} className={`${BOTON_SECUNDARIO} max-sm:flex-1`}><Download className="h-4 w-4" /> {abierta ? "Arqueo parcial" : "PDF del cierre"}</button>
+            <button type="button" onClick={pdf} disabled={!r} className={`${BOTON_SECUNDARIO} max-sm:flex-1`}><Printer className="h-4 w-4" /> {abierta ? "Imprimir arqueo parcial" : "Imprimir cierre"}</button>
             {abierta && onCerrar ? (
               <button type="button" onClick={onCerrar} className={`${BOTON_PRIMARIO} bg-rose-600 max-sm:flex-1`}><Lock className="h-4 w-4" /> Cerrar caja</button>
             ) : null}

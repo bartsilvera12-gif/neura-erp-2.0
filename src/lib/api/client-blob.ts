@@ -45,3 +45,36 @@ export async function abrirArchivo(path: string, nombrePorDefecto: string) {
     throw e;
   }
 }
+
+/**
+ * Imprime un PDF: en la compu abre directo el diálogo de impresión (iframe oculto con el PDF);
+ * en celular/tablet (no imprimen desde un iframe) lo abre en otra pestaña para imprimir o compartir.
+ */
+export async function imprimirArchivo(path: string, nombrePorDefecto: string) {
+  if (window.matchMedia("(pointer: coarse)").matches) return abrirArchivo(path, nombrePorDefecto);
+  const res = await pedir(path);
+  const url = URL.createObjectURL(await res.blob());
+  document.querySelectorAll("iframe[data-imprimir]").forEach((f) => f.remove());
+  const f = document.createElement("iframe");
+  f.dataset.imprimir = "";
+  f.setAttribute("aria-hidden", "true");
+  f.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden";
+  f.src = url;
+  await new Promise<void>((ok) => {
+    f.onload = () => {
+      // El visor de PDF termina de armarse un instante después del load.
+      setTimeout(() => {
+        try {
+          f.contentWindow?.focus();
+          f.contentWindow?.print();
+        } catch {
+          window.open(url, "_blank");
+        }
+        ok();
+      }, 300);
+    };
+    document.body.appendChild(f);
+  });
+  // No se saca enseguida: algunos navegadores cancelan la impresión si desaparece el iframe.
+  setTimeout(() => { f.remove(); URL.revokeObjectURL(url); }, 120000);
+}

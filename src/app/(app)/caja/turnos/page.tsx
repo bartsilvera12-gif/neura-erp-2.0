@@ -12,9 +12,9 @@
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeftRight, Building2, Clock, Download, Eye, Loader2, Lock, Settings2, ShoppingCart, Unlock, Wallet } from "lucide-react";
+import { ArrowLeftRight, Building2, Clock, Eye, Loader2, Lock, Printer, Settings2, ShoppingCart, Unlock, Wallet } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
-import { descargarArchivo } from "@/lib/api/client-blob";
+import { imprimirArchivo } from "@/lib/api/client-blob";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, TEAL } from "@/modules/inventario/ui";
 import { AccionesPagina } from "@/components/EncabezadoPagina";
 import { TablaTarjetas } from "@/components/TablaResponsive";
@@ -178,7 +178,7 @@ function TurnosContenido() {
                 celda: (t) => (
                   <>
                     <button type="button" onClick={(e) => { e.stopPropagation(); setVer(t.id); }} title="Ver turno" aria-label="Ver turno" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Eye className="h-4 w-4" /></button>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); descargarArchivo(`/api/caja/turnos/${t.id}/pdf`, `cierre-caja-${t.numero_caja}.pdf`).catch(() => {}); }} title="PDF del cierre" aria-label="PDF del cierre" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Download className="h-4 w-4" /></button>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); imprimirArchivo(`/api/caja/turnos/${t.id}/pdf`, `cierre-caja-${t.numero_caja}.pdf`).catch(() => {}); }} title="Imprimir cierre" aria-label="Imprimir cierre" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Printer className="h-4 w-4" /></button>
                   </>
                 ),
               },

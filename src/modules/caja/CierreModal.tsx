@@ -10,9 +10,9 @@
  * egresos, retiros e ingresos. Cerrado: el resultado y el PDF del cierre.
  */
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, CheckCircle2, ChevronDown, Download, FileText, Loader2, Lock } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronDown, Loader2, Lock, Printer } from "lucide-react";
 import MontoInput from "@/components/ui/MontoInput";
-import { descargarArchivo } from "@/lib/api/client-blob";
+import { imprimirArchivo } from "@/lib/api/client-blob";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT, ModalDocumento, TEAL } from "@/modules/inventario/ui";
 import { cerrarCaja, DENOMINACIONES, fechaHora, getResumenTurno, type ResumenTurno } from "@/modules/caja/turno";
 import { formatGs } from "@/modules/caja/lib";
@@ -76,7 +76,7 @@ export function CierreModal({ turnoId, onClose, onCerrada }: { turnoId: string; 
   }
 
   const pdf = () =>
-    descargarArchivo(`/api/caja/turnos/${turnoId}/pdf`, `cierre-caja-${r?.caja.numero_caja ?? ""}.pdf`).catch((e) => setError((e as Error).message));
+    imprimirArchivo(`/api/caja/turnos/${turnoId}/pdf`, `cierre-caja-${r?.caja.numero_caja ?? ""}.pdf`).catch((e) => setError((e as Error).message));
 
   const titulo = r ? `Cerrar ${r.caja.punto_nombre} · ${r.caja.sucursal_nombre}` : "Cerrar caja";
   const subtitulo = r ? `Turno N° ${r.caja.numero_caja} · abierta ${fechaHora(r.caja.fecha_apertura)} por ${r.caja.abierta_por_nombre ?? "—"}` : undefined;
@@ -87,8 +87,8 @@ export function CierreModal({ turnoId, onClose, onCerrada }: { turnoId: string; 
       <ModalDocumento titulo="Caja cerrada" subtitulo={`${r.caja.punto_nombre} · ${r.caja.sucursal_nombre} · Turno N° ${r.caja.numero_caja}`} ancho="max-w-md" onClose={onClose}
         footer={
           <>
-            <button type="button" onClick={pdf} className={BOTON_SECUNDARIO}><Download className="h-4 w-4" /> PDF del cierre</button>
-            <button type="button" onClick={onClose} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>Listo</button>
+            <button type="button" onClick={onClose} className={`${BOTON_SECUNDARIO} max-sm:flex-1`}>Listo</button>
+            <button type="button" onClick={pdf} className={`${BOTON_PRIMARIO} max-sm:flex-[1.4]`} style={{ backgroundColor: TEAL }}><Printer className="h-4 w-4" /> Imprimir cierre</button>
           </>
         }>
         <div className="py-4 text-center">
@@ -110,7 +110,7 @@ export function CierreModal({ turnoId, onClose, onCerrada }: { turnoId: string; 
         <>
           {error ? <p className="mr-auto max-w-md text-xs font-medium text-rose-600 max-sm:w-full">{error}</p> : falta && r ? <p className="mr-auto text-xs text-slate-500 max-sm:w-full">Falta {falta}.</p> : null}
           {/* Celular: el PDF queda como ícono; "Cerrar caja" ocupa el resto. */}
-          <button type="button" onClick={pdf} disabled={!r} className={`${BOTON_SECUNDARIO} max-sm:w-11 max-sm:px-0`} title="Arqueo parcial en PDF (sin cerrar)" aria-label="Arqueo parcial en PDF"><FileText className="h-4 w-4" /> <span className="max-sm:hidden">Arqueo parcial</span></button>
+          <button type="button" onClick={pdf} disabled={!r} className={`${BOTON_SECUNDARIO} max-sm:w-11 max-sm:px-0`} title="Imprimir arqueo parcial (sin cerrar)" aria-label="Imprimir arqueo parcial"><Printer className="h-4 w-4" /> <span className="max-sm:hidden">Arqueo parcial</span></button>
           <button type="button" onClick={onClose} disabled={busy} className={`${BOTON_SECUNDARIO} max-sm:flex-1`}>Cancelar</button>
           <button type="button" onClick={cerrar} disabled={!r || !!falta || busy} className={`${BOTON_PRIMARIO} bg-rose-600 max-sm:flex-[1.4]`}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />} Cerrar caja

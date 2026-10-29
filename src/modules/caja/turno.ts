@@ -148,6 +148,8 @@ export type VentaCreditoTurno = {
   cobrado: number | null;
   saldo: number | null;
   estado_cuenta: string | null;
+  cuotas?: number | null;
+  cuotas_cada?: string | null;
 };
 
 export type ResumenTurno = {
