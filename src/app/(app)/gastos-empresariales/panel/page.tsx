@@ -3,8 +3,8 @@
 /**
  * /gastos-empresariales/panel — Panel de Gastos empresariales (la tarjeta de /finanzas abre acá):
  * una tarjeta con foto por sub-pantalla (PanelModulo → TarjetaImagen). Las rutas no cambian (el
- * Resumen sigue en /gastos-empresariales). Acá no se muestran las pestañas del módulo
- * (PestanasGastos). Fotos y créditos: public/finanzas/ y docs/creditos-imagenes-demo.md
+ * Resumen sigue en /gastos-empresariales). Acá no se muestra el encabezado común del módulo
+ * (PestanasGastos: "← Gastos empresariales"). Fotos y créditos: public/finanzas/ y docs/creditos-imagenes-demo.md
  * (sección "Panel Finanzas").
  */
 import { PanelModulo, hslDeMarca, type TarjetaPanel } from "@/components/ui/PanelModulo";

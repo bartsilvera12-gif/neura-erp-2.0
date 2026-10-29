@@ -11,7 +11,8 @@ import type { Modulo } from "@/modules/types";
  *   · Recurrentes        plantillas mensuales y "Generar gastos del mes".
  * Las URLs viejas siguen funcionando: /gastos y /gastos-empresariales/operativos redirigen a la
  * lista con el filtro de gastos y /compras con el de mercadería; /compras/nueva, /compras/ordenes,
- * /compras/pagos y /proveedores son las mismas páginas, con las pestañas del módulo.
+ * /compras/pagos y /proveedores son las mismas páginas. Cada una es una pantalla propia (sin barra
+ * de pestañas): se entra desde el panel o el submenú y arriba lleva "← Gastos empresariales".
  * Va dentro del ítem "Finanzas" del menú (grupo "finanzas" → /finanzas) y tiene su propio panel
  * de tarjetas (/gastos-empresariales/panel); el Resumen sigue en /gastos-empresariales.
  */
@@ -37,6 +38,3 @@ export const moduloGastosEmpresariales: Modulo = {
     { label: "Nueva orden de compra", href: "/compras/ordenes/nueva" },
   ],
 };
-
-/** Pestañas del módulo (mismas que el submenú). */
-export const PESTANAS_GASTOS = moduloGastosEmpresariales.children!;
