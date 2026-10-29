@@ -13,17 +13,16 @@ import type { Modulo } from "@/modules/types";
  * lista con el filtro de gastos y /compras con el de mercadería; /compras/nueva, /compras/ordenes,
  * /compras/pagos y /proveedores son las mismas páginas. Cada una es una pantalla propia (sin barra
  * de pestañas): se entra desde el panel o el submenú y arriba lleva "← Gastos empresariales".
- * Va dentro del ítem "Finanzas" del menú (grupo "finanzas" → /finanzas) y tiene su propio panel
- * de tarjetas (/gastos-empresariales/panel).
+ * Ítem propio del menú lateral (familia "Gastos", después de Finanzas; antes iba dentro del grupo
+ * Finanzas) que abre su panel de tarjetas (/gastos-empresariales/panel).
  */
 export const moduloGastosEmpresariales: Modulo = {
   id: "gastos-empresariales",
   label: "Gastos empresariales",
   href: "/gastos-empresariales/panel",
   panel: true,
-  grupo: "finanzas",
   icon: "wallet-cards",
-  familia: "Finanzas",
+  familia: "Gastos",
   roles: ["ADMIN"],
   children: [
     { label: "Compras y gastos", href: "/gastos-empresariales/compras-gastos" },

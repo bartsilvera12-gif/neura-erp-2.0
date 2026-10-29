@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * /gastos-empresariales/panel — Panel de Gastos empresariales (la tarjeta de /finanzas abre acá):
+ * /gastos-empresariales/panel — Panel de Gastos empresariales (el ítem del menú abre acá):
  * una tarjeta con foto por sub-pantalla (PanelModulo → TarjetaImagen). El Resumen de gastos pasó
  * a Reportes › Gastos (/reportes/gastos). Acá no se muestra el encabezado común del módulo
  * (PestanasGastos: "← Gastos empresariales"). Fotos y créditos: public/finanzas/ y docs/creditos-imagenes-demo.md
@@ -20,8 +20,7 @@ const TARJETAS: TarjetaPanel[] = [
 export default function PanelGastosPage() {
   return (
     <PanelModulo
-      volver={{ href: "/finanzas", label: "Finanzas" }}
-      kicker="Finanzas"
+      kicker="Gastos"
       titulo="Gastos empresariales"
       subtitulo="Compras de mercadería, gastos de la empresa, proveedores y lo que se les paga."
       tarjetas={TARJETAS}
