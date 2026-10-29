@@ -16,7 +16,8 @@
 import Link from "next/link";
 import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { ArrowLeft, CheckCircle2, ClipboardList, Loader2, Package, Pencil, Printer, RotateCw, Search, Trash2, UserRound, X } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ClipboardList, Loader2, Package, Pencil, Printer, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
+import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { buscar, buscarEnIndice, exactosPrimero, indexar } from "@/lib/busqueda";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
@@ -172,6 +173,8 @@ export default function PedidosMostradorPage() {
   const [qCliente, setQCliente] = useState("");
   const [clientesBuscados, setClientesBuscados] = useState<Cliente[]>([]);
   const [abiertoCliente, setAbiertoCliente] = useState(false);
+  // Alta rápida (la misma de la caja): con lo escrito como nombre si no es un número.
+  const [creandoCliente, setCreandoCliente] = useState(false);
   const cajaCliente = useRef<HTMLDivElement>(null);
   const listaCliente = useRef<HTMLDivElement>(null);
   // La lista flota sobre la pantalla (fuera de la zona con scroll, que la recortaba): abajo del
@@ -435,7 +438,15 @@ export default function PedidosMostradorPage() {
         {/* Cliente y nota (opcionales) */}
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div ref={cajaCliente} className="relative">
-            <label htmlFor="ped-cliente" className="mb-1.5 block text-sm font-medium text-slate-700">Cliente <span className="font-normal text-slate-400">(opcional)</span></label>
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <label htmlFor="ped-cliente" className="block text-sm font-medium text-slate-700">Cliente <span className="font-normal text-slate-400">(opcional)</span></label>
+              {!cliente ? (
+                <button type="button" onClick={() => { setAbiertoCliente(false); setCreandoCliente(true); }}
+                  className="-my-2 inline-flex min-h-8 items-center gap-1 text-xs font-semibold hover:underline [@media(pointer:coarse)]:min-h-11" style={{ color: TEAL }}>
+                  <UserRoundPlus className="h-3.5 w-3.5" aria-hidden /> Nuevo
+                </button>
+              ) : null}
+            </div>
             {cliente ? (
               <div className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3">
                 <UserRound className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
@@ -465,6 +476,11 @@ export default function PedidosMostradorPage() {
                     {c.telefono ? <span className="ml-2 text-xs text-slate-400">· {c.telefono}</span> : null}
                   </button>
                 ))}
+                <button type="button" onClick={() => { setAbiertoCliente(false); setCreandoCliente(true); }}
+                  className="flex min-h-11 w-full items-center gap-2 border-t border-slate-100 px-3 py-2 text-left text-sm font-semibold hover:bg-slate-50" style={{ color: TEAL }}>
+                  <UserRoundPlus className="h-4 w-4 shrink-0" aria-hidden />
+                  <span className="min-w-0 truncate">Crear cliente{/^[\d.\s-]+$/.test(qCliente.trim()) ? "" : ` «${qCliente.trim()}»`}</span>
+                </button>
               </div>,
               document.body,
             ) : null}
@@ -603,6 +619,14 @@ export default function PedidosMostradorPage() {
         <div className={`min-h-0 min-w-0 flex-col ${pestana === "armar" ? "flex" : "hidden"} lg:flex`}>{panelArmar}</div>
         <div className={`min-h-0 min-w-0 flex-col ${pestana === "lista" ? "flex" : "hidden"} lg:flex`}>{panelLista}</div>
       </div>
+
+      {creandoCliente ? (
+        <NuevoCliente
+          inicial={qCliente.trim() && !/^[\d.\s-]+$/.test(qCliente.trim()) ? { nombre: qCliente.trim() } : undefined}
+          onClose={() => setCreandoCliente(false)}
+          onCreado={(c) => { setCliente(c); setQCliente(""); setCreandoCliente(false); }}
+        />
+      ) : null}
 
       {/* Celular / tablet: pie fijo con el total y "Enviar a caja" */}
       {pestana === "armar" ? (
