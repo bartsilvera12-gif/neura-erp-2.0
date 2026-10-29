@@ -163,7 +163,7 @@ export type Perdidas = {
   por_deposito: { id: string; nombre: string; sucursal: string; valor: number; unidades: number }[];
   por_mes: { mes: string; valor: number; por_motivo: Record<string, number> }[];
   rows: {
-    dia: string; origen: "perdida" | "traslado"; documento_id: string; documento: string; motivo: string; motivo_label: string;
+    dia: string; origen: "perdida" | "traslado" | "nota_credito"; documento_id: string; documento: string; motivo: string; motivo_label: string;
     detalle: string | null; producto_id: string; producto: string; sku: string | null; deposito: string; sucursal: string; unidades: number; valor: number;
   }[];
 };

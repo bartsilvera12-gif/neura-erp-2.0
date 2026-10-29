@@ -105,7 +105,7 @@ function ReportePerdidas() {
               filas={d.rows.map((x, i) => ({
                 key: `${x.documento_id}-${x.producto_id}-${i}`,
                 celdas: [fechaCorta(x.dia),
-                  <Link key="d" href={x.origen === "perdida" ? `/inventario/ajustes?ver=${x.documento_id}` : `/inventario/traslados?ver=${x.documento_id}`} className="font-mono text-xs text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">{x.documento}</Link>,
+                  <Link key="d" href={x.origen === "perdida" ? `/inventario/ajustes?ver=${x.documento_id}` : x.origen === "nota_credito" ? `/caja/notas-credito?ver=${x.documento_id}` : `/inventario/traslados?ver=${x.documento_id}`} className="font-mono text-xs text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">{x.documento}</Link>,
                   <span key="m" className="inline-flex items-center gap-1.5" title={x.detalle ?? undefined}>
                     <span aria-hidden className="inline-block h-2 w-2 rounded-[2px]" style={{ backgroundColor: C_MOTIVO[x.motivo] ?? "#94a3b8" }} />{x.motivo_label}
                   </span>,

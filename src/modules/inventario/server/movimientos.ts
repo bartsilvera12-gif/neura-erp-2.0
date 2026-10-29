@@ -13,6 +13,7 @@ export const ORIGENES_MOV = [
   "inventario_inicial", "ajuste_manual", "venta", "anulacion_venta", "compra", "anulacion_compra",
   "traslado_salida", "traslado_entrada", "anulacion_traslado", "ajuste", "perdida",
   "anulacion_ajuste", "anulacion_perdida", "apertura", "produccion", "anulacion_produccion",
+  "devolucion_venta", "anulacion_devolucion",
 ];
 const RE_FECHA = /^\d{4}-\d{2}-\d{2}$/;
 const limpio = (t: string) => t.replace(/[,()"\\*:]/g, "").trim();

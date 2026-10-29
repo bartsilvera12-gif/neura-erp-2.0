@@ -13,7 +13,7 @@
  * (pago mixto) · Enter confirma · Esc cancela.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Banknote, CreditCard, FileText, Landmark, Loader2, Plus, QrCode, ReceiptText, ScrollText, Trash2, Wallet } from "lucide-react";
+import { Banknote, CreditCard, FileText, Landmark, Loader2, PiggyBank, Plus, QrCode, ReceiptText, ScrollText, Trash2, Wallet } from "lucide-react";
 import MontoInput from "@/components/ui/MontoInput";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -24,7 +24,11 @@ import type { EstadoCuenta } from "@/modules/clientes/cobros";
 import { clienteConfig } from "@/cliente.config";
 
 const TEAL = clienteConfig.color;
-const ICONO: Record<MetodoVenta, React.ComponentType<{ className?: string }>> = {
+/** Receta 99: además de las formas de la caja, el saldo a favor del cliente (no entra a la caja). */
+type MetodoLinea = MetodoVenta | "saldo_favor";
+const SALDO_FAVOR = { value: "saldo_favor" as const, label: "Saldo a favor", corto: "Saldo a favor", referencia: undefined, banco: undefined };
+const ICONO: Record<MetodoLinea, React.ComponentType<{ className?: string }>> = {
+  saldo_favor: PiggyBank,
   efectivo: Banknote,
   tarjeta_debito: CreditCard,
   tarjeta_credito: CreditCard,
@@ -33,9 +37,9 @@ const ICONO: Record<MetodoVenta, React.ComponentType<{ className?: string }>> = 
   cheque: ScrollText,
 };
 
-export type PagoEnviar = { metodo_pago: MetodoVenta; monto: number; recibido?: number | null; referencia?: string | null; banco?: string | null };
+export type PagoEnviar = { metodo_pago: MetodoLinea; monto: number; recibido?: number | null; referencia?: string | null; banco?: string | null };
 
-type Linea = { id: string; metodo: MetodoVenta; monto: number; manual: boolean; referencia: string; banco: string };
+type Linea = { id: string; metodo: MetodoLinea; monto: number; manual: boolean; referencia: string; banco: string };
 const nuevoId = () => `p_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
 /** Billetes "redondos" que el cliente probablemente entregue (para el vuelto). */
@@ -89,11 +93,13 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1,
   const vuelto = recibido != null && efectivo > 0 ? recibido - efectivo : null;
   const lineasConMonto = efectivas.filter((l) => l.monto > 0);
 
-  // Crédito: deuda del cliente y su límite.
+  // Crédito: deuda del cliente y su límite. Contado: su saldo a favor (receta 99).
   useEffect(() => {
-    if (tipoVenta !== "CREDITO" || !cliente) return;
+    if (!cliente) return;
     apiFetch<EstadoCuenta>(`/api/clientes/${cliente.id}/estado-cuenta`).then(setCuenta).catch(() => {});
   }, [tipoVenta, cliente]);
+  const saldoFavor = tipoVenta === "CONTADO" && cliente ? Number(cuenta?.saldo_favor ?? 0) : 0;
+  const conSaldo = efectivas.filter((l) => l.metodo === "saldo_favor").reduce((a, l) => a + (l.monto || 0), 0);
   const limite = Number(cliente?.limite_credito ?? 0);
   const deuda = Number(cuenta?.deuda ?? 0);
   const disponible = limite > 0 ? limite - deuda : null;
@@ -107,6 +113,7 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1,
       : restante > 0 ? `Falta asignar ${formatGs(restante)}.`
       : restante < 0 ? `Las formas de pago se pasan por ${formatGs(-restante)}.`
       : lineasConMonto.length === 0 ? "Cargá cómo paga."
+      : conSaldo > saldoFavor ? `El cliente tiene ${formatGs(saldoFavor)} a favor: no alcanza.`
       : recibido != null && efectivo > 0 && recibido < efectivo ? `Con ${formatGs(recibido)} no alcanza el efectivo (${formatGs(efectivo)}).`
       : null;
 
@@ -132,7 +139,14 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1,
     }));
   }
 
-  function setMetodo(id: string, metodo: MetodoVenta) {
+  function usarSaldo() {
+    const id = nuevoId();
+    const monto = Math.min(saldoFavor, lineas[0].manual ? Math.max(0, restante) : total);
+    setLineas((ls) => [...ls, { id, metodo: "saldo_favor", monto, manual: true, referencia: "", banco: "" }]);
+    setActiva(id);
+    setAviso(null);
+  }
+  function setMetodo(id: string, metodo: MetodoLinea) {
     setLineas((ls) => ls.map((l) => (l.id === id ? { ...l, metodo } : l)));
     setAviso(null);
   }
@@ -301,7 +315,7 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1,
               {/* Líneas de pago */}
               <ul className="space-y-2">
                 {efectivas.map((l, i) => {
-                  const def = METODOS_VENTA.find((m) => m.value === l.metodo)!;
+                  const def = l.metodo === "saldo_favor" ? SALDO_FAVOR : METODOS_VENTA.find((m) => m.value === l.metodo)!;
                   const Icono = ICONO[l.metodo];
                   const esActiva = l.id === lineaActiva?.id;
                   return (
@@ -321,7 +335,9 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1,
                           <button type="button" onClick={() => quitar(l.id)} aria-label="Quitar forma de pago" className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-300 hover:bg-rose-50 hover:text-rose-500 sm:h-auto sm:w-auto sm:p-1.5"><Trash2 className="h-4 w-4" /></button>
                         ) : <span className="hidden w-7 sm:block" />}
                       </div>
-                      {l.metodo !== "efectivo" ? (
+                      {l.metodo === "saldo_favor" ? (
+                        <p className="mt-1.5 text-xs text-slate-500 sm:pl-7">Tiene {formatGs(saldoFavor)} a favor. No entra a la caja.</p>
+                      ) : l.metodo !== "efectivo" ? (
                         <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:pl-7">
                           <input value={l.referencia} onFocus={() => setActiva(l.id)} onChange={(e) => setLineas((ls) => ls.map((x) => (x.id === l.id ? { ...x, referencia: e.target.value } : x)))}
                             maxLength={120} placeholder={`${def.referencia ?? "Referencia"} (opcional)`}
@@ -336,6 +352,12 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1,
                   );
                 })}
               </ul>
+              {saldoFavor > 0 && conSaldo === 0 ? (
+                <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-2 text-sm text-emerald-900">
+                  <span className="flex min-w-0 items-center gap-2"><PiggyBank className="h-4 w-4 shrink-0" /> <span>{cliente?.nombre} tiene <b className="tabular-nums">{formatGs(saldoFavor)}</b> a favor</span></span>
+                  <button type="button" onClick={usarSaldo} className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-emerald-700 ring-1 ring-emerald-200 hover:bg-emerald-100 [@media(pointer:coarse)]:min-h-11">Usar</button>
+                </div>
+              ) : null}
               <button type="button" onClick={() => agregar()} className="inline-flex items-center justify-center gap-1 text-xs font-semibold hover:underline max-sm:min-h-11 max-sm:w-full max-sm:rounded-xl max-sm:border max-sm:border-dashed max-sm:border-slate-300 max-sm:text-sm" style={{ color: TEAL }}>
                 <Plus className="h-3.5 w-3.5" /> Agregar otra forma de pago (mixto) <kbd className="ml-1 hidden rounded border border-slate-200 px-1 font-mono text-[10px] text-slate-400 lg:inline">Alt+M</kbd>
               </button>

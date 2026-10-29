@@ -19,7 +19,7 @@ export const NIVELES: { id: Nivel; label: string; detalle: string }[] = [
 export const nivelLabel = (n?: string) => NIVELES.find((x) => x.id === n)?.label ?? n ?? "";
 
 export type Permiso =
-  | "ver_costos" | "anular_ventas" | "anular_ventas_cerradas" | "descuentos_precio" | "vender_credito"
+  | "ver_costos" | "anular_ventas" | "anular_ventas_cerradas" | "notas_credito" | "descuentos_precio" | "vender_credito"
   | "abrir_cerrar_caja" | "movimientos_caja" | "ver_cajas_otras_sucursales" | "pedidos_mesas" | "cocina" | "pedidos_mostrador"
   | "registrar_cobros" | "registrar_transferencias" | "aprobar_transferencias" | "anular_cobros"
   | "registrar_compras" | "anular_compras" | "registrar_gastos" | "anular_gastos" | "pagar_proveedores"
@@ -45,6 +45,7 @@ export const GRUPOS_PERMISOS: { id: string; label: string; permisos: DefPermiso[
       { id: "ver_costos", label: "Ver costos y márgenes", descripcion: "Ve el costo de los productos, la ganancia y los márgenes en productos, ventas, inicio y reportes.", sensible: true },
       { id: "anular_ventas", label: "Anular ventas", descripcion: "Anula una venta del turno abierto: el stock vuelve y el cobro sale del arqueo.", sensible: true },
       { id: "anular_ventas_cerradas", label: "Anular ventas de turnos cerrados", descripcion: "Anula ventas de un turno que ya se cerró (con motivo). El efectivo se devuelve desde una caja abierta.", sensible: true },
+      { id: "notas_credito", label: "Hacer y anular notas de crédito", descripcion: "Devuelve productos (vuelven al stock o quedan como pérdida) o hace un descuento sobre una venta ya hecha: baja la deuda, devuelve la plata desde la caja o la deja como saldo a favor del cliente.", sensible: true },
       { id: "descuentos_precio", label: "Dar descuentos y cambiar precios en caja", descripcion: "Cambia el precio de un producto al vender o hace descuentos (por producto o a toda la venta), hasta el tope del perfil." },
       { id: "vender_credito", label: "Vender a crédito", descripcion: "Hace ventas a crédito: el cliente paga después y queda en sus cuentas a cobrar." },
       { id: "abrir_cerrar_caja", label: "Abrir y cerrar caja", descripcion: "Abre un turno de caja con el monto inicial y lo cierra con el arqueo." },

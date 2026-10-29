@@ -13,6 +13,8 @@ const TARJETAS: TarjetaPanel[] = [
   { href: "/caja/nueva", titulo: "Nueva venta", imagen: "/finanzas/nueva-venta-escaner-celular.webp", color: hslDeMarca(clienteConfig.color), posicion: "50% 45%" },
   { href: "/caja/turnos", titulo: "Apertura y cierre", imagen: "/finanzas/apertura-cierre-billetes-mano.webp", color: "152 34% 22%", posicion: "50% 50%" },
   { href: "/caja", titulo: "Órdenes de venta", imagen: "/finanzas/ordenes-venta-ticket-impreso.webp", color: "214 40% 24%", posicion: "55% 40%" },
+  // Receta 99: foto prestada (la de crédito: libro de cuentas) hasta tener una propia.
+  { href: "/caja/notas-credito", titulo: "Notas de crédito", imagen: "/finanzas/credito-libro-cuentas.webp", color: "346 38% 26%", posicion: "50% 50%" },
   { href: "/caja/mesas", titulo: "Pedidos de mesas", imagen: "/finanzas/ordenes-compra-caja-pedido.webp", color: "24 55% 24%", posicion: "50% 45%" },
   { href: "/caja/cocina", titulo: "Cocina", imagen: "/soporte/mis-tickets-lista-pendientes.webp", color: "8 45% 24%", posicion: "50% 45%" },
   // Receta 77: foto prestada (la de compras: canasto) hasta tener una propia — ver docs/creditos-imagenes-demo.md.

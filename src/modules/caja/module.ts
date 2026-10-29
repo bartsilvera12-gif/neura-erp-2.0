@@ -18,6 +18,8 @@ export const moduloCaja: Modulo = {
     { label: "Nueva venta", href: "/caja/nueva", palabras: ["vender", "facturar", "punto de venta", "pos"] },
     { label: "Apertura y cierre", href: "/caja/turnos", palabras: ["arqueo", "turno", "abrir caja", "cerrar caja"] },
     { label: "Órdenes de venta", href: "/caja", palabras: ["ventas", "facturas emitidas", "anular venta"] },
+    // Receta 99: devoluciones y descuentos sobre ventas ya hechas (se emiten desde la venta).
+    { label: "Notas de crédito", href: "/caja/notas-credito", palabras: ["nota de credito", "devolucion", "devolver", "descuento", "saldo a favor"] },
     // Receta 68: pedidos por QR de las mesas (cola + cuentas abiertas) y la pantalla de cocina.
     // Receta 75: se apagan con Rubro y funciones (Mesas y QR / Cocina y estaciones).
     { label: "Pedidos de mesas", href: "/caja/mesas", permiso: "pedidos_mesas", funcion: "mesas" },

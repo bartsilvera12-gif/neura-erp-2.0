@@ -99,17 +99,19 @@ export function Paginador({ pagina, porPagina, total, cargando, onCambiar }: {
 }
 
 /** Modal de documento: cabecera y pie fijos, cuerpo con scroll (patrón de CapaModal). */
-export function ModalDocumento({ titulo, subtitulo, extra, ancho = "max-w-3xl", onClose, footer, children }: {
+export function ModalDocumento({ titulo, subtitulo, extra, ancho = "max-w-3xl", z = "z-[110]", onClose, footer, children }: {
   titulo: React.ReactNode;
   subtitulo?: React.ReactNode;
   extra?: React.ReactNode;
   ancho?: string;
+  /** capa (ej. z-[130] para abrir encima del detalle de una venta) */
+  z?: string;
   onClose?: () => void;
   footer?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (
-    <CapaModal onClose={onClose} z="z-[110]">
+    <CapaModal onClose={onClose} z={z}>
       <div role="dialog" aria-modal="true"
         className={`flex w-full ${ancho} ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[#4FAEB2]/15`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>

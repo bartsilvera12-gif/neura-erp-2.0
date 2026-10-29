@@ -87,6 +87,8 @@ const ventaSchema = z.object({
           "efectivo", "transferencia", "cheque",
           "tarjeta_debito", "tarjeta_credito", "pos_debito", "pos_credito",
           "tarjeta", "pos", "qr", "billetera", "otro",
+          // Receta 99: el saldo a favor del cliente (no entra a la caja).
+          "saldo_favor",
         ]),
         monto: z.coerce.number().positive("Hay una forma de pago con monto en cero"),
         recibido: z.coerce.number().positive().nullish(),

@@ -7,10 +7,13 @@
  *   · turno abierto: se anula y el cobro sale del arqueo de ese turno
  *   · turno CERRADO: solo ADMIN o SUPERVISOR, con motivo; el efectivo se devuelve desde
  *     una caja abierta (la base valida todo: anular_venta, receta 51)
+ *   · una FACTURA solo dentro de las 48 h (regla SIFEN); después, nota de crédito (receta 99)
+ * Nota de crédito: devolver productos o descuento por monto (NotaCreditoModal); las notas de la
+ * venta se listan abajo y abren su detalle (imprimir / anular).
  */
 import { useEffect, useState } from "react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
-import { FileText, Trash2, X } from "lucide-react";
+import { ChevronRight, FileText, ReceiptText, Trash2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { browserClient } from "@/lib/supabase/browser";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
@@ -21,6 +24,9 @@ import { metodoLabel, invalidarCajas } from "@/modules/caja/turno";
 import { fechaHora } from "@/lib/fecha/paraguay";
 import { SelectorCaja } from "@/modules/caja/SelectorCaja";
 import { textoConPrecios, type ModsSnapshot } from "@/modules/mesas/modificadores";
+import { NotaCreditoModal } from "@/modules/caja/NotaCreditoModal";
+import { NotaCreditoDetalle } from "@/modules/caja/NotaCreditoDetalle";
+import type { NotaCreditoPrevia } from "@/modules/caja/notas-credito";
 
 const TEAL = clienteConfig.color;
 
@@ -69,7 +75,13 @@ type Detalle = { venta: Venta; items: Item[]; pagos: Pago[]; cuenta: Cuenta; cli
 const PRECIO: Record<string, string> = { minorista: "Minorista", mayorista: "Mayorista", distribuidor: "Distribuidor", costo: "Costo" };
 const fechaCorta = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
 
-export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string; onClose: () => void; onAnulada: () => void }) {
+export function VentaDetalle({ ventaId, onClose, onAnulada, onCambio }: {
+  ventaId: string;
+  onClose: () => void;
+  onAnulada: () => void;
+  /** se emitió o anuló una nota de crédito (para refrescar la lista) */
+  onCambio?: () => void;
+}) {
   const me = useUsuario();
   const [d, setD] = useState<Detalle | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -78,10 +90,16 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
   const [motivo, setMotivo] = useState("");
   const [cajaDev, setCajaDev] = useState<string | null>(null);
   const [anulando, setAnulando] = useState(false);
+  // Receta 99: notas de crédito de la venta y si la factura todavía se puede anular (48 h).
+  const [nc, setNc] = useState<NotaCreditoPrevia | null>(null);
+  const [nuevaNc, setNuevaNc] = useState(false);
+  const [verNc, setVerNc] = useState<string | null>(null);
 
+  const cargarNc = () => apiFetch<NotaCreditoPrevia>(`/api/ventas/${ventaId}/nota-credito`).then(setNc).catch(() => {});
   useEffect(() => {
     apiFetch<Detalle>(`/api/ventas/${ventaId}`).then(setD).catch((e) => setError((e as Error).message)).finally(() => setCargando(false));
-  }, [ventaId]);
+    void cargarNc();
+  }, [ventaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const venta = d?.venta;
   const anulada = venta?.estado === "anulada";
@@ -90,6 +108,12 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
   const efectivo = (d?.pagos ?? []).filter((p) => p.metodo_pago === "efectivo").reduce((a, p) => a + Number(p.monto), 0);
   // Perfil: anular pide "anular ventas"; si el turno ya se cerró, además "anular ventas de turnos cerrados".
   const puedeAnular = tienePermiso(me, "anular_ventas") && (!turnoCerrado || tienePermiso(me, "anular_ventas_cerradas"));
+  const notasVivas = (nc?.notas ?? []).filter((x) => x.estado === "emitida");
+  // La base lo vuelve a validar: con notas de crédito, o factura de más de 48 h, no se anula.
+  const motivoNoAnula = notasVivas.length ? "Tiene notas de crédito: anulalas para poder anular la venta."
+    : nc && !nc.venta.factura_anulable ? "Pasaron más de 48 h de la factura: ya no se anula. Hacé una nota de crédito."
+    : null;
+  const puedeNc = tienePermiso(me, "notas_credito") && !!nc && nc.disponible > 0;
 
   async function anular() {
     if (turnoCerrado && !motivo.trim()) { setError("Escribí el motivo de la anulación."); return; }
@@ -221,6 +245,29 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
                 <div className="flex items-center justify-between border-t border-slate-200 pt-1.5"><span className="text-sm font-semibold text-slate-900">Total</span><span className="text-lg font-bold tabular-nums text-slate-900">{formatGs(venta.total)}</span></div>
               </div>
 
+              {nc && nc.notas.length ? (
+                <>
+                  <p className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Notas de crédito ({nc.notas.length})</p>
+                  <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
+                    {nc.notas.map((x) => (
+                      <li key={x.id}>
+                        <button type="button" onClick={() => setVerNc(x.id)} className="flex w-full items-center justify-between gap-3 px-3.5 py-2.5 text-left hover:bg-slate-50">
+                          <span className="min-w-0">
+                            <span className={`block font-mono text-sm font-semibold ${x.estado === "anulada" ? "text-slate-400 line-through" : "text-slate-800"}`}>{x.numero}</span>
+                            <span className="block truncate text-xs text-slate-400">{fechaHora(x.fecha)} · {x.motivo}</span>
+                          </span>
+                          <span className="flex shrink-0 items-center gap-1.5">
+                            <span className={`text-sm font-semibold tabular-nums ${x.estado === "anulada" ? "text-slate-400" : "text-rose-600"}`}>−{formatGs(x.total)}</span>
+                            <ChevronRight className="h-4 w-4 text-slate-300" />
+                          </span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                  {nc.acreditado > 0 ? <p className="mt-1.5 text-right text-xs text-slate-500">Acreditado {formatGs(nc.acreditado)} · queda {formatGs(nc.disponible)}</p> : null}
+                </>
+              ) : null}
+
               {confirmar && !anulada ? (
                 <div className="mt-4 space-y-3 rounded-xl border border-rose-200 bg-rose-50/60 p-3.5">
                   {turnoCerrado ? (
@@ -249,8 +296,10 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
 
         <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 sm:flex-nowrap sm:gap-3 sm:px-6 sm:py-4">
           {!anulada && venta ? (
-            !puedeAnular ? (
-              <span className="text-[11px] text-slate-400 max-sm:w-full sm:max-w-[60%]">{!tienePermiso(me, "anular_ventas") ? "Tu perfil no permite anular ventas." : "Es de un turno cerrado: tu perfil no permite anularla."}</span>
+            motivoNoAnula ? (
+              <span className="text-[11px] text-slate-400 max-sm:w-full sm:max-w-[45%]">{motivoNoAnula}</span>
+            ) : !puedeAnular ? (
+              <span className="text-[11px] text-slate-400 max-sm:w-full sm:max-w-[45%]">{!tienePermiso(me, "anular_ventas") ? "Tu perfil no permite anular ventas." : "Es de un turno cerrado: tu perfil no permite anularla."}</span>
             ) : confirmar ? (
               <div className="flex items-center gap-2 max-sm:w-full">
                 <button onClick={anular} disabled={anulando} className="inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-rose-600 px-4 max-sm:h-11 max-sm:flex-1 text-sm font-semibold text-white transition hover:bg-rose-700 disabled:opacity-50">
@@ -264,11 +313,21 @@ export function VentaDetalle({ ventaId, onClose, onAnulada }: { ventaId: string;
               </button>
             )
           ) : <span />}
+          {!anulada && venta && puedeNc && !confirmar ? (
+            <button onClick={() => setNuevaNc(true)} className="inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:border-[var(--brand)] hover:text-[var(--brand)] max-sm:h-11 max-sm:flex-1 sm:ml-auto">
+              <ReceiptText className="h-4 w-4" /> Nota de crédito
+            </button>
+          ) : null}
           <button onClick={verComprobante} className="inline-flex h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-5 max-sm:h-11 max-sm:flex-1 text-sm font-semibold text-white transition hover:brightness-95" style={{ backgroundColor: TEAL }}>
             <FileText className="h-4 w-4" /> Ver comprobante
           </button>
         </div>
       </div>
+      {nuevaNc ? (
+        <NotaCreditoModal ventaId={ventaId} onClose={() => setNuevaNc(false)}
+          onHecho={(r) => { setNuevaNc(false); void cargarNc(); setVerNc(r.id); onCambio?.(); }} />
+      ) : null}
+      {verNc ? <NotaCreditoDetalle notaId={verNc} onClose={() => setVerNc(null)} onCambio={() => { void cargarNc(); onCambio?.(); }} /> : null}
     </CapaModal>
   );
 }
