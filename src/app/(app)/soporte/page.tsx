@@ -387,7 +387,7 @@ export default function SoporteDashboardPage() {
                   const abierto = respAbierto.has(i);
                   return (
                     <li key={`${p.responsable}-${i}`}>
-                      <button type="button" onClick={() => toggle(setRespAbierto, i)} className="w-full text-left">
+                      <button type="button" onClick={() => toggle(setRespAbierto, i)} aria-expanded={abierto} className="w-full text-left [@media(pointer:coarse)]:py-1.5">
                         <div className="flex items-center justify-between gap-3 text-[13px]">
                           <span className="flex min-w-0 items-center gap-1.5 font-medium text-slate-700">
                             <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-slate-400 transition-transform ${abierto ? "rotate-180" : ""}`} aria-hidden />

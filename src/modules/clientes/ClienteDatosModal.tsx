@@ -95,7 +95,7 @@ export function ClienteDatosModal({ id, onCerrar, onCambio }: { id: string; onCe
         estado === "activo" ? (
           esAdmin ? (
             <button type="button" onClick={() => setBajando(true)}
-              className="rounded-xl border border-rose-600 bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 sm:mr-auto">
+              className="whitespace-nowrap rounded-xl border border-rose-600 bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 max-sm:px-3 sm:mr-auto">
               Dar de baja
             </button>
           ) : (

@@ -21,12 +21,55 @@ import { useViewportVisible } from "@/lib/ui/responsive";
  *     `modal-alto`) se limita al alto VISIBLE: con el teclado abierto (también en iOS, vía
  *     visualViewport → --capa-alto) el pie de acciones sigue a la vista; sus botones miden 44 px.
  *   · táctil: los botones "Cerrar" (aria-label) miden 44 × 44.
+ *   · táctil: el botón "atrás" del celular cierra el modal de arriba (no se va de la pantalla).
  *   · tablet/escritorio: igual que siempre (centrado con margen).
  * Para que un modal nuevo se vea bien en celular alcanza con: panel = hijo directo de CapaModal,
  * `flex flex-col` + ALTO_MAX_MODAL, cabecera y pie `shrink-0` (el pie, ÚLTIMO hijo) y el cuerpo
  * `min-h-0 flex-1 overflow-y-auto`.
  */
 export const ALTO_MAX_MODAL = "modal-alto max-h-[calc(100dvh-2rem)] sm:max-h-[calc(100dvh-3rem)]";
+
+// ── "Atrás" del celular ─────────────────────────────────────────────────────────────────
+// Cada modal abierto agrega una entrada al historial (misma URL) con su id en `__capas`;
+// "atrás" la saca y el modal cuyo id ya no está se cierra. Si el modal se cierra con un
+// botón, su entrada queda en el historial marcada como cerrada: el próximo "atrás" que salga
+// de ella sin cambiar de pantalla sigue de largo solo (así nunca hay un "atrás" que no hace nada).
+const cerradas = new Set<string>();
+let actual: { href: string; top?: string } = { href: "" };
+let escuchando = false;
+const topDe = (s: unknown) => {
+  const c = (s as { __capas?: string[] } | null)?.__capas;
+  return c?.[c.length - 1];
+};
+function alVolverGlobal() {
+  const antes = actual;
+  actual = { href: window.location.href, top: topDe(window.history.state) };
+  if (antes.top && cerradas.has(antes.top) && antes.top !== actual.top && antes.href === actual.href) window.history.back();
+}
+
+function useAtrasCierra(onClose: (() => void) | undefined) {
+  const cerrar = useRef(onClose);
+  useEffect(() => { cerrar.current = onClose; }, [onClose]);
+  const habilitado = !!onClose;
+  useEffect(() => {
+    if (!habilitado || !window.matchMedia("(pointer: coarse)").matches) return;
+    const id = Math.random().toString(36).slice(2);
+    const prev = (window.history.state ?? {}) as { __capas?: string[] };
+    window.history.pushState({ ...prev, __capas: [...(prev.__capas ?? []), id] }, "");
+    actual = { href: window.location.href, top: id };
+    if (!escuchando) { escuchando = true; window.addEventListener("popstate", alVolverGlobal); }
+    const href = window.location.href;
+    const enHistoria = () => ((window.history.state as { __capas?: string[] } | null)?.__capas ?? []).includes(id);
+    const onPop = () => { if (!enHistoria()) cerrar.current?.(); };
+    window.addEventListener("popstate", onPop);
+    return () => {
+      window.removeEventListener("popstate", onPop);
+      // Se cerró con un botón (su entrada sigue en el historial) o se fue a otra pantalla:
+      // la entrada queda como cerrada. Si la sacó "atrás" (otra escucha pudo cerrarlo antes), no.
+      if (enHistoria() || window.location.href !== href) cerradas.add(id);
+    };
+  }, [habilitado]);
+}
 
 export function CapaModal({
   onClose,
@@ -44,6 +87,7 @@ export function CapaModal({
   const [montado, setMontado] = useState(false);
   const capa = useRef<HTMLDivElement>(null);
   useEffect(() => setMontado(true), []);
+  useAtrasCierra(onClose);
   // Celular/tablet: la capa sigue al viewport visible (teclado de iOS) y deja --capa-alto.
   useViewportVisible(capa, montado);
 
