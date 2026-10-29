@@ -1,0 +1,22 @@
+# Dependencias y build: se regeneran dentro del contenedor
+node_modules
+.next
+out
+tsconfig.tsbuildinfo
+
+# Git y metadatos
+.git
+.gitignore
+.claude
+.mcp.json
+
+# Env: los inyecta Coolify, no van en la imagen
+.env*
+
+# No los usa la app en runtime
+docs
+db
+scripts
+*.md
+*.png
+!public/**/*.png

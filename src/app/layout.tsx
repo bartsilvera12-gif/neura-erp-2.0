@@ -1,8 +1,18 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const jakarta = Plus_Jakarta_Sans({ subsets: ["latin"], variable: "--font-jakarta" });
+/**
+ * Fuente local, no `next/font/google`: con Google, `next build` descarga la fuente en medio del
+ * build y en Coolify (varios builds a la vez) falla ("Failed to fetch `Plus Jakarta Sans`"). Es el
+ * mismo archivo que sirve Google (latin, variable 300–800), igual que en sistemas-propio.
+ */
+const jakarta = localFont({
+  src: "./fonts/plus-jakarta-sans-latin.woff2",
+  variable: "--font-jakarta",
+  weight: "300 800",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "Neura ERP",

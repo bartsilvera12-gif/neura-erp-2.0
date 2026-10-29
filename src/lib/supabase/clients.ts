@@ -17,6 +17,10 @@ import { tenantSchema } from "@/lib/tenant/schema";
 
 const NO_REFRESH = { auth: { autoRefreshToken: false, persistSession: false } } as const;
 
+/** El schema del tenant es dinámico (no "public"): el cliente se tipa sin schema fijo. */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Cliente = SupabaseClient<any, any, any>;
+
 function env(name: string): string {
   const v = process.env[name]?.trim();
   if (!v) throw new Error(`Falta la variable de entorno ${name}`);
@@ -24,7 +28,7 @@ function env(name: string): string {
 }
 
 /** Cliente con la sesión del usuario (Bearer). La RLS hace el aislamiento. */
-export function userClient(bearer: string, schema: string = tenantSchema()): SupabaseClient {
+export function userClient(bearer: string, schema: string = tenantSchema()): Cliente {
   return createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("NEXT_PUBLIC_SUPABASE_ANON_KEY"), {
     ...NO_REFRESH,
     db: { schema },
@@ -33,7 +37,7 @@ export function userClient(bearer: string, schema: string = tenantSchema()): Sup
 }
 
 /** Cliente anónimo sólo para validar el token (getUser). No toca datos. */
-export function authOnlyClient(): SupabaseClient {
+export function authOnlyClient(): Cliente {
   return createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("NEXT_PUBLIC_SUPABASE_ANON_KEY"), NO_REFRESH);
 }
 
@@ -42,7 +46,7 @@ export function authOnlyClient(): SupabaseClient {
  * garantiza withTenant inyectando empresa_id en cada operación (ver tenant-db.ts).
  * No usar directo: siempre a través del contexto de withTenant.
  */
-export function scopedServiceClient(empresaId: string, schema: string = tenantSchema()): SupabaseClient {
+export function scopedServiceClient(empresaId: string, schema: string = tenantSchema()): Cliente {
   if (!empresaId) throw new Error("scopedServiceClient requiere empresaId");
   return createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
     ...NO_REFRESH,
@@ -55,7 +59,7 @@ export function scopedServiceClient(empresaId: string, schema: string = tenantSc
  * catálogo/infra dentro de lib/ (ej. resolver a qué empresa pertenece un usuario).
  * PROHIBIDO importarlo desde una ruta: el lint lo bloquea fuera de lib/.
  */
-export function systemClient(schema: string = tenantSchema()): SupabaseClient {
+export function systemClient(schema: string = tenantSchema()): Cliente {
   return createClient(env("NEXT_PUBLIC_SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"), {
     ...NO_REFRESH,
     db: { schema },
