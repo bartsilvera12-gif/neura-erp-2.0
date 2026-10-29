@@ -59,7 +59,7 @@ function EstadoDeCuenta() {
               href={`/reportes/ventas?desde=${d.desde}&hasta=${d.hasta}`} />
             <Kpi label="Margen bruto" valor={gs(x.margen)} hint={`${pct(x.margen, x.ventas)} de las ventas`} tono={x.margen < 0 ? "malo" : undefined} />
             <Kpi label="Gastos operativos" valor={gs(x.operativos)} hint={`${d.gastos.docs_gastos} gastos · ${pct(x.operativos, x.ventas)} de ventas`}
-              href={`/gastos-empresariales?desde=${d.desde}&hasta=${d.hasta}`} />
+              href={`/reportes/gastos?desde=${d.desde}&hasta=${d.hasta}`} />
             <Kpi label="Pérdidas de producto" valor={gs(x.perdidas)} hint={`${pct(x.perdidas, x.ventas)} de las ventas`} tono={x.perdidas ? "alerta" : undefined}
               href={`/reportes/perdidas?desde=${d.desde}&hasta=${d.hasta}${d.sucursal_id ? `&sucursal=${d.sucursal_id}` : ""}`} />
             <Kpi label="Resultado" valor={gs(x.resultado)} hint={`${pct(x.resultado, x.ventas)} sobre ventas`} tono={x.resultado < 0 ? "malo" : "bueno"} />

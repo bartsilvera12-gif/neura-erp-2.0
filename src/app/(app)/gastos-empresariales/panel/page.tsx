@@ -2,16 +2,14 @@
 
 /**
  * /gastos-empresariales/panel — Panel de Gastos empresariales (la tarjeta de /finanzas abre acá):
- * una tarjeta con foto por sub-pantalla (PanelModulo → TarjetaImagen). Las rutas no cambian (el
- * Resumen sigue en /gastos-empresariales). Acá no se muestra el encabezado común del módulo
+ * una tarjeta con foto por sub-pantalla (PanelModulo → TarjetaImagen). El Resumen de gastos pasó
+ * a Reportes › Gastos (/reportes/gastos). Acá no se muestra el encabezado común del módulo
  * (PestanasGastos: "← Gastos empresariales"). Fotos y créditos: public/finanzas/ y docs/creditos-imagenes-demo.md
  * (sección "Panel Finanzas").
  */
-import { PanelModulo, hslDeMarca, type TarjetaPanel } from "@/components/ui/PanelModulo";
-import { clienteConfig } from "@/cliente.config";
+import { PanelModulo, type TarjetaPanel } from "@/components/ui/PanelModulo";
 
 const TARJETAS: TarjetaPanel[] = [
-  { href: "/gastos-empresariales", titulo: "Resumen", imagen: "/finanzas/gastos-resumen-graficos-papel.webp", color: hslDeMarca(clienteConfig.color), posicion: "55% 45%" },
   { href: "/gastos-empresariales/compras-gastos", titulo: "Compras y gastos", imagen: "/finanzas/compras-canasto-supermercado.webp", color: "26 50% 24%", posicion: "45% 55%" },
   { href: "/compras/ordenes", titulo: "Órdenes de compra", imagen: "/finanzas/ordenes-compra-caja-pedido.webp", color: "205 32% 21%", posicion: "30% 60%" },
   { href: "/proveedores", titulo: "Proveedores", imagen: "/finanzas/proveedores-apreton-manos.webp", color: "258 28% 30%", posicion: "50% 60%" },

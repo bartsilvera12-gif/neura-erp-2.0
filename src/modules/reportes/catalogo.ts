@@ -1,4 +1,4 @@
-import { Boxes, CalendarClock, CalendarRange, CreditCard, HandCoins, Landmark, Lock, PackageMinus, PackageX, ShoppingCart, Truck, Wallet, Warehouse, type LucideIcon } from "lucide-react";
+import { Boxes, CalendarClock, CalendarRange, CreditCard, HandCoins, Landmark, Lock, PackageMinus, PackageX, Receipt, ShoppingCart, Truck, Wallet, Warehouse, type LucideIcon } from "lucide-react";
 
 /**
  * Catálogo de reportes: alimenta la pantalla /reportes (tarjetas agrupadas por sección).
@@ -25,6 +25,15 @@ export const REPORTES: Reporte[] = [
     subtitulo: "Resultado de la empresa",
     descripcion: "Ventas, costo de lo vendido, margen, gastos por categoría, pérdidas y resultado. IVA, cuentas a cobrar y a pagar, flujo de caja y evolución mensual.",
     icono: Landmark,
+    seccion: "Finanzas",
+  },
+  {
+    // Antes "Resumen" de Gastos empresariales (/gastos-empresariales redirige acá).
+    href: "/reportes/gastos",
+    titulo: "Gastos",
+    subtitulo: "Todo lo que salió de plata",
+    descripcion: "Compras de mercadería y gastos operativos del período: evolución por mes contra el presupuesto, fijo vs. variable, por categoría, por sucursal y proveedores principales.",
+    icono: Receipt,
     seccion: "Finanzas",
   },
   {

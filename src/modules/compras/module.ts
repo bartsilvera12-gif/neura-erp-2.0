@@ -2,7 +2,7 @@ import type { Modulo } from "@/modules/types";
 
 /**
  * Gastos empresariales: TODO lo que sale de plata de la empresa en un solo módulo.
- *   · Resumen            gráficos del período: compras de mercadería + gastos operativos.
+ *   · (El Resumen de gastos pasó a Reportes › Gastos, /reportes/gastos; /gastos-empresariales redirige.)
  *   · Compras y gastos   UNA lista (receta 59): compras de mercadería, gastos (alquiler, servicios,
  *                        sueldos…, con o sin comprobante fiscal) y compras mixtas; el tipo se
  *                        elige por línea en "Nueva compra". Incluye los gastos cargados antes.
@@ -14,7 +14,7 @@ import type { Modulo } from "@/modules/types";
  * /compras/pagos y /proveedores son las mismas páginas. Cada una es una pantalla propia (sin barra
  * de pestañas): se entra desde el panel o el submenú y arriba lleva "← Gastos empresariales".
  * Va dentro del ítem "Finanzas" del menú (grupo "finanzas" → /finanzas) y tiene su propio panel
- * de tarjetas (/gastos-empresariales/panel); el Resumen sigue en /gastos-empresariales.
+ * de tarjetas (/gastos-empresariales/panel).
  */
 export const moduloGastosEmpresariales: Modulo = {
   id: "gastos-empresariales",
@@ -26,7 +26,6 @@ export const moduloGastosEmpresariales: Modulo = {
   familia: "Finanzas",
   roles: ["ADMIN"],
   children: [
-    { label: "Resumen", href: "/gastos-empresariales" },
     { label: "Compras y gastos", href: "/gastos-empresariales/compras-gastos" },
     { label: "Órdenes de compra", href: "/compras/ordenes" },
     { label: "Proveedores", href: "/proveedores" },

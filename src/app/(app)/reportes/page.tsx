@@ -16,6 +16,8 @@ import { GRILLA_PANEL } from "@/components/ui/PanelModulo";
 /** Foto, color de tema (HSL oscuro, L ≤ ~30 %) y encuadre de cada reporte, por href. */
 const FOTOS: Record<string, { imagen: string; color: string; posicion?: string }> = {
   "/reportes/estado-cuenta": { imagen: "/reportes/estado-cuenta-informes-dueno.webp", color: "214 40% 22%", posicion: "50% 45%" },
+  // Reutiliza la foto del Resumen de Gastos empresariales (public/finanzas/).
+  "/reportes/gastos": { imagen: "/finanzas/gastos-resumen-graficos-papel.webp", color: "26 50% 24%", posicion: "55% 45%" },
   "/reportes/cuentas-cobrar": { imagen: "/reportes/cuentas-cobrar-deudas-laptop-dueno.webp", color: "152 34% 22%", posicion: "45% 40%" },
   "/reportes/cuentas-pagar": { imagen: "/reportes/cuentas-pagar-facturas-calculadora-dueno.webp", color: "8 40% 26%", posicion: "50% 45%" },
   "/reportes/proveedores": { imagen: "/reportes/proveedores-descarga-camion-dueno.webp", color: "200 38% 22%", posicion: "50% 45%" },
