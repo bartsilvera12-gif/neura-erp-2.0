@@ -14,7 +14,8 @@
  * tablet / escritorio (≥ 1024): las dos columnas a la vez.
  */
 import Link from "next/link";
-import { useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useDeferredValue, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ArrowLeft, CheckCircle2, ClipboardList, Loader2, Package, Pencil, Printer, RotateCw, Search, Trash2, UserRound, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { buscar, buscarEnIndice, exactosPrimero, indexar } from "@/lib/busqueda";
@@ -172,6 +173,27 @@ export default function PedidosMostradorPage() {
   const [clientesBuscados, setClientesBuscados] = useState<Cliente[]>([]);
   const [abiertoCliente, setAbiertoCliente] = useState(false);
   const cajaCliente = useRef<HTMLDivElement>(null);
+  const listaCliente = useRef<HTMLDivElement>(null);
+  // La lista flota sobre la pantalla (fuera de la zona con scroll, que la recortaba): abajo del
+  // campo o, si no entra, arriba.
+  const [posCliente, setPosCliente] = useState<{ left: number; width: number; top?: number; bottom?: number; maxH: number } | null>(null);
+  const mostrarClientes = abiertoCliente && !cliente && !!qCliente.trim();
+  useLayoutEffect(() => {
+    if (!mostrarClientes) { setPosCliente(null); return; }
+    const ubicar = () => {
+      const r = cajaCliente.current?.querySelector("input")?.getBoundingClientRect();
+      if (!r) return;
+      const abajo = window.innerHeight - r.bottom - 8;
+      const arriba = r.top - 8;
+      setPosCliente(abajo >= 200 || abajo >= arriba
+        ? { left: r.left, width: r.width, top: r.bottom + 4, maxH: Math.min(256, abajo - 4) }
+        : { left: r.left, width: r.width, bottom: window.innerHeight - r.top + 4, maxH: Math.min(256, arriba - 4) });
+    };
+    ubicar();
+    window.addEventListener("resize", ubicar);
+    window.addEventListener("scroll", ubicar, true);
+    return () => { window.removeEventListener("resize", ubicar); window.removeEventListener("scroll", ubicar, true); };
+  }, [mostrarClientes]);
   useEffect(() => {
     const t = qCliente.trim();
     if (!t) { setClientesBuscados([]); return; }
@@ -182,7 +204,10 @@ export default function PedidosMostradorPage() {
     return () => { vivo = false; clearTimeout(h); };
   }, [qCliente]);
   useEffect(() => {
-    const fuera = (e: MouseEvent) => { if (cajaCliente.current && !cajaCliente.current.contains(e.target as Node)) setAbiertoCliente(false); };
+    const fuera = (e: MouseEvent) => {
+      const n = e.target as Node;
+      if (cajaCliente.current && !cajaCliente.current.contains(n) && !listaCliente.current?.contains(n)) setAbiertoCliente(false);
+    };
     document.addEventListener("mousedown", fuera);
     return () => document.removeEventListener("mousedown", fuera);
   }, []);
@@ -427,8 +452,9 @@ export default function PedidosMostradorPage() {
                 placeholder="Nombre, CI, RUC o teléfono" autoComplete="off"
                 className="min-h-11 w-full rounded-lg border border-slate-200 px-3 text-base outline-none focus:ring-2 sm:text-sm" style={{ ["--tw-ring-color" as string]: `${TEAL}55` }} />
             )}
-            {abiertoCliente && !cliente && qCliente.trim() ? (
-              <div className="absolute z-20 mt-1 max-h-64 w-full overflow-auto overscroll-contain rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
+            {mostrarClientes && posCliente && typeof document !== "undefined" ? createPortal(
+              <div ref={listaCliente} style={{ position: "fixed", left: posCliente.left, width: posCliente.width, top: posCliente.top, bottom: posCliente.bottom, maxHeight: posCliente.maxH }}
+                className="z-[90] overflow-auto overscroll-contain rounded-lg border border-slate-200 bg-white shadow-xl ring-1 ring-black/5">
                 {clientesFiltrados.length === 0 ? (
                   <p className="px-3 py-2 text-xs text-slate-400">Sin clientes que coincidan.</p>
                 ) : clientesFiltrados.map((c, i) => (
@@ -439,7 +465,8 @@ export default function PedidosMostradorPage() {
                     {c.telefono ? <span className="ml-2 text-xs text-slate-400">· {c.telefono}</span> : null}
                   </button>
                 ))}
-              </div>
+              </div>,
+              document.body,
             ) : null}
           </div>
           <div>
