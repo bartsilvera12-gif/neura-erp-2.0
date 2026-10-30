@@ -9,7 +9,7 @@ import { withTenant } from "@/lib/api/with-tenant";
 import { created, ok, fail, ERR } from "@/lib/api/responses";
 import { errorDb } from "@/modules/clientes/suscripciones/server";
 
-const COLS = "id, nombre, descripcion, precio, moneda, tipo_iva, activo, created_at";
+const COLS = "id, nombre, descripcion, precio, moneda, tipo_iva, activo, created_at, tipo_id, duracion_meses, tipo:planes_tipos(nombre)";
 
 export const GET = withTenant(async (ctx, req) => {
   const soloActivos = new URL(req.url).searchParams.get("activos") === "1";
@@ -24,7 +24,9 @@ export const GET = withTenant(async (ctx, req) => {
   for (const s of (subs.data ?? []) as unknown as { plan_id: string | null }[]) {
     if (s.plan_id) uso.set(s.plan_id, (uso.get(s.plan_id) ?? 0) + 1);
   }
-  const rows = ((planes.data ?? []) as unknown as { id: string }[]).map((p) => ({ ...p, suscripciones: uso.get(p.id) ?? 0 }));
+  const rows = ((planes.data ?? []) as unknown as { id: string; tipo: { nombre: string } | null }[]).map(({ tipo, ...p }) => ({
+    ...p, tipo_nombre: tipo?.nombre ?? null, suscripciones: uso.get(p.id) ?? 0,
+  }));
   return ok(rows);
 });
 
@@ -35,6 +37,8 @@ const crearPlan = z.object({
   moneda: z.enum(["GS", "USD"]).default("GS"),
   tipo_iva: z.enum(["10%", "5%", "exenta"]).default("10%"),
   activo: z.boolean().default(true),
+  tipo_id: z.string().uuid().nullish(),
+  duracion_meses: z.coerce.number().int().min(1, "El plazo es de al menos 1 mes").max(600, "El plazo es de hasta 600 meses").nullish(),
 });
 
 export const POST = withTenant(
@@ -46,6 +50,8 @@ export const POST = withTenant(
       moneda: input.moneda,
       tipo_iva: input.tipo_iva,
       activo: input.activo,
+      tipo_id: input.tipo_id ?? null,
+      duracion_meses: input.duracion_meses ?? null,
     });
     if (error) {
       if ((error as { code?: string }).code === "23505") return fail(`Ya existe un plan llamado "${input.nombre}"`, 422);

@@ -1,8 +1,8 @@
 "use client";
 
 /**
- * "Nueva suscripción" (copia del sistema actual): plan, precio (sale del plan, editable),
- * fecha de inicio, duración (vacío = sin fin), día de facturación y de vencimiento,
+ * "Nueva suscripción" (copia del sistema actual): plan, precio y plazo (salen del plan, editables),
+ * fecha de inicio, día de facturación y de vencimiento,
  * observación. Al crear NO se emite nada solo: si querés la primera cuota ya, se marca
  * a la vista "Emitir también la cuota de <mes>".
  */
@@ -18,6 +18,7 @@ import MontoInput from "@/components/ui/MontoInput";
 import { PIE_MODAL, TEAL } from "@/modules/clientes/ui";
 import type { Plan, SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos";
 import { IVA_LABEL, monto, nombreMes } from "@/modules/clientes/suscripciones/ui";
+import { CampoPlazo, textoPlazo } from "@/modules/clientes/suscripciones/CampoPlazo";
 import { SelectorFecha } from "@/components/SelectorFecha";
 
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
@@ -34,7 +35,7 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
   const [planId, setPlanId] = useState("");
   const [precio, setPrecio] = useState<number | "">("");
   const [inicio, setInicio] = useState(hoyPY());
-  const [duracion, setDuracion] = useState("");
+  const [duracion, setDuracion] = useState<number | null>(null);
   const [diaFact, setDiaFact] = useState("1");
   const [diaVenc, setDiaVenc] = useState("10");
   const [observacion, setObservacion] = useState("");
@@ -56,7 +57,7 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
     setPlanId(id);
     setConfirmaDuplicado(false);
     const p = planes?.find((x) => x.id === id);
-    if (p) setPrecio(Number(p.precio));
+    if (p) { setPrecio(Number(p.precio)); setDuracion(p.duracion_meses); }
   }
 
   function validar(): string | null {
@@ -67,7 +68,7 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
     if (!Number.isInteger(df) || df < 1 || df > 28) return "El día de facturación va del 1 al 28";
     if (!Number.isInteger(dv) || dv < 1 || dv > 31) return "El día de vencimiento va del 1 al 31";
     if (dv < df) return "El día de vencimiento no puede ser antes del día de facturación";
-    if (duracion.trim() && (!Number.isInteger(Number(duracion)) || Number(duracion) < 1)) return "La duración es de al menos 1 mes (o dejala vacía: sin fin)";
+    if (duracion !== null && (duracion < 1 || duracion > 600)) return "Cargá el plazo: de 1 a 600 meses";
     return null;
   }
 
@@ -86,7 +87,7 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
           plan_id: planId,
           precio: Number(precio),
           fecha_inicio: inicio,
-          duracion_meses: duracion.trim() ? Number(duracion) : null,
+          duracion_meses: duracion,
           dia_facturacion: Number(diaFact),
           dia_vencimiento: Number(diaVenc),
           observacion: observacion.trim() || null,
@@ -133,7 +134,7 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
           <div>
             <span className={LABEL}>Plan</span>
             <Select block value={planId} onChange={elegirPlan} etiqueta="Plan"
-              options={[["", "— Elegí un plan —"], ...planes.map((p) => [p.id, `${p.nombre} — ${monto(p.precio, p.moneda)}`] as [string, string])]} />
+              options={[["", "— Elegí un plan —"], ...planes.map((p) => [p.id, `${p.tipo_nombre ? `${p.tipo_nombre} · ` : ""}${p.nombre} — ${monto(p.precio, p.moneda)}`] as [string, string])]} />
             {plan ? (
               <p className="mt-1 text-[11px] text-slate-500">
                 {plan.moneda === "USD" ? "En dólares" : "En guaraníes"} · {IVA_LABEL[plan.tipo_iva] ?? plan.tipo_iva}
@@ -155,10 +156,8 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
-            <label>
-              <span className={LABEL}>Duración (meses)</span>
-              <input type="number" min={1} max={600} className={INPUT} value={duracion} onChange={(e) => setDuracion(e.target.value)} placeholder="Sin fin" />
-            </label>
+            {/* key: al elegir otro plan, el campo arranca con el plazo de ese plan. */}
+            <CampoPlazo key={planId} value={duracion} onChange={setDuracion} claseInput={INPUT} claseEtiqueta={LABEL} />
             <label>
               <span className={LABEL}>Día de facturación</span>
               <input type="number" min={1} max={28} className={INPUT} value={diaFact} onChange={(e) => setDiaFact(e.target.value)} />
@@ -169,7 +168,7 @@ export function ModalNuevaSuscripcion({ clienteId, suscripciones, esAdmin, onClo
             </label>
           </div>
           <p className="-mt-2 text-[11px] text-slate-500">
-            Cada mes la cuota se emite con el botón "Emitir cuota" y vence el día {Number(diaVenc) || "—"} de ese mes. Duración vacía = sigue hasta que la canceles.
+            Cada mes la cuota se emite con el botón "Emitir cuota" y vence el día {Number(diaVenc) || "—"} de ese mes. {duracion === null ? "Plazo indefinido: sigue hasta que la canceles." : duracion > 0 ? `Plazo: ${textoPlazo(duracion)} desde el inicio.` : ""}
           </p>
           <label className="block">
             <span className={LABEL}>Observación (opcional)</span>

@@ -14,9 +14,15 @@ export type Plan = {
   moneda: Moneda;
   tipo_iva: TipoIva;
   activo: boolean;
+  /** Receta 108: tipo de plan y plazo con el que nace la suscripción (null = indefinido). */
+  tipo_id: string | null;
+  tipo_nombre: string | null;
+  duracion_meses: number | null;
   /** suscripciones no canceladas que lo usan */
   suscripciones?: number;
 };
+
+export type TipoPlan = { id: string; nombre: string };
 
 /** Un mes del "Estado de facturación". */
 export type MesFacturacion = {

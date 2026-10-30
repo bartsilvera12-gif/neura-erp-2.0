@@ -16,6 +16,8 @@ const editarPlan = z.object({
   moneda: z.enum(["GS", "USD"]).optional(),
   tipo_iva: z.enum(["10%", "5%", "exenta"]).optional(),
   activo: z.boolean().optional(),
+  tipo_id: z.string().uuid().nullable().optional(),
+  duracion_meses: z.coerce.number().int().min(1, "El plazo es de al menos 1 mes").max(600, "El plazo es de hasta 600 meses").nullable().optional(),
 });
 
 export const PATCH = withTenant(
@@ -28,6 +30,8 @@ export const PATCH = withTenant(
     if (input.moneda !== undefined) patch.moneda = input.moneda;
     if (input.tipo_iva !== undefined) patch.tipo_iva = input.tipo_iva;
     if (input.activo !== undefined) patch.activo = input.activo;
+    if (input.tipo_id !== undefined) patch.tipo_id = input.tipo_id;
+    if (input.duracion_meses !== undefined) patch.duracion_meses = input.duracion_meses;
     if (input.precio !== undefined) {
       patch.precio = Math.round(input.precio * 100) / 100;
     }

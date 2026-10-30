@@ -43,7 +43,8 @@ export const POST = withTenant(
         plan_id: input.plan_id,
         precio: input.precio ?? null,
         fecha_inicio: input.fecha_inicio || null,
-        duracion_meses: input.duracion_meses ?? null,
+        // null = indefinido; sin indicar, la base usa el plazo del plan (receta 108).
+        ...(input.duracion_meses !== undefined ? { duracion_meses: input.duracion_meses } : {}),
         dia_facturacion: input.dia_facturacion,
         dia_vencimiento: input.dia_vencimiento,
         observacion: input.observacion || null,

@@ -15,6 +15,7 @@ import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components
 import { TEAL } from "@/modules/clientes/ui";
 import type { EstadoSuscripcion, SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos";
 import { fechaDia } from "@/modules/clientes/suscripciones/ui";
+import { textoPlazo } from "@/modules/clientes/suscripciones/CampoPlazo";
 import { ModalFacturacion } from "@/modules/clientes/suscripciones/ModalFacturacion";
 import { ModalCambioPlan } from "@/modules/clientes/suscripciones/ModalCambioPlan";
 import { ModalEstado } from "@/modules/clientes/suscripciones/ModalEstado";
@@ -85,7 +86,7 @@ export function TabSuscripciones({ clienteNombre, ruc, avisoRuc, suscripciones, 
     },
     { key: "moneda", titulo: "Moneda", movil: "oculto", claseTd: "text-slate-600", celda: (s) => s.moneda },
     { key: "inicio", titulo: "Inicio", movil: "dato", claseTd: "whitespace-nowrap text-slate-600", celda: (s) => fechaDia(s.fecha_inicio) },
-    { key: "meses", titulo: "Meses", movil: "dato", claseTd: "text-slate-600", celda: (s) => s.duracion_meses ?? "—" },
+    { key: "meses", titulo: "Plazo", movil: "dato", claseTd: "text-slate-600", celda: (s) => textoPlazo(s.duracion_meses) },
     { key: "fact", titulo: "Día fact.", movil: "dato", claseTd: "text-slate-600", celda: (s) => s.dia_facturacion },
     { key: "venc", titulo: "Día venc.", movil: "dato", claseTd: "text-slate-600", celda: (s) => s.dia_vencimiento },
     {
