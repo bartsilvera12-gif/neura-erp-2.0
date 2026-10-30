@@ -40,6 +40,9 @@ export default function CuentasCobrarPage() {
   const [recarga, setRecarga] = useState(0);
   const router = useRouter();
   const vistaTarjetas = useVistaTarjetas();
+  // La flecha de volver lleva al lugar del que se vino (por defecto, Seguimiento Cobranzas).
+  const [desdeReporte, setDesdeReporte] = useState(false);
+  useEffect(() => { setDesdeReporte(new URLSearchParams(window.location.search).get("desde") === "reportes"); }, []);
 
   useEffect(() => {
     const t = setTimeout(() => { setQ(borrador.trim()); setPagina(1); }, 300);
@@ -121,6 +124,7 @@ export default function CuentasCobrarPage() {
   return (
     <div className="space-y-4 pb-10 sm:space-y-6">
       <EncabezadoPagina
+        volver={desdeReporte ? { href: "/reportes/cuentas-cobrar", label: "Reporte de cuentas a cobrar" } : { href: "/cobranzas", label: "Seguimiento Cobranzas" }}
         kicker="Comercial · Clientes"
         titulo="Cuentas a cobrar"
         subtitulo="Todo lo que te deben tus clientes, empezando por lo más urgente."

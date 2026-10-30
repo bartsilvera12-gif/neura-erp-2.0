@@ -34,7 +34,7 @@ function CuentasPorCobrar() {
   return (
     <div className="space-y-6 pb-10">
       <EncabezadoReporte kicker="Reportes · Finanzas" titulo="Cuentas por cobrar"
-        subtitulo={<>Quién te debe, cuánto y desde cuándo. Para registrar un cobro, andá a <Link href="/clientes/cobrar" className="font-semibold text-[var(--brand)] hover:underline">Cuentas a cobrar</Link>.</>}>
+        subtitulo={<>Quién te debe, cuánto y desde cuándo. Para registrar un cobro, andá a <Link href="/clientes/cobrar?desde=reportes" className="font-semibold text-[var(--brand)] hover:underline">Cuentas a cobrar</Link>.</>}>
         <Descargas excel={`/api/reportes/cuentas-cobrar/export?${filtros.query}`} pdf={`/api/reportes/cuentas-cobrar/pdf?${filtros.query}`} deshabilitado={!d?.rows.length} />
       </EncabezadoReporte>
 

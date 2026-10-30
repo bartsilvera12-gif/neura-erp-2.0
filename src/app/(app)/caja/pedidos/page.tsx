@@ -387,14 +387,15 @@ export default function PedidosMostradorPage() {
             <p className="text-xs">Buscalos arriba o escaneá el código.</p>
           </div>
         ) : (
-          <ul className="space-y-2">
+          // Con ancho (≥ 576 px) cada línea va en un solo renglón; en pantallas táctiles los ± siguen de 44 px.
+          <ul className="@container space-y-2 @xl:space-y-1.5">
             {lineas.map((l) => {
               const falta = faltaStock(l.producto);
               return (
-                <li key={l.key} className={`rounded-xl border p-2.5 sm:p-3 ${falta ? "border-amber-300 bg-amber-50/50" : "border-slate-200 bg-slate-50/40"}`}>
-                  <div className="flex items-start gap-2.5">
+                <li key={l.key} className={`rounded-xl border p-2.5 sm:p-3 @xl:!px-2.5 @xl:!py-1.5 ${falta ? "border-amber-300 bg-amber-50/50" : "border-slate-200 bg-slate-50/40"}`}>
+                  <div className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-start gap-x-2.5 @xl:grid-cols-[auto_minmax(0,1fr)_auto_auto] @xl:items-center">
                     <Miniatura url={l.producto.imagen_url} nombre={l.producto.nombre} />
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0">
                       <p className="text-sm font-medium leading-snug text-slate-900 [overflow-wrap:anywhere]">{l.producto.nombre}</p>
                       <p className="font-mono text-[11px] text-slate-500">{l.producto.sku} · <b className="text-slate-700">{formatGs(unidad(l))}</b> c/u</p>
                       {l.mods_snap || tieneMods(l.producto.mods) ? (
@@ -413,21 +414,21 @@ export default function PedidosMostradorPage() {
                         </p>
                       ) : null}
                     </div>
+                    <div className="col-span-3 row-start-2 mt-2 flex items-center justify-between gap-2 @xl:col-span-1 @xl:col-start-3 @xl:row-start-1 @xl:mt-0 @xl:gap-3">
+                      <div className="inline-flex shrink-0 items-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm @xl:rounded-lg">
+                        <button type="button" onClick={() => cambiarCant(l.key, l.cantidad - 1)} disabled={l.cantidad <= 1} aria-label="Quitar una unidad"
+                          className="flex h-11 w-11 items-center justify-center text-xl text-slate-500 active:bg-[var(--brand-100)] disabled:opacity-30 @xl:[@media(pointer:fine)]:h-8 @xl:[@media(pointer:fine)]:w-9 @xl:[@media(pointer:fine)]:text-lg">−</button>
+                        <QtyInput value={l.cantidad} onChange={(n) => cambiarCant(l.key, n)} decimals={0}
+                          className="h-11 w-14 border-x border-slate-200 bg-white text-center text-base font-semibold tabular-nums text-slate-900 outline-none focus:bg-slate-50 @xl:[@media(pointer:fine)]:h-8 @xl:[@media(pointer:fine)]:w-10 @xl:[@media(pointer:fine)]:text-sm" />
+                        <button type="button" onClick={() => cambiarCant(l.key, l.cantidad + 1)} aria-label="Agregar una unidad"
+                          className="flex h-11 w-11 items-center justify-center text-xl text-slate-500 active:bg-[var(--brand-100)] @xl:[@media(pointer:fine)]:h-8 @xl:[@media(pointer:fine)]:w-9 @xl:[@media(pointer:fine)]:text-lg">+</button>
+                      </div>
+                      <p className="whitespace-nowrap text-base font-bold tabular-nums text-slate-900 @xl:w-28 @xl:text-right @xl:text-sm">{formatGs(Math.round(l.cantidad * unidad(l)))}</p>
+                    </div>
                     <button type="button" onClick={() => quitar(l.key)} aria-label={`Quitar ${l.producto.nombre}`}
-                      className="-mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 active:bg-rose-50">
+                      className="col-start-3 row-start-1 -mr-1 -mt-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 active:bg-rose-50 @xl:col-start-4 @xl:mt-0 @xl:[@media(pointer:fine)]:h-8 @xl:[@media(pointer:fine)]:w-8">
                       <Trash2 className="h-4 w-4" />
                     </button>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between gap-2">
-                    <div className="inline-flex shrink-0 items-center overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-                      <button type="button" onClick={() => cambiarCant(l.key, l.cantidad - 1)} disabled={l.cantidad <= 1} aria-label="Quitar una unidad"
-                        className="flex h-11 w-11 items-center justify-center text-xl text-slate-500 active:bg-[var(--brand-100)] disabled:opacity-30">−</button>
-                      <QtyInput value={l.cantidad} onChange={(n) => cambiarCant(l.key, n)} decimals={0}
-                        className="h-11 w-14 border-x border-slate-200 bg-white text-center text-base font-semibold tabular-nums text-slate-900 outline-none focus:bg-slate-50" />
-                      <button type="button" onClick={() => cambiarCant(l.key, l.cantidad + 1)} aria-label="Agregar una unidad"
-                        className="flex h-11 w-11 items-center justify-center text-xl text-slate-500 active:bg-[var(--brand-100)]">+</button>
-                    </div>
-                    <p className="text-base font-bold tabular-nums text-slate-900">{formatGs(Math.round(l.cantidad * unidad(l)))}</p>
                   </div>
                 </li>
               );
@@ -608,9 +609,6 @@ export default function PedidosMostradorPage() {
           <h1 className="text-lg font-semibold tracking-tight text-slate-900">Pedidos</h1>
           <span className="hidden truncate text-xs text-slate-400 sm:inline">· Armá el pedido y mandalo a caja</span>
         </div>
-        <Link href="/caja/nueva" className="inline-flex min-h-11 shrink-0 items-center rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-700 hover:bg-slate-50 lg:min-h-9">
-          Ir a la caja →
-        </Link>
       </div>
 
       {/* Celular / tablet angosta: pestañas */}
@@ -753,7 +751,7 @@ function PieEnvio({ total, unidades, lineas, enviando, editando, error, imprimir
 
 function Miniatura({ url, nombre }: { url?: string | null; nombre: string }) {
   return (
-    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white">
+    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-lg border border-slate-200 bg-white @xl:h-9 @xl:w-9">
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={url} alt={nombre} loading="lazy" decoding="async" className="h-full w-full object-cover" />
