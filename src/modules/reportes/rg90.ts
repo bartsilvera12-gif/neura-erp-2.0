@@ -1,18 +1,21 @@
 /**
- * Registro de comprobantes — RG 90/2021 (receta 100). Tipos y armado del archivo de
+ * Registro de comprobantes — RG 90/2021 (recetas 100 y 102). Tipos y armado del archivo de
  * importación de Marangatu según la "Especificación Técnica para Importación" de la SET (jun-2021):
  *   · .TXT delimitado por TABULACIONES, UTF-8, SIN fila de títulos, dentro de un .ZIP con el mismo
  *     nombre: <RUC sin DV>_REG_<MMAAAA>_<id de hasta 5>  (obligación 955, registro mensual).
  *   · máximo 5.000 filas por archivo (si hay más, varias partes).
+ *   · ventas = tipo de registro 1, 19 campos en orden (ver lineaVenta).
  *   · compras = tipo de registro 2, 20 campos en orden (ver lineaCompra).
+ *   · los dos tipos pueden ir en el mismo archivo.
  * Las filas con `problemas` NO van al archivo: primero se corrigen en el ERP.
  */
 
 export type FilaRg90 = {
-  origen: "compra" | "gasto";
+  origen: "compra" | "gasto" | "venta" | "nota_credito";
   id: string;
   documento: string;
   fecha: string;
+  /** Proveedor en las compras; cliente en las ventas. */
   proveedor: string | null;
   ruc: string | null;
   tipo_comprobante: string;
@@ -28,14 +31,18 @@ export type FilaRg90 = {
   condicion: 1 | 2;
   moneda_extranjera: boolean;
   iva_credito: number;
+  /** Nota de crédito: la factura que corrige. */
+  asociado?: string | null;
+  timbrado_asociado?: string | null;
   problemas: string[];
 };
 
-export type ExcluidoRg90 = { origen: string; id: string; documento: string; fecha: string; proveedor: string | null; tipo_comprobante: string | null; total: number; motivo: string };
+/** `manual`: no entra al archivo pero hay que registrarlo a mano en Marangatu. */
+export type ExcluidoRg90 = { origen: string; id: string; documento: string; fecha: string; proveedor: string | null; tipo_comprobante: string | null; total: number; motivo: string; manual?: boolean };
 
 export type Rg90 = { ruc: string | null; desde: string; hasta: string; filas: FilaRg90[]; excluidos: ExcluidoRg90[] };
 
-/** A qué impuestos se imputan las compras (lo que liquida la empresa). */
+/** A qué impuestos se imputan los comprobantes (lo que liquida la empresa). */
 export type Imputacion = { iva: boolean; ire: boolean; irp: boolean };
 
 export const MAX_FILAS = 5000;
@@ -53,11 +60,43 @@ const sn = (b: boolean) => (b ? "S" : "N");
 /** Tabulador / saltos de línea fuera de los textos (romperían las columnas). */
 const limpio = (t: string | null | undefined) => (t ?? "").replace(/[\t\r\n]+/g, " ").trim();
 
-/** Imputación de UNA compra: el IVA solo si tiene IVA crédito; tiene que quedar al menos una. */
+export const esVenta = (f: Pick<FilaRg90, "origen">) => f.origen === "venta" || f.origen === "nota_credito";
+
+/** Imputación de UN comprobante: en compras, el IVA solo si tiene IVA crédito; tiene que quedar al menos una. */
 export function imputacionFila(f: FilaRg90, imp: Imputacion): Imputacion & { ok: boolean } {
-  const r = { iva: imp.iva && f.iva_credito > 0, ire: imp.ire, irp: imp.irp };
+  const r = { iva: imp.iva && (esVenta(f) || f.iva_credito > 0), ire: imp.ire, irp: imp.irp };
   return { ...r, ok: r.iva || r.ire || r.irp };
 }
+
+/** Una fila de VENTAS (tipo 1) con los 19 campos de la especificación, separados por tab. */
+export function lineaVenta(f: FilaRg90, imp: Imputacion): string {
+  const i = imputacionFila(f, imp);
+  const campos = [
+    "1",                                                   // 1 tipo de registro
+    String(f.tipo_ident ?? 15),                            // 2 tipo de identificación del comprador
+    f.ident,                                               // 3 número (RUC sin DV)
+    f.tipo_ident === 11 || f.tipo_ident === 12 || f.tipo_ident === 15 ? "" : limpio(f.proveedor), // 4 nombre (no va con RUC / CI / sin nombre)
+    String(f.codigo),                                      // 5 tipo de comprobante (109 factura, 110 nota de crédito)
+    fechaSet(f.fecha),                                     // 6 fecha dd/mm/aaaa
+    f.timbrado,                                            // 7 timbrado
+    f.numero,                                              // 8 número ###-###-#######
+    String(f.gravado_10),                                  // 9 gravado 10 % (IVA incluido)
+    String(f.gravado_5),                                   // 10 gravado 5 % (IVA incluido)
+    String(f.exento),                                      // 11 exento
+    String(f.total),                                       // 12 total
+    String(f.condicion),                                   // 13 condición 1 contado / 2 crédito
+    sn(f.moneda_extranjera),                               // 14 moneda extranjera
+    sn(i.iva),                                             // 15 imputa IVA
+    sn(i.ire),                                             // 16 imputa IRE
+    sn(i.irp),                                             // 17 imputa IRP-RSP
+    f.asociado ?? "",                                      // 18 comprobante asociado (nota de crédito)
+    f.timbrado_asociado ?? "",                             // 19 timbrado asociado
+  ];
+  return campos.join("\t");
+}
+
+/** La línea del archivo según el tipo de comprobante. */
+export const lineaArchivo = (f: FilaRg90, imp: Imputacion) => (esVenta(f) ? lineaVenta(f, imp) : lineaCompra(f, imp));
 
 /** Una fila de COMPRAS (tipo 2) con los 20 campos de la especificación, separados por tab. */
 export function lineaCompra(f: FilaRg90, imp: Imputacion): string {

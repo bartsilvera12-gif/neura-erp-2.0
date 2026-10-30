@@ -1,14 +1,14 @@
 "use client";
 
 /**
- * /reportes/rg90 — Registro de comprobantes (RG 90/2021, receta 100): el archivo para importar en
- * Marangatu. Se elige el mes y a qué impuestos se imputan las compras (IVA, IRE, IRP-RSP):
+ * /reportes/rg90 — Registro de comprobantes (RG 90/2021, recetas 100 y 102): el archivo para importar
+ * en Marangatu. Se elige el mes y a qué impuestos se imputan los comprobantes (IVA, IRE, IRP-RSP):
  *   · "Faltan datos": comprobantes que Marangatu rechazaría (sin RUC, sin timbrado, número mal
  *     escrito…), con el link para corregirlos. No van al archivo hasta corregirlos.
- *   · "Van en el archivo": los que están bien.
- *   · "No se registran": electrónicas / virtuales (Marangatu ya las tiene), recibos, sin comprobante.
+ *   · "Ventas" y "Compras y gastos": los que están bien y van en el archivo.
+ *   · "No se registran": electrónicas / virtuales (Marangatu ya las tiene), anuladas, recibos, sin
+ *     comprobante. Las facturas sin número fiscal se avisan: hay que cargarlas a mano en Marangatu.
  * "Descargar para Marangatu" baja el ZIP con el nombre y el formato de la SET.
- * Etapa 1: compras y gastos. Las ventas por autoimpresor se suman cuando tengan número fiscal.
  */
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
@@ -20,7 +20,7 @@ import { Select } from "@/components/Select";
 import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { EncabezadoReporte, FilaKpis, Kpi } from "@/modules/reportes/ui";
 import { clienteConfig } from "@/cliente.config";
-import { filasParaArchivo, imputacionFila, MAX_FILAS, type FilaRg90, type Imputacion, type Rg90 } from "@/modules/reportes/rg90";
+import { esVenta, filasParaArchivo, imputacionFila, MAX_FILAS, type FilaRg90, type Imputacion, type Rg90 } from "@/modules/reportes/rg90";
 
 const TEAL = clienteConfig.color;
 const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-PY")}`;
@@ -39,7 +39,10 @@ function opcionesMes(): [string, string][] {
 }
 
 const hrefDoc = (f: { origen: string; id: string }) =>
-  f.origen === "gasto" ? `/gastos-empresariales/operativos?ver=${f.id}` : `/compras?ver=${f.id}`;
+  f.origen === "gasto" ? `/gastos-empresariales/operativos?ver=${f.id}`
+    : f.origen === "venta" ? "/configuracion/facturacion"
+    : f.origen === "nota_credito" ? `/caja/notas-credito?ver=${f.id}`
+    : `/compras?ver=${f.id}`;
 
 export default function Rg90Page() {
   const meses = useMemo(opcionesMes, []);
@@ -75,6 +78,9 @@ export default function Rg90Page() {
   const listas = d ? filasParaArchivo(d, imp) : [];
   const conProblemas = (d?.filas ?? []).filter((f) => f.problemas.length);
   const sinImputacion = (d?.filas ?? []).filter((f) => !f.problemas.length && !imputacionFila(f, imp).ok);
+  const ventas = listas.filter(esVenta);
+  const compras = listas.filter((f) => !esVenta(f));
+  const aMano = (d?.excluidos ?? []).filter((x) => x.manual);
   const partes = Math.max(1, Math.ceil(listas.length / MAX_FILAS));
   const ningunImpuesto = !imp.iva && !imp.ire && !imp.irp;
 
@@ -91,8 +97,8 @@ export default function Rg90Page() {
     }
   }
 
-  const columnas: ColumnaTabla<FilaRg90>[] = [
-    { key: "prov", titulo: "Proveedor", movil: "titulo", celda: (f) => f.proveedor ?? "—" },
+  const columnasDe = (quien: string): ColumnaTabla<FilaRg90>[] => [
+    { key: "prov", titulo: quien, movil: "titulo", celda: (f) => f.proveedor ?? "—" },
     { key: "total", titulo: "Total", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-semibold tabular-nums", celda: (f) => gs(f.total) },
     { key: "comp", titulo: "Comprobante", movil: "subtitulo", claseTd: "whitespace-nowrap", celda: (f) => <>{f.tipo_comprobante} {f.numero}</> },
     { key: "fecha", titulo: "Fecha", movil: "dato", claseTd: "tabular-nums", celda: (f) => dia(f.fecha) },
@@ -101,7 +107,9 @@ export default function Rg90Page() {
     { key: "iva", titulo: "Gravado 10 % / 5 % / exento", movil: "detalle", claseTd: "whitespace-nowrap tabular-nums text-xs text-slate-500",
       celda: (f) => `${gs(f.gravado_10)} / ${gs(f.gravado_5)} / ${gs(f.exento)}` },
     { key: "cond", titulo: "Cond.", movil: "detalle", celda: (f) => (f.condicion === 2 ? "Crédito" : "Contado") },
-    { key: "doc", titulo: "En el ERP", movil: "detalle", celda: (f) => <Link href={hrefDoc(f)} className="font-mono text-xs text-[var(--brand)] hover:underline">{f.documento}</Link> },
+    { key: "doc", titulo: "En el ERP", movil: "detalle", celda: (f) => (f.origen === "venta"
+      ? <span className="font-mono text-xs text-slate-500">{f.documento}</span>
+      : <Link href={hrefDoc(f)} className="font-mono text-xs text-[var(--brand)] hover:underline">{f.documento}</Link>) },
   ];
 
   const CHIP = (on: boolean) =>
@@ -110,7 +118,7 @@ export default function Rg90Page() {
   return (
     <div className="space-y-5 pb-10 sm:space-y-6">
       <EncabezadoReporte kicker="Reportes · Impuestos" titulo="Registro de comprobantes (RG 90)"
-        subtitulo="El archivo para importar en Marangatu: las compras y gastos del mes con comprobante, en el formato de la SET.">
+        subtitulo="El archivo para importar en Marangatu: las ventas, compras y gastos del mes con comprobante, en el formato de la SET.">
         {partes > 1 ? null : (
           <button type="button" onClick={() => void bajar(1)} disabled={!listas.length || ningunImpuesto || bajando !== null}
             className="inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: TEAL }}>
@@ -126,14 +134,14 @@ export default function Rg90Page() {
           <Select block value={mes} onChange={setMes} options={meses} etiqueta="Mes" />
         </div>
         <div className="min-w-0">
-          <span className="mb-1 block text-xs font-medium text-slate-600">Las compras se imputan a</span>
+          <span className="mb-1 block text-xs font-medium text-slate-600">Los comprobantes se imputan a</span>
           <div className="flex flex-wrap gap-2">
             <button type="button" onClick={() => cambiarImp("iva")} aria-pressed={imp.iva} className={CHIP(imp.iva)}>IVA</button>
             <button type="button" onClick={() => cambiarImp("ire")} aria-pressed={imp.ire} className={CHIP(imp.ire)}>IRE</button>
             <button type="button" onClick={() => cambiarImp("irp")} aria-pressed={imp.irp} className={CHIP(imp.irp)}>IRP-RSP</button>
           </div>
         </div>
-        <p className="text-[11px] text-slate-400 sm:max-w-xs">El IVA se imputa solo en los comprobantes con IVA crédito. Lo que liquida tu empresa queda guardado en este equipo.</p>
+        <p className="text-[11px] text-slate-400 sm:max-w-xs">En las compras, el IVA se imputa solo si tienen IVA crédito. Lo que liquida tu empresa queda guardado en este equipo.</p>
       </div>
 
       {error ? <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
@@ -144,10 +152,17 @@ export default function Rg90Page() {
       ) : d ? (
         <>
           <FilaKpis n={3}>
-            <Kpi label="Van en el archivo" valor={String(listas.length)} hint={gs(listas.reduce((a, f) => a + f.total, 0))} tono="bueno" />
+            <Kpi label="Van en el archivo" valor={String(listas.length)} hint={`${ventas.length} de ventas · ${compras.length} de compras`} tono="bueno" />
             <Kpi label="Faltan datos" valor={String(conProblemas.length + sinImputacion.length)} hint={conProblemas.length ? "corregilos para que entren" : "todo completo"} tono={conProblemas.length ? "alerta" : undefined} />
-            <Kpi label="No se registran" valor={String(d.excluidos.length)} hint="electrónicas, recibos, sin comprobante" />
+            <Kpi label="No se registran" valor={String(d.excluidos.length)} hint="electrónicas, anuladas, recibos, sin comprobante" />
           </FilaKpis>
+
+          {aMano.length ? (
+            <p className="flex items-start gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{aMano.length === 1 ? "1 comprobante de venta no tiene" : `${aMano.length} comprobantes de venta no tienen`} número fiscal (se emitieron antes de activar el autoimpresor): no entran al archivo, cargalos a mano en Marangatu. Están en “No se registran”.</span>
+            </p>
+          ) : null}
 
           {partes > 1 ? (
             <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3.5">
@@ -185,13 +200,18 @@ export default function Rg90Page() {
             </section>
           ) : null}
 
-          <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-            <h2 className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">
-              <CheckCircle2 className="h-4 w-4 text-emerald-600" /> Van en el archivo · {listas.length}
-            </h2>
-            <TablaTarjetas filas={listas} columnas={columnas} claveFila={(f) => f.origen + f.id} minAncho={1050}
-              vacio={<p className="px-4 py-10 text-center text-sm text-slate-400">No hay compras con comprobante listas en este mes.</p>} />
-          </section>
+          {([
+            ["Ventas", ventas, "Cliente", "No hay facturas ni notas de crédito con número fiscal en este mes."],
+            ["Compras y gastos", compras, "Proveedor", "No hay compras con comprobante listas en este mes."],
+          ] as const).map(([titulo, filas, quien, vacio]) => (
+            <section key={titulo} className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <h2 className="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5 text-sm font-semibold text-slate-800">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600" /> {titulo} · {filas.length} en el archivo · {gs(filas.reduce((a, f) => a + f.total, 0))}
+              </h2>
+              <TablaTarjetas filas={filas} columnas={columnasDe(quien)} claveFila={(f) => f.origen + f.id} minAncho={1050}
+                vacio={<p className="px-4 py-10 text-center text-sm text-slate-400">{vacio}</p>} />
+            </section>
+          ))}
 
           {d.excluidos.length ? (
             <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
@@ -224,8 +244,7 @@ export default function Rg90Page() {
               <li>Revisá lo importado y <b>confirmá la presentación</b> del mes.</li>
             </ol>
             <p className="text-xs text-slate-500">
-              Las facturas electrónicas no van: Marangatu ya las tiene. Las <b>ventas</b> por autoimpresor se van a sumar a este archivo cuando
-              el sistema asigne el número fiscal a cada factura.
+              Las facturas electrónicas no van: Marangatu ya las tiene. Las notas de crédito salen con la factura que corrigen; las anuladas no se registran.
             </p>
           </div>
         </>

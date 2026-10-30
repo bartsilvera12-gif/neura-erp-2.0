@@ -97,7 +97,8 @@ export const GET = withTenant(async (ctx, req) => {
         timbrado: String(v.fiscal_timbrado ?? ""),
         vigenciaDesde: fechaDoc(v.fiscal_vigencia_desde),
         vigenciaHasta: fechaDoc(v.fiscal_vigencia_hasta),
-        condicion: v.tipo_venta === "CREDITO" && (Number(v.plazo_dias) > 0 || Number(v.cuotas) > 1) ? "Crédito" : "Contado",
+        // La "factura al contado" se guarda como CREDITO con plazo 0 y una cuota (igual que el RG 90).
+        condicion: v.tipo_venta === "CREDITO" && !(v.plazo_dias === 0 && Number(v.cuotas ?? 1) <= 1) ? "Crédito" : "Contado",
         exenta: sumar("EXENTA", "total_linea"),
         gravada5: sumar("5%", "total_linea"),
         gravada10: sumar("10%", "total_linea"),
