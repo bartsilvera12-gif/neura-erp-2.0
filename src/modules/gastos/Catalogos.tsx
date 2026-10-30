@@ -255,11 +255,11 @@ function TabCuentas({ cuentas, bancos, onGuardado, onError }: {
       </div>
       {ed ? (
         <div className="grid grid-cols-2 gap-2 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/5 p-3 sm:grid-cols-4">
-          <div className="col-span-2"><label className={LABEL}>Banco *</label>
-            <Select value={ed.banco_id} onChange={(v) => setEd({ ...ed, banco_id: v })} block etiqueta="Banco" options={[...bancos.map((b): [string, string] => [b.id, b.nombre]), ["__otro__", "Otro banco…"]]} />
+          <div className="col-span-2"><label className={LABEL}>Banco o entidad *</label>
+            <Select value={ed.banco_id} onChange={(v) => setEd({ ...ed, banco_id: v })} block etiqueta="Banco o entidad" options={[...bancos.filter((b) => b.nombre !== "Otro").map((b): [string, string] => [b.id, b.nombre]), ["__otro__", "Otra entidad…"]]} />
           </div>
           {ed.banco_id === "__otro__" || !ed.banco_id ? (
-            <div className="col-span-2"><label className={LABEL}>Nombre del banco *</label><input className={INPUT} enterKeyHint="next" value={ed.banco_nombre} onChange={(e) => setEd({ ...ed, banco_nombre: e.target.value })} /></div>
+            <div className="col-span-2"><label className={LABEL}>Nombre de la entidad *</label><input className={INPUT} enterKeyHint="next" value={ed.banco_nombre} onChange={(e) => setEd({ ...ed, banco_nombre: e.target.value })} /></div>
           ) : <div className="hidden sm:col-span-2 sm:block" />}
           <div className="col-span-2"><label className={LABEL}>Número de cuenta *</label><input autoFocus className={`${INPUT} font-mono`} enterKeyHint="next" value={ed.numero} onChange={(e) => setEd({ ...ed, numero: e.target.value })} /></div>
           <div className="min-w-0"><label className={LABEL}>Moneda</label><Select value={ed.moneda} onChange={(v) => setEd({ ...ed, moneda: v as "GS" | "USD" })} block etiqueta="Moneda" options={[["GS", "Guaraníes"], ["USD", "Dólares"]]} /></div>
