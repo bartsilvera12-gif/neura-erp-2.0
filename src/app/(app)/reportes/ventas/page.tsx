@@ -210,6 +210,12 @@ function Contenido() {
             <Kpi label="Anuladas" value={num(resumen.anuladas.cantidad)} hint={gs(resumen.anuladas.monto)} valueClass={resumen.anuladas.cantidad ? "text-red-600" : undefined} />
           </FilaKpis>
 
+          {Number(resumen.notas_credito?.cantidad) > 0 ? (
+            <p className="rounded-xl bg-slate-50 px-4 py-2.5 text-sm text-slate-600">
+              Las ventas netas ya restan {num(resumen.notas_credito.cantidad)} {Number(resumen.notas_credito.cantidad) === 1 ? "nota de crédito" : "notas de crédito"} por {gs(resumen.notas_credito.monto)}, emitidas en este período. El detalle de abajo muestra cada venta por su total original.
+            </p>
+          ) : null}
+
           {k.productos_sin_costo ? (
             <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
               <span className="flex items-center gap-2">
@@ -324,7 +330,12 @@ function Contenido() {
               { key: "it", titulo: "Ítems", claseTh: "text-right", claseTd: "text-right tabular-nums text-slate-600", celda: (v) => v.items },
               { key: "tot", titulo: "Total", movil: "valor", claseTh: "text-right",
                 claseTd: "whitespace-nowrap text-right font-semibold tabular-nums text-slate-900",
-                celda: (v) => <span className={v.estado === "anulada" ? "text-slate-400 line-through" : ""}>{gs(v.total)}</span> },
+                celda: (v) => (
+                  <>
+                    <span className={v.estado === "anulada" ? "text-slate-400 line-through" : ""}>{gs(v.total)}</span>
+                    {Number(v.notas_credito) > 0 ? <span className="block text-[11px] font-normal text-rose-600">NC −{gs(v.notas_credito)}</span> : null}
+                  </>
+                ) },
               { key: "gan", titulo: "Ganancia", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-slate-600", celda: (v) => (v.estado === "anulada" ? "—" : gs(v.ganancia)) },
             ]} />
         </div>

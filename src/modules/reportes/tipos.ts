@@ -52,6 +52,8 @@ export type EstadoCuenta = {
   desde: string; hasta: string; sucursal_id: string | null; sucursales: SucursalOpcion[];
   ventas: { netas: number; iva: number; cmv: number; cantidad: number; productos_sin_costo: number };
   anuladas: { cantidad: number; total: number };
+  /** Receta 103: ya restadas de las ventas (en el período en que se emitieron). */
+  notas_credito: { cantidad: number; total: number };
   gastos: {
     compras: number; operativos: number; iva_credito: number; fijo: number; docs_compras: number; docs_gastos: number;
     por_rubro: { id: string | null; nombre: string; total: number }[];
@@ -59,7 +61,7 @@ export type EstadoCuenta = {
   perdidas: { total: number; unidades: number; pe: number; traslados: number; por_motivo: { motivo: string; label: string; valor: number }[] };
   cxc: { saldo: number; vencido: number };
   cxp: { saldo: number; vencido: number };
-  flujo: { ventas_contado: number; cobros: number; compras_contado: number; gastos_contado: number; pagos_proveedores: number };
+  flujo: { ventas_contado: number; cobros: number; compras_contado: number; gastos_contado: number; pagos_proveedores: number; devoluciones: number };
   por_mes: { mes: string; ventas: number; cmv: number; compras: number; operativos: number; perdidas: number }[];
 };
 

@@ -67,7 +67,7 @@ export const GET = withTenant(
     yd = renglon(doc, yd, "   vencidas", g(Number(d.cxp.vencido)), { ...o, gris: true });
     yd += 2;
     yd = renglon(doc, yd, "Cobrado (contado + cobros)", g(x.entro), o);
-    yd = renglon(doc, yd, "Pagado (compras, gastos, proveedores)", g(-x.salio), { ...o, gris: true });
+    yd = renglon(doc, yd, "Pagado (compras, gastos, proveedores, devoluciones)", g(-x.salio), { ...o, gris: true });
     yd = renglon(doc, yd + 1.5, "Flujo neto", g(x.neto), { ...o, bold: true, linea: true, color: x.neto < 0 ? COLOR.rojo : COLOR.negro });
     yd = renglon(doc, yd, "Compras de mercadería (al stock)", g(Number(d.gastos.compras)), { ...o, gris: true });
 

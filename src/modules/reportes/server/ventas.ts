@@ -51,6 +51,8 @@ export type ResumenVentas = {
   };
   iva: { tipo: string; total: number; iva: number; gravado: number }[];
   anuladas: { cantidad: number; monto: number };
+  /** Receta 103: ya restadas de ventas_netas (en el período en que se emitieron). */
+  notas_credito: { cantidad: number; monto: number };
   por_dia: { dia: string; ventas: number; cantidad: number; ganancia: number }[];
   por_medio: { medio: string; monto: number; ventas: number }[];
   por_cajero: { cajero_id: string | null; nombre: string; ventas: number; cantidad: number; ganancia: number; anuladas: number }[];
@@ -60,6 +62,8 @@ export type ResumenVentas = {
 
 export type VentaDetalle = {
   id: string; numero: string; fecha: string; tipo: string; estado: string; total: number; iva: number;
+  /** Receta 103: lo acreditado por notas de crédito emitidas (de cualquier fecha). */
+  notas_credito: number;
   cliente: string | null; cajero: string | null; items: number; ganancia: number; medios: string[];
 };
 

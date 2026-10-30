@@ -32,6 +32,7 @@ export const GET = withTenant(
       { c: "Pagado: compras de contado", v: Number(d.flujo.compras_contado) },
       { c: "Pagado: gastos de contado", v: Number(d.flujo.gastos_contado) },
       { c: "Pagado: pagos a proveedores", v: Number(d.flujo.pagos_proveedores) },
+      { c: "Pagado: devoluciones a clientes", v: Number(d.flujo.devoluciones) },
       { c: "Flujo neto (cobrado − pagado)", v: x.neto },
       { c: "Compras de mercadería (entran al stock)", v: Number(d.gastos.compras) },
       { c: "Ventas anuladas (no suman)", v: Number(d.anuladas.total) },

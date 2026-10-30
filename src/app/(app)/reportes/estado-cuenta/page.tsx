@@ -74,7 +74,7 @@ function EstadoDeCuenta() {
           ) : null}
 
           <div className="grid gap-6 xl:grid-cols-[1.15fr_1fr]">
-            <Tarjeta titulo="Resultado del período" sub="IVA incluido, sin ventas anuladas">
+            <Tarjeta titulo="Resultado del período" sub="IVA incluido, sin ventas anuladas ni notas de crédito">
               <dl className="text-sm">
                 <Linea l="Ventas netas" v={x.ventas} nota={`${d.ventas.cantidad} ventas`} />
                 <Linea l="Costo de lo vendido" v={-x.cmv} nota={pct(x.cmv, x.ventas)} gris />
@@ -92,6 +92,7 @@ function EstadoDeCuenta() {
               <div className="mt-4 space-y-1">
                 <Nota>Costo de lo vendido = costo guardado en cada venta al momento de vender. Las compras de mercadería ({gs(d.gastos.compras)} en el período) entran al stock: se vuelven costo recién cuando se venden.</Nota>
                 <Nota>Ventas anuladas fuera del total: {d.anuladas.cantidad} por {gs(d.anuladas.total)}.</Nota>
+                {Number(d.notas_credito.cantidad) > 0 ? <Nota>Notas de crédito ya restadas: {d.notas_credito.cantidad} por {gs(d.notas_credito.total)}, en el período en que se emitieron.</Nota> : null}
               </div>
             </Tarjeta>
             <Tarjeta titulo="¿A dónde va la plata?" sub="costo de lo vendido, gastos por categoría y pérdidas">
@@ -132,6 +133,7 @@ function EstadoDeCuenta() {
                 <Linea l="Compras de contado" v={-Number(d.flujo.compras_contado)} gris />
                 <Linea l="Gastos de contado" v={-Number(d.flujo.gastos_contado)} gris />
                 <Linea l="Pagos a proveedores" v={-Number(d.flujo.pagos_proveedores)} gris />
+                {Number(d.flujo.devoluciones) ? <Linea l="Devoluciones a clientes" v={-Number(d.flujo.devoluciones)} gris /> : null}
                 <Linea l="Neto" v={x.neto} total fuerte />
               </dl>
             </Tarjeta>
