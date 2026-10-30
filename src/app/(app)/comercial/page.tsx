@@ -25,7 +25,7 @@ export default function PanelComercialPage() {
     <PanelModulo
       kicker="Comercial"
       titulo="Comercial"
-      subtitulo="Clientes y prospectos, cotizaciones, planes mensuales, la agenda y los proyectos."
+      subtitulo="Clientes y prospectos, cotizaciones, planes mensuales y la agenda."
       tarjetas={TARJETAS}
       vacio="No tenés pantallas de Comercial habilitadas."
     />

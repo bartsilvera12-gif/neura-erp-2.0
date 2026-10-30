@@ -12,6 +12,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { ExternalLink, Eye, Sparkles, UserPlus, X } from "lucide-react";
+import { moduloEstaActivo } from "@/modules/registry";
 import { HojaInferior } from "@/components/HojaInferior";
 import { useEsEscritorio } from "@/lib/ui/responsive";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
@@ -88,7 +89,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
   const c = ficha?.cliente ?? null;
   const p = ficha?.prospecto ?? null;
   const previas = ficha?.previas ?? [];
-  const proyectos = ficha?.proyectos ?? [];
+  const proyectos = moduloEstaActivo("proyectos") ? ficha?.proyectos ?? [] : [];
 
   const nuevoCliente = creandoCliente ? (
     <NuevoCliente

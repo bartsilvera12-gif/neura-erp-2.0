@@ -448,7 +448,7 @@ function EditorCola({
             </label>
             <p className={ayuda}>
               {c.solo_transferencia
-                ? "Esta cola NO recibe chats nuevos automáticamente (los canales asociados se ignoran): solo los que un asesor le deriva. Ej. Proyectos o Postventa."
+                ? "Esta cola NO recibe chats nuevos automáticamente (los canales asociados se ignoran): solo los que un asesor le deriva. Ej. Postventa."
                 : "Apagado: la cola recibe los chats nuevos de sus canales y también los que le deriven."}
             </p>
             <label className="block">
@@ -458,7 +458,7 @@ function EditorCola({
                 onChange={(e) => set("mensaje_derivacion", e.target.value)}
                 maxLength={1000}
                 rows={3}
-                placeholder="Ej. Te paso con el equipo de Proyectos, en breve te escriben."
+                placeholder="Ej. Te paso con el equipo de Postventa, en breve te escriben."
                 className={`${campo} resize-y`}
               />
               <p className={ayuda}>
