@@ -401,7 +401,7 @@ export default function PedidosMostradorPage() {
                         <div className="mt-0.5 flex flex-wrap items-center gap-x-2">
                           <ModsDetalle mods={l.mods_snap ?? null} className="min-w-0" />
                           {tieneMods(l.producto.mods) ? (
-                            <button type="button" onClick={() => setHojaMods({ p: l.producto, editar: l.key })} className="inline-flex min-h-8 items-center text-xs font-semibold hover:underline" style={{ color: TEAL }}>
+                            <button type="button" onClick={() => setHojaMods({ p: l.producto, editar: l.key })} className="inline-flex min-h-8 items-center text-xs font-semibold hover:underline [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-1" style={{ color: TEAL }}>
                               {l.mods_snap ? "Cambiar" : "Elegir opciones"}
                             </button>
                           ) : null}

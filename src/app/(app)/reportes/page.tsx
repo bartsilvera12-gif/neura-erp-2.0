@@ -11,7 +11,7 @@ import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { reportesPara, SECCIONES } from "@/modules/reportes/catalogo";
 import { EncabezadoReporte } from "@/modules/reportes/ui";
 import { TarjetaImagen } from "@/components/ui/tarjeta-imagen";
-import { GRILLA_PANEL } from "@/components/ui/PanelModulo";
+import { GRILLA_PANEL, ListaPanelMovil } from "@/components/ui/PanelModulo";
 
 /** Foto, color de tema (HSL oscuro, L ≤ ~30 %) y encuadre de cada reporte, por href. */
 const FOTOS: Record<string, { imagen: string; color: string; posicion?: string }> = {
@@ -56,7 +56,8 @@ export default function ReportesPage() {
           return (
             <section key={sec} aria-labelledby={idTitulo} className="space-y-3">
               <h2 id={idTitulo} className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-400">{sec}</h2>
-              <ul className={`m-0 list-none p-0 ${GRILLA_PANEL}`}>
+              <ListaPanelMovil filas={items.map((r) => ({ href: r.href, titulo: r.titulo, detalle: r.subtitulo, imagen: (FOTOS[r.href] ?? FOTO_GENERICA).imagen }))} />
+              <ul className={`m-0 list-none p-0 max-sm:hidden ${GRILLA_PANEL}`}>
                 {items.map(({ href, titulo, descripcion }) => {
                   const f = FOTOS[href] ?? FOTO_GENERICA;
                   return (

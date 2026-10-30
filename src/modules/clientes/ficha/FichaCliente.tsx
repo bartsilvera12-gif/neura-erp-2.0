@@ -37,6 +37,7 @@ import { moduloEstaActivo } from "@/modules/registry";
 import { ProyectosDeCliente } from "@/modules/proyectos/ui/ProyectosDeCliente";
 import { PresupuestosDeCliente } from "@/modules/presupuestos/PresupuestosDeCliente";
 import { ScrollHorizontal } from "@/components/ScrollHorizontal";
+import { AccionesPagina } from "@/components/EncabezadoPagina";
 import { ModalTipificacion, useAvisoTipificacion } from "@/modules/tipificacion/ModalTipificacion";
 import { precargarTipificacion } from "@/modules/tipificacion/datos";
 
@@ -164,12 +165,15 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
     ...(CON_PROYECTOS ? [{ id: "proyectos" as Tab, label: "Proyectos" }] : []),
     { id: "historial", label: "Historial" },
   ];
-  const datos: { label: string; value: React.ReactNode }[] = [
+  // `movil`: lo que queda a la vista en el celular (el resto está en la pestaña Información).
+  const datos: { label: string; value: React.ReactNode; movil?: boolean; ancho?: boolean }[] = [
     { label: "Origen", value: c.origen ?? "MANUAL" },
-    { label: "Categoría", value: c.categoria_nombre ? <CategoriaChip nombre={c.categoria_nombre} color={c.categoria_color} /> : "—" },
-    { label: "Condición", value: credito ? `Crédito${c.plazo_dias ? ` ${c.plazo_dias} días` : ""}` : "Contado" },
+    { label: "Categoría", value: c.categoria_nombre ? <CategoriaChip nombre={c.categoria_nombre} color={c.categoria_color} /> : "—", movil: true },
+    { label: "Condición", value: credito ? `Crédito${c.plazo_dias ? ` ${c.plazo_dias} días` : ""}` : "Contado", movil: true },
     {
       label: "Suscripción activa",
+      movil: activas.length > 0,
+      ancho: true,
       value: subsCargando && subs.length === 0
         ? <span className="inline-block h-4 w-28 max-w-full animate-pulse rounded-md bg-slate-200" aria-hidden />
         : activas.length
@@ -192,13 +196,13 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
             <div className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
               <Avatar nombre={c.nombre} size="lg" />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 max-sm:hidden">
                   <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: TEAL }} />
                   <p className="text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: TEAL }}>Cliente</p>
                 </div>
                 <h1 className="mt-1 text-xl font-semibold leading-tight [overflow-wrap:anywhere] sm:truncate tracking-tight text-slate-900 sm:text-2xl">{c.nombre}</h1>
                 <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <CodigoChip codigo={codigoCliente(c)} fondo="bg-white" />
+                  <span className="contents max-sm:hidden"><CodigoChip codigo={codigoCliente(c)} fondo="bg-white" /></span>
                   {rucParaFactura(c) ? (
                     <span className="text-[11px] text-slate-500"><span className="font-medium text-slate-400">RUC:</span> {rucParaFactura(c)}</span>
                   ) : c.documento ? (
@@ -211,7 +215,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
                 </div>
               </div>
             </div>
-            <div className="flex w-full shrink-0 items-center gap-2 sm:w-auto max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1 max-sm:[&>button]:justify-center">
+            <div className="flex shrink-0 items-center gap-2 max-sm:hidden">
               {estado === "activo" ? (
                 esAdmin ? (
                   <button type="button" onClick={() => { setBajando(true); setEliminando(false); }}
@@ -238,8 +242,24 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
               ) : null}
             </div>
           </div>
-          {/* Acciones: en celular, grilla de 2 columnas con botones de 44 px. */}
-          <div className="mt-4 grid grid-cols-2 gap-2 border-t border-slate-200/70 pt-4 sm:mt-5 sm:flex sm:flex-wrap max-sm:[&_a]:inline-flex max-sm:[&_a]:min-h-11 max-sm:[&_a]:items-center max-sm:[&_a]:justify-center max-sm:[&_a]:text-center max-sm:[&_button]:min-h-11 max-sm:[&_button]:justify-center max-sm:[&_button]:text-center">
+          {/* Celular: "Registrar pago" a la vista y todo lo demás en el menú ⋯ (las pestañas quedan arriba). */}
+          <div className="mt-3 sm:hidden">
+            <AccionesPagina acciones={[
+              { etiqueta: "Registrar pago", onClick: () => setTransfiriendo(""), primaria: true },
+              { etiqueta: "Factura al contado", onClick: () => setFacturaContado(true) },
+              ...(puedeSuscribir ? [{ etiqueta: "Nueva suscripción", icono: <Plus />, onClick: () => setNuevaSusc(true) }] : []),
+              ...(puedePresupuestar ? [{ etiqueta: "Nuevo presupuesto", icono: <FileSignature />, href: `/presupuestos/nuevo?cliente=${encodeURIComponent(c.id)}` }] : []),
+              { etiqueta: "Tipificación", icono: <ClipboardPen />, onClick: () => { precargarTipificacion(c.id); setTipificando(true); } },
+              { etiqueta: "Abrir en Gestión", href: `/clientes/gestion?cliente=${encodeURIComponent(c.id)}` },
+              ...(estado !== "activo"
+                ? [{ etiqueta: cambiando ? "Reactivando…" : "Reactivar", onClick: () => void cambiarActivo(true), deshabilitada: cambiando }]
+                : esAdmin
+                  ? [{ etiqueta: "Dar de baja", onClick: () => { setBajando(true); setEliminando(false); } }]
+                  : [{ etiqueta: "Desactivar", onClick: () => void cambiarActivo(false), deshabilitada: cambiando }]),
+              ...(esAdmin ? [{ etiqueta: "Eliminar cliente", icono: <Trash2 />, onClick: () => setEliminando(true), tono: "peligro" as const }] : []),
+            ]} />
+          </div>
+          <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200/70 pt-4 max-sm:hidden sm:mt-5">
             <span title={puedeSuscribir ? undefined : "Solo un administrador o vendedor puede crear suscripciones"} className="flex">
               <button type="button" disabled={!puedeSuscribir} onClick={() => setNuevaSusc(true)}
                 className="inline-flex w-full items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
@@ -279,7 +299,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
             celda completa la fila (2 y 4 columnas). */}
         <div className="grid grid-cols-2 gap-px border-t border-slate-100 bg-slate-100 sm:grid-cols-4 xl:grid-cols-7">
           {datos.map((d, i) => (
-            <div key={d.label} className={`min-w-0 bg-[#fcfdfd] px-3 py-3 sm:px-5 sm:py-3.5 ${i === datos.length - 1 && datos.length % 2 ? "col-span-2 xl:col-span-1" : ""}`}>
+            <div key={d.label} className={`min-w-0 bg-[#fcfdfd] px-3 py-3 sm:px-5 sm:py-3.5 ${d.movil ? "" : "max-sm:hidden"} ${d.ancho ? "max-sm:col-span-2" : ""} ${i === datos.length - 1 && datos.length % 2 ? "col-span-2 xl:col-span-1" : ""}`}>
               <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{d.label}</p>
               <div className="mt-1 truncate text-sm font-semibold text-slate-900">{d.value}</div>
             </div>

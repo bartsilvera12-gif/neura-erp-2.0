@@ -335,7 +335,7 @@ export default function InventarioPage() {
 
   return (
     <div className="space-y-6 pb-10">
-      {/* Encabezado. En celular: "Exportar" a la vista y las importaciones en el menú ⋯. */}
+      {/* Encabezado. En celular: "Nuevo producto" a la vista; exportar e importar en el menú ⋯. */}
       <EncabezadoPagina
         volver={{ href: "/inventario/panel", label: "Inventario" }}
         kicker="Operaciones · Stock"
@@ -343,6 +343,7 @@ export default function InventarioPage() {
         subtitulo="Gestión de productos y control de stock"
         acciones={esMovil ? (
           <AccionesPagina acciones={[
+            { etiqueta: "Nuevo producto", icono: <Plus />, onClick: () => abrirForm(null), primaria: true },
             { etiqueta: exportando ? "Generando..." : "Exportar Excel", icono: <Download />, onClick: exportar, cargando: exportando },
             ...(esAdmin ? [
               { etiqueta: "Importación inicial", href: "/inventario/import-inicial" },
@@ -379,7 +380,7 @@ export default function InventarioPage() {
             <p className="text-sm text-slate-500">
               {cargando ? "Cargando…" : total === 0 ? "Sin resultados" : <>Mostrando <span className="font-semibold text-slate-700">{desdeIdx.toLocaleString("es-PY")}–{hastaIdx.toLocaleString("es-PY")}</span> de <span className="font-semibold text-slate-700">{total.toLocaleString("es-PY")}</span> {total === 1 ? "producto" : "productos"}</>}
             </p>
-            <div className="ml-auto">
+            <div className="ml-auto max-sm:hidden">
               <button onClick={() => abrirForm(null)} onMouseEnter={() => void cargarProductoForm()} onFocus={() => void cargarProductoForm()} className="inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 active:scale-95 max-md:min-h-11 max-md:px-4 max-md:text-sm" style={{ backgroundColor: TEAL }}>
                 <Plus className="h-3.5 w-3.5" /> Nuevo producto
               </button>

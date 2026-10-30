@@ -17,7 +17,7 @@ import { descargarArchivo } from "@/lib/api/client-blob";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { Select } from "@/components/Select";
 import { DeltaTexto } from "@/components/graficos/Graficos";
-import { TablaScroll } from "@/components/TablaResponsive";
+import { TablaScroll, useVistaTarjetas } from "@/components/TablaResponsive";
 import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import type { SucursalOpcion } from "@/modules/reportes/tipos";
 import { SelectorFecha } from "@/components/SelectorFecha";
@@ -545,6 +545,31 @@ export function Tarjeta({ titulo, sub, extra, children, className = "" }: { titu
       </div>
       {children}
     </section>
+  );
+}
+
+/**
+ * `Tarjeta` que en el celular arranca plegada (solo el título): los resúmenes secundarios de un
+ * reporte no empujan lo importante hacia abajo. En tablet y escritorio es una `Tarjeta` común.
+ */
+export function TarjetaPlegable({ titulo, sub, extra, children, className = "" }: { titulo: ReactNode; sub?: ReactNode; extra?: ReactNode; children: ReactNode; className?: string }) {
+  const angosta = useVistaTarjetas();
+  if (!angosta) return <Tarjeta titulo={titulo} sub={sub} extra={extra} className={className}>{children}</Tarjeta>;
+  return (
+    <details className={`group min-w-0 rounded-2xl border border-slate-200 bg-white shadow-sm ${className}`}>
+      <summary className="flex min-h-12 cursor-pointer list-none items-center justify-between gap-3 px-3.5 [&::-webkit-details-marker]:hidden">
+        <span className="flex min-w-0 items-center gap-2.5">
+          <span className="block h-5 w-1 shrink-0 rounded-full bg-[var(--brand)]" />
+          <span className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">{titulo}</span>
+        </span>
+        <ChevronDown aria-hidden className="h-4 w-4 shrink-0 text-slate-400 transition-transform group-open:rotate-180" />
+      </summary>
+      <div className="space-y-2.5 px-3.5 pb-3.5">
+        {sub ? <p className="text-xs text-slate-400">{sub}</p> : null}
+        {extra ? <div className="min-w-0">{extra}</div> : null}
+        {children}
+      </div>
+    </details>
   );
 }
 

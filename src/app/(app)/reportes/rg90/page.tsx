@@ -100,9 +100,10 @@ export default function Rg90Page() {
   const columnasDe = (quien: string): ColumnaTabla<FilaRg90>[] => [
     { key: "prov", titulo: quien, movil: "titulo", celda: (f) => f.proveedor ?? "—" },
     { key: "total", titulo: "Total", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-semibold tabular-nums", celda: (f) => gs(f.total) },
-    { key: "comp", titulo: "Comprobante", movil: "subtitulo", claseTd: "whitespace-nowrap", celda: (f) => <>{f.tipo_comprobante} {f.numero}</> },
+    { key: "comp", titulo: "Comprobante", movil: "subtitulo", claseTd: "whitespace-nowrap", celda: (f) => <>{f.tipo_comprobante} {f.numero}</>,
+      celdaMovil: (f) => (f.codigo === 110 ? `NC ${f.numero}` : f.numero) },
     { key: "fecha", titulo: "Fecha", movil: "dato", claseTd: "tabular-nums", celda: (f) => dia(f.fecha) },
-    { key: "ruc", titulo: "RUC", movil: "dato", claseTd: "whitespace-nowrap tabular-nums", celda: (f) => f.ruc ?? "—" },
+    { key: "ruc", titulo: "RUC", movil: "detalle", claseTd: "whitespace-nowrap tabular-nums", celda: (f) => f.ruc ?? "—" },
     { key: "timb", titulo: "Timbrado", movil: "detalle", celda: (f) => f.timbrado || "—" },
     { key: "iva", titulo: "Gravado 10 % / 5 % / exento", movil: "detalle", claseTd: "whitespace-nowrap tabular-nums text-xs text-slate-500",
       celda: (f) => `${gs(f.gravado_10)} / ${gs(f.gravado_5)} / ${gs(f.exento)}` },
@@ -146,6 +147,7 @@ export default function Rg90Page() {
 
       {error ? <p className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
       {ningunImpuesto ? <p className="rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-800">Elegí al menos un impuesto: Marangatu pide que cada comprobante se impute a alguno.</p> : null}
+      {d && !cargando && !listas.length && !ningunImpuesto ? <p className="rounded-xl bg-slate-50 px-4 py-3 text-sm text-slate-600">Este mes no tiene comprobantes listos: por eso no se puede descargar el archivo todavía.</p> : null}
 
       {cargando && !d ? (
         <div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-slate-400" /></div>

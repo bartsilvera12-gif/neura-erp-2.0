@@ -16,7 +16,7 @@ import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { BarraFiltros } from "@/components/EncabezadoPagina";
 import { TablaTarjetas, useVistaTarjetas } from "@/components/TablaResponsive";
-import { EncabezadoReporte, FilaKpis, Kpi as KpiReporte, RangoFechasLocal, SANGRIA_TARJETAS, Tabla as TablaReporte, Tarjeta, TH_REPORTE } from "@/modules/reportes/ui";
+import { EncabezadoReporte, FilaKpis, Kpi as KpiReporte, RangoFechasLocal, SANGRIA_TARJETAS, Tabla as TablaReporte, Tarjeta, TarjetaPlegable, TH_REPORTE } from "@/modules/reportes/ui";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
 import { CorregirCostos } from "@/modules/reportes/CorregirCostos";
 import { opcionesFiltroCategoria, type Categoria } from "@/modules/inventario/categorias";
@@ -206,7 +206,7 @@ function Contenido() {
             <Kpi accent label="Ventas netas" value={gs(k.ventas_netas)} hint={`${num(k.cantidad_ventas)} venta${Number(k.cantidad_ventas) === 1 ? "" : "s"} · ${num(k.unidades)} ${Number(k.unidades) === 1 ? "unidad" : "unidades"}`} />
             <Kpi label="Ticket promedio" value={gs(ticket)} hint="por venta" />
             <Kpi label="Ganancia bruta" value={gs(k.ganancia)} hint={`${pct(k.ganancia, k.ventas_netas)} sobre ventas`} valueClass={k.ganancia < 0 ? "text-red-600" : undefined} />
-            <Kpi label="IVA incluido" value={gs(k.iva_total)} hint={(resumen.iva ?? []).map((t) => `${t.tipo === "EXENTA" ? "Exentas" : t.tipo} ${gs(t.total)}`).join(" · ") || "—"} />
+            <Kpi label="IVA incluido" value={gs(k.iva_total)} hint={angosta ? undefined : (resumen.iva ?? []).map((t) => `${t.tipo === "EXENTA" ? "Exentas" : t.tipo} ${gs(t.total)}`).join(" · ") || "—"} />
             <Kpi label="Anuladas" value={num(resumen.anuladas.cantidad)} hint={gs(resumen.anuladas.monto)} valueClass={resumen.anuladas.cantidad ? "text-red-600" : undefined} />
           </FilaKpis>
 
@@ -240,26 +240,28 @@ function Contenido() {
             <>
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* Medios de pago */}
-                <Tarjeta titulo="Por medio de pago">
+                <TarjetaPlegable titulo="Por medio de pago">
                   <Tabla
                     cols={["Medio", "Ventas", "Monto", "% del total"]}
                     der={[1, 2, 3]}
+                    movil={[0, 2, 3]}
                     filas={resumen.por_medio.map((m) => [MEDIO[m.medio] ?? m.medio, num(m.ventas), gs(m.monto), pct(m.monto, totalMedios)])}
                     pie={["Total", "", gs(totalMedios), "100%"]}
                   />
-                </Tarjeta>
+                </TarjetaPlegable>
                 {/* Cajeros */}
-                <Tarjeta titulo="Por cajero">
+                <TarjetaPlegable titulo="Por cajero">
                   <Tabla
                     cols={["Cajero", "Ventas", "Monto", "Ticket prom.", "Anuladas"]}
                     der={[1, 2, 3, 4]}
+                    movil={[0, 1, 2]}
                     filas={resumen.por_cajero.map((c) => [c.nombre, num(c.cantidad), gs(c.ventas), gs(c.cantidad ? c.ventas / c.cantidad : 0), c.anuladas ? <span key="a" className="font-semibold text-red-600">{c.anuladas}</span> : "0"])}
                   />
-                </Tarjeta>
+                </TarjetaPlegable>
               </div>
 
               {/* Productos */}
-              <Tarjeta titulo="Productos más vendidos" extra={resumen.productos.length > 10 ? (
+              <TarjetaPlegable titulo="Productos más vendidos" extra={resumen.productos.length > 10 ? (
                 <button onClick={() => setVerTodosProd((v) => !v)} className="text-xs font-semibold hover:underline max-sm:min-h-11 max-sm:text-[13px]" style={{ color: TEAL }}>
                   {verTodosProd ? "Ver top 10" : `Ver los ${resumen.productos.length}`}
                 </button>
@@ -268,8 +270,9 @@ function Contenido() {
                   // El puesto va junto al nombre: así la columna fija (la 1.ª) es el producto.
                   cols={["Producto", "SKU", "Unidades", "Monto", "Ganancia", "Margen de ganancia"]}
                   der={[2, 3, 4, 5]}
+                  movil={[0, 3]}
                   filas={productos.map((p, i) => [
-                    <span key="n" className="font-medium text-slate-800"><span className="mr-1.5 inline-block min-w-[1.5ch] text-right font-normal tabular-nums text-slate-400">{i + 1}</span>{p.nombre}{p.sin_costo ? <span className="ml-1 font-bold text-amber-600" title="Vendido al menos una vez sin costo cargado">*</span> : null}</span>,
+                    <span key="n" className="font-medium text-slate-800 max-md:block max-md:max-w-[10.5rem] max-md:truncate"><span className="mr-1.5 inline-block min-w-[1.5ch] text-right font-normal tabular-nums text-slate-400">{i + 1}</span>{p.nombre}{p.sin_costo ? <span className="ml-1 font-bold text-amber-600" title="Vendido al menos una vez sin costo cargado">*</span> : null}<span className="block text-[11px] font-normal text-slate-400 md:hidden">{num(p.unidades)} {Number(p.unidades) === 1 ? "unidad" : "unidades"}</span></span>,
                     <span key="s" className="font-mono text-xs text-slate-500">{p.sku ?? "—"}</span>,
                     num(p.unidades),
                     gs(p.monto),
@@ -277,25 +280,27 @@ function Contenido() {
                     <span key="m" className={`font-semibold ${margenColor(p.ganancia, p.monto)}`}>{pct(p.ganancia, p.monto)}</span>,
                   ])}
                 />
-              </Tarjeta>
+              </TarjetaPlegable>
 
               <div className="grid gap-6 lg:grid-cols-2">
                 {/* Por día */}
-                <Tarjeta titulo="Por día">
+                <TarjetaPlegable titulo="Por día">
                   <Tabla
                     cols={["Día", "Ventas", "Monto", "Ticket prom.", "Ganancia"]}
                     der={[1, 2, 3, 4]}
+                    movil={[0, 1, 2]}
                     filas={resumen.por_dia.map((d) => [<span key="d" className="capitalize">{diaCorto(d.dia)}</span>, num(d.cantidad), gs(d.ventas), gs(d.cantidad ? d.ventas / d.cantidad : 0), gs(d.ganancia)])}
                   />
-                </Tarjeta>
+                </TarjetaPlegable>
                 {/* Categorías */}
-                <Tarjeta titulo="Por categoría">
+                <TarjetaPlegable titulo="Por categoría">
                   <Tabla
                     cols={["Categoría", "Unidades", "Monto", "% del total", "Margen de ganancia"]}
                     der={[1, 2, 3, 4]}
+                    movil={[0, 2]}
                     filas={resumen.por_categoria.map((c) => [c.nombre, num(c.unidades), gs(c.monto), pct(c.monto, k.ventas_netas), <span key="m" className={`font-semibold ${margenColor(c.ganancia, c.monto)}`}>{pct(c.ganancia, c.monto)}</span>])}
                   />
-                </Tarjeta>
+                </TarjetaPlegable>
               </div>
             </>
           )}
@@ -313,17 +318,19 @@ function Contenido() {
             columnas={[
               { key: "num", titulo: "Número", movil: "subtitulo", claseTd: "whitespace-nowrap font-mono text-xs text-slate-600",
                 celda: (v) => <>{v.numero}{v.estado === "anulada" ? <span className="ml-1.5 rounded-full bg-red-50 px-1.5 py-0.5 font-sans text-[10px] font-semibold text-red-600">Anulada</span> : null}</>,
-                celdaMovil: (v) => <span className="tabular-nums"><span className="font-mono text-xs">{v.numero}</span> · {fechaHora(v.fecha)}</span> },
-              { key: "fecha", titulo: "Fecha", movil: "oculto", claseTd: "whitespace-nowrap text-xs tabular-nums text-slate-500", celda: (v) => fechaHora(v.fecha) },
+                celdaMovil: (v) => v.numero },
+              { key: "fecha", titulo: "Fecha", movil: "dato", claseTd: "whitespace-nowrap text-xs tabular-nums text-slate-500", celda: (v) => fechaHora(v.fecha) },
               { key: "cli", titulo: "Cliente", movil: "titulo", claseTd: "max-w-[180px] truncate text-slate-700", celda: (v) => v.cliente ?? <span className="text-slate-300">Sin cliente</span>,
                 celdaMovil: (v) => v.cliente ?? <span className="font-medium text-slate-400">Sin cliente</span> },
-              { key: "caj", titulo: "Cajero", movil: "dato", claseTd: "whitespace-nowrap text-slate-600", celda: (v) => v.cajero ?? "—" },
+              { key: "caj", titulo: "Cajero", movil: "oculto", claseTd: "whitespace-nowrap text-slate-600", celda: (v) => v.cajero ?? "—" },
               { key: "tipo", titulo: "Tipo", movil: "chip",
                 celda: (v) => (
                   <span className="rounded-full px-2 py-0.5 text-xs font-semibold" style={v.tipo === "CREDITO" ? { backgroundColor: "#fff7ed", color: "#ea580c" } : { backgroundColor: "#f1f5f9", color: "#475569" }}>
                     {v.tipo === "CREDITO" ? "Crédito" : "Contado"}
                   </span>
-                ) },
+                ),
+                // En el celular solo lo que se sale de lo común: el crédito.
+                celdaMovil: (v) => (v.tipo === "CREDITO" && v.estado !== "anulada" ? <span className="rounded-full bg-orange-50 px-2 py-0.5 text-xs font-semibold text-orange-600">Crédito</span> : null) },
               { key: "anu", titulo: "", movil: "chip", claseTh: "hidden", claseTd: "hidden",
                 celda: (v) => (v.estado === "anulada" ? <span className="rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600">Anulada</span> : null) },
               { key: "med", titulo: "Medio de pago", movil: "dato", etiquetaMovil: "Medio", claseTd: "whitespace-nowrap text-xs text-slate-600", celda: (v) => v.medios.map((m) => MEDIO[m] ?? m).join(" + ") },
@@ -335,8 +342,11 @@ function Contenido() {
                     <span className={v.estado === "anulada" ? "text-slate-400 line-through" : ""}>{gs(v.total)}</span>
                     {Number(v.notas_credito) > 0 ? <span className="block text-[11px] font-normal text-rose-600">NC −{gs(v.notas_credito)}</span> : null}
                   </>
-                ) },
-              { key: "gan", titulo: "Ganancia", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-slate-600", celda: (v) => (v.estado === "anulada" ? "—" : gs(v.ganancia)) },
+                ),
+                celdaMovil: (v) => <span className={v.estado === "anulada" ? "text-slate-400 line-through" : ""}>{gs(v.total)}</span> },
+              { key: "nc", titulo: "Notas de crédito", movil: "dato", claseTh: "hidden", claseTd: "hidden",
+                celda: (v) => (Number(v.notas_credito) > 0 ? <span className="text-rose-600">NC −{gs(v.notas_credito)}</span> : null) },
+              { key: "gan", titulo: "Ganancia", movil: "oculto", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-slate-600", celda: (v) => (v.estado === "anulada" ? "—" : gs(v.ganancia)) },
             ]} />
         </div>
         {totalVentas > POR_PAGINA ? (
@@ -371,6 +381,13 @@ function Kpi({ label, value, hint, accent, valueClass }: { label: string; value:
 }
 
 /** Tabla de los resúmenes (las filas como arreglos): la de los reportes, con scroll interno y 1.ª columna fija. */
-function Tabla({ cols, filas, der, pie }: { cols: string[]; filas: React.ReactNode[][]; der: number[]; pie?: React.ReactNode[] }) {
-  return <TablaReporte cols={cols} der={der} pie={pie} filas={filas.map((celdas, i) => ({ key: String(i), celdas }))} />;
+function Tabla({ cols, filas, der, pie, movil }: { cols: string[]; filas: React.ReactNode[][]; der: number[]; pie?: React.ReactNode[];
+  /** columnas que quedan en el celular (el resto entra en el PDF / Excel): sin scroll de costado. */
+  movil?: number[];
+}) {
+  const angosta = useVistaTarjetas();
+  const ver = angosta && movil ? movil : cols.map((_, i) => i);
+  const elegir = <T,>(a: T[]) => ver.map((i) => a[i]);
+  return <TablaReporte cols={elegir(cols)} der={ver.flatMap((c, i) => (der.includes(c) ? [i] : []))} pie={pie ? elegir(pie) : undefined}
+    filas={filas.map((celdas, i) => ({ key: String(i), celdas: elegir(celdas) }))} />;
 }

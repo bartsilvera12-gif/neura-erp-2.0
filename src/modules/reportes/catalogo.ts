@@ -41,7 +41,7 @@ export const REPORTES: Reporte[] = [
     href: "/reportes/rg90",
     titulo: "Registro de comprobantes (RG 90)",
     subtitulo: "El archivo para Marangatu",
-    descripcion: "Las compras y gastos del mes con comprobante en el formato de importación de la SET (ZIP con TXT): marca los que tienen datos faltantes y lo que no se registra.",
+    descripcion: "Las ventas, compras y gastos del mes con comprobante en el formato de importación de la SET (ZIP con TXT): marca los que tienen datos faltantes y lo que no se registra.",
     icono: FileCheck2,
     seccion: "Finanzas",
   },

@@ -11,7 +11,9 @@
  *   <PanelModulo kicker="Operaciones" titulo="Inventario" subtitulo="…" tarjetas={TARJETAS}
  *     vacio="No tenés pantallas de inventario habilitadas." />
  */
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import { ChevronRight } from "lucide-react";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { pantallasCatalogo, perfilVePantalla } from "@/modules/registry";
@@ -59,6 +61,27 @@ export function hslDeMarca(hex: string, maxL = 28): string {
 /** Grilla de las tarjetas de los paneles (también la usa /reportes, que arma sus secciones a mano). */
 export const GRILLA_PANEL = "grid gap-4 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4";
 const GRILLA = GRILLA_PANEL;
+
+/** En el celular, en lugar de las tarjetas con foto: lista compacta, entran todas de un vistazo. */
+export function ListaPanelMovil({ filas }: { filas: { href: string; titulo: string; detalle?: string; imagen: string }[] }) {
+  return (
+    <ul className="m-0 list-none divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-sm sm:hidden">
+      {filas.map((f) => (
+        <li key={f.href}>
+          <Link href={f.href} className="flex min-h-[64px] items-center gap-3 px-4 py-2.5 active:bg-slate-50">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={f.imagen} alt="" loading="lazy" className="h-11 w-11 shrink-0 rounded-xl object-cover" />
+            <span className="min-w-0 flex-1">
+              <span className="block text-[15px] font-semibold leading-snug text-slate-900 [overflow-wrap:anywhere]">{f.titulo}</span>
+              {f.detalle ? <span className="mt-0.5 block text-[13px] leading-snug text-slate-500">{f.detalle}</span> : null}
+            </span>
+            <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-slate-300" />
+          </Link>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function PanelModulo({
   kicker, titulo, subtitulo, tarjetas, vacio = "No tenés pantallas habilitadas en este módulo.", volver, cargando = false,
@@ -123,13 +146,16 @@ export function PanelModulo({
       ) : visibles.length === 0 ? (
         <p className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-400">{vacio}</p>
       ) : (
-        <ul className={`m-0 list-none p-0 ${GRILLA}`}>
-          {visibles.map((t) => (
-            <li key={t.href} className="h-[150px]">
-              <TarjetaImagen imagen={t.imagen} titulo={t.titulo} href={t.href} colorTema={t.color} posicionImagen={t.posicion} accion="Entrar" />
-            </li>
-          ))}
-        </ul>
+        <>
+          <ListaPanelMovil filas={visibles} />
+          <ul className={`m-0 list-none p-0 max-sm:hidden ${GRILLA}`}>
+            {visibles.map((t) => (
+              <li key={t.href} className="h-[150px]">
+                <TarjetaImagen imagen={t.imagen} titulo={t.titulo} href={t.href} colorTema={t.color} posicionImagen={t.posicion} accion="Entrar" />
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </div>
   );
