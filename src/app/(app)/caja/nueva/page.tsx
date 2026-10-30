@@ -1610,8 +1610,9 @@ function CajaPageContenido() {
             ) : (
               // La tarjeta de cada línea se acomoda al ANCHO DEL CARRITO (container query): angosto
               // (celular, tablet, escritorio de 1024) → cantidad grande táctil y el IVA en su fila;
-              // ancho (≥ 512 px) → todo en una fila, como siempre.
-              <ul className="@container space-y-2">
+              // medio (≥ 512 px) → nombre arriba y cantidad, IVA y total debajo; ancho (≥ 576 px) →
+              // TODO en un solo renglón: entran el doble de productos a la vista.
+              <ul className="@container space-y-2 @xl:space-y-1.5">
                 {cart.map((l) => {
                   const sinStockLinea = idsSinStock.has(l.producto.id);
                   const tier = tierDe(l);
@@ -1620,10 +1621,11 @@ function CajaPageContenido() {
                   const brutoLinea = l.cantidad * pAct;
                   const netoLinea = totalLinea(l);
                   return (
-                    <li key={l.cart_line_id} className={`rounded-xl border p-2.5 @lg:p-3 ${sinStockLinea ? "border-rose-300 bg-rose-50/60" : "border-slate-200 bg-slate-50/40"}`}>
-                      <div className="flex items-start gap-2.5 @lg:gap-3">
-                        <ProdThumb url={l.producto.imagen_url} nombre={l.producto.nombre} className="h-10 w-10 @lg:h-12 @lg:w-12" />
-                        <div className="min-w-0 flex-1">
+                    <li key={l.cart_line_id} className={`rounded-xl border p-2.5 @lg:p-3 @xl:px-2.5 @xl:py-1.5 ${sinStockLinea ? "border-rose-300 bg-rose-50/60" : "border-slate-200 bg-slate-50/40"}`}>
+                      <div className="flex items-start gap-2.5 @lg:gap-3 @xl:items-center">
+                        <ProdThumb url={l.producto.imagen_url} nombre={l.producto.nombre} className="h-10 w-10 @lg:h-12 @lg:w-12 @xl:h-9 @xl:w-9" />
+                        <div className="min-w-0 flex-1 @xl:flex @xl:items-center @xl:gap-3">
+                          <div className="min-w-0 @xl:flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <p className="min-w-0 flex-1 text-sm font-medium leading-snug text-slate-900 [overflow-wrap:anywhere] @lg:truncate">{l.producto.nombre}</p>
                             {l.mesa_min ? <span className="rounded-full border border-sky-200 bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-800">Mesa · {cantTxt(l.mesa_min)}</span> : null}
@@ -1641,11 +1643,12 @@ function CajaPageContenido() {
                               </span>
                             )}
                           </div>
-                          <div className="flex flex-wrap items-center gap-1 font-mono text-[11px] text-slate-500">
+                          <div className="flex flex-wrap items-center gap-1 font-mono text-[11px] text-slate-500 @xl:flex-nowrap @xl:whitespace-nowrap">
                             <span className="min-w-0 truncate">{l.producto.sku}</span>
                             <span>·</span>
                             <span className="font-semibold text-slate-700">{formatGs(pAct)}</span>
                             <span>c/u</span>
+                            {desc > 0 && <span className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-1.5 font-sans text-[10px] font-bold text-emerald-700 @xl:inline" title="Descuento del producto (Inventario)">−{desc}%</span>}
                           </div>
                           {/* Receta 73: modificadores de la línea (se cambian con la hoja; los de una mesa no). */}
                           {l.mods_snap || tieneMods(l.producto.mods) ? (
@@ -1659,8 +1662,9 @@ function CajaPageContenido() {
                               ) : null}
                             </div>
                           ) : null}
+                          </div>
                           {/* Fila de cantidad / IVA / total (ancho). En angosto, ver abajo. */}
-                          <div className="mt-2 hidden items-center gap-2 @lg:flex">
+                          <div className="mt-2 hidden items-center gap-2 @lg:flex @xl:mt-0 @xl:shrink-0">
                             {/* Tablet (táctil): botones de 44 px también en la fila ancha. */}
                             <Stepper l={l} updateCant={updateCant} grande={!esEscritorio} />
                             <div className="ml-auto inline-flex overflow-hidden rounded-md border border-slate-300 shadow-sm" role="group" aria-label="IVA de la línea">
@@ -1676,8 +1680,9 @@ function CajaPageContenido() {
                               })}
                             </div>
                             {/* Descuento del producto (definido en Inventario): solo lectura. */}
+                            {/* En un solo renglón va junto al precio unitario: las columnas quedan alineadas. */}
                             {desc > 0 && (
-                              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700" title="Descuento del producto (Inventario)">−{desc}%</span>
+                              <span className="rounded-full border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 @xl:hidden" title="Descuento del producto (Inventario)">−{desc}%</span>
                             )}
                             <div className="w-24 text-right">
                               {desc > 0 && <div className="text-[10px] text-slate-400 line-through tabular-nums">{formatGs(brutoLinea)}</div>}
