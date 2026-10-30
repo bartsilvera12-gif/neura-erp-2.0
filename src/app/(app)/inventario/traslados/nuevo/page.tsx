@@ -24,7 +24,7 @@ import type { StockProducto } from "@/modules/inventario/vencimientos";
 import { depositosPlanos, invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
 import { invalidarLista } from "@/modules/inventario/lista-cache";
 import { MOTIVOS_TRASLADO, cant, dia } from "@/modules/inventario/documentos";
-import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, ET, INPUT, TEAL } from "@/modules/inventario/ui";
+import { BarraEnvio, BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, ET, INPUT, TEAL } from "@/modules/inventario/ui";
 import { unidadCorta } from "@/modules/inventario/recetas";
 import { SelectorFecha } from "@/components/SelectorFecha";
 
@@ -103,6 +103,12 @@ function NuevoTraslado() {
   });
   const listo = !!origenEf && !!destino && origenEf !== destino && lineas.length > 0 && problemas.every((p) => !p)
     && (r.motivo_codigo !== "99" || !!r.motivo_descripcion.trim());
+  // Lo que todavía falta para poder enviar (se muestra en la barra flotante).
+  const falta = !destino ? "Elegí el depósito de destino"
+    : !lineas.length ? "Agregá al menos un producto"
+    : problemas.some(Boolean) ? (problemas.filter(Boolean).length > 1 ? `Revisá ${problemas.filter(Boolean).length} productos: falta la cantidad o supera el stock` : `${lineas[problemas.findIndex(Boolean)].prod.nombre}: ${problemas.find(Boolean)}`)
+    : r.motivo_codigo === "99" && !r.motivo_descripcion.trim() ? "Escribí cuál es el motivo del traslado"
+    : null;
 
   async function guardar() {
     if (!listo || busy) return;
@@ -346,39 +352,12 @@ function NuevoTraslado() {
         </label>
       </section>
 
-      {/* Celular / tablet: resumen y "Enviar traslado" en un pie fijo (safe-area) */}
-      <div className="fixed inset-x-0 bottom-0 z-30 !mb-0 border-t border-slate-200 bg-white/95 shadow-[0_-10px_30px_-12px_rgba(15,23,42,0.28)] backdrop-blur pb-safe lg:hidden">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2.5 sm:px-4">
-          <div className="min-w-0 flex-1">
-            {error ? (
-              <p className="line-clamp-2 text-xs font-medium text-rose-600">{error}</p>
-            ) : (
-              <>
-                <p className="truncate text-[11px] text-slate-500">{dOrigen && dDestino ? <>{dOrigen.nombre} → {dDestino.nombre}</> : !destino ? "Elegí el depósito de destino" : "Origen y destino"}</p>
-                <p className="truncate text-base font-bold leading-tight text-slate-900">{lineas.length ? <>{lineas.length} {lineas.length === 1 ? "producto" : "productos"}</> : "Agregá productos"}</p>
-              </>
-            )}
-          </div>
-          <button type="button" onClick={() => void guardar()} disabled={!listo || busy}
-            className="inline-flex h-12 max-w-[60%] shrink-0 items-center justify-center gap-2 rounded-xl px-5 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-40" style={{ backgroundColor: TEAL }}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />}
-            <span className="truncate">Enviar traslado</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Escritorio: barra de acción fija */}
-      <div className="sticky bottom-0 z-20 -mx-6 -mb-6 hidden border-t border-slate-200 bg-white/95 px-6 py-3 backdrop-blur lg:block">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-slate-600">
-            {lineas.length ? <>{lineas.length} {lineas.length === 1 ? "producto" : "productos"}{dOrigen && dDestino ? <> · {dOrigen.nombre} → {dDestino.nombre}</> : null}</> : "Agregá productos"}
-            {error ? <span className="ml-3 font-medium text-rose-600">{error}</span> : null}
-          </p>
-          <button onClick={guardar} disabled={!listo || busy} className={BOTON_PRIMARIO} style={{ backgroundColor: TEAL }}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Truck className="h-4 w-4" />} Enviar traslado
-          </button>
-        </div>
-      </div>
+      <BarraEnvio
+        chico={dOrigen && dDestino ? <>{dOrigen.nombre} → {dDestino.nombre}</> : "Origen y destino"}
+        grande={lineas.length ? <>{lineas.length} {lineas.length === 1 ? "producto" : "productos"}</> : "Nuevo traslado"}
+        resumen={lineas.length ? <>{lineas.length} {lineas.length === 1 ? "producto" : "productos"}{dOrigen && dDestino ? <> · {dOrigen.nombre} → {dDestino.nombre}</> : null}</> : null}
+        falta={falta} error={error} etiqueta="Enviar traslado" icono={<Truck className="h-4 w-4 shrink-0" />}
+        listo={listo} busy={busy} onEnviar={() => void guardar()} />
     </div>
   );
 }

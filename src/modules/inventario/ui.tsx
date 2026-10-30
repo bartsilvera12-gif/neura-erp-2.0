@@ -19,6 +19,61 @@ export const ET = "mb-1 block text-xs font-medium text-slate-600";
 export const BOTON_PRIMARIO = "inline-flex items-center justify-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 active:scale-[0.98] disabled:opacity-40";
 export const BOTON_SECUNDARIO = "inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50";
 
+/**
+ * Barra flotante de la acción principal de un documento (traslado, ajuste). Celular / tablet: pie
+ * fijo (safe-area). Escritorio: tarjeta sólida despegada de los bordes, que acompaña el scroll.
+ * Mientras no se puede enviar, el botón va en gris y `falta` dice qué hay que completar.
+ */
+export function BarraEnvio({ chico, grande, resumen, falta, error, etiqueta, icono, listo, busy, onEnviar, color = TEAL }: {
+  /** celular: línea chica y línea grande */
+  chico: React.ReactNode;
+  grande: React.ReactNode;
+  /** escritorio: el resumen del documento (null si todavía no hay nada) */
+  resumen: React.ReactNode;
+  falta: string | null;
+  error: string | null;
+  etiqueta: string;
+  icono: React.ReactNode;
+  listo: boolean;
+  busy: boolean;
+  onEnviar: () => void;
+  color?: string;
+}) {
+  const boton = (clase: string) => (
+    <button type="button" onClick={onEnviar} disabled={!listo || busy}
+      className={`inline-flex shrink-0 items-center justify-center gap-2 rounded-xl text-sm font-semibold transition active:scale-[0.98] disabled:active:scale-100 ${listo ? "text-white shadow-sm hover:brightness-95" : "bg-slate-200 text-slate-500"} ${busy ? "opacity-70" : ""} ${clase}`}
+      style={listo ? { backgroundColor: color } : undefined}>
+      {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : icono}
+      <span className="truncate">{etiqueta}</span>
+    </button>
+  );
+  return (
+    <>
+      <div className="fixed inset-x-0 bottom-0 z-30 !mb-0 border-t border-slate-200 bg-white shadow-[0_-10px_30px_-12px_rgba(15,23,42,0.28)] pb-safe lg:hidden">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2.5 sm:px-4">
+          <div className="min-w-0 flex-1">
+            {error ? <p className="line-clamp-2 text-xs font-medium text-rose-600">{error}</p> : (
+              <>
+                <p className={`truncate text-[11px] ${falta ? "font-medium text-amber-700" : "text-slate-500"}`}>{falta ?? chico}</p>
+                <div className="truncate text-base font-bold leading-tight text-slate-900">{grande}</div>
+              </>
+            )}
+          </div>
+          {boton("h-12 max-w-[60%] px-5")}
+        </div>
+      </div>
+
+      <div className="sticky bottom-3 z-20 hidden items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-[0_8px_30px_-8px_rgba(2,48,71,0.25)] lg:flex">
+        <div className="min-w-0 text-sm">
+          {resumen ? <div className="truncate font-semibold text-slate-800">{resumen}</div> : null}
+          {error ? <p className="font-medium text-rose-600">{error}</p> : falta ? <p className={resumen ? "text-xs font-medium text-amber-700" : "font-medium text-slate-600"}>{falta}</p> : null}
+        </div>
+        {boton("h-11 px-5")}
+      </div>
+    </>
+  );
+}
+
 export function Cabecera({ kicker, titulo, subtitulo, volver, children }: {
   kicker: string; titulo: string; subtitulo?: string;
   /** Link "← …" arriba del título (ej. volver al panel de Inventario). */

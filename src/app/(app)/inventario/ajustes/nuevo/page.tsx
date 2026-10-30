@@ -23,7 +23,7 @@ import { loteAutomatico, type StockProducto } from "@/modules/inventario/vencimi
 import { invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
 import { invalidarLista } from "@/modules/inventario/lista-cache";
 import { MOTIVOS_AJUSTE, MOTIVOS_PERDIDA, cant, dia, gs } from "@/modules/inventario/documentos";
-import { BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, ET, INPUT, TEAL } from "@/modules/inventario/ui";
+import { BarraEnvio, BOTON_PRIMARIO, BOTON_SECUNDARIO, Cabecera, ET, INPUT, TEAL } from "@/modules/inventario/ui";
 import { SelectorFecha } from "@/components/SelectorFecha";
 
 type Linea = {
@@ -113,6 +113,12 @@ function NuevoAjuste() {
   };
   const problemas = lineas.map(problema);
   const listo = !!depEf && lineas.length > 0 && problemas.every((p) => !p) && (motivo !== "otro" || !!detalle.trim());
+  // Lo que todavía falta para poder guardar (se muestra en la barra flotante).
+  const falta = !depEf ? "Elegí el depósito"
+    : !lineas.length ? "Agregá al menos un producto"
+    : problemas.some(Boolean) ? (problemas.filter(Boolean).length > 1 ? `Revisá ${problemas.filter(Boolean).length} productos: faltan datos` : `${lineas[problemas.findIndex(Boolean)].prod.nombre}: ${problemas.find(Boolean)}`)
+    : motivo === "otro" && !detalle.trim() ? "Escribí el detalle del motivo"
+    : null;
   const valorTotal = lineas.reduce((a, l) => { const d = difDe(l); return a + (Number.isFinite(d) ? d * costoDe(l) : 0); }, 0);
 
   async function guardar() {
@@ -302,40 +308,13 @@ function NuevoAjuste() {
         )}
       </section>
 
-      {/* Celular / tablet: valor y acción principal en un pie fijo (safe-area) */}
-      <div className="fixed inset-x-0 bottom-0 z-30 !mb-0 border-t border-slate-200 bg-white/95 shadow-[0_-10px_30px_-12px_rgba(15,23,42,0.28)] backdrop-blur pb-safe lg:hidden">
-        <div className="mx-auto flex max-w-3xl items-center gap-3 px-3 py-2.5 sm:px-4">
-          <div className="min-w-0 flex-1">
-            {error ? (
-              <p className="line-clamp-2 text-xs font-medium text-rose-600">{error}</p>
-            ) : (
-              <>
-                <p className="truncate text-[11px] text-slate-500">{lineas.length ? `${lineas.length} ${lineas.length === 1 ? "producto" : "productos"} · al costo` : "Agregá productos"}</p>
-                <p className={`truncate text-lg font-bold leading-tight tabular-nums ${valorTotal < 0 ? "text-red-600" : valorTotal > 0 ? "text-emerald-700" : "text-slate-900"}`}>{valorTotal < 0 ? "−" : ""}{gs(Math.abs(valorTotal))}</p>
-              </>
-            )}
-          </div>
-          <button type="button" onClick={() => void guardar()} disabled={!listo || busy}
-            className="inline-flex h-12 max-w-[60%] shrink-0 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-40" style={{ backgroundColor: tipo === "perdida" ? "#e11d48" : TEAL }}>
-            {busy ? <Loader2 className="h-4 w-4 shrink-0 animate-spin" /> : tipo === "perdida" ? <PackageMinus className="h-4 w-4 shrink-0" /> : <ClipboardCheck className="h-4 w-4 shrink-0" />}
-            <span className="truncate">{tipo === "perdida" ? (esAdmin ? "Registrar pérdida" : "Enviar para aprobación") : "Aplicar ajuste"}</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Escritorio: barra de acción fija */}
-      <div className="sticky bottom-0 z-20 -mx-6 -mb-6 hidden border-t border-slate-200 bg-white/95 px-6 py-3 backdrop-blur lg:block">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-slate-600">
-            {lineas.length ? <>{lineas.length} {lineas.length === 1 ? "producto" : "productos"} · valor <strong className={valorTotal < 0 ? "text-red-600" : "text-emerald-700"}>{valorTotal < 0 ? "−" : ""}{gs(Math.abs(valorTotal))}</strong> al costo</> : "Agregá productos"}
-            {error ? <span className="ml-3 font-medium text-rose-600">{error}</span> : null}
-          </p>
-          <button onClick={guardar} disabled={!listo || busy} className={BOTON_PRIMARIO} style={{ backgroundColor: tipo === "perdida" ? "#e11d48" : TEAL }}>
-            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : tipo === "perdida" ? <PackageMinus className="h-4 w-4" /> : <ClipboardCheck className="h-4 w-4" />}
-            {tipo === "perdida" ? (esAdmin ? "Registrar pérdida" : "Enviar para aprobación") : "Aplicar ajuste"}
-          </button>
-        </div>
-      </div>
+      <BarraEnvio
+        chico={lineas.length ? `${lineas.length} ${lineas.length === 1 ? "producto" : "productos"} · al costo` : "Valor al costo"}
+        grande={<span className={`tabular-nums ${valorTotal < 0 ? "text-red-600" : valorTotal > 0 ? "text-emerald-700" : ""}`}>{valorTotal < 0 ? "−" : ""}{gs(Math.abs(valorTotal))}</span>}
+        resumen={lineas.length ? <>{lineas.length} {lineas.length === 1 ? "producto" : "productos"} · valor <span className={valorTotal < 0 ? "text-red-600" : "text-emerald-700"}>{valorTotal < 0 ? "−" : ""}{gs(Math.abs(valorTotal))}</span> al costo</> : null}
+        falta={falta} error={error} etiqueta={tipo === "perdida" ? (esAdmin ? "Registrar pérdida" : "Enviar para aprobación") : "Aplicar ajuste"}
+        icono={tipo === "perdida" ? <PackageMinus className="h-4 w-4 shrink-0" /> : <ClipboardCheck className="h-4 w-4 shrink-0" />}
+        listo={listo} busy={busy} onEnviar={() => void guardar()} color={tipo === "perdida" ? "#e11d48" : TEAL} />
     </div>
   );
 }
