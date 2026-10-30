@@ -22,6 +22,8 @@ import { clienteConfig } from "@/cliente.config";
 import MontoInput from "@/components/ui/MontoInput";
 import { Select } from "@/components/Select";
 import { BuscadorCliente } from "@/modules/clientes/gestion/BuscadorCliente";
+import { CamposCredito } from "@/modules/caja/CamposCredito";
+import { MAX_CUOTAS, type CadaCuota } from "@/modules/caja/cuotas";
 import { BuscadorProductos, Segmentado, Tarjeta } from "@/modules/compras/partes";
 import { ProductoForm } from "@/modules/inventario/ProductoForm";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
@@ -101,6 +103,8 @@ function Formulario() {
   const [cambio, setCambio] = useState(0);
   const [condicion, setCondicion] = useState<"contado" | "credito">("contado");
   const [plazo, setPlazo] = useState("30");
+  const [cuotas, setCuotas] = useState("1");
+  const [cuotasCada, setCuotasCada] = useState<CadaCuota>("mes");
   const [vendedorId, setVendedorId] = useState("");
 
   // Líneas y cierre
@@ -181,6 +185,8 @@ function Formulario() {
         setCambio(p.moneda === "USD" ? Number(p.tipo_cambio) : 0);
         setCondicion(p.condicion);
         if (p.plazo_dias) setPlazo(String(p.plazo_dias));
+        setCuotas(String(p.cuotas ?? 1));
+        setCuotasCada((p.cuotas_cada as CadaCuota) ?? "mes");
         setVendedorId(p.vendedor_id ?? "");
         setDescGlobal(Number(p.descuento_pct) ? String(Number(p.descuento_pct)) : "");
         setCondiciones(p.condiciones ?? "");
@@ -250,6 +256,7 @@ function Formulario() {
     !(diasValidez >= 0 && diasValidez <= 365) && "una validez entre 0 y 365 días",
     fecha > hoy && "una fecha que no sea futura",
     condicion === "credito" && !(parseInt(plazo) >= 1) && "el plazo del crédito",
+    condicion === "credito" && !(parseInt(cuotas) >= 1 && parseInt(cuotas) <= MAX_CUOTAS) && `cuotas entre 1 y ${MAX_CUOTAS}`,
     lineas.length === 0 && "al menos una línea",
     lineas.some((l) => !l.producto_id) && "quitar las líneas sin producto del inventario",
     lineas.some((l) => !(num(l.cantidad) > 0)) && "la cantidad de alguna línea",
@@ -276,6 +283,8 @@ function Formulario() {
         tipo_cambio: moneda === "USD" ? cambio : null,
         condicion,
         plazo_dias: condicion === "credito" ? parseInt(plazo) : null,
+        cuotas: condicion === "credito" ? parseInt(cuotas) : 1,
+        cuotas_cada: condicion === "credito" && parseInt(cuotas) > 1 ? cuotasCada : "mes",
         vendedor_id: vendedorId || null,
         descuento_pct: dg,
         condiciones: condiciones.trim() || null,
@@ -413,10 +422,8 @@ function Formulario() {
                 <span className={ET}>Condición propuesta</span>
                 <Segmentado valor={condicion} onChange={(v) => setCondicion(v as "contado" | "credito")} opciones={[["contado", "Contado"], ["credito", "Crédito"]]} />
                 {condicion === "credito" ? (
-                  <div className="mt-2 flex items-center gap-2">
-                    <input inputMode="numeric" value={plazo} onChange={(e) => setPlazo(e.target.value.replace(/\D/g, "").slice(0, 4))} className={`${INPUT} w-20 py-2 text-right tabular-nums`} />
-                    <span className="text-sm text-slate-500">días</span>
-                  </div>
+                  <CamposCredito propuesta total={tot.total} cuotas={cuotas} setCuotas={setCuotas} plazoDias={plazo} setPlazoDias={setPlazo}
+                    cada={cuotasCada} setCada={setCuotasCada} monto={moneda === "GS" ? (v) => monto(v, "GS") : null} />
                 ) : null}
               </div>
               <div className="sm:col-span-2 sm:max-w-sm">

@@ -4,6 +4,7 @@
  * y la caja (crear_venta): precio unitario redondeado con los descuentos aplicados y
  * línea = cantidad × ese precio. Acá solo sirven de vista previa; manda la base.
  */
+import { textoCredito } from "@/modules/caja/cuotas";
 import { z } from "zod";
 import type { TipoIva } from "@/modules/caja/lib";
 
@@ -98,6 +99,9 @@ export type Presupuesto = {
   tipo_cambio: number;
   condicion: "contado" | "credito";
   plazo_dias: number | null;
+  /** Receta 106 */
+  cuotas: number;
+  cuotas_cada: string;
   vendedor_id: string | null;
   vendedor_nombre: string | null;
   descuento_pct: number;
@@ -136,7 +140,7 @@ export type Presupuesto = {
 };
 
 export const COLS_PRESUPUESTO =
-  "id, numero, revision, cliente_id, cliente_nombre, cliente_ruc, cliente_telefono, cliente_email, cliente_direccion, fecha, validez_dias, valido_hasta, moneda, tipo_cambio, condicion, plazo_dias, vendedor_id, vendedor_nombre, descuento_pct, subtotal_bruto, descuento_lineas, descuento_global, total, total_10, iva_10, total_5, iva_5, total_exenta, total_iva, condiciones, notas_internas, estado, enviado_at, aceptado_at, aceptado_por, rechazado_at, rechazado_por, rechazo_motivo, convertido_at, venta_id, token, vistas, visto_at, ultima_vista_at, created_at, updated_at";
+  "id, numero, revision, cliente_id, cliente_nombre, cliente_ruc, cliente_telefono, cliente_email, cliente_direccion, fecha, validez_dias, valido_hasta, moneda, tipo_cambio, condicion, plazo_dias, cuotas, cuotas_cada, vendedor_id, vendedor_nombre, descuento_pct, subtotal_bruto, descuento_lineas, descuento_global, total, total_10, iva_10, total_5, iva_5, total_exenta, total_iva, condiciones, notas_internas, estado, enviado_at, aceptado_at, aceptado_por, rechazado_at, rechazado_por, rechazo_motivo, convertido_at, venta_id, token, vistas, visto_at, ultima_vista_at, created_at, updated_at";
 export const COLS_ITEM =
   "id, orden, producto_id, sku, descripcion, detalle, unidad, cantidad, precio_unitario, precio_lista, descuento_pct, tipo_iva, total, total_final";
 
@@ -152,6 +156,8 @@ export type PresupuestoDoc = {
   tipo_cambio: number;
   condicion: "contado" | "credito";
   plazo_dias: number | null;
+  cuotas: number;
+  cuotas_cada: string;
   vendedor_nombre: string | null;
   cliente: { nombre: string; ruc: string | null; telefono: string | null; email: string | null; direccion: string | null };
   condiciones: string | null;
@@ -198,6 +204,8 @@ export const cuerpoPresupuesto = z.object({
   tipo_cambio: z.coerce.number().positive().nullish(),
   condicion: z.enum(["contado", "credito"]).default("contado"),
   plazo_dias: z.coerce.number().int().min(1).max(3650).nullish(),
+  cuotas: z.coerce.number().int().min(1).max(60).default(1),
+  cuotas_cada: z.enum(["mes", "quincena", "semana"]).default("mes"),
   vendedor_id: z.string().uuid().nullish(),
   descuento_pct: z.coerce.number().min(0).max(99.99).default(0),
   condiciones: texto(4000),
@@ -307,5 +315,6 @@ export const diaCorto = (d: string | null | undefined) => (d ? `${d.slice(8, 10)
 export const numeroConRevision = (numero: string, revision: number) => (revision > 1 ? `${numero} rev ${revision}` : numero);
 export const nombreArchivoPresupuesto = (numero: string, revision: number) =>
   `presupuesto-${numero}${revision > 1 ? `-rev${revision}` : ""}.pdf`;
-export const condicionTexto = (c: "contado" | "credito", plazo: number | null) =>
-  c === "credito" ? `Crédito${plazo ? ` a ${plazo} días` : ""}` : "Contado";
+/** "Contado" · "Crédito a 30 días" · "Crédito · 3 cuotas mensuales (1ª a 30 días)". */
+export const condicionTexto = (c: "contado" | "credito", plazo: number | null, cuotas?: number | null, cada?: string | null) =>
+  c !== "credito" ? "Contado" : Number(cuotas) > 1 ? textoCredito(plazo, cuotas, cada) : `Crédito${plazo ? ` a ${plazo} días` : ""}`;

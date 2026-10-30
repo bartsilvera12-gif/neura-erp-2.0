@@ -93,7 +93,7 @@ export function ModalConvertir({ presupuestoId, validoHasta, onClose, onCambio }
                 </div>
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-400">Condición</p>
-                  <p className="mt-0.5 text-sm font-semibold text-slate-900">{condicionTexto(p.condicion, p.plazo_dias)}</p>
+                  <p className="mt-0.5 text-sm font-semibold text-slate-900">{condicionTexto(p.condicion, p.plazo_dias, p.cuotas, p.cuotas_cada)}</p>
                 </div>
               </div>
 

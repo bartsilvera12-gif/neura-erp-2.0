@@ -262,7 +262,7 @@ export async function pdfPresupuesto(p: PresupuestoDoc & { emisor?: EmisorPresup
   const padB = 3;
   const xB = MX + padB, wB = ANCHO - padB * 2;
   const operacion: Campo[] = [
-    { l: "Condición de venta", v: condicionTexto(p.condicion, p.plazo_dias) },
+    { l: "Condición de venta", v: condicionTexto(p.condicion, p.plazo_dias, p.cuotas, p.cuotas_cada) },
     {
       l: "Moneda",
       v: usd ? `Dólares (US$)${Number(p.tipo_cambio) > 0 ? ` · T.C. Gs. ${Math.round(p.tipo_cambio).toLocaleString("es-PY")}` : ""}` : "Guaraníes (Gs.)",

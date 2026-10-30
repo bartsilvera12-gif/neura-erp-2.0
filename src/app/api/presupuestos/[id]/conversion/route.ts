@@ -20,7 +20,7 @@ export const GET = withTenant(async (ctx, req) => {
   if (!/^[0-9a-f-]{36}$/i.test(id ?? "")) return ERR.invalid("Falta el id del presupuesto");
 
   const [p, i] = await Promise.all([
-    ctx.db.select("presupuestos", "id, numero, revision, estado, valido_hasta, moneda, tipo_cambio, condicion, plazo_dias, descuento_pct, total, cliente_id, cliente_nombre, cliente_ruc, cliente_telefono").eq("id", id).limit(1),
+    ctx.db.select("presupuestos", "id, numero, revision, estado, valido_hasta, moneda, tipo_cambio, condicion, plazo_dias, cuotas, cuotas_cada, descuento_pct, total, cliente_id, cliente_nombre, cliente_ruc, cliente_telefono").eq("id", id).limit(1),
     ctx.db.select("presupuestos_items", "id, descripcion, cantidad, precio_unitario, precio_lista, descuento_pct, tipo_iva, total_final, producto_id").eq("presupuesto_id", id).order("orden", { ascending: true }),
   ]);
   if (p.error || i.error) return ERR.server();

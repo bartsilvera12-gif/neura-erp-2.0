@@ -106,7 +106,7 @@ function Documento({ p, token }: { p: PresupuestoDoc & { permite_responder: bool
           </div>
           <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-200/70 pt-4 text-sm sm:grid-cols-3">
             <Dato icono={<CalendarClock className="h-3.5 w-3.5" />} l="Válido hasta" v={diaCorto(p.valido_hasta)} extra={p.estado === "enviado" ? vigencia : undefined} />
-            <Dato icono={<FileText className="h-3.5 w-3.5" />} l="Condición" v={condicionTexto(p.condicion, p.plazo_dias)} />
+            <Dato icono={<FileText className="h-3.5 w-3.5" />} l="Condición" v={condicionTexto(p.condicion, p.plazo_dias, p.cuotas, p.cuotas_cada)} />
             {p.vendedor_nombre ? <Dato icono={<UserRound className="h-3.5 w-3.5" />} l="Te atiende" v={p.vendedor_nombre} /> : null}
           </div>
         </div>

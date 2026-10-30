@@ -24,6 +24,9 @@ export type ConversionPresupuesto = {
     tipo_cambio: number;
     condicion: "contado" | "credito";
     plazo_dias: number | null;
+    /** Receta 106 */
+    cuotas: number;
+    cuotas_cada: string;
     descuento_pct: number;
     total: number;
     cliente_id: string | null;

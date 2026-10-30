@@ -295,7 +295,7 @@ export function PresupuestoDetalle({ id, onCerrar, onCambio, avisoInicial }: {
           <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-slate-200/70 pt-3.5 sm:grid-cols-3 lg:grid-cols-5">
             <Dato l="Fecha" v={diaCorto(p.fecha)} />
             <Dato l="Válido hasta" v={diaCorto(p.valido_hasta)} extra={vig} rojo={e === "vencido"} />
-            <Dato l="Condición" v={condicionTexto(p.condicion, p.plazo_dias)} />
+            <Dato l="Condición" v={condicionTexto(p.condicion, p.plazo_dias, p.cuotas, p.cuotas_cada)} />
             <Dato l="Vendedor" v={p.vendedor_nombre ?? "—"} />
             <Dato l="Moneda" v={p.moneda === "USD" ? "Dólares (US$)" : "Guaraníes"} extra={p.moneda === "USD" ? { texto: `1 US$ = Gs. ${Math.round(p.tipo_cambio).toLocaleString("es-PY")}`, tono: "text-slate-400" } : null} />
           </dl>
