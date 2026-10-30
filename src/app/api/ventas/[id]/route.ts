@@ -26,6 +26,7 @@ export const GET = withTenant(async (ctx, req) => {
         "usuario_nombre, caja_id, anulada_at, anulada_motivo, tipo_documento, receptor_nombre, receptor_ruc, receptor_ocasional, fiscal_numero, fiscal_timbrado, " +
         `ventas_items(id, producto_nombre, sku, cantidad, precio_venta, tipo_precio, tipo_iva, monto_iva, total_linea${mods ? ", modificadores, modificadores_texto, precio_mods" : ""}), ` +
         "pagos:ventas_pagos_detalle(id, metodo_pago, monto, referencia, banco, recibido, vuelto, created_at), " +
+        "correcciones:ventas_pagos_correcciones(id, usuario_nombre, motivo, antes, despues, created_at), " +
         "turno:cajas(numero_caja, estado), punto:puntos_venta(nombre), sucursal:sucursales(nombre), deposito:depositos(nombre), " +
         "cliente:clientes!cliente_id(nombre), cuenta:cuentas_por_cobrar(vencimiento, cobrado, saldo, estado)",
     )
@@ -38,17 +39,19 @@ export const GET = withTenant(async (ctx, req) => {
     | (Record<string, unknown> & {
         ventas_items?: unknown[] | null;
         pagos?: { created_at: string }[] | null;
+        correcciones?: { created_at: string }[] | null;
         cliente?: { nombre?: string | null } | null;
         cuenta?: unknown[] | Record<string, unknown> | null;
       })
     | null;
   if (!fila) return ERR.notFound();
-  const { ventas_items, cliente, pagos, cuenta, ...venta } = fila;
+  const { ventas_items, cliente, pagos, correcciones, cuenta, ...venta } = fila;
 
   return ok({
     venta,
     items: ventas_items ?? [],
     pagos: (pagos ?? []).slice().sort((a, b) => (a.created_at < b.created_at ? -1 : 1)),
+    correcciones: (correcciones ?? []).slice().sort((a, b) => (a.created_at < b.created_at ? 1 : -1)),
     cuenta: Array.isArray(cuenta) ? (cuenta[0] ?? null) : (cuenta ?? null),
     // Receta 67: venta a cliente ocasional → "Cliente ocasional (X)".
     cliente_nombre: cliente?.nombre || (venta.receptor_ocasional ? etiquetaOcasional(venta.receptor_nombre as string | null) : "Consumidor final (sin cliente)"),

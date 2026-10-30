@@ -10,6 +10,7 @@
  *   · una FACTURA solo dentro de las 48 h (regla SIFEN); después, nota de crédito (receta 99)
  * Nota de crédito: devolver productos o descuento por monto (NotaCreditoModal); las notas de la
  * venta se listan abajo y abren su detalle (imprimir / anular).
+ * Corregir el método de pago (receta 109): sin cambiar montos, con motivo y queda registrado.
  */
 import { useEffect, useState } from "react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
@@ -20,7 +21,8 @@ import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { clienteConfig } from "@/cliente.config";
 import { formatGs } from "@/modules/caja/lib";
 import { textoCredito } from "@/modules/caja/cuotas";
-import { metodoLabel, invalidarCajas } from "@/modules/caja/turno";
+import { metodoLabel, invalidarCajas, METODOS_VENTA } from "@/modules/caja/turno";
+import { Select } from "@/components/Select";
 import { fechaHora } from "@/lib/fecha/paraguay";
 import { SelectorCaja } from "@/modules/caja/SelectorCaja";
 import { textoConPrecios, type ModsSnapshot } from "@/modules/mesas/modificadores";
@@ -73,10 +75,14 @@ type Venta = {
 };
 type Pago = { id: string; metodo_pago: string; monto: number; referencia: string | null; banco: string | null; recibido: number | null; vuelto: number | null };
 type Cuenta = { vencimiento: string; cobrado: number; saldo: number; estado: string } | null;
-type Detalle = { venta: Venta; items: Item[]; pagos: Pago[]; cuenta: Cuenta; cliente_nombre: string };
+type PagoCorregido = { metodo_pago: string; monto: number };
+type Correccion = { id: string; usuario_nombre: string | null; motivo: string; antes: PagoCorregido[]; despues: PagoCorregido[]; created_at: string };
+type Detalle = { venta: Venta; items: Item[]; pagos: Pago[]; correcciones?: Correccion[]; cuenta: Cuenta; cliente_nombre: string };
+type PagoEditado = { id: string; metodo_pago: string; referencia: string; banco: string };
 
 const PRECIO: Record<string, string> = { minorista: "Minorista", mayorista: "Mayorista", distribuidor: "Distribuidor", costo: "Costo" };
 const fechaCorta = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
+const CAMPO_PAGO = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-[var(--brand)] max-sm:min-h-11";
 
 export function VentaDetalle({ ventaId, onClose, onAnulada, onCambio }: {
   ventaId: string;
@@ -98,9 +104,15 @@ export function VentaDetalle({ ventaId, onClose, onAnulada, onCambio }: {
   const [nuevaNc, setNuevaNc] = useState(false);
   const [verNc, setVerNc] = useState<string | null>(null);
 
+  // Receta 109: corregir el método de pago.
+  const [editandoPago, setEditandoPago] = useState<PagoEditado[] | null>(null);
+  const [motivoPago, setMotivoPago] = useState("");
+  const [guardandoPago, setGuardandoPago] = useState(false);
+
+  const cargarVenta = () => apiFetch<Detalle>(`/api/ventas/${ventaId}`).then(setD);
   const cargarNc = () => apiFetch<NotaCreditoPrevia>(`/api/ventas/${ventaId}/nota-credito`).then(setNc).catch(() => {});
   useEffect(() => {
-    apiFetch<Detalle>(`/api/ventas/${ventaId}`).then(setD).catch((e) => setError((e as Error).message)).finally(() => setCargando(false));
+    cargarVenta().catch((e) => setError((e as Error).message)).finally(() => setCargando(false));
     void cargarNc();
   }, [ventaId]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -117,6 +129,28 @@ export function VentaDetalle({ ventaId, onClose, onAnulada, onCambio }: {
     : nc && !nc.venta.factura_anulable ? "Pasaron más de 48 h de la factura: ya no se anula. Hacé una nota de crédito."
     : null;
   const puedeNc = tienePermiso(me, "notas_credito") && !!nc && nc.disponible > 0;
+
+  async function corregirPago() {
+    if (!editandoPago) return;
+    if (!motivoPago.trim()) { setError("Escribí el motivo de la corrección."); return; }
+    setGuardandoPago(true);
+    setError(null);
+    try {
+      await apiFetch(`/api/ventas/${ventaId}/corregir-pago`, {
+        method: "POST",
+        body: JSON.stringify({ motivo: motivoPago.trim(), cambios: editandoPago }),
+      });
+      await cargarVenta();
+      setEditandoPago(null);
+      setMotivoPago("");
+      invalidarCajas();
+      onCambio?.();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGuardandoPago(false);
+    }
+  }
 
   async function anular() {
     if (turnoCerrado && !motivo.trim()) { setError("Escribí el motivo de la anulación."); return; }
@@ -206,7 +240,57 @@ export function VentaDetalle({ ventaId, onClose, onAnulada, onCambio }: {
 
               {!credito && d.pagos.length ? (
                 <>
-                  <p className="mb-2 mt-5 text-[11px] font-semibold uppercase tracking-widest text-slate-400">Forma{d.pagos.length > 1 ? "s" : ""} de pago</p>
+                  <div className="mb-2 mt-5 flex items-center justify-between gap-3">
+                    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">Forma{d.pagos.length > 1 ? "s" : ""} de pago</p>
+                    {!anulada && puedeAnular && !editandoPago && d.pagos.some((p) => p.metodo_pago !== "saldo_favor") ? (
+                      <button type="button" onClick={() => { setError(null); setEditandoPago(d.pagos.filter((p) => p.metodo_pago !== "saldo_favor").map((p) => ({ id: p.id, metodo_pago: p.metodo_pago, referencia: p.referencia ?? "", banco: p.banco ?? "" }))); }}
+                        className="inline-flex items-center text-xs font-semibold hover:underline max-sm:min-h-11" style={{ color: TEAL }}>
+                        Corregir
+                      </button>
+                    ) : null}
+                  </div>
+                  {editandoPago ? (
+                    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50/60 p-3.5">
+                      {editandoPago.map((e) => {
+                        const original = d.pagos.find((p) => p.id === e.id);
+                        const met = METODOS_VENTA.find((m) => m.value === e.metodo_pago);
+                        const poner = (cambio: Partial<PagoEditado>) => setEditandoPago((l) => (l ?? []).map((x) => (x.id === e.id ? { ...x, ...cambio } : x)));
+                        return (
+                          <div key={e.id} className="space-y-2">
+                            <div className="flex items-center gap-3">
+                              <div className="min-w-0 flex-1">
+                                <Select block value={e.metodo_pago} onChange={(v) => poner({ metodo_pago: v })} etiqueta="Método de pago"
+                                  options={[
+                                    ...(METODOS_VENTA.some((m) => m.value === e.metodo_pago) ? [] : [[e.metodo_pago, metodoLabel(e.metodo_pago)] as [string, string]]),
+                                    ...METODOS_VENTA.map((m): [string, string] => [m.value, m.label]),
+                                  ]} />
+                              </div>
+                              <p className="shrink-0 text-sm font-semibold tabular-nums text-slate-900">{formatGs(original?.monto ?? 0)}</p>
+                            </div>
+                            {met?.referencia || met?.banco ? (
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {met.referencia ? <input value={e.referencia} onChange={(ev) => poner({ referencia: ev.target.value })} maxLength={100} placeholder={`${met.referencia} (opcional)`} aria-label={met.referencia} className={CAMPO_PAGO} /> : null}
+                                {met.banco ? <input value={e.banco} onChange={(ev) => poner({ banco: ev.target.value })} maxLength={100} placeholder="Banco (opcional)" aria-label="Banco" className={CAMPO_PAGO} /> : null}
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
+                      <label className="block">
+                        <span className="mb-1 block text-xs font-medium text-slate-600">Motivo <span className="text-rose-500">*</span></span>
+                        <input value={motivoPago} onChange={(ev) => setMotivoPago(ev.target.value)} maxLength={500} placeholder="Ej: se marcó efectivo y pagó con tarjeta" className={CAMPO_PAGO} />
+                      </label>
+                      <p className="text-xs text-slate-500">
+                        {turnoCerrado ? "El turno ya se cerró: su arqueo queda como está. Cambian la venta y los reportes." : "El monto no cambia. El arqueo de la caja se ajusta al método correcto."}
+                      </p>
+                      <div className="flex justify-end gap-2">
+                        <button type="button" onClick={() => { setEditandoPago(null); setMotivoPago(""); setError(null); }} disabled={guardandoPago} className="min-h-10 rounded-xl px-3 text-sm font-medium text-slate-500 hover:text-slate-700 max-sm:min-h-11">Cancelar</button>
+                        <button type="button" onClick={corregirPago} disabled={guardandoPago} className="min-h-10 rounded-xl px-4 text-sm font-semibold text-white transition hover:brightness-95 disabled:opacity-50 max-sm:min-h-11" style={{ backgroundColor: TEAL }}>
+                          {guardandoPago ? "Guardando…" : "Guardar corrección"}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
                   <ul className="divide-y divide-slate-100 overflow-hidden rounded-xl border border-slate-200">
                     {d.pagos.map((p) => (
                       <li key={p.id} className="flex items-start justify-between gap-3 px-3.5 py-2.5">
@@ -221,6 +305,12 @@ export function VentaDetalle({ ventaId, onClose, onAnulada, onCambio }: {
                       </li>
                     ))}
                   </ul>
+                  )}
+                  {(d.correcciones ?? []).map((c) => (
+                    <p key={c.id} className="mt-1.5 text-xs text-slate-500">
+                      Corregido: {c.antes.map((a) => metodoLabel(a.metodo_pago)).join(" + ")} → {c.despues.map((a) => metodoLabel(a.metodo_pago)).join(" + ")} · {fechaHora(c.created_at)}{c.usuario_nombre ? ` · ${c.usuario_nombre}` : ""} · {c.motivo}
+                    </p>
+                  ))}
                 </>
               ) : null}
 

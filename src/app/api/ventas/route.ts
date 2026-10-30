@@ -22,7 +22,7 @@ import { ok, ERR } from "@/lib/api/responses";
 import { aplicarBusqueda, hayBusqueda, paginarConPrimeros, prepararBusqueda, primerosDe, restringirIds, type Primeros } from "@/lib/api/busqueda-servidor";
 
 const COLS =
-  "id, numero_control, fecha, total, tipo_venta, estado, metodo_pago, sucursal_id, punto_venta_id, " +
+  "id, numero_control, fecha, total, tipo_venta, estado, metodo_pago, sucursal_id, punto_venta_id, usuario_nombre, " +
   "ventas_items(producto_nombre, sku, cantidad, tipo_iva), pagos:ventas_pagos_detalle(metodo_pago, monto), " +
   "punto:puntos_venta(nombre), sucursal:sucursales(nombre)";
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

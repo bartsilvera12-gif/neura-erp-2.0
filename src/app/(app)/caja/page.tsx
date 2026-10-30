@@ -3,21 +3,18 @@
 /**
  * Caja › Órdenes de venta: las ventas (contado y crédito) con filtros por sucursal, caja,
  * forma de pago, condición, IVA, estado y fechas (el producto se busca con el buscador).
- * Arriba, las cajas abiertas
- * (cada una lleva a Apertura y cierre).
+ * Nueva venta y las cajas abiertas están en el panel de Caja; las ventas a crédito, en Reportes.
  */
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight, Clock, Plus, Search, Wallet, X } from "lucide-react";
-import { AccionesPagina, BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
-import { ScrollHorizontal } from "@/components/ScrollHorizontal";
+import { ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { BarraFiltros, EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { clienteConfig } from "@/cliente.config";
 import { Select } from "@/components/Select";
 import { VentaDetalle } from "@/modules/caja/VentaDetalle";
 import { TablaTarjetas } from "@/components/TablaResponsive";
 import { formatGs } from "@/modules/caja/lib";
-import { desdeTurno, etiquetaCaja, haceDias, metodoLabel, invalidarCajas, turnoViejo, METODOS_VENTA, useEstadoCajas, type EstadoCajas } from "@/modules/caja/turno";
+import { metodoLabel, invalidarCajas, METODOS_VENTA, useEstadoCajas, type EstadoCajas } from "@/modules/caja/turno";
 import { rangoAtajo, SelectorPeriodo, ATAJO_LABEL, type Atajo } from "@/modules/reportes/ui";
 import { fechaHora, hoyPY } from "@/lib/fecha/paraguay";
 
@@ -38,6 +35,7 @@ type Venta = {
   tipo_venta: string;
   estado: string;
   metodo_pago: string | null;
+  usuario_nombre: string | null;
   ventas_items: VentaItem[];
   pagos: { metodo_pago: string; monto: number }[] | null;
   punto: { nombre: string } | null;
@@ -50,50 +48,10 @@ export default function CajaDashboard() {
   const { datos } = useEstadoCajas(recargaCajas);
   return (
     <div className="space-y-4 pb-10 sm:space-y-6">
-      {/* Encabezado: en celular "Nueva venta" a la vista y el resto en "⋯". */}
-      <EncabezadoPagina volver={{ href: "/caja/panel", label: "Caja" }} kicker="Caja" titulo="Órdenes de venta" subtitulo="Todas las ventas de las cajas, con su forma de pago"
-        acciones={<AccionesPagina acciones={[
-          { etiqueta: "Nueva venta", icono: <Plus />, href: "/caja/nueva", primaria: true },
-          { etiqueta: "Apertura y cierre", icono: <Wallet />, href: "/caja/turnos" },
-          { etiqueta: "Ventas a crédito", icono: <Clock />, href: "/reportes/ventas-credito" },
-        ]} />} />
-
-      <CajasAbiertas estado={datos} />
+      <EncabezadoPagina volver={{ href: "/caja/panel", label: "Caja" }} kicker="Caja" titulo="Órdenes de venta" subtitulo="Todas las ventas de las cajas, con su forma de pago" />
 
       <Ordenes cajas={datos} onAnulada={() => { invalidarCajas(); setRecargaCajas((n) => n + 1); }} />
     </div>
-  );
-}
-
-// ── Cajas abiertas (tira) ───────────────────────────────────────────────────
-function CajasAbiertas({ estado }: { estado: EstadoCajas | null }) {
-  if (!estado) return null;
-  const abiertas = estado.sucursales.flatMap((s) => s.cajas.filter((c) => c.turno).map((c) => ({ c, s })));
-  return (
-    // Celular / tablet: tira con scroll horizontal (nunca empuja el ancho de la página).
-    <ScrollHorizontal claseFila="items-stretch gap-3" className="-mx-3 px-3 py-0.5 sm:mx-0 sm:px-0">
-      {abiertas.length === 0 ? (
-        <Link href="/caja/turnos" className="flex min-h-11 shrink-0 items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm text-slate-500 transition hover:border-[var(--brand)] hover:text-[var(--brand)]">
-          <Wallet className="h-4 w-4" /> No hay cajas abiertas · Abrir caja
-        </Link>
-      ) : abiertas.map(({ c, s }) => {
-        const viejo = turnoViejo(c.turno!.fecha_apertura);
-        return (
-        <Link key={c.id} href="/caja/turnos" className={`w-[240px] shrink-0 rounded-2xl border bg-white px-4 py-3 shadow-sm transition hover:shadow ${viejo ? "border-amber-200 hover:border-amber-300" : "border-emerald-100 hover:border-emerald-200"}`}>
-          <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" /> {etiquetaCaja({ punto_nombre: c.nombre, sucursal_nombre: s.nombre })}
-          </p>
-          <p className="mt-0.5 text-[11px] text-slate-500">Turno N° {c.turno!.numero_caja} · {c.turno!.abierta_por_nombre ?? "—"} · desde {desdeTurno(c.turno!.fecha_apertura)}</p>
-          {/* Lo vendido es del turno (puede abarcar varios días), no "de hoy". */}
-          <p className="mt-1.5 flex items-baseline justify-between gap-3 text-xs">
-            <span className="text-slate-500">Ventas del turno · {c.turno!.ventas_cantidad}</span>
-            <span className="font-bold tabular-nums text-slate-900">{formatGs(c.turno!.ventas_total)}</span>
-          </p>
-          {viejo ? <p className="mt-1.5 rounded-md bg-amber-50 px-2 py-1 text-[11px] font-medium text-amber-800">Abierto {haceDias(viejo.dias)}: cerralo y abrí uno nuevo.</p> : null}
-        </Link>
-        );
-      })}
-    </ScrollHorizontal>
   );
 }
 
@@ -250,11 +208,12 @@ function Ordenes({ cajas, onAnulada }: { cajas: EstadoCajas | null; onAnulada: (
         claseFila={(v) => (v.estado === "anulada" ? "opacity-50" : "")}
         claseTabla="w-full text-left text-sm"
         claseThead="bg-slate-50"
-        thBase="whitespace-nowrap px-4 py-3 text-xs font-semibold text-slate-500"
-        tdBase="px-4 py-4"
+        minAncho={1120}
+        thBase="whitespace-nowrap px-2.5 py-2.5 text-xs font-semibold text-slate-500"
+        tdBase="px-2.5 py-2"
         vacio={<p className="py-12 text-center text-sm text-slate-400">{buscando ? "Buscando…" : totalGeneral === 0 ? "No hay ventas registradas" : "Ninguna venta coincide con los filtros"}</p>}
         columnas={[
-          { key: "num", titulo: "Número", claseTd: "font-mono text-xs text-slate-500", movil: "subtitulo",
+          { key: "num", titulo: "Número", claseTd: "whitespace-nowrap font-mono text-xs text-slate-500", movil: "subtitulo",
             celda: (v) => v.numero_control,
             // Celular: número · fecha · forma de pago en la línea gris.
             celdaMovil: (v) => <>{v.numero_control} · {fechaVenta(v.fecha).replace(/\/\d{4},?/, "")}{v.tipo_venta !== "CREDITO" ? ` · ${(v.pagos ?? []).length ? [...new Set((v.pagos ?? []).map((pg) => metodoLabel(pg.metodo_pago)))].join(" + ") : metodoLabel(v.metodo_pago)}` : ""}</> },
@@ -262,11 +221,12 @@ function Ordenes({ cajas, onAnulada }: { cajas: EstadoCajas | null; onAnulada: (
             celda: (v) => {
               const items = v.ventas_items ?? [];
               const primero = items[0];
+              // Un solo renglón: el código y el detalle están en la venta.
               return (
-                <>
-                  <span className="block truncate font-normal text-slate-800 max-md:whitespace-normal max-md:font-semibold">{primero?.producto_nombre ?? "—"}</span>
-                  <span className="text-xs font-normal text-slate-400">{primero?.sku ?? ""}{items.length > 1 ? `${primero?.sku ? " · " : ""}+${items.length - 1} más` : ""}</span>
-                </>
+                <span className="flex max-w-[210px] items-baseline gap-1.5" title={items.map((i) => i.producto_nombre).join(", ")}>
+                  <span className="min-w-0 truncate font-normal text-slate-800">{primero?.producto_nombre ?? "—"}</span>
+                  {items.length > 1 ? <span className="shrink-0 text-xs font-normal text-slate-400">+{items.length - 1} más</span> : null}
+                </span>
               );
             },
             celdaMovil: (v) => {
@@ -283,9 +243,9 @@ function Ordenes({ cajas, onAnulada }: { cajas: EstadoCajas | null; onAnulada: (
           { key: "cant", titulo: "Cant. total", claseTh: "text-right", claseTd: "text-right tabular-nums text-slate-700", movil: "oculto",
             celda: (v) => cantTotal(v.ventas_items ?? []) },
           { key: "iva", titulo: "IVA", movil: "detalle",
-            celda: (v) => { const ivas = [...new Set((v.ventas_items ?? []).map((i) => i.tipo_iva))]; return <span className="rounded-full bg-indigo-50 px-2 py-1 text-xs font-semibold text-indigo-700">{ivas.length === 1 ? `IVA ${ivas[0]}` : "Varios"}</span>; } },
-          { key: "total", titulo: "Total", claseTh: "text-right", claseTd: "text-right font-semibold tabular-nums text-slate-800", movil: "valor", celda: (v) => formatGs(v.total) },
-          { key: "cond", titulo: "Condición / pago", movil: "chip",
+            celda: (v) => { const ivas = [...new Set((v.ventas_items ?? []).map((i) => i.tipo_iva))]; return <span className="whitespace-nowrap rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700">{ivas.length === 1 ? `IVA ${ivas[0]}` : "Varios"}</span>; } },
+          { key: "total", titulo: "Total", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-semibold tabular-nums text-slate-800", movil: "valor", celda: (v) => formatGs(v.total) },
+          { key: "cond", titulo: "Tipo de pago", movil: "chip",
             // Celular: solo lo que no es lo habitual (crédito o anulada); "Contado" no se repite en cada renglón.
             celdaMovil: (v) => (v.tipo_venta === "CREDITO" || v.estado === "anulada" ? (
               <span className="rounded-full px-2 py-0.5 text-[11px] font-semibold" style={v.estado === "anulada" ? { backgroundColor: "#fff1f2", color: "#e11d48" } : { backgroundColor: "#fff7ed", color: "#ea580c" }}>
@@ -293,20 +253,22 @@ function Ordenes({ cajas, onAnulada }: { cajas: EstadoCajas | null; onAnulada: (
               </span>
             ) : null),
             celda: (v) => (
-              <span className="inline-flex flex-col items-start">
-                <span className="rounded-full px-2 py-1 text-xs font-semibold" style={v.tipo_venta === "CREDITO" ? { backgroundColor: "#fff7ed", color: "#ea580c" } : { backgroundColor: "#f1f5f9", color: "#475569" }}>
-                  {v.tipo_venta === "CREDITO" ? "Crédito" : "Contado"}{v.estado === "anulada" ? " · anulada" : ""}
-                </span>
-                {v.tipo_venta !== "CREDITO" ? (
-                  <span className="mt-1 block max-w-[180px] truncate text-[11px] text-slate-500 max-md:hidden" title={(v.pagos ?? []).map((pg) => `${metodoLabel(pg.metodo_pago)} ${formatGs(pg.monto)}`).join(" + ")}>
-                    {(v.pagos ?? []).length ? [...new Set((v.pagos ?? []).map((pg) => metodoLabel(pg.metodo_pago)))].join(" + ") : metodoLabel(v.metodo_pago)}
-                  </span>
-                ) : null}
+              <span className="whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-semibold" style={v.tipo_venta === "CREDITO" ? { backgroundColor: "#fff7ed", color: "#ea580c" } : { backgroundColor: "#f1f5f9", color: "#475569" }}>
+                {v.tipo_venta === "CREDITO" ? "Crédito" : "Contado"}{v.estado === "anulada" ? " · anulada" : ""}
               </span>
             ) },
-          { key: "caja", titulo: "Caja", claseTd: "text-xs text-slate-600", movil: "detalle",
-            celda: (v) => <>{v.punto?.nombre ?? "—"}{v.sucursal?.nombre ? <span className="block text-[11px] text-slate-400">{v.sucursal.nombre}</span> : null}</> },
-          { key: "fecha", titulo: "Fecha", claseTd: "text-xs tabular-nums text-slate-500", movil: "oculto", celda: (v) => fechaVenta(v.fecha) },
+          // Celular: ya va en la línea gris, junto al número.
+          { key: "modo", titulo: "Modo de pago", claseTd: "text-xs text-slate-600", movil: "oculto",
+            celda: (v) => (v.tipo_venta === "CREDITO" ? <span className="text-slate-400">—</span> : (
+              <span className="block max-w-[120px] truncate" title={(v.pagos ?? []).map((pg) => `${metodoLabel(pg.metodo_pago)} ${formatGs(pg.monto)}`).join(" + ")}>
+                {(v.pagos ?? []).length ? [...new Set((v.pagos ?? []).map((pg) => metodoLabel(pg.metodo_pago)))].join(" + ") : metodoLabel(v.metodo_pago)}
+              </span>
+            )) },
+          { key: "caja", titulo: "Caja", claseTd: "whitespace-nowrap text-xs text-slate-600", movil: "detalle",
+            celda: (v) => <span className="block max-w-[130px] truncate" title={[v.punto?.nombre, v.sucursal?.nombre].filter(Boolean).join(" · ")}>{v.punto?.nombre ?? "—"}{v.sucursal?.nombre ? <span className="text-slate-400"> · {v.sucursal.nombre}</span> : null}</span> },
+          { key: "usuario", titulo: "Usuario", claseTd: "text-xs text-slate-600", movil: "oculto",
+            celda: (v) => <span className="block max-w-[100px] truncate" title={v.usuario_nombre ?? undefined}>{v.usuario_nombre ?? "—"}</span> },
+          { key: "fecha", titulo: "Fecha", claseTd: "whitespace-nowrap text-xs tabular-nums text-slate-500", movil: "oculto", celda: (v) => fechaVenta(v.fecha) },
         ]}
       />
 
@@ -346,7 +308,7 @@ function Ordenes({ cajas, onAnulada }: { cajas: EstadoCajas | null; onAnulada: (
       ) : null}
 
       {viendo ? (
-        <VentaDetalle ventaId={viendo} onClose={() => setViendo(null)} onAnulada={() => { setViendo(null); cargar(true); onAnulada(); }} />
+        <VentaDetalle ventaId={viendo} onClose={() => setViendo(null)} onAnulada={() => { setViendo(null); cargar(true); onAnulada(); }} onCambio={() => cargar(true)} />
       ) : null}
     </section>
   );
