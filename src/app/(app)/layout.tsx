@@ -11,6 +11,7 @@ import { NOMBRE_FUNCION, pantallaConFuncionVisible, type FuncionId } from "@/mod
 import { modulosDelPerfil, panelDeRuta, pantallaDeRuta, perfilVePantalla } from "@/modules/registry";
 import { NotificacionesBell } from "@/modules/notificaciones/NotificacionesBell";
 import { MarcoApp } from "@/components/shell/MarcoApp";
+import { marcarSalida, useAvisoConexion } from "@/modules/usuarios/conexion";
 
 type Me = Usuario;
 const ACCENT = "#7dcfd2";
@@ -101,21 +102,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <MarcoApp
-      modulos={modulos}
-      cargandoMenu={me === null}
-      usuario={me ?? { rol: "", email: emailSesion }}
-      pathname={pathname}
-      onLogout={async () => { await browserClient().auth.signOut(); limpiarCache(); router.replace("/login"); }}
-      campana={<NotificacionesBell />}
-    >
-      <ProveedorUsuario value={me}>
-        {funcionApagada?.funcion && funcionApagada.funcion !== "rubro" ? (
-          <FuncionInactiva funcion={funcionApagada.funcion} pantalla={funcionApagada.label} esAdmin={rol === "ADMIN"} />
-        ) : pantallaBloqueada ? <SinAcceso pantalla={`${pantallaBloqueada.moduloLabel}${pantallaBloqueada.label !== pantallaBloqueada.moduloLabel ? ` › ${pantallaBloqueada.label}` : ""}`} perfil={perfil?.nombre ?? null} /> : children}
-      </ProveedorUsuario>
-    </MarcoApp>
+    <>
+      <AvisoConexion />
+      <MarcoApp
+        modulos={modulos}
+        cargandoMenu={me === null}
+        usuario={me ?? { rol: "", email: emailSesion }}
+        pathname={pathname}
+        onLogout={async () => { await marcarSalida(); await browserClient().auth.signOut(); limpiarCache(); router.replace("/login"); }}
+        campana={<NotificacionesBell />}
+      >
+        <ProveedorUsuario value={me}>
+          {funcionApagada?.funcion && funcionApagada.funcion !== "rubro" ? (
+            <FuncionInactiva funcion={funcionApagada.funcion} pantalla={funcionApagada.label} esAdmin={rol === "ADMIN"} />
+          ) : pantallaBloqueada ? <SinAcceso pantalla={`${pantallaBloqueada.moduloLabel}${pantallaBloqueada.label !== pantallaBloqueada.moduloLabel ? ` › ${pantallaBloqueada.label}` : ""}`} perfil={perfil?.nombre ?? null} /> : children}
+        </ProveedorUsuario>
+      </MarcoApp>
+    </>
   );
+}
+
+/** Solo se monta con sesión: el aviso de conexión no corre mientras se va al login. */
+function AvisoConexion() {
+  useAvisoConexion();
+  return null;
 }
 
 function FuncionInactiva({ funcion, pantalla, esAdmin }: { funcion: FuncionId; pantalla: string; esAdmin: boolean }) {

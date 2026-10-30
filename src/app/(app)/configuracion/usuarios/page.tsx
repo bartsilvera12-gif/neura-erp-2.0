@@ -2,10 +2,11 @@
 
 /**
  * /configuracion/usuarios — Configuración › Usuarios (nivel ADMIN + "Administrar usuarios").
- * Dos vistas (pestañas, ?vista=perfiles):
+ * Tres vistas (pestañas, ?vista=perfiles|conexiones):
  *   · Usuarios: listado con búsqueda y filtros; alta por invitación (email o link para
  *     WhatsApp), edición, activar / desactivar, reenviar invitación / restablecer contraseña.
  *   · Perfiles y permisos: perfiles con sus pantallas del menú y sus permisos.
+ *   · Conexiones: quién está conectado ahora y su última conexión.
  * El admin nunca escribe ni ve contraseñas. Todo cambio queda en el historial.
  */
 import { Suspense, useCallback, useEffect, useState } from "react";
@@ -15,6 +16,7 @@ import { Pestanas } from "@/modules/inventario/ui";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { VistaUsuarios } from "@/modules/usuarios/ui/VistaUsuarios";
 import { VistaPerfiles } from "@/modules/usuarios/ui/VistaPerfiles";
+import { VistaConexiones } from "@/modules/usuarios/ui/VistaConexiones";
 import { URL_PERFILES, URL_USUARIOS, type DatosUsuarios, type PerfilCompleto } from "@/modules/usuarios/ui/comun";
 
 export default function UsuariosPage() {
@@ -29,7 +31,8 @@ function Usuarios() {
   const router = useRouter();
   const pathname = usePathname();
   const sp = useSearchParams();
-  const vista = sp.get("vista") === "perfiles" ? "perfiles" : "usuarios";
+  const param = sp.get("vista");
+  const vista = param === "perfiles" || param === "conexiones" ? param : "usuarios";
 
   const [datos, setDatos] = useState<DatosUsuarios | null>(null);
   const [perfiles, setPerfiles] = useState<PerfilCompleto[] | null>(null);
@@ -58,7 +61,7 @@ function Usuarios() {
 
   const cambiarVista = (id: string) => {
     const q = new URLSearchParams(sp.toString());
-    if (id === "perfiles") q.set("vista", "perfiles");
+    if (id !== "usuarios") q.set("vista", id);
     else q.delete("vista");
     router.replace(`${pathname}${q.size ? `?${q.toString()}` : ""}`, { scroll: false });
   };
@@ -77,13 +80,16 @@ function Usuarios() {
           opciones={[
             { id: "usuarios", label: "Usuarios", badge: pendientes || undefined },
             { id: "perfiles", label: "Perfiles y permisos" },
+            { id: "conexiones", label: "Conexiones" },
           ]}
         />
       </div>
       {vista === "usuarios" ? (
         <VistaUsuarios datos={datos} perfiles={perfiles} cargando={cargando} error={error} onCambio={refrescar} />
-      ) : (
+      ) : vista === "perfiles" ? (
         <VistaPerfiles perfiles={perfiles} cargando={cargando} error={error} onCambio={refrescar} />
+      ) : (
+        <VistaConexiones />
       )}
     </div>
   );
