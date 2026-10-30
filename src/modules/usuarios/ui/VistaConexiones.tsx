@@ -72,7 +72,8 @@ const columnas: ColumnaTabla<Conexion>[] = [
   { key: "perfil", titulo: "Perfil", movil: "chip", celda: (c) => <InsigniaPerfil nombre={c.perfil_nombre} codigo={c.perfil_codigo} /> },
 ];
 
-export function VistaConexiones() {
+/** La lista de conexiones, al día: cada 30 s mientras la pantalla se ve. También la usa la pestaña Usuarios. */
+export function useConexiones() {
   const [filas, setFilas] = useState<Conexion[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -101,7 +102,12 @@ export function VistaConexiones() {
     };
   }, []);
 
-  const conectados = filas?.filter((c) => c.conectado).length ?? 0;
+  return { filas, error };
+}
+
+export function VistaConexiones() {
+  const { filas, error } = useConexiones();
+  const conectados =filas?.filter((c) => c.conectado).length ?? 0;
   const activos = filas?.filter((c) => c.activo).length ?? 0;
 
   return (

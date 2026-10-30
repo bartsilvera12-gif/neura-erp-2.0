@@ -12,6 +12,7 @@ import { filtrar } from "@/lib/busqueda";
 import { BOTON_PRIMARIO, INPUT_FILTRO } from "@/modules/inventario/ui";
 import { ModalUsuario } from "@/modules/usuarios/ui/ModalUsuario";
 import { AvisoCupo, cupoLleno, IndicadorCupo, ModalCupoLleno, RE_LIMITE_USUARIOS } from "@/modules/usuarios/ui/Cupo";
+import { useConexiones } from "@/modules/usuarios/ui/VistaConexiones";
 import {
   api, Avatar, estadoDe, fechaHora, haceCuanto, InsigniaPerfil, invalidarTodo, PillEstado, TEAL,
   type DatosUsuarios, type Estado, type PerfilCompleto, type UsuarioFila,
@@ -34,6 +35,10 @@ export function VistaUsuarios({ datos, perfiles, cargando, error, onCambio }: {
   const [verCupo, setVerCupo] = useState(false);
   const cupo = datos?.cupo;
   const lleno = cupoLleno(cupo);
+
+  // Conexión al día (receta 111): va aparte de `datos`, que se guarda en caché y quedaría vieja.
+  const { filas: filasConexion } = useConexiones();
+  const conexiones = useMemo(() => new Map(filasConexion?.map((c) => [c.id, c])), [filasConexion]);
 
   const usuarios = useMemo(() => datos?.usuarios ?? [], [datos]);
   const conteo = useMemo(() => {
@@ -89,7 +94,7 @@ export function VistaUsuarios({ datos, perfiles, cargando, error, onCambio }: {
 
   const sucursales = datos?.sucursales ?? [];
   // Lista: en celular cada usuario es una tarjeta (nombre + email, estado y perfil como chips,
-  // sucursal y último ingreso a la vista, menú ⋯ al pie); desde tablet, la tabla.
+  // sucursal y conexión a la vista, menú ⋯ al pie); desde tablet, la tabla.
   const columnas: ColumnaTabla<UsuarioFila>[] = [
     {
       key: "usuario", titulo: "Usuario", movil: "titulo", claseTh: "!pl-5", claseTd: "!pl-5",
@@ -111,16 +116,28 @@ export function VistaUsuarios({ datos, perfiles, cargando, error, onCambio }: {
       key: "sucursal", titulo: "Sucursal", movil: "dato", claseTd: "text-xs text-slate-600",
       celda: (u) => (u.sucursal_nombre ? <span className="inline-flex items-center gap-1"><Building2 className="h-3.5 w-3.5 shrink-0 text-slate-400" /> {u.sucursal_nombre}</span> : <span className="text-slate-400">Principal</span>),
     },
-    { key: "estado", titulo: "Estado", movil: "chip", celda: (u) => <PillEstado estado={estadoDe(u)} /> },
+    { key: "estado", titulo: "Cuenta", movil: "chip", celda: (u) => <PillEstado estado={estadoDe(u)} /> },
     {
-      key: "ingreso", titulo: "Último ingreso", movil: "dato", claseTd: "text-xs",
-      celda: (u) => (u.pendiente ? (
-        <span className="inline-flex items-center gap-1 text-amber-700" title={u.invitado_at ? `Invitado el ${fechaHora(u.invitado_at)}` : undefined}>
-          <Link2 className="h-3.5 w-3.5 shrink-0" /> Nunca entró
-        </span>
-      ) : (
-        <span title={fechaHora(u.ultimo_ingreso)} className="tabular-nums text-slate-600">{haceCuanto(u.ultimo_ingreso)}</span>
-      )),
+      key: "conexion", titulo: "Conexión", movil: "dato", claseTd: "whitespace-nowrap text-xs",
+      celda: (u) => {
+        const c = conexiones.get(u.id);
+        if (c?.conectado) {
+          return (
+            <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700">
+              <span aria-hidden className="h-2 w-2 rounded-full bg-emerald-500" /> Conectado ahora
+            </span>
+          );
+        }
+        if (u.pendiente) {
+          return (
+            <span className="inline-flex items-center gap-1 text-amber-700" title={u.invitado_at ? `Invitado el ${fechaHora(u.invitado_at)}` : undefined}>
+              <Link2 className="h-3.5 w-3.5 shrink-0" /> Nunca entró
+            </span>
+          );
+        }
+        const ultima = c?.ultima_conexion ?? u.ultimo_ingreso;
+        return <span title={fechaHora(ultima)} className="tabular-nums text-slate-600">Desconectado · {haceCuanto(ultima)}</span>;
+      },
     },
     {
       key: "acciones", titulo: "", movil: "acciones", claseTh: "w-12", claseTd: "text-right",
