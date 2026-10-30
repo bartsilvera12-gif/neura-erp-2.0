@@ -20,8 +20,8 @@ export const BOTON_PRIMARIO = "inline-flex items-center justify-center gap-1.5 r
 export const BOTON_SECUNDARIO = "inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50";
 
 /**
- * Barra flotante de la acción principal de un documento (traslado, ajuste). Celular / tablet: pie
- * fijo (safe-area). Escritorio: tarjeta sólida despegada de los bordes, que acompaña el scroll.
+ * Acción principal de un documento (traslado, ajuste). Celular / tablet: pie fijo (safe-area).
+ * Escritorio: al final de la página, a la derecha, sin caja ni flotar sobre el contenido.
  * Mientras no se puede enviar, el botón va en gris y `falta` dice qué hay que completar.
  */
 export function BarraEnvio({ chico, grande, resumen, falta, error, etiqueta, icono, listo, busy, onEnviar, color = TEAL }: {
@@ -63,8 +63,8 @@ export function BarraEnvio({ chico, grande, resumen, falta, error, etiqueta, ico
         </div>
       </div>
 
-      <div className="sticky bottom-3 z-20 hidden items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white px-5 py-3 shadow-[0_8px_30px_-8px_rgba(2,48,71,0.25)] lg:flex">
-        <div className="min-w-0 text-sm">
+      <div className="hidden items-center justify-end gap-4 lg:flex">
+        <div className="min-w-0 text-right text-sm">
           {resumen ? <div className="truncate font-semibold text-slate-800">{resumen}</div> : null}
           {error ? <p className="font-medium text-rose-600">{error}</p> : falta ? <p className={resumen ? "text-xs font-medium text-amber-700" : "font-medium text-slate-600"}>{falta}</p> : null}
         </div>
