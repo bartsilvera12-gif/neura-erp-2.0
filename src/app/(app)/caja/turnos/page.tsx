@@ -168,7 +168,7 @@ function TurnosContenido() {
                   const dif = (t.diferencia ?? 0) + (t.diferencia_otros ?? 0);
                   return (
                     <span className={`max-md:rounded-full max-md:px-2 max-md:py-0.5 max-md:text-[11px] max-md:font-semibold ${t.diferencia == null ? "text-slate-400 max-md:bg-slate-100" : dif === 0 ? "text-emerald-600 max-md:bg-emerald-50" : dif < 0 ? "text-rose-600 max-md:bg-rose-50" : "text-amber-600 max-md:bg-amber-50"}`}>
-                      {t.diferencia == null ? "—" : dif === 0 ? "Cuadró" : `${dif > 0 ? "+" : "−"} ${formatGs(Math.abs(dif))}`}
+                      {t.diferencia == null ? "—" : dif === 0 ? "Cuadra" : `${dif > 0 ? "+" : "−"} ${formatGs(Math.abs(dif))}`}
                     </span>
                   );
                 },

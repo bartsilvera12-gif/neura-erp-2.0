@@ -98,7 +98,7 @@ function DiaCaja({ fecha }: { fecha: string }) {
             <Kpi label="Contado" valor={gs(t.ventas_contado)} hint={`Crédito ${gs(t.ventas_credito)}`} />
             <Kpi label="Cobros de cuentas" valor={gs(t.cobros)} hint="entraron a las cajas" />
             <Kpi label="Egresos y retiros" valor={gs(Number(t.egresos) + Number(t.retiros))} hint={`Retiros ${gs(t.retiros)} · ingresos ${gs(t.ingresos)}`} />
-            <Kpi label="Diferencias" valor={Number(t.diferencia) + Number(t.diferencia_otros) === 0 ? "Cuadró" : conSigno(Number(t.diferencia) + Number(t.diferencia_otros))}
+            <Kpi label="Diferencias" valor={Number(t.diferencia) + Number(t.diferencia_otros) === 0 ? "Cuadra" : conSigno(Number(t.diferencia) + Number(t.diferencia_otros))}
               tono={Number(t.diferencia) + Number(t.diferencia_otros) === 0 ? "bueno" : Number(t.diferencia) + Number(t.diferencia_otros) < 0 ? "malo" : "alerta"}
               hint={`Efectivo ${conSigno(t.diferencia)} · otros ${conSigno(t.diferencia_otros)}`} />
           </FilaKpis>
@@ -218,7 +218,7 @@ function TurnoCard({ r, fecha, onVer }: { r: ResumenTurno; fecha: string; onVer:
             <li className="flex justify-between gap-3 border-t border-slate-200 pt-1.5 font-semibold text-slate-800"><span>Esperado</span><span className="tabular-nums">{gs(e.esperado)}</span></li>
             <li className="flex justify-between gap-3 text-slate-600"><span>Contado al cierre</span><span className="tabular-nums">{e.contado == null ? "—" : gs(e.contado)}</span></li>
             <li className={`flex justify-between gap-3 font-semibold ${e.diferencia == null ? "text-slate-400" : e.diferencia === 0 ? "text-emerald-700" : e.diferencia < 0 ? "text-rose-600" : "text-amber-600"}`}>
-              <span>Diferencia</span><span className="tabular-nums">{e.diferencia == null ? "—" : e.diferencia === 0 ? "Cuadró" : conSigno(e.diferencia)}</span>
+              <span>Diferencia</span><span className="tabular-nums">{e.diferencia == null ? "—" : e.diferencia === 0 ? "Cuadra" : conSigno(e.diferencia)}</span>
             </li>
           </ul>
           {c.motivo_diferencia ? <p className="mt-3 rounded-xl bg-white px-3 py-2 text-xs text-slate-600"><b className="text-slate-700">Motivo:</b> {c.motivo_diferencia}</p> : null}

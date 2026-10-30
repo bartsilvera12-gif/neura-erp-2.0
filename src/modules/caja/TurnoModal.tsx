@@ -66,7 +66,7 @@ export function TurnoModal({ turnoId, onClose, onCerrar, onCambio }: {
               <Dato etiqueta={abierta ? "Efectivo esperado" : "Diferencia efectivo"}>
                 {abierta ? formatGs(r.efectivo.esperado) : (
                   <span className={r.caja.diferencia === 0 ? "text-emerald-700" : (r.caja.diferencia ?? 0) < 0 ? "text-rose-600" : "text-amber-600"}>
-                    {r.caja.diferencia === 0 ? "Cuadró" : `${(r.caja.diferencia ?? 0) > 0 ? "+" : "−"} ${formatGs(Math.abs(r.caja.diferencia ?? 0))}`}
+                    {r.caja.diferencia === 0 ? "Cuadra" : `${(r.caja.diferencia ?? 0) > 0 ? "+" : "−"} ${formatGs(Math.abs(r.caja.diferencia ?? 0))}`}
                   </span>
                 )}
               </Dato>

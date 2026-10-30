@@ -14,7 +14,7 @@ import { diaSemana, gs, num } from "@/components/graficos/formato";
 import { Descargas, EncabezadoReporte, EstadoCarga, FilaKpis, FiltrosReporte, Kpi, Nota, Tabla, Tarjeta, useFiltrosReporte, useReporte } from "@/modules/reportes/ui";
 import type { CierresDias } from "@/modules/reportes/tipos";
 
-const conSigno = (n: number) => (n === 0 ? "Cuadró" : `${n > 0 ? "+" : "−"} ${gs(Math.abs(n))}`);
+const conSigno = (n: number) => (n === 0 ? "Cuadra" : `${n > 0 ? "+" : "−"} ${gs(Math.abs(n))}`);
 
 export default function Page() {
   return <Suspense fallback={null}><CierresPorDia /></Suspense>;
