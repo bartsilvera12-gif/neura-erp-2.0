@@ -28,7 +28,6 @@ const crear = z
     plan_id: z.string().uuid("Elegí un plan"),
     precio: z.coerce.number().min(0, "El precio no puede ser negativo").optional().nullable(),
     fecha_inicio: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha de inicio inválida").optional().nullable(),
-    duracion_meses: z.coerce.number().int().min(1, "La duración es de al menos 1 mes").max(600).optional().nullable(),
     dia_facturacion: z.coerce.number().int().min(1, "Día de facturación: 1 a 28").max(28, "Día de facturación: 1 a 28").default(1),
     dia_vencimiento: z.coerce.number().int().min(1, "Día de vencimiento: 1 a 31").max(31, "Día de vencimiento: 1 a 31").default(10),
     observacion: z.string().trim().max(500).optional().nullable(),
@@ -43,8 +42,6 @@ export const POST = withTenant(
         plan_id: input.plan_id,
         precio: input.precio ?? null,
         fecha_inicio: input.fecha_inicio || null,
-        // null = indefinido; sin indicar, la base usa el plazo del plan (receta 108).
-        ...(input.duracion_meses !== undefined ? { duracion_meses: input.duracion_meses } : {}),
         dia_facturacion: input.dia_facturacion,
         dia_vencimiento: input.dia_vencimiento,
         observacion: input.observacion || null,

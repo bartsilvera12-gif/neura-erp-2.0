@@ -14,7 +14,7 @@ export type Plan = {
   moneda: Moneda;
   tipo_iva: TipoIva;
   activo: boolean;
-  /** Receta 108: tipo de plan y plazo con el que nace la suscripción (null = indefinido). */
+  /** Receta 108: tipo de plan. Receta 110: el plazo lo define el plan (null = indefinido). */
   tipo_id: string | null;
   tipo_nombre: string | null;
   duracion_meses: number | null;

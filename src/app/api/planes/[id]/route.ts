@@ -2,6 +2,7 @@
  * Un plan.
  *   PATCH  /api/planes/[id] → editar (nombre, descripción, precio, moneda, IVA, activo). Solo administrador.
  *          Cambiar el precio NO toca las suscripciones que ya existen (cada una guarda su precio).
+ *          El plazo no se cambia si ya lo usan suscripciones: otro plazo, otro plan (receta 110).
  *   DELETE /api/planes/[id] → borrar, solo si ninguna suscripción lo usa; si no, conviene desactivarlo.
  */
 import { z } from "zod";
@@ -24,6 +25,18 @@ export const PATCH = withTenant(
   async (ctx, req, input) => {
     const id = idDeRuta(req, "planes");
     if (!id) return ERR.invalid("Falta el id del plan");
+    if (input.duracion_meses !== undefined) {
+      const [actual, usado, pendiente] = await Promise.all([
+        ctx.db.select("planes", "duracion_meses").eq("id", id),
+        ctx.db.select("suscripciones", "id", { count: "exact", head: true }).eq("plan_id", id).neq("estado", "cancelada"),
+        ctx.db.select("suscripciones", "id", { count: "exact", head: true }).eq("plan_pendiente_id", id).neq("estado", "cancelada"),
+      ]);
+      if (actual.error || usado.error || pendiente.error) return ERR.server();
+      const plan = (actual.data as unknown as { duracion_meses: number | null }[] | null)?.[0];
+      if (plan && plan.duracion_meses !== input.duracion_meses && (usado.count ?? 0) + (pendiente.count ?? 0) > 0) {
+        return fail("Este plan ya lo usan suscripciones: su plazo no se puede cambiar. Para otro plazo, creá otro plan.", 409);
+      }
+    }
     const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
     if (input.nombre !== undefined) patch.nombre = input.nombre;
     if (input.descripcion !== undefined) patch.descripcion = input.descripcion?.trim() || null;

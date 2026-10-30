@@ -5,7 +5,8 @@
  * descripción, precio, moneda, IVA, cuántas suscripciones lo usan y estado; alta y
  * edición en un modal. Solo el administrador crea, edita, desactiva o borra (borrar
  * solo si ninguna suscripción lo usa). Receta 108: cada plan tiene su tipo (para organizarlos y
- * filtrarlos) y su plazo, con el que nace la suscripción: indefinido, un año u otro.
+ * filtrarlos) y su plazo: indefinido, un año u otro. Receta 110: el plazo lo define el plan (otro
+ * plazo, otro plan) y no se cambia si ya lo usan suscripciones.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Plus, Tag, Trash2 } from "lucide-react";
@@ -19,7 +20,7 @@ import MontoInput from "@/components/ui/MontoInput";
 import { PIE_MODAL, TEAL } from "@/modules/clientes/ui";
 import type { Moneda, Plan, TipoIva, TipoPlan } from "@/modules/clientes/suscripciones/tipos";
 import { IVA_LABEL, monto } from "@/modules/clientes/suscripciones/ui";
-import { CampoPlazo, textoPlazo } from "@/modules/clientes/suscripciones/CampoPlazo";
+import { CampoPlazo, PlazoFijo, textoPlazo } from "@/modules/clientes/suscripciones/CampoPlazo";
 
 const INPUT = "w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]";
 const LABEL = "mb-1 block text-xs font-medium text-slate-600";
@@ -137,7 +138,7 @@ export function PanelPlanes({ esAdmin, onCambio }: { esAdmin: boolean; onCambio?
           <p className="text-sm font-semibold text-slate-800">Planes</p>
           <p className="text-xs text-slate-500">
             Lo que cobrás todos los meses (cuota, abono, mantenimiento…). {planes ? `${activos} activo${activos === 1 ? "" : "s"} de ${planes.length}.` : ""}
-            {" "}Cada plan se cobra a través de una suscripción; cambiar su precio o su plazo no toca las que ya existen.
+            {" "}Cada plan se cobra a través de una suscripción y tiene un solo plazo: si querés uno a 6 meses y otro a 12, creá dos planes.
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap items-center gap-2 max-sm:w-full">
@@ -322,7 +323,11 @@ function ModalPlan({ plan, tipos, onClose, onGuardado }: { plan: Plan | null; ti
               <input autoFocus className={`${INPUT} mt-2`} value={tipoNuevo} onChange={(e) => setTipoNuevo(e.target.value)} maxLength={60} placeholder="Ej: Abonos, Mantenimiento" aria-label="Nombre del tipo nuevo" />
             ) : null}
           </div>
-          <CampoPlazo value={plazo} onChange={setPlazo} claseInput={INPUT} claseEtiqueta={LABEL} />
+          {plan?.suscripciones ? (
+            <PlazoFijo meses={plan.duracion_meses} claseEtiqueta={LABEL} nota="Ya lo usan suscripciones: para otro plazo, creá otro plan." />
+          ) : (
+            <CampoPlazo value={plazo} onChange={setPlazo} claseInput={INPUT} claseEtiqueta={LABEL} />
+          )}
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <label>
@@ -344,7 +349,7 @@ function ModalPlan({ plan, tipos, onClose, onGuardado }: { plan: Plan | null; ti
         </label>
         {plan && plan.suscripciones ? (
           <p className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
-            Lo usan {plan.suscripciones} suscripci{plan.suscripciones === 1 ? "ón" : "ones"}: cada una mantiene su precio y su plazo. Para cambiarle el precio, usá "Cambiar plan" en la ficha del cliente.
+            Lo usan {plan.suscripciones} suscripci{plan.suscripciones === 1 ? "ón" : "ones"}: cada una mantiene su precio. Para cambiárselo, usá "Cambiar plan" en la ficha del cliente.
           </p>
         ) : null}
         {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p> : null}

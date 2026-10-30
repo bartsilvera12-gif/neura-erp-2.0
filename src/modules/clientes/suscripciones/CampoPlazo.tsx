@@ -14,8 +14,19 @@ export function textoPlazo(meses: number | null | undefined): string {
   return meses === 1 ? "1 mes" : `${meses} meses`;
 }
 
+/** El plazo donde no se puede editar: lo define el plan (receta 110). */
+export function PlazoFijo({ meses, claseEtiqueta, nota }: { meses: number | null | undefined; claseEtiqueta: string; nota?: string }) {
+  return (
+    <div className="min-w-0">
+      <span className={claseEtiqueta}>Plazo</span>
+      <p className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-600">{meses === undefined ? "—" : textoPlazo(meses)}</p>
+      {nota ? <p className="mt-1 text-[11px] text-slate-500">{nota}</p> : null}
+    </div>
+  );
+}
+
 /**
- * Plazo de un plan o una suscripción: indefinido, un año o los meses que se carguen.
+ * Plazo de un plan: indefinido, un año o los meses que se carguen.
  * `value`: meses (null = indefinido). Mientras "Otro" está vacío, `value` es 0: quien lo usa lo valida.
  * Va con div y no label: un <label> le repite el click al botón del Select (abre y cierra).
  */

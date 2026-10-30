@@ -15,6 +15,7 @@ import MontoInput from "@/components/ui/MontoInput";
 import { PIE_MODAL, TEAL } from "@/modules/clientes/ui";
 import type { ModoCambioPlan, Plan, SuscripcionCliente } from "@/modules/clientes/suscripciones/tipos";
 import { mesActual, monto, nombreMes, sumarMes } from "@/modules/clientes/suscripciones/ui";
+import { textoPlazo } from "@/modules/clientes/suscripciones/CampoPlazo";
 
 export function ModalCambioPlan({ suscripcion: s, onClose, onHecho }: {
   suscripcion: SuscripcionCliente;
@@ -120,7 +121,8 @@ export function ModalCambioPlan({ suscripcion: s, onClose, onHecho }: {
             <div>
               <span className="mb-1 block text-xs font-medium text-slate-600">Plan nuevo</span>
               <Select block value={planId} onChange={elegirPlan} etiqueta="Plan nuevo"
-                options={[["", "— Elegí un plan —"], ...planes.map((p) => [p.id, `${p.nombre} — ${monto(p.precio, p.moneda)}`] as [string, string])]} />
+                options={[["", "— Elegí un plan —"], ...planes.map((p) => [p.id, `${p.nombre} — ${monto(p.precio, p.moneda)} · ${textoPlazo(p.duracion_meses)}`] as [string, string])]} />
+              {plan ? <p className="mt-1 text-[11px] text-slate-500">Plazo: {textoPlazo(plan.duracion_meses)}{plan.duracion_meses === null ? "" : ", contado desde que empezó la suscripción"}.</p> : null}
             </div>
             <label>
               <span className="mb-1 block text-xs font-medium text-slate-600">Precio mensual</span>
