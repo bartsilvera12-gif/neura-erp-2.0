@@ -8,7 +8,7 @@
  * Enter = primer resultado; Esc cierra.
  */
 import { useEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { TEAL, codigoCliente } from "@/modules/clientes/ui";
 import type { ClienteBuscado } from "@/modules/clientes/gestion/tipos";
@@ -28,12 +28,14 @@ async function buscar(q: string): Promise<ClienteBuscado[]> {
   return apiFetch<ClienteBuscado[]>(`/api/clientes?q=${encodeURIComponent(t)}&limite=50`);
 }
 
-export function BuscadorCliente({ variant, seleccionado, onSelect, onClear }: {
+export function BuscadorCliente({ variant, seleccionado, onSelect, onClear, onCrear }: {
   variant: "landing" | "toolbar";
   /** nombre del cliente abierto (solo toolbar) */
   seleccionado?: string | null;
   onSelect: (c: ClienteBuscado) => void;
   onClear?: () => void;
+  /** Si viene, la lista ofrece "Crear cliente" con lo que se buscó (alta rápida). */
+  onCrear?: (texto: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -179,6 +181,13 @@ export function BuscadorCliente({ variant, seleccionado, onSelect, onClear }: {
               ))
             )}
           </div>
+          {onCrear ? (
+            <button type="button" onClick={() => { setOpen(false); setQuery(""); onCrear(t); }}
+              className="flex min-h-11 w-full items-center gap-2 border-t border-slate-100 px-3 py-2 text-left text-xs font-semibold text-[var(--brand)] transition-colors hover:bg-[var(--brand-50)]">
+              <Plus className="h-4 w-4 shrink-0" />
+              <span className="min-w-0 truncate">{t ? <>Crear cliente «{t}»</> : "Crear un cliente nuevo"}</span>
+            </button>
+          ) : null}
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-slate-100 bg-slate-50 px-3 py-1.5 text-[10px] text-slate-400 [@media(pointer:coarse)]:hidden">
             <span className="inline-flex items-center gap-1">
               <kbd className="rounded border border-slate-200 bg-white px-1 py-0.5 font-mono text-[9px] leading-none">↵</kbd>

@@ -13,7 +13,7 @@
 import Link from "next/link";
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, FileSignature, Loader2, Lock, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, ChevronDown, ChevronUp, FileSignature, Loader2, Lock, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchCache, invalidar } from "@/lib/api/cache-cliente";
 import { tienePermiso, useUsuario } from "@/lib/sesion/ContextoUsuario";
@@ -22,6 +22,7 @@ import { clienteConfig } from "@/cliente.config";
 import MontoInput from "@/components/ui/MontoInput";
 import { Select } from "@/components/Select";
 import { BuscadorCliente } from "@/modules/clientes/gestion/BuscadorCliente";
+import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
 import { CamposCredito } from "@/modules/caja/CamposCredito";
 import { MAX_CUOTAS, type CadaCuota } from "@/modules/caja/cuotas";
 import { BuscadorProductos, Segmentado, Tarjeta } from "@/modules/compras/partes";
@@ -119,6 +120,9 @@ function Formulario() {
   const [idem] = useState(() => crypto.randomUUID());
   const puedeCrearProducto = tienePermiso(me, "editar_productos");
   const [creandoProd, setCreandoProd] = useState<string | null>(null);
+  // Alta rápida de cliente (mismas reglas que POST /api/clientes). El texto es lo que se buscó.
+  const puedeCrearCliente = me?.rol === "ADMIN" || me?.rol === "VENDEDOR";
+  const [creandoCliente, setCreandoCliente] = useState<string | null>(null);
 
   // Ajustes de la empresa (validez y condiciones por defecto) y vendedores.
   useEffect(() => {
@@ -260,7 +264,7 @@ function Formulario() {
     lineas.length === 0 && "al menos una línea",
     lineas.some((l) => !l.producto_id) && "quitar las líneas sin producto del inventario",
     lineas.some((l) => !(num(l.cantidad) > 0)) && "la cantidad de alguna línea",
-    lineas.some((l) => !(l.precio > 0)) && "el precio de alguna línea",
+    lineas.some((l) => !(l.precio > 0)) && "cargar en el inventario el precio de alguna línea",
     (lineas.some((l) => num(l.descuento) < 0 || num(l.descuento) >= 100) || dg < 0 || dg >= 100) && "descuentos entre 0 y 99,99 %",
   ].filter(Boolean) as string[];
 
@@ -357,11 +361,20 @@ function Formulario() {
                   <span className={ET}>Cliente *</span>
                   {cliente ? (
                     <BuscadorCliente variant="toolbar" seleccionado={`${cliente.nombre}${cliente.ruc ? ` · ${cliente.ruc}` : ""}`}
-                      onSelect={(c) => void elegirCliente(c.id)} onClear={() => { setCliente(null); setTelefono(""); setEmail(""); }} />
+                      onSelect={(c) => void elegirCliente(c.id)} onClear={() => { setCliente(null); setTelefono(""); setEmail(""); }}
+                      onCrear={puedeCrearCliente ? setCreandoCliente : undefined} />
                   ) : (
-                    <BuscadorCliente variant="toolbar" onSelect={(c) => void elegirCliente(c.id)} />
+                    <div className="flex items-start gap-2">
+                      <BuscadorCliente variant="toolbar" onSelect={(c) => void elegirCliente(c.id)} onCrear={puedeCrearCliente ? setCreandoCliente : undefined} />
+                      {puedeCrearCliente ? (
+                        <button type="button" onClick={() => setCreandoCliente("")} title="Crear un cliente nuevo" aria-label="Nuevo cliente"
+                          className="inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)] max-sm:w-11 max-sm:px-0">
+                          <Plus className="h-4 w-4" /> <span className="max-sm:hidden">Nuevo cliente</span>
+                        </button>
+                      ) : null}
+                    </div>
                   )}
-                  <p className="mt-1 text-[11px] text-slate-500">¿Todavía no es cliente? Usá <button type="button" onClick={() => setModo("prospecto")} className="font-semibold text-[var(--brand)] hover:underline [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3">Prospecto</button> y cargá sus datos a mano.</p>
+                  <p className="mt-1 text-[11px] text-slate-500">¿Todavía no es cliente? {puedeCrearCliente ? "Crealo acá o usá " : "Usá "}<button type="button" onClick={() => setModo("prospecto")} className="font-semibold text-[var(--brand)] hover:underline [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:py-3">Prospecto</button> y cargá sus datos a mano.</p>
                 </div>
                 {cliente ? (
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -440,6 +453,14 @@ function Formulario() {
             <p className="mt-1.5 text-[11px] text-slate-500">
               Solo productos del inventario.{puedeCrearProducto ? " Si falta uno, crealo con el botón + y queda cargado en el inventario." : " Si falta uno, pedí que lo carguen en el inventario."}
             </p>
+            {creandoCliente !== null ? (
+              <NuevoCliente
+                // Un número buscado no es un nombre: no se precarga.
+                inicial={creandoCliente && !/^[\d.\s-]+$/.test(creandoCliente) ? { nombre: creandoCliente } : undefined}
+                onClose={() => setCreandoCliente(null)}
+                onCreado={(c) => { setCreandoCliente(null); void elegirCliente(c.id); }}
+              />
+            ) : null}
             {creandoProd !== null ? (
               <ProductoForm modal inicial={{ nombre: creandoProd }}
                 onClose={() => setCreandoProd(null)}
@@ -495,13 +516,14 @@ function Formulario() {
                         <div className="grid grid-cols-2 gap-2 max-sm:w-full sm:contents">
                           <label className="sm:w-20"><span className={ET}>Cant.</span>
                             <input inputMode="decimal" enterKeyHint="next" value={l.cantidad} onChange={(e) => editar(l.key, { cantidad: e.target.value.replace(/[^\d.,]/g, "") })} className={`${INPUT} px-2 py-2 text-right tabular-nums`} /></label>
-                          <label className="sm:w-32"><span className={ET}>Precio {moneda === "USD" ? "US$" : "Gs."}</span>
-                            <MontoInput value={l.precio} onChange={(v) => editar(l.key, { precio: v })} decimals={moneda === "USD"} placeholder="0" className={`${INPUT} px-2 py-2 text-right tabular-nums`} /></label>
+                          {/* El precio sale del inventario (receta 107): para bajarlo, el descuento. */}
+                          <div className="sm:w-32"><span className={ET}>Precio {moneda === "USD" ? "US$" : "Gs."}</span>
+                            <p title="El precio sale del inventario. Para bajarlo, usá el descuento." className="rounded-xl border border-slate-100 bg-slate-50 px-2 py-2 text-right text-sm tabular-nums text-slate-700">{monto(l.precio, moneda).replace(/^(Gs\.|US\$)\s*/, "")}</p></div>
                           <label className="sm:w-[4.5rem]"><span className={ET}>Desc. %</span>
                             <input inputMode="decimal" enterKeyHint="done" value={l.descuento} onChange={(e) => editar(l.key, { descuento: e.target.value.replace(/[^\d.,]/g, "").slice(0, 6) })} placeholder="0" className={`${INPUT} px-2 py-2 text-right tabular-nums`} /></label>
                           <div className="sm:w-28">
                             <span className={ET}>IVA</span>
-                            <p className="rounded-xl border border-transparent px-1 py-2 text-sm text-slate-600" title="El IVA del producto">{l.tipo_iva === "EXENTA" ? "Exenta" : l.tipo_iva}</p>
+                            <p className="rounded-xl border border-transparent px-1 py-2 text-sm text-slate-600" title="El IVA ya está incluido en el precio: no se descuenta">{l.tipo_iva === "EXENTA" ? "Exenta" : `${l.tipo_iva} incluido`}</p>
                           </div>
                         </div>
                         <div className="flex items-center justify-between gap-2 max-sm:w-full max-sm:border-t max-sm:border-slate-100 max-sm:pt-2 sm:block sm:w-28 sm:pt-5 sm:text-right">
@@ -512,6 +534,7 @@ function Formulario() {
                           <div className="text-right">
                             {num(l.descuento) > 0 ? <p className="text-[10px] tabular-nums text-slate-400 line-through">{monto(c.bruto, moneda)}</p> : null}
                             <p className="text-base font-bold tabular-nums text-slate-900 sm:text-sm">{monto(c.total, moneda)}</p>
+                            {num(l.descuento) > 0 ? <p className="text-[10px] font-medium text-emerald-700">con {l.descuento} % de descuento</p> : null}
                           </div>
                         </div>
                         <button type="button" onClick={() => setLineas((ls) => ls.filter((x) => x.key !== l.key))} aria-label={`Quitar ${l.descripcion || "línea"}`}
