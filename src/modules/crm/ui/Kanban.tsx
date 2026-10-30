@@ -16,7 +16,7 @@
  */
 import { memo, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { ArrowRightLeft, Check, ChevronDown, Clock, Copy, Loader2, Pencil, Phone, X } from "lucide-react";
+import { ArrowRightLeft, Check, ChevronDown, Clock, Loader2, Phone, X } from "lucide-react";
 import { MenuAcciones } from "@/components/MenuAcciones";
 import { Select } from "@/components/Select";
 import {
@@ -80,59 +80,35 @@ export const ProspectoCard = memo(function ProspectoCard({
       }}
       onDragEnd={acciones.onDragEnd}
       onClick={() => acciones.onAbrir(t.id)}
-      className={`group flex shrink-0 select-none flex-col rounded-2xl border border-l-4 border-slate-200 bg-white p-3 shadow-sm transition-all [contain-intrinsic-size:auto_400px] [content-visibility:auto] [@media(pointer:coarse)]:[contain-intrinsic-size:auto_520px] ${tactil ? "cursor-pointer active:bg-slate-50" : "cursor-grab hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing"} ${tono.borderLeft}`}
+      className={`group flex shrink-0 select-none flex-col rounded-2xl border border-l-4 border-slate-200 bg-white p-2.5 shadow-sm transition-all [contain-intrinsic-size:auto_210px] [content-visibility:auto] [@media(pointer:coarse)]:[contain-intrinsic-size:auto_340px] ${tactil ? "cursor-pointer active:bg-slate-50" : "cursor-grab hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing"} ${tono.borderLeft}`}
     >
-      <div className="flex items-start gap-2">
-        <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${tono.dot}`} />
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-[13px] font-semibold leading-tight text-slate-900 max-md:text-sm" title={t.empresa || t.contacto}>{t.empresa || t.contacto}</p>
-          <p className="mt-0.5 truncate font-mono text-[10px] leading-tight text-slate-400">{t.numero_control}</p>
-        </div>
-        <button
-          type="button"
-          onClick={(e) => { e.stopPropagation(); acciones.onAbrir(t.id); }}
-          className="shrink-0 rounded-md p-1 text-slate-300 opacity-0 transition-all hover:bg-[var(--brand)]/10 hover:text-[var(--brand)] group-hover:opacity-100 [@media(hover:none)]:hidden"
-          title="Editar"
-          aria-label="Editar prospecto"
-        >
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
+      {/* Compacta: cada dato en una sola línea y sin cajas de más. Las filas tienen alto fijo (con
+          un texto gris si están vacías): así todas las tarjetas miden lo mismo, en cualquier columna. */}
+      <div className="flex items-center gap-1.5">
+        <span className={`h-2 w-2 shrink-0 rounded-full ${tono.dot}`} />
+        <p className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight text-slate-900 max-md:text-sm" title={t.empresa || t.contacto}>{t.empresa || t.contacto}</p>
+        <span className="shrink-0 text-[10px] text-slate-400">{diaMes(t.created_at)}</span>
       </div>
 
-      {/* Todas las filas se muestran siempre (con un texto gris si están vacías) y con alto fijo:
-          así todas las tarjetas miden lo mismo, en cualquier columna. */}
-      <p className={`mt-1.5 h-4 truncate text-[11px] leading-4 ${t.servicio ? "text-slate-500" : "italic text-slate-300"}`} title={t.servicio || undefined}>
-        {t.servicio || "Sin plan"}
+      <p className="mt-0.5 h-4 truncate text-[11px] leading-4" title={t.servicio || undefined}>
+        <span className="font-mono text-[10px] text-slate-400">{t.numero_control}</span>
+        <span className="text-slate-300"> · </span>
+        <span className={t.servicio ? "text-slate-500" : "italic text-slate-300"}>{t.servicio || "Sin plan"}</span>
       </p>
 
-      <div className="mt-2 flex h-5 items-baseline justify-between gap-2">
-        <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Valor</span>
+      <div className="mt-1.5 flex h-5 items-center justify-between gap-2">
         <span className="truncate text-sm font-semibold tabular-nums text-slate-900">{gsCompleto(t.valor_estimado)}</span>
-      </div>
-
-      <div className="mt-2 flex h-5 items-center gap-1 overflow-hidden">
         {t.origen_creacion && t.origen_creacion !== "manual" ? (
-          <span className={`inline-flex min-w-0 items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium leading-none ${
+          <span className={`inline-flex min-w-0 shrink items-center gap-1 rounded-full border px-1.5 py-0.5 text-[10px] font-medium leading-none ${
             t.origen_creacion === "whatsapp" ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-slate-50 text-slate-600"
           }`}>
             <span aria-hidden className={`h-1 w-1 shrink-0 rounded-full ${t.origen_creacion === "whatsapp" ? "bg-emerald-500" : "bg-slate-400"}`} />
             <span className="truncate">{ORIGEN_LABEL[t.origen_creacion] ?? t.origen_creacion}</span>
           </span>
-        ) : (
-          <span className="inline-flex items-center gap-1 rounded-full border border-dashed border-slate-200 px-1.5 py-0.5 text-[10px] leading-none text-slate-300">
-            Carga manual
-          </span>
-        )}
+        ) : null}
       </div>
 
-      <div className="mt-2 flex h-7 items-center rounded-xl bg-slate-50/80 px-2.5">
-        {t.empresa && t.contacto ? (
-          <p className="truncate text-[11px] text-slate-700" title={t.contacto}><span className="font-medium text-slate-500">Contacto: </span>{t.contacto}</p>
-        ) : (
-          <p className="truncate text-[11px] italic text-slate-300">Sin contacto</p>
-        )}
-      </div>
-
+      {/* Contacto y teléfono en una sola fila: tocarla copia el número. */}
       {tel ? (
         <button
           type="button"
@@ -142,130 +118,120 @@ export const ProspectoCard = memo(function ProspectoCard({
             setCopiado(true);
             window.setTimeout(() => setCopiado(false), 1500);
           }}
-          title={copiado ? "Copiado" : "Hacé click para copiar el número"}
-          className={`mt-2 flex h-8 w-full items-center justify-between gap-2 rounded-xl border px-2.5 text-left text-[11px] transition-colors [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:text-[13px] ${
+          title={copiado ? "Copiado" : `${t.empresa && t.contacto ? `${t.contacto} · ` : ""}Hacé click para copiar el número`}
+          className={`mt-1.5 flex h-7 w-full items-center gap-1.5 rounded-lg border px-2 text-left text-[11px] transition-colors [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:text-[13px] ${
             copiado ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-[var(--brand)]/30 bg-[var(--brand)]/[0.08] text-[var(--brand-600)] hover:border-[var(--brand)]/50"
           }`}
         >
-          <span className="flex min-w-0 flex-1 items-center gap-1.5">
-            <Phone className={`h-3 w-3 shrink-0 ${copiado ? "text-emerald-600" : "text-[var(--brand)]"}`} />
-            <span className="min-w-0 flex-1 truncate font-mono font-medium tabular-nums">{telefonoLindo(tel)}</span>
-          </span>
-          {copiado ? <Check className="h-3 w-3 shrink-0 text-emerald-600" /> : <Copy className="h-3 w-3 shrink-0 text-[var(--brand)]/70" />}
+          {copiado ? <Check className="h-3 w-3 shrink-0 text-emerald-600" /> : <Phone className="h-3 w-3 shrink-0 text-[var(--brand)]" />}
+          <span className="shrink-0 font-mono font-medium tabular-nums">{telefonoLindo(tel)}</span>
+          {t.empresa && t.contacto ? <span className="min-w-0 flex-1 truncate text-right text-slate-500">{t.contacto}</span> : null}
         </button>
       ) : (
-        <div className="mt-2 flex h-8 w-full items-center gap-1.5 rounded-xl border border-dashed border-slate-200 px-2.5 text-[11px] italic text-slate-300 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:text-[13px]">
-          <Phone className="h-3 w-3 shrink-0" aria-hidden /> Sin teléfono
+        <div className="mt-1.5 flex h-7 w-full items-center gap-1.5 rounded-lg border border-dashed border-slate-200 px-2 text-[11px] text-slate-300 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:text-[13px]">
+          <Phone className="h-3 w-3 shrink-0" aria-hidden />
+          <span className="shrink-0 italic">Sin teléfono</span>
+          {t.empresa && t.contacto ? <span className="min-w-0 flex-1 truncate text-right text-slate-500">{t.contacto}</span> : null}
         </div>
       )}
 
-      {t.proxima_accion || t.fecha_proxima_accion ? (
-        <div
-          className={`mt-2 flex h-7 items-center gap-1.5 rounded-lg border px-2 ${
-            t.accion_vencida && abierta ? "border-rose-200 bg-rose-50/80" : "border-amber-100 bg-amber-50/70"
-          }`}
-          title={[t.proxima_accion, t.fecha_proxima_accion ? fechaSimple(t.fecha_proxima_accion) : ""].filter(Boolean).join(" · ")}
-        >
-          <Clock className={`h-3 w-3 shrink-0 ${t.accion_vencida && abierta ? "text-rose-500" : "text-amber-500"}`} />
-          <p className={`truncate text-[10px] leading-tight ${t.accion_vencida && abierta ? "text-rose-800" : "text-amber-800"}`}>
-            {t.proxima_accion}
+      <div
+        className={`mt-1.5 flex h-4 items-center gap-1.5 ${t.proxima_accion || t.fecha_proxima_accion ? (t.accion_vencida && abierta ? "text-rose-700" : "text-amber-700") : "text-slate-300"}`}
+        title={[t.proxima_accion, t.fecha_proxima_accion ? fechaSimple(t.fecha_proxima_accion) : ""].filter(Boolean).join(" · ") || undefined}
+      >
+        <Clock className="h-3 w-3 shrink-0" aria-hidden />
+        {t.proxima_accion || t.fecha_proxima_accion ? (
+          // La fecha nunca se corta: si no entra, se acorta el texto de la acción.
+          <p className="flex min-w-0 flex-1 items-center justify-between gap-2 text-[10px] leading-tight">
+            <span className="min-w-0 truncate">{t.proxima_accion}</span>
             {t.fecha_proxima_accion ? (
-              <span className="font-semibold">{t.proxima_accion ? " · " : ""}{fechaSimple(t.fecha_proxima_accion)}{t.accion_vencida && abierta ? " (vencida)" : ""}</span>
+              <span className="shrink-0 font-semibold">{t.accion_vencida && abierta ? "Venció " : ""}{fechaSimple(t.fecha_proxima_accion)}</span>
             ) : null}
           </p>
-        </div>
-      ) : (
-        <div className="mt-2 flex h-7 items-center gap-1.5 rounded-lg border border-dashed border-slate-200 px-2 text-[10px] italic text-slate-300">
-          <Clock className="h-3 w-3 shrink-0" aria-hidden /> Sin próxima acción
-        </div>
-      )}
+        ) : <p className="truncate text-[10px] italic leading-tight">Sin próxima acción</p>}
+      </div>
 
-      <div className="mt-2 flex h-8 items-center justify-between gap-2 border-t border-slate-100 pt-2">
+      <div className="mt-1.5 flex h-5 min-w-0 items-center gap-1.5">
         {t.responsable_nombre ? (
-          <div className="flex min-w-0 items-center gap-1.5">
+          <>
             <AvatarIni nombre={t.responsable_nombre} />
             <span className="truncate text-[10px] text-slate-600">{t.responsable_nombre}</span>
-          </div>
+          </>
         ) : (
           <span className="text-[10px] italic text-slate-300">Sin responsable</span>
         )}
-        <span className="shrink-0 text-[10px] text-slate-400">{diaMes(t.created_at)}</span>
       </div>
 
-      {/* Mover a etapa: el select no arrastra la tarjeta ni abre el detalle. */}
-      <div
-        className={`mt-2 rounded-xl border border-slate-100 bg-slate-50/70 ${tactil ? "p-1" : "px-2 py-1.5"}`}
-        draggable={false}
-        onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
-        onPointerDown={parar}
-        onMouseDown={parar}
-        onClick={parar}
-      >
-        {tactil ? (
-          // Táctil: "Mover a…" abre la lista de etapas (hoja inferior en celular).
-          <MenuAcciones
-            etiqueta="Mover a…"
-            items={etapas
-              .filter((e) => e.codigo !== t.etapa)
-              .map((e) => ({
-                etiqueta: e.nombre,
-                icono: <span className={`h-2.5 w-2.5 rounded-full ${tonoEtapa(e.color).dot}`} />,
-                onClick: () => acciones.onMover(t, e.codigo),
-                tono: e.es_ganado ? ("exito" as const) : e.es_perdido ? ("peligro" as const) : undefined,
-              }))}
-            className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-left text-sm font-medium text-slate-700"
-          >
-            <span className="flex min-w-0 items-center gap-2">
-              <ArrowRightLeft className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
-              <span className="truncate">Mover a…</span>
-            </span>
-            <span className="flex min-w-0 items-center gap-1 text-xs text-slate-500">
-              <span className="truncate">{etapa?.nombre ?? t.etapa}</span>
-              <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
-            </span>
-          </MenuAcciones>
-        ) : (
+      {tactil ? (
         <>
-        <span className="mb-1 block text-[9px] font-semibold uppercase tracking-[0.1em] text-slate-500">Mover a etapa</span>
-        <Select
-          chico
-          block
-          etiqueta="Mover a etapa"
-          value={t.etapa}
-          onChange={(v) => acciones.onMover(t, v)}
-          options={etapas.map((e): [string, string] => [e.codigo, e.nombre])}
-        />
+          {/* Táctil: "Mover a…" abre la lista de etapas (hoja inferior en celular). */}
+          <div className="mt-2" draggable={false} onPointerDown={parar} onMouseDown={parar} onClick={parar}>
+            <MenuAcciones
+              etiqueta="Mover a…"
+              items={etapas
+                .filter((e) => e.codigo !== t.etapa)
+                .map((e) => ({
+                  etiqueta: e.nombre,
+                  icono: <span className={`h-2.5 w-2.5 rounded-full ${tonoEtapa(e.color).dot}`} />,
+                  onClick: () => acciones.onMover(t, e.codigo),
+                  tono: e.es_ganado ? ("exito" as const) : e.es_perdido ? ("peligro" as const) : undefined,
+                }))}
+              className="flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 text-left text-sm font-medium text-slate-700"
+            >
+              <span className="flex min-w-0 items-center gap-2">
+                <ArrowRightLeft className="h-4 w-4 shrink-0 text-slate-400" aria-hidden />
+                <span className="truncate">Mover a…</span>
+              </span>
+              <span className="flex min-w-0 items-center gap-1 text-xs text-slate-500">
+                <span className="truncate">{etapa?.nombre ?? t.etapa}</span>
+                <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+              </span>
+            </MenuAcciones>
+          </div>
+          {abierta && ganado && perdido ? (
+            <div className="mt-2 flex h-11 gap-1">
+              <button type="button" onClick={(e) => { e.stopPropagation(); acciones.onMover(t, ganado); }}
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-200 px-2 text-xs font-semibold text-emerald-700">
+                <Check className="h-3 w-3" /> Ganado
+              </button>
+              <button type="button" onClick={(e) => { e.stopPropagation(); acciones.onMover(t, perdido); }}
+                className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-rose-200 px-2 text-xs font-semibold text-rose-700">
+                <X className="h-3 w-3" /> Perdido
+              </button>
+            </div>
+          ) : null}
         </>
-        )}
-      </div>
-
-      {/* Atajos Ganado / Perdido (etapas abiertas) o, si la etapa ya está cerrada, una fila de estado
-          del mismo alto: así no cambia el tamaño de la tarjeta entre columnas. */}
-      {abierta && ganado && perdido ? (
-        <div className="mt-2 flex h-7 gap-1 opacity-0 transition-opacity group-hover:opacity-100 [@media(hover:none)]:opacity-100 [@media(pointer:coarse)]:h-11">
-          <button type="button" onClick={(e) => { e.stopPropagation(); acciones.onMover(t, ganado); }}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-emerald-200 px-2 text-[10px] font-semibold text-emerald-700 transition-colors hover:bg-emerald-50 [@media(pointer:coarse)]:text-xs">
-            <Check className="h-3 w-3" /> Ganado
-          </button>
-          <button type="button" onClick={(e) => { e.stopPropagation(); acciones.onMover(t, perdido); }}
-            className="flex flex-1 items-center justify-center gap-1 rounded-lg border border-rose-200 px-2 text-[10px] font-semibold text-rose-700 transition-colors hover:bg-rose-50 [@media(pointer:coarse)]:text-xs">
-            <X className="h-3 w-3" /> Perdido
-          </button>
-        </div>
       ) : (
-        <div className={`mt-2 flex h-7 items-center justify-center gap-1 rounded-lg border px-2 text-[10px] font-semibold [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:text-xs ${
-          etapa?.es_ganado ? "border-emerald-100 bg-emerald-50/60 text-emerald-700"
-            : etapa?.es_perdido ? "border-rose-100 bg-rose-50/60 text-rose-700"
-            : "border-slate-100 bg-slate-50 text-slate-500"
-        }`}>
-          {etapa?.es_ganado ? <><Check className="h-3 w-3" /> Ganado · etapa cerrada</>
-            : etapa?.es_perdido ? <><X className="h-3 w-3" /> Perdido · etapa cerrada</>
-            : <span className="truncate">{etapa?.nombre ?? t.etapa}</span>}
+        // Escritorio: etapa y atajos en una sola fila; el select no arrastra la tarjeta ni abre el detalle.
+        <div
+          className="mt-2 flex items-center gap-1 border-t border-slate-100 pt-2"
+          draggable={false}
+          onDragStart={(e) => { e.preventDefault(); e.stopPropagation(); }}
+          onPointerDown={parar}
+          onMouseDown={parar}
+          onClick={parar}
+        >
+          <div className="min-w-0 flex-1">
+            <Select chico block etiqueta="Mover a etapa" value={t.etapa} onChange={(v) => acciones.onMover(t, v)}
+              options={etapas.map((e): [string, string] => [e.codigo, e.nombre])} />
+          </div>
+          {abierta && ganado && perdido ? (
+            <>
+              <button type="button" onClick={() => acciones.onMover(t, ganado)} title="Marcar como ganado" aria-label="Marcar como ganado"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-emerald-200 text-emerald-700 transition-colors hover:bg-emerald-50">
+                <Check className="h-3.5 w-3.5" />
+              </button>
+              <button type="button" onClick={() => acciones.onMover(t, perdido)} title="Marcar como perdido" aria-label="Marcar como perdido"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-rose-200 text-rose-700 transition-colors hover:bg-rose-50">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            </>
+          ) : null}
         </div>
       )}
 
       {/* Acción final anclada abajo */}
-      <div className="mt-auto pt-2">
+      <div className="mt-auto pt-1.5">
       {t.cliente_id ? (
         <Link href={`/clientes/${t.cliente_id}`} onClick={parar} draggable={false}
           className="flex h-7 w-full items-center justify-center gap-1 rounded-lg border border-emerald-200 bg-emerald-50/80 px-2 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:text-xs">
@@ -303,7 +269,7 @@ export const ColumnaKanban = memo(function ColumnaKanban({
   const tactil = useEsTactil();
   return (
     <div
-      className={`flex w-64 min-w-64 snap-start flex-col rounded-2xl border bg-white/60 backdrop-blur-sm transition-all duration-150 max-md:w-[calc(100vw-3.5rem)] max-md:min-w-[calc(100vw-3.5rem)] max-md:max-w-80 ${
+      className={`flex w-60 min-w-60 snap-start flex-col rounded-2xl border bg-white/60 backdrop-blur-sm transition-all duration-150 max-md:w-[calc(100vw-3.5rem)] max-md:min-w-[calc(100vw-3.5rem)] max-md:max-w-80 ${
         resaltada ? "border-[var(--brand)] bg-[var(--brand)]/[0.04] ring-2 ring-[var(--brand)]/30" : tono.headerBorder
       }`}
       onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; onDragSobre(col.codigo); }}
