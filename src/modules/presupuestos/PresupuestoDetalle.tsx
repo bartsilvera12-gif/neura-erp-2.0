@@ -19,7 +19,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
-  ArrowLeft, Ban, CalendarClock, CheckCircle2, ChevronDown, Copy, Download, ExternalLink, Eye, FileSignature, History, Loader2,
+  ArrowLeft, CalendarClock, CheckCircle2, ChevronDown, Copy, Download, ExternalLink, FileSignature, History, Loader2,
   MoreHorizontal, Pencil, Receipt, RotateCcw, Send, Share2, ShoppingCart, StickyNote, ThumbsDown, ThumbsUp, UserRound, X,
 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -35,9 +35,10 @@ import { VentaDetalle } from "@/modules/caja/VentaDetalle";
 import { BadgeEstado, textoVigencia } from "@/modules/presupuestos/ui";
 import { ModalRechazo } from "@/modules/presupuestos/Modales";
 import { ModalConvertir } from "@/modules/presupuestos/ModalConvertir";
+import { HistorialPresupuesto } from "@/modules/presupuestos/HistorialPresupuesto";
 import { browserClient } from "@/lib/supabase/browser";
 import {
-  cantidad, condicionTexto, diaCorto, monto, nombreArchivoPresupuesto, pct, type Presupuesto, type PresupuestoEvento,
+  cantidad, condicionTexto, diaCorto, monto, nombreArchivoPresupuesto, pct, type Presupuesto,
 } from "@/modules/presupuestos/tipos";
 
 const TEAL = clienteConfig.color;
@@ -243,19 +244,7 @@ export function PresupuestoDetalle({ id, onCerrar, onCambio, avisoInicial }: {
       ) : null}
 
       <div className="px-4 py-3.5 sm:px-6">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">Historial</p>
-        <ol className="mt-3">
-          {p.eventos.map((ev, n) => (
-            <li key={ev.id} className="relative flex gap-3 pb-3.5 last:pb-0">
-              {n < p.eventos.length - 1 ? <span aria-hidden className="absolute left-[11px] top-6 h-[calc(100%-18px)] w-px bg-slate-200" /> : null}
-              <span className="relative mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500">{iconoEvento(ev)}</span>
-              <div className="min-w-0">
-                <p className="text-sm text-slate-800 [overflow-wrap:anywhere]">{textoEvento(ev, p)}</p>
-                <p className="text-[11px] text-slate-400">{fechaHora(ev.created_at)}{ev.usuario_nombre ? ` · ${ev.usuario_nombre}` : ev.canal === "link" ? " · cliente" : ""}</p>
-              </div>
-            </li>
-          ))}
-        </ol>
+        <HistorialPresupuesto p={p} />
       </div>
     </div>
   );
@@ -480,44 +469,6 @@ export function PresupuestoDetalle({ id, onCerrar, onCambio, avisoInicial }: {
       ) : null}
     </div>
   );
-}
-
-const CANAL: Record<string, string> = { whatsapp: "WhatsApp", link: "link", email: "email", caja: "la caja" };
-
-function textoEvento(ev: PresupuestoEvento, p: Presupuesto): React.ReactNode {
-  const d = (ev.detalle ?? {}) as Record<string, string | number | null>;
-  switch (ev.tipo) {
-    case "creado": return d.duplicado_de ? <>Creado como copia de <b className="font-mono font-semibold">{d.duplicado_de}</b></> : "Creado";
-    case "editado": return "Editado";
-    case "revision": return <>Revisión {ev.revision} <span className="text-slate-400">(antes {monto(Number(d.total_anterior), p.moneda)})</span></>;
-    case "enviado": return ev.canal && CANAL[ev.canal] ? `Enviado por ${CANAL[ev.canal]}` : "Marcado como enviado";
-    case "reenviado": return `Compartido de nuevo${ev.canal && CANAL[ev.canal] ? ` por ${CANAL[ev.canal]}` : ""}`;
-    case "visto": return "Visto por el cliente";
-    case "pdf": return "PDF descargado";
-    case "aceptado": return ev.canal === "link" ? <>Aceptado por el cliente{d.nombre ? ` (${d.nombre})` : ""}</> : `Marcado como aceptado${d.estaba_vencido ? " (estaba vencido)" : ""}`;
-    case "rechazado": return <>{ev.canal === "link" ? "Rechazado por el cliente" : "Rechazado"}{d.motivo ? <>: <b className="font-semibold">{d.motivo}</b></> : ""}</>;
-    case "reabierto": return "Reabierto";
-    case "convertido": return <>Convertido en venta <b className="font-mono font-semibold">{d.numero_control}</b></>;
-    case "venta_anulada": return <>Se anuló la venta <b className="font-mono font-semibold">{d.numero_control}</b>: vuelve a aceptado</>;
-    case "producto_vinculado": return <>«{d.linea}» ligada al producto <b className="font-semibold">{d.producto}</b></>;
-    default: return ev.tipo;
-  }
-}
-
-function iconoEvento(ev: PresupuestoEvento) {
-  const c = "h-3 w-3";
-  switch (ev.tipo) {
-    case "creado": return <FileSignature className={c} />;
-    case "editado": case "revision": case "producto_vinculado": return <Pencil className={c} />;
-    case "enviado": case "reenviado": return <Send className={c} />;
-    case "visto": return <Eye className={`${c} text-sky-500`} />;
-    case "pdf": return <Download className={c} />;
-    case "aceptado": return <ThumbsUp className={`${c} text-emerald-600`} />;
-    case "rechazado": return <ThumbsDown className={`${c} text-rose-500`} />;
-    case "convertido": return <ShoppingCart className={`${c} text-[#3F8E91]`} />;
-    case "venta_anulada": return <Ban className={`${c} text-rose-500`} />;
-    default: return <UserRound className={c} />;
-  }
 }
 
 function Dato({ l, v, extra, rojo }: { l: string; v: string; extra?: { texto: string; tono: string } | null; rojo?: boolean }) {
