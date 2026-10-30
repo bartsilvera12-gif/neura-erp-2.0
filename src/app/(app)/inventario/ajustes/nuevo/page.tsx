@@ -17,7 +17,7 @@ import { apiFetch } from "@/lib/api/client-fetch";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Select } from "@/components/Select";
-import { BuscadorProductos } from "@/modules/compras/partes";
+import { BuscadorProductos, MiniaturaProducto } from "@/modules/compras/partes";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 import { loteAutomatico, type StockProducto } from "@/modules/inventario/vencimientos";
 import { invalidarDepositos, opcionesDepositos, useDepositos } from "@/modules/inventario/depositos";
@@ -235,7 +235,7 @@ function NuevoAjuste() {
       <section className="rounded-2xl border bg-white shadow-sm" style={{ borderColor: `${TEAL}33` }}>
         <div className="border-b px-4 py-4 sm:px-5" style={{ borderColor: `${TEAL}22` }}>
           <h2 className="mb-3 text-sm font-semibold text-slate-900">Productos</h2>
-          <BuscadorProductos onElegir={agregar} />
+          <BuscadorProductos onElegir={agregar} deposito={depEf ? { id: depEf, nombre: depNombre } : null} agregados={lineas.map((l) => l.prod.id)} />
         </div>
         {lineas.length === 0 ? (
           <p className="px-4 py-10 text-center text-sm text-slate-400 sm:px-5">Buscá los productos {tipo === "perdida" ? "que se perdieron" : "a ajustar"}.</p>
@@ -250,11 +250,14 @@ function NuevoAjuste() {
                 <li key={l.prod.id} className="px-4 py-3 sm:px-5">
                   {/* Celular: nombre + quitar (44 px) arriba; modo a todo el ancho; cantidad | diferencia en 2 col. */}
                   <div className="flex flex-wrap items-center gap-3 max-sm:gap-2">
-                    <div className="min-w-0 flex-1 max-sm:basis-[calc(100%-3.25rem)]">
-                      <p className="truncate font-medium text-slate-800 max-sm:whitespace-normal max-sm:[overflow-wrap:anywhere]">{l.prod.nombre}</p>
-                      <p className="text-[11px] text-slate-500">
-                        <span className="font-mono">{l.prod.sku}</span> · en el sistema: {l.stock ? <strong className="text-slate-700">{cant(dep?.cantidad ?? 0)}</strong> : <Loader2 className="inline h-3 w-3 animate-spin" />} {unidadCorta(l.prod.unidad_medida ?? "Unidad")}
-                      </p>
+                    <div className="flex min-w-0 flex-1 items-center gap-3 max-sm:basis-[calc(100%-3.25rem)]">
+                      <MiniaturaProducto url={l.prod.imagen_url} nombre={l.prod.nombre} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium text-slate-800 max-sm:whitespace-normal max-sm:[overflow-wrap:anywhere]">{l.prod.nombre}</p>
+                        <p className="text-[11px] text-slate-500">
+                          <span className="font-mono">{l.prod.sku}</span> · en el sistema: {l.stock ? <strong className="text-slate-700">{cant(dep?.cantidad ?? 0)}</strong> : <Loader2 className="inline h-3 w-3 animate-spin" />} {unidadCorta(l.prod.unidad_medida ?? "Unidad")}
+                        </p>
+                      </div>
                     </div>
                     {tipo === "ajuste" ? (
                       <div className="flex rounded-lg bg-slate-100 p-0.5 text-[11px] font-semibold max-sm:order-2 max-sm:w-full max-sm:text-xs">
