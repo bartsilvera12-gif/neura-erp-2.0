@@ -95,8 +95,9 @@ export function NotaCreditoDetalle({ notaId, onClose, onCambio, onVerVenta }: {
                     {d.venta.numero_control}
                   </button>
                 ) : <p className="mt-1 font-mono text-sm text-slate-800">{d.venta.numero_control}</p>}
-                <p className="text-[11px] text-slate-400">{fechaCorta(d.venta.fecha)} · {d.venta.tipo_documento === "factura" ? "Factura" : "Ticket"} · {formatGs(d.venta.total)}</p>
+                <p className="text-[11px] text-slate-400">{fechaCorta(d.venta.fecha)} · {d.venta.fiscal_numero ? `Factura ${d.venta.fiscal_numero}` : d.venta.tipo_documento === "factura" ? "Factura" : "Ticket"} · {formatGs(d.venta.total)}</p>
               </Campo>
+              {n.fiscal_numero ? <Campo label="N° fiscal" valor={`${n.fiscal_numero} · Timbrado ${n.fiscal_timbrado ?? "—"}`} /> : null}
               <Campo label="Tipo" valor={tipoNotaLabel(n.tipo)} />
               <Campo label="Depósito" valor={d.deposito ?? "—"} />
             </div>

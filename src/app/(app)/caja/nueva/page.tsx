@@ -1071,7 +1071,7 @@ function CajaPageContenido() {
   const ayudaDocumento = tipoDocumento === "ticket"
     ? "Registra la venta e imprime un ticket. No toca SIFEN."
     : cfgFact?.modo === "autoimpresor"
-      ? "Factura impresa (autoimpresor) — todavía no se emite: se imprime el ticket."
+      ? "Factura impresa (autoimpresor): al confirmar toma el próximo número del timbrado."
       : cfgFact?.modo === "sin_factura_fiscal"
         ? "La empresa está en modo sin factura fiscal (Configuración › Facturación): se imprime el ticket."
         : "Factura electrónica (SIFEN) — por ahora inactivo: se imprime el ticket.";

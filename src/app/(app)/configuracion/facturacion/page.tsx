@@ -457,7 +457,7 @@ export default function FacturacionPage() {
 
 type FormAuto = Record<
   "ruc_emisor" | "razon_social_emisor" | "nombre_fantasia" | "direccion_matriz" | "telefono" | "timbrado_numero" | "timbrado_inicio_vigencia" |
-  "timbrado_fin_vigencia" | "establecimiento_codigo" | "punto_expedicion_codigo" | "numero_actual" | "numero_inicial" | "numero_final" |
+  "timbrado_fin_vigencia" | "establecimiento_codigo" | "punto_expedicion_codigo" | "numero_actual" | "nc_numero_actual" | "numero_inicial" | "numero_final" |
   "leyenda_papel_termico" | "observaciones", string
 > & { activo: boolean; formato_impresion_default: TipoImpresion };
 
@@ -468,7 +468,7 @@ const deAuto = (a: Autoimpresor): FormAuto => ({
   timbrado_inicio_vigencia: a.timbrado_inicio_vigencia ?? "", timbrado_fin_vigencia: a.timbrado_fin_vigencia ?? "",
   establecimiento_codigo: a.establecimiento_codigo ?? "", punto_expedicion_codigo: a.punto_expedicion_codigo ?? "",
   numero_actual: a.numero_actual != null ? String(a.numero_actual) : "", numero_inicial: a.numero_inicial != null ? String(a.numero_inicial) : "",
-  numero_final: a.numero_final != null ? String(a.numero_final) : "",
+  numero_final: a.numero_final != null ? String(a.numero_final) : "", nc_numero_actual: a.nc_numero_actual != null ? String(a.nc_numero_actual) : "1",
   formato_impresion_default: a.formato_impresion_default, leyenda_papel_termico: a.leyenda_papel_termico ?? "", observaciones: a.observaciones ?? "",
 });
 
@@ -490,7 +490,7 @@ function AutoimpresorTarjeta({ valor, soloLectura, onGuardado }: { valor: Autoim
         method: "PUT",
         body: JSON.stringify({
           ...f,
-          numero_actual: num(f.numero_actual), numero_inicial: num(f.numero_inicial), numero_final: num(f.numero_final),
+          numero_actual: num(f.numero_actual), nc_numero_actual: num(f.nc_numero_actual), numero_inicial: num(f.numero_inicial), numero_final: num(f.numero_final),
           timbrado_inicio_vigencia: f.timbrado_inicio_vigencia || null, timbrado_fin_vigencia: f.timbrado_fin_vigencia || null,
         }),
       });
@@ -537,8 +537,9 @@ function AutoimpresorTarjeta({ valor, soloLectura, onGuardado }: { valor: Autoim
           <Campo etiqueta="Punto de expedición"><input inputMode="numeric" className={`${INPUT} font-mono`} placeholder="001" value={f.punto_expedicion_codigo} onChange={(e) => set("punto_expedicion_codigo", digitos(e.target.value, 3))} disabled={soloLectura} /></Campo>
           <div className="hidden lg:block" />
           <Campo etiqueta="N° inicial"><input inputMode="numeric" className={`${INPUT} tabular-nums`} value={f.numero_inicial} onChange={(e) => set("numero_inicial", digitos(e.target.value, 10))} disabled={soloLectura} /></Campo>
-          <Campo etiqueta="N° actual"><input inputMode="numeric" className={`${INPUT} tabular-nums`} value={f.numero_actual} onChange={(e) => set("numero_actual", digitos(e.target.value, 10))} disabled={soloLectura} /></Campo>
           <Campo etiqueta="N° final"><input inputMode="numeric" className={`${INPUT} tabular-nums`} value={f.numero_final} onChange={(e) => set("numero_final", digitos(e.target.value, 10))} disabled={soloLectura} /></Campo>
+          <Campo etiqueta="Próxima factura N°"><input inputMode="numeric" className={`${INPUT} tabular-nums`} value={f.numero_actual} onChange={(e) => set("numero_actual", digitos(e.target.value, 10))} disabled={soloLectura} /></Campo>
+          <Campo etiqueta="Próxima nota de crédito N°"><input inputMode="numeric" className={`${INPUT} tabular-nums`} value={f.nc_numero_actual} onChange={(e) => set("nc_numero_actual", digitos(e.target.value, 10))} disabled={soloLectura} /></Campo>
         </div>
 
         <div className="grid grid-cols-1 gap-3 border-t border-slate-100 pt-4 sm:grid-cols-2">

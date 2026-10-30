@@ -39,6 +39,8 @@ export type Autoimpresor = {
   establecimiento_codigo: string | null;
   punto_expedicion_codigo: string | null;
   numero_actual: number | null;
+  /** Receta 101: próximo número de nota de crédito. */
+  nc_numero_actual: number | null;
   numero_inicial: number | null;
   numero_final: number | null;
   tipo_documento_default: string;

@@ -23,7 +23,7 @@ export const GET = withTenant(async (ctx, req) => {
     .select(
       "ventas",
       "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, cuotas, cuotas_cada, metodo_pago, moneda, cliente_id, observaciones, " +
-        "usuario_nombre, caja_id, anulada_at, anulada_motivo, tipo_documento, receptor_nombre, receptor_ruc, receptor_ocasional, " +
+        "usuario_nombre, caja_id, anulada_at, anulada_motivo, tipo_documento, receptor_nombre, receptor_ruc, receptor_ocasional, fiscal_numero, fiscal_timbrado, " +
         `ventas_items(id, producto_nombre, sku, cantidad, precio_venta, tipo_precio, tipo_iva, monto_iva, total_linea${mods ? ", modificadores, modificadores_texto, precio_mods" : ""}), ` +
         "pagos:ventas_pagos_detalle(id, metodo_pago, monto, referencia, banco, recibido, vuelto, created_at), " +
         "turno:cajas(numero_caja, estado), punto:puntos_venta(nombre), sucursal:sucursales(nombre), deposito:depositos(nombre), " +

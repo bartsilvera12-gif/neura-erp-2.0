@@ -1,7 +1,8 @@
 /**
  * Ticket imprimible de una venta (térmico 58/80 mm). Portado del flujo de O&M:
  * devuelve HTML listo para imprimir. Con ?auto=1 dispara window.print() al cargar.
- * SIFEN inactivo → por ahora toda venta (ticket o "factura") sale por acá.
+ * SIFEN inactivo → por ahora toda venta (ticket o "factura") sale por acá. Receta 101: la factura
+ * del autoimpresor sale con número fiscal, timbrado e IVA por tasa.
  * Receta 71: respeta Configuración › Tickets y facturación › Ticket de venta (ancho, logo,
  * encabezado, pie, qué datos se muestran, letra y copias). El HTML lo arma htmlTicketVenta()
  * de src/modules/facturacion/tickets.ts (el mismo de la vista previa). ?w=58|80 fuerza el ancho.
@@ -16,8 +17,9 @@ import { datosEmpresa } from "@/modules/empresa/server";
 import { membreteEmpresa, nombreParaFactura, rucParaFactura } from "@/modules/empresa/tipos";
 import {
   etiquetaMetodoPago, htmlTicketVenta, ticketVentaEfectivo,
-  type ConfigTicketVenta, type DatosTicketVenta,
+  type ConfigTicketVenta, type DatosTicketVenta, type FiscalTicket,
 } from "@/modules/facturacion/tickets";
+import type { Autoimpresor } from "@/modules/facturacion/tipos";
 import { textoConPrecios, type ModsSnapshot } from "@/modules/mesas/modificadores";
 
 function ventaId(req: { url: string }): string | null {
@@ -34,9 +36,10 @@ export const GET = withTenant(async (ctx, req) => {
 
   // Config del ticket (receta 71; sin 71 → el ancho del tipo de impresión de 61; sin 61 → 80 mm).
   // (el builder de supabase es "thenable" sin .catch: se envuelve en un Promise de verdad)
-  const cfgP = Promise.resolve(ctx.db.rpc<{ impresion_tipo_default?: string; ticket_venta?: Partial<ConfigTicketVenta> }>("config_facturacion"))
-    .then((r) => ticketVentaEfectivo(r.data?.ticket_venta, r.data?.impresion_tipo_default))
-    .catch(() => ticketVentaEfectivo());
+  const facP = Promise.resolve(ctx.db.rpc<{ impresion_tipo_default?: string; ticket_venta?: Partial<ConfigTicketVenta>; autoimpresor?: Partial<Autoimpresor> }>("config_facturacion"))
+    .then((r) => r.data)
+    .catch(() => null);
+  const cfgP = facP.then((r) => ticketVentaEfectivo(r?.ticket_venta, r?.impresion_tipo_default));
 
   // Membrete (Configuración › Datos de la empresa): en paralelo con la venta.
   const empresaP = datosEmpresa(ctx.db);
@@ -47,7 +50,7 @@ export const GET = withTenant(async (ctx, req) => {
     .select(
       "ventas",
       "id, numero_control, fecha, subtotal, monto_iva, total, estado, tipo_venta, plazo_dias, cuotas, cuotas_cada, metodo_pago, cliente_id, usuario_nombre, " +
-        "tipo_documento, receptor_nombre, receptor_ruc, receptor_ocasional, " +
+        "tipo_documento, receptor_nombre, receptor_ruc, receptor_ocasional, fiscal_numero, fiscal_timbrado, fiscal_vigencia_desde, fiscal_vigencia_hasta, " +
         `ventas_items(producto_nombre, sku, cantidad, precio_venta, precio_venta_original, tipo_iva, monto_iva, total_linea${mods ? ", modificadores, modificadores_texto, precio_mods" : ""}), ` +
         "pagos:ventas_pagos_detalle(metodo_pago, monto, referencia, recibido, vuelto, created_at), " +
         "punto:puntos_venta(nombre), sucursal:sucursales(nombre), " +
@@ -77,14 +80,43 @@ export const GET = withTenant(async (ctx, req) => {
     .sort((a, b) => (a.created_at < b.created_at ? -1 : 1));
   const cajaTxt = [(v.punto as { nombre?: string } | null)?.nombre, (v.sucursal as { nombre?: string } | null)?.nombre].filter(Boolean).join(" · ");
 
-  const [cfgBase, empresa] = await Promise.all([cfgP, empresaP]);
+  const [cfgBase, empresa, fac] = await Promise.all([cfgP, empresaP, facP]);
   const wParam = sp.get("w");
   const cfg: ConfigTicketVenta = wParam === "58" || wParam === "80" ? { ...cfgBase, ancho_mm: wParam === "58" ? 58 : 80 } : cfgBase;
   const m = membreteEmpresa(empresa, { nombre: clienteConfig.nombre });
   const logo = cfg.logo ? (await logoDoc(empresa).catch(() => null))?.data ?? null : null;
 
+  // Receta 101: factura del autoimpresor. Emisor de la configuración del timbrado; IVA por tasa.
+  const timbrado = fac?.autoimpresor;
+  const fechaDoc = (iso: unknown) => (typeof iso === "string" && iso ? `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}` : null);
+  const sumar = (tasa: string, campo: "total_linea" | "monto_iva") =>
+    items.filter((it) => String(it.tipo_iva ?? "").toUpperCase() === tasa).reduce((s, it) => s + (Number(it[campo]) || 0), 0);
+  const fiscal: FiscalTicket | null = v.fiscal_numero
+    ? {
+        numero: String(v.fiscal_numero),
+        timbrado: String(v.fiscal_timbrado ?? ""),
+        vigenciaDesde: fechaDoc(v.fiscal_vigencia_desde),
+        vigenciaHasta: fechaDoc(v.fiscal_vigencia_hasta),
+        condicion: v.tipo_venta === "CREDITO" && (Number(v.plazo_dias) > 0 || Number(v.cuotas) > 1) ? "Crédito" : "Contado",
+        exenta: sumar("EXENTA", "total_linea"),
+        gravada5: sumar("5%", "total_linea"),
+        gravada10: sumar("10%", "total_linea"),
+        iva5: sumar("5%", "monto_iva"),
+        iva10: sumar("10%", "monto_iva"),
+        leyenda: timbrado?.leyenda_papel_termico ?? null,
+      }
+    : null;
+
   const datos: DatosTicketVenta = {
-    empresa: { nombre: m.nombre, razonSocial: m.razonSocial, ruc: m.ruc, ubicacion: m.ubicacion, telefono: m.telefono, logo },
+    fiscal,
+    empresa: {
+      nombre: (fiscal && timbrado?.nombre_fantasia) || m.nombre,
+      razonSocial: (fiscal && timbrado?.razon_social_emisor) || m.razonSocial,
+      ruc: (fiscal && timbrado?.ruc_emisor) || m.ruc,
+      ubicacion: (fiscal && timbrado?.direccion_matriz) || m.ubicacion,
+      telefono: (fiscal && timbrado?.telefono) || m.telefono,
+      logo,
+    },
     numero: String(v.numero_control ?? ""),
     fecha,
     caja: cajaTxt || null,

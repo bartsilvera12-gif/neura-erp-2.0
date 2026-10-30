@@ -60,6 +60,9 @@ type Venta = {
   usuario_nombre: string | null;
   anulada_at: string | null;
   anulada_motivo: string | null;
+  /** Receta 101 */
+  fiscal_numero?: string | null;
+  fiscal_timbrado?: string | null;
   turno: { numero_caja: number; estado: string } | null;
   punto: { nombre: string } | null;
   sucursal: { nombre: string } | null;
@@ -190,6 +193,7 @@ export function VentaDetalle({ ventaId, onClose, onAnulada, onCambio }: {
                 <Campo label="Salió de" valor={venta.deposito?.nombre ?? "—"} />
                 <Campo label="Precio" valor={PRECIO[d.items[0]?.tipo_precio ?? "minorista"] ?? "Minorista"} />
                 <Campo label="Documento" valor={venta.tipo_documento === "factura" ? `Factura${venta.receptor_ruc ? ` · RUC ${venta.receptor_ruc}` : ""}` : "Ticket"} />
+                {venta.fiscal_numero ? <Campo label="Factura N°" valor={`${venta.fiscal_numero} · Timbrado ${venta.fiscal_timbrado ?? "—"}`} /> : null}
               </div>
 
               {credito && d.cuenta ? (

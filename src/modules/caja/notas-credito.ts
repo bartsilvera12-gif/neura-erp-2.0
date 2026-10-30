@@ -87,6 +87,9 @@ export type NotaCreditoDetalle = {
   nota: {
     id: string;
     numero: string;
+    /** Receta 101: solo si corrige una factura del autoimpresor con número. */
+    fiscal_numero?: string | null;
+    fiscal_timbrado?: string | null;
     venta_id: string;
     cliente_id: string | null;
     fecha: string;
@@ -107,7 +110,7 @@ export type NotaCreditoDetalle = {
     anulada_por_nombre: string | null;
     anulada_motivo: string | null;
   };
-  venta: { id: string; numero_control: string; fecha: string; total: number; tipo_venta: string; tipo_documento: string | null; receptor_nombre: string | null; receptor_ruc: string | null };
+  venta: { id: string; numero_control: string; fiscal_numero?: string | null; fiscal_timbrado?: string | null; fecha: string; total: number; tipo_venta: string; tipo_documento: string | null; receptor_nombre: string | null; receptor_ruc: string | null };
   cliente: { id: string; nombre: string; documento: string | null } | null;
   cliente_nombre: string;
   caja: { id: string; etiqueta: string; numero_caja: number | null; estado: string } | null;

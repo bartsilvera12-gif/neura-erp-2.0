@@ -33,6 +33,7 @@ const esquema = z.object({
   establecimiento_codigo: txt(3),
   punto_expedicion_codigo: txt(3),
   numero_actual: num,
+  nc_numero_actual: num,
   numero_inicial: num,
   numero_final: num,
   tipo_documento_default: z.enum(["factura", "ticket", "nota_venta", "otro"]).optional(),

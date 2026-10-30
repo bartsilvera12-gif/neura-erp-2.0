@@ -261,6 +261,23 @@ export type DatosTicketVenta = {
   /** Crédito / sin detalle: una sola etiqueta ("Efectivo", "Crédito (30 días)"). Si no, el detalle de cada pago. */
   pago: { metodo: string } | { detalle: PagoTicket[] };
   anulada?: boolean;
+  /** Receta 101: factura del autoimpresor. Con esto el papel sale como factura, no como comprobante interno. */
+  fiscal?: FiscalTicket | null;
+};
+
+export type FiscalTicket = {
+  numero: string;
+  timbrado: string;
+  /** Ya formateadas (dd/mm/aaaa). */
+  vigenciaDesde?: string | null;
+  vigenciaHasta?: string | null;
+  condicion: string;
+  exenta: number;
+  gravada5: number;
+  gravada10: number;
+  iva5: number;
+  iva10: number;
+  leyenda?: string | null;
 };
 
 /** Cuerpo de un papel del ticket de venta (sin <section>). */
@@ -268,11 +285,13 @@ export function papelTicketVenta(cfg: ConfigTicketVenta, d: DatosTicketVenta): s
   const e = d.empresa;
   const razon = (e.razonSocial ?? "").trim() || null;
   const titulo = cfg.enc_nombre_fantasia ? e.nombre : cfg.enc_razon_social ? razon : null;
-  const lineaRazon = cfg.enc_nombre_fantasia && cfg.enc_razon_social && razon && razon !== titulo ? razon : null;
+  // La factura lleva siempre razón social, RUC, dirección y cliente, aunque el ticket los oculte.
+  const f = d.fiscal ?? null;
+  const lineaRazon = (f || (cfg.enc_nombre_fantasia && cfg.enc_razon_social)) && razon && razon !== titulo ? razon : null;
   const emisor = [
     lineaRazon,
-    cfg.enc_ruc && e.ruc ? `RUC ${e.ruc}` : null,
-    cfg.enc_direccion ? e.ubicacion : null,
+    (f || cfg.enc_ruc) && e.ruc ? `RUC ${e.ruc}` : null,
+    f || cfg.enc_direccion ? e.ubicacion : null,
     cfg.enc_telefono && e.telefono ? `Tel. ${e.telefono}` : null,
   ].filter(Boolean).map((l) => escHtml(l)).join("<br>");
   const encLibre = cfg.encabezado_texto.trim();
@@ -312,7 +331,21 @@ export function papelTicketVenta(cfg: ConfigTicketVenta, d: DatosTicketVenta): s
           .join("");
 
   const pie = cfg.pie_texto.trim();
-  const doc = cfg.mostrar_cliente_doc ? (d.cliente.documento ?? "").trim() : "";
+  const doc = f || cfg.mostrar_cliente_doc ? (d.cliente.documento ?? "").trim() : "";
+  const vigencia = f && f.vigenciaHasta ? `${f.vigenciaDesde ? `${escHtml(f.vigenciaDesde)} al ` : "Hasta "}${escHtml(f.vigenciaHasta)}` : "";
+  const fila = (etiqueta: string, monto: number) => `<tr><td class="lbl">${etiqueta}</td><td class="val">${gs(monto)}</td></tr>`;
+  const filasIva = f
+    ? [
+        f.exenta ? fila("Exentas", f.exenta) : "",
+        f.gravada5 ? fila("Gravadas 5 %", f.gravada5) : "",
+        f.gravada10 ? fila("Gravadas 10 %", f.gravada10) : "",
+        f.iva5 ? fila("IVA 5 %", f.iva5) : "",
+        f.iva10 ? fila("IVA 10 %", f.iva10) : "",
+      ].join("")
+    : cfg.mostrar_iva
+      ? `${fila("Subtotal", d.subtotal)}${fila("IVA", d.iva)}`
+      : "";
+  const leyenda = (f?.leyenda ?? "").trim();
 
   return `
     ${d.anulada ? `<div class="anulado-banner">ANULADO</div>` : ""}
@@ -321,27 +354,28 @@ export function papelTicketVenta(cfg: ConfigTicketVenta, d: DatosTicketVenta): s
     ${emisor ? `<div class="emisor">${emisor}</div>` : ""}
     ${encLibre ? `<div class="emisor">${multilinea(encLibre)}</div>` : ""}
     <hr>
+    ${f ? `<div class="meta"><strong>FACTURA N° ${escHtml(f.numero)}</strong><br>Timbrado N° ${escHtml(f.timbrado)}${vigencia ? `<br>Vigencia: ${vigencia}` : ""}<br>Condición: ${escHtml(f.condicion)}</div>
+    <hr>` : ""}
     <div class="meta">${escHtml(d.numero)}<br>${escHtml(d.fecha)}${caja ? `<br>${escHtml(caja)}` : ""}${cajero ? ` · ${escHtml(cajero)}` : ""}</div>
     <hr>
-    ${cfg.mostrar_cliente ? `<div class="cliente">Cliente: ${escHtml(d.cliente.nombre)}${doc ? `<br>${escHtml(doc)}` : ""}</div>
+    ${f || cfg.mostrar_cliente ? `<div class="cliente">Cliente: ${escHtml(d.cliente.nombre)}${doc ? `<br>${escHtml(doc)}` : ""}</div>
     <hr>` : ""}
     <table>${filas}</table>
     <hr>
     <table class="totales">
-      ${cfg.mostrar_iva ? `<tr><td class="lbl">Subtotal</td><td class="val">${gs(d.subtotal)}</td></tr>
-      <tr><td class="lbl">IVA</td><td class="val">${gs(d.iva)}</td></tr>` : ""}
+      ${filasIva}
       <tr class="total-row"><td class="lbl">TOTAL</td><td class="val">${gs(d.total)}</td></tr>
       ${filasPago}
     </table>
     <hr>
-    <div class="footer">${pie ? `${multilinea(pie)}<br>` : ""}Comprobante interno — no válido como factura legal.</div>
+    <div class="footer">${pie ? `${multilinea(pie)}<br>` : ""}${f ? (leyenda ? multilinea(leyenda) : "") : "Comprobante interno — no válido como factura legal."}</div>
   `;
 }
 
 /** HTML completo del ticket de venta, respetando la config (ancho, letra, copias, etc.). */
 export function htmlTicketVenta(cfg: ConfigTicketVenta, d: DatosTicketVenta, op: OpcionesDocumento = {}): string {
   return documentoTicket({
-    titulo: `Ticket ${d.numero} — ${d.empresa.nombre}`,
+    titulo: `${d.fiscal ? `Factura ${d.fiscal.numero}` : `Ticket ${d.numero}`} — ${d.empresa.nombre}`,
     ancho: cfg.ancho_mm,
     fontPara: (w) => letraTicketPx(w, cfg.letra),
     papel: papelTicketVenta(cfg, d),

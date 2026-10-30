@@ -21,7 +21,7 @@ const cant = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionD
 export async function pdfNotaCredito(d: NotaCreditoDetalle, empresa?: DatosEmpresa | null) {
   const n = d.nota;
   const doc = nuevoDocumento(empresa);
-  let y = await encabezado(doc, `NOTA DE CRÉDITO ${n.numero}`, fechaHoraPY(n.fecha));
+  let y = await encabezado(doc, `NOTA DE CRÉDITO ${n.fiscal_numero ?? n.numero}`, fechaHoraPY(n.fecha));
 
   if (n.estado === "anulada") {
     doc.setDrawColor(...COLOR.rojo).setLineWidth(0.6).rect(M, y, W, 12);
@@ -50,10 +50,12 @@ export async function pdfNotaCredito(d: NotaCreditoDetalle, empresa?: DatosEmpre
       ["Cliente", d.cliente_nombre],
       ["RUC / CI", ruc ?? "—"],
       ["Tipo", n.tipo === "descuento" ? "Descuento / bonificación" : "Devolución de productos"],
+      ...(n.fiscal_numero ? [["Timbrado", n.fiscal_timbrado ?? "—"] as [string, string], ["N° interno", n.numero] as [string, string]] : []),
     ], M + 3, y + 5),
     filas([
       ["Corrige la venta", `${d.venta.numero_control} · ${fechaCorta(d.venta.fecha.slice(0, 10))}`],
-      ["Documento", d.venta.tipo_documento === "factura" ? "Factura" : "Ticket"],
+      ["Documento", d.venta.fiscal_numero ? `Factura ${d.venta.fiscal_numero}` : d.venta.tipo_documento === "factura" ? "Factura" : "Ticket"],
+      ...(d.venta.fiscal_numero ? [["Timbrado factura", d.venta.fiscal_timbrado ?? "—"] as [string, string]] : []),
       ["Emitida por", n.usuario_nombre ?? "—"],
     ], M + col + 8, y + 5),
   );
@@ -159,6 +161,6 @@ export async function pdfNotaCredito(d: NotaCreditoDetalle, empresa?: DatosEmpre
   doc.text(pdfTxt(`Emitida por${n.usuario_nombre ? ` · ${n.usuario_nombre}` : ""}`), M + 5 + fw / 2, y + 4, { align: "center" });
   doc.text(pdfTxt("Recibí conforme (cliente)"), M + W - 5 - fw / 2, y + 4, { align: "center" });
 
-  pieDePagina(doc, `Nota de crédito ${n.numero} · Documento interno (no fiscal)`);
+  pieDePagina(doc, n.fiscal_numero ? `Nota de crédito ${n.fiscal_numero} · Timbrado ${n.fiscal_timbrado ?? "—"}` : `Nota de crédito ${n.numero} · Documento interno (no fiscal)`);
   return doc;
 }
