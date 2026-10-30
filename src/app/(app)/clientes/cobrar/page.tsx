@@ -87,10 +87,12 @@ export default function CuentasCobrarPage() {
       celda: (r) => (r.cliente_telefono ? (
         <a href={`tel:${r.cliente_telefono}`} onClick={(e) => e.stopPropagation()} className="-my-1.5 inline-flex min-h-11 items-center font-medium text-[var(--brand)] hover:underline">{r.cliente_telefono}</a>
       ) : "sin teléfono"),
+      celdaMovil: (r) => (r.cliente_telefono ? <a href={`tel:${r.cliente_telefono}`} onClick={(e) => e.stopPropagation()} className="font-medium text-[var(--brand)]">{r.cliente_telefono}</a> : null),
     },
     {
       key: "venta", titulo: "Venta", movil: "dato",
       celda: (r) => <><span className="font-mono text-xs font-semibold text-slate-800">{r.numero}</span><span className="block text-[11px] text-slate-500">{dia(r.fecha_emision)}</span></>,
+      celdaMovil: (r) => r.numero,
     },
     {
       key: "vence", titulo: "Vence", movil: "dato",
@@ -99,11 +101,14 @@ export default function CuentasCobrarPage() {
           {dia(r.vencimiento)}{r.dias_atraso > 0 ? <span className="block">vencida hace {r.dias_atraso} días</span> : null}
         </span>
       ),
+      celdaMovil: (r) => (r.dias_atraso > 0
+        ? <span className="font-semibold text-rose-600">vencida hace {r.dias_atraso} {r.dias_atraso === 1 ? "día" : "días"}</span>
+        : `vence ${dia(r.vencimiento)}`),
     },
-    { key: "importe", titulo: "Importe", movil: "dato", claseTh: "text-right", claseTd: "text-right tabular-nums text-slate-600 whitespace-nowrap", celda: (r) => gs(r.monto) },
+    { key: "importe", titulo: "Importe", movil: "oculto", claseTh: "text-right", claseTd: "text-right tabular-nums text-slate-600 whitespace-nowrap", celda: (r) => gs(r.monto) },
     { key: "debe", titulo: "Debe", movil: "valor", claseTh: "text-right", claseTd: "text-right font-bold tabular-nums text-slate-900 whitespace-nowrap", celda: (r) => gs(r.saldo) },
     {
-      key: "acc", titulo: "", movil: "acciones", claseTh: "w-px", claseTd: "!px-5",
+      key: "acc", titulo: "", movil: "pie", claseTh: "w-px", claseTd: "!px-5",
       celda: (r) => (
         <button type="button" onClick={() => setCobrando({ id: r.cliente_id, nombre: r.cliente_nombre })}
           className="inline-flex items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700 max-md:px-4 max-md:text-sm">
@@ -131,8 +136,8 @@ export default function CuentasCobrarPage() {
             <span className="text-emerald-700"> · cobrado este mes {gs(ant?.cobrado_mes ?? 0)}</span>
           </p>
         </div>
-        {/* Tramos: 2 por fila en celular ("Por vencer" a todo el ancho), 3 en tablet, 5 en pantallas anchas. */}
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 2xl:grid-cols-5">
+        {/* Tramos: 3 por fila en tablet, 5 en pantallas anchas. En el celular no: las pestañas de abajo filtran lo mismo y dejan la lista a la vista. */}
+        <div className="grid gap-2 max-sm:hidden sm:grid-cols-3 2xl:grid-cols-5">
           {tramos.map((t, i) => {
             const clave = i === 0 ? "por_vencer" : "vencidas";
             const activo = (i === 0 && filtro === "por_vencer") || (i > 0 && filtro === "vencidas");

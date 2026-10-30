@@ -186,7 +186,7 @@ export default function SuscripcionesPage() {
     { key: "estado", titulo: "Estado", movil: "chip", celda: (r) => <BadgeSuscripcion estado={r.estado} /> },
     { key: "cuota", titulo: `Cuota de ${nombreMes(periodo)}`, etiquetaMovil: "Cuota del mes", movil: "dato", claseTd: "whitespace-nowrap", celda: (r) => <CuotaDelMes r={r} /> },
     {
-      key: "acc", titulo: "Acción", movil: "acciones", claseTh: "text-right", claseTd: "whitespace-nowrap text-right",
+      key: "acc", titulo: "Acción", movil: "pie", claseTh: "text-right", claseTd: "whitespace-nowrap text-right",
       celda: (r) => (r.cuota_venta_id ? (
         <button type="button" onClick={() => setViendo(r.cuota_venta_id)}
           className="rounded-lg border bg-white px-3 py-1.5 text-xs font-semibold transition hover:brightness-95"

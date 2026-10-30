@@ -609,7 +609,7 @@ function columnasDocumentos({ puedeCobrar, onVer, onCobrar }: {
 }): ColumnaTabla<DocumentoCliente>[] {
   const cobrable = (d: DocumentoCliente) => d.estado !== "anulado" && Number(d.saldo) > 0 && !!d.cxc_id && puedeCobrar;
   return [
-    { key: "tipo", titulo: "Tipo", movil: "chip", celda: (d) => <BadgeTipo d={d} /> },
+    { key: "tipo", titulo: "Tipo", movil: "oculto", celda: (d) => <BadgeTipo d={d} /> },
     {
       key: "numero", titulo: "Nro. factura", movil: "titulo", claseTd: "whitespace-nowrap",
       celda: (d) => (
@@ -620,14 +620,15 @@ function columnasDocumentos({ puedeCobrar, onVer, onCobrar }: {
       ),
       celdaMovil: (d) => <span className={`font-mono ${d.estado === "anulado" ? "line-through" : ""}`}>{d.numero}</span>,
     },
-    { key: "emision", titulo: "Fecha emisión", movil: "dato", etiquetaMovil: "Emisión", claseTd: "whitespace-nowrap text-xs text-slate-500", celda: (d) => fechaDia(d.emision) || "—" },
+    { key: "emision", titulo: "Fecha emisión", movil: "oculto", etiquetaMovil: "Emisión", claseTd: "whitespace-nowrap text-xs text-slate-500", celda: (d) => fechaDia(d.emision) || "—" },
     {
       key: "vencimiento", titulo: "Fecha vencimiento", movil: "dato", etiquetaMovil: "Vencimiento",
       claseTd: "whitespace-nowrap text-xs font-medium",
       celda: (d) => <span className={d.estado === "vencido" ? "text-red-600" : "text-slate-600"}>{d.vencimiento ? fechaDia(d.vencimiento) : "—"}</span>,
+      celdaMovil: (d) => (d.vencimiento ? `vence ${fechaDia(d.vencimiento)}` : null),
     },
     {
-      key: "monto", titulo: "Monto", movil: "dato", claseTd: "whitespace-nowrap text-xs tabular-nums text-slate-800",
+      key: "monto", titulo: "Monto", movil: "oculto", claseTd: "whitespace-nowrap text-xs tabular-nums text-slate-800",
       celda: (d) => <span className={d.estado === "anulado" ? "line-through" : ""}>{monto(d.monto, d.moneda)}</span>,
     },
     {
@@ -637,6 +638,7 @@ function columnasDocumentos({ puedeCobrar, onVer, onCobrar }: {
     {
       key: "mora", titulo: "Días mora", movil: "dato", claseTh: "!text-center", claseTd: "text-center text-xs",
       celda: (d) => (d.dias_mora > 0 ? <span className="font-bold tabular-nums text-red-600">{d.dias_mora}</span> : <span className="text-slate-300">—</span>),
+      celdaMovil: (d) => (d.dias_mora > 0 ? <span className="font-semibold text-red-600">{d.dias_mora} {d.dias_mora === 1 ? "día" : "días"} de mora</span> : null),
     },
     { key: "estado", titulo: "Estado", movil: "chip", celda: (d) => <BadgeDocumento estado={d.estado} /> },
     {
@@ -649,7 +651,11 @@ function columnasDocumentos({ puedeCobrar, onVer, onCobrar }: {
       ),
     },
     {
-      key: "operacion", titulo: "Operación", movil: "acciones", claseTh: "!text-center",
+      key: "operacion", titulo: "Operación", movil: "pie", claseTh: "!text-center",
+      // En el celular "Ver" sobra (tocar la fila abre la venta): solo Cobrar, si corresponde.
+      celdaMovil: (d) => (cobrable(d) ? (
+        <button type="button" onClick={() => onCobrar(d)} className="inline-flex items-center justify-center rounded-lg px-4 text-sm font-semibold text-white shadow-sm" style={{ backgroundColor: TEAL }}>Cobrar</button>
+      ) : null),
       celda: (d) => (
         <div className="flex items-center justify-center gap-1.5">
           <button type="button" onClick={() => onVer(d)} title="Ver la venta e imprimir el comprobante"

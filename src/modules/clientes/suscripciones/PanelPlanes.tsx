@@ -106,7 +106,7 @@ export function PanelPlanes({ esAdmin, onCambio }: { esAdmin: boolean; onCambio?
       ),
     },
     ...(esAdmin ? [{
-      key: "acc", titulo: "Acción", movil: "acciones" as const, claseTh: "text-right", claseTd: "text-right",
+      key: "acc", titulo: "Acción", movil: "pie" as const, claseTh: "text-right", claseTd: "text-right",
       celda: (p: Plan) => (
         <MenuAcciones items={items(p)} etiqueta={`Acciones de ${p.nombre}`}
           className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]">

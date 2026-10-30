@@ -216,7 +216,7 @@ function TablaCuentas({ moneda, filtro, setFiltro, recarga, onAntiguedad, esAdmi
       key: "factura", titulo: "Factura", movil: "subtitulo", claseTd: "whitespace-nowrap font-mono text-xs font-semibold text-slate-800",
       celda: (r) => r.numero, celdaMovil: (r) => <>Factura <span className="font-mono text-xs">{r.numero}</span></>,
     },
-    { key: "compra", titulo: "Compra / gasto", movil: "dato", celda: (r) => <Link href={hrefOrigenCxp(r)} className="inline-flex items-center font-mono text-xs font-semibold text-[var(--brand)] hover:underline max-md:min-h-9">{r.compra_numero}</Link> },
+    { key: "compra", titulo: "Compra / gasto", movil: "oculto", celda: (r) => <Link href={hrefOrigenCxp(r)} className="inline-flex items-center font-mono text-xs font-semibold text-[var(--brand)] hover:underline max-md:min-h-9">{r.compra_numero}</Link> },
     { key: "emision", titulo: "Emisión", movil: "detalle", claseTd: "whitespace-nowrap text-xs text-slate-600", celda: (r) => dia(r.fecha_emision) },
     {
       key: "vencimiento", titulo: "Vencimiento", movil: "dato", claseTd: "whitespace-nowrap text-xs",
@@ -229,9 +229,10 @@ function TablaCuentas({ moneda, filtro, setFiltro, recarga, onAntiguedad, esAdmi
           </>
         );
       },
+      celdaMovil: (r) => { const v = textoVencimiento(r.dias_atraso, r.dias_para_vencer); return <span className={v.c}>{v.t}</span>; },
     },
-    { key: "monto", titulo: "Monto", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-slate-600", celda: (r) => din(r.monto) },
-    { key: "pagado", titulo: "Pagado", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-emerald-700", celda: (r) => (Number(r.pagado) ? din(r.pagado) : "—") },
+    { key: "monto", titulo: "Monto", movil: "oculto", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-slate-600", celda: (r) => din(r.monto) },
+    { key: "pagado", titulo: "Pagado", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right tabular-nums text-emerald-700", celda: (r) => (Number(r.pagado) ? din(r.pagado) : "—"), celdaMovil: (r) => (Number(r.pagado) ? `pagado ${din(r.pagado)}` : null) },
     { key: "saldo", titulo: "Saldo", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-bold tabular-nums text-slate-900", celda: (r) => din(r.saldo) },
     {
       key: "estado", titulo: "Estado", movil: "chip",
@@ -241,7 +242,7 @@ function TablaCuentas({ moneda, filtro, setFiltro, recarga, onAntiguedad, esAdmi
       },
     },
     {
-      key: "acciones", titulo: "", movil: esAdmin ? "acciones" : "oculto", claseTh: "w-px pr-5", claseTd: "pr-5",
+      key: "acciones", titulo: "", movil: esAdmin ? "pie" : "oculto", claseTh: "w-px pr-5", claseTd: "pr-5",
       celda: (r) => esAdmin ? (
         <button onClick={() => onPagar({ id: r.proveedor_id, nombre: r.proveedor_nombre, cxp: r.id })}
           className="inline-flex items-center gap-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white hover:brightness-95" style={{ backgroundColor: TEAL }}>
@@ -250,7 +251,7 @@ function TablaCuentas({ moneda, filtro, setFiltro, recarga, onAntiguedad, esAdmi
       ) : null,
       celdaMovil: (r) => (
         <>
-          <button onClick={() => onPagar({ id: r.proveedor_id, nombre: r.proveedor_nombre })} className="whitespace-nowrap rounded-lg px-3 text-[13px] font-semibold text-[var(--brand)]" title="Registrar un pago a este proveedor (una o varias facturas)">Pagar varias</button>
+          <button onClick={() => onPagar({ id: r.proveedor_id, nombre: r.proveedor_nombre })} className="inline-flex items-center whitespace-nowrap rounded-lg border border-slate-200 px-3 text-[13px] font-semibold text-slate-600" title="Registrar un pago a este proveedor (una o varias facturas)">Pagar varias</button>
           <button onClick={() => onPagar({ id: r.proveedor_id, nombre: r.proveedor_nombre, cxp: r.id })}
             className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-4 text-sm font-semibold text-white" style={{ backgroundColor: TEAL }}>
             <Banknote className="h-4 w-4" /> Pagar
@@ -392,7 +393,7 @@ function TablaPagos({ moneda, recarga, esAdmin, onCambio }: {
     },
     { key: "usuario", titulo: "Usuario", movil: "dato", claseTd: "text-xs text-slate-600", celda: (p) => p.usuario_nombre ?? "—" },
     {
-      key: "acciones", titulo: "", movil: "acciones", claseTh: "w-px pr-5", claseTd: "pr-5",
+      key: "acciones", titulo: "", movil: "pie", claseTh: "w-px pr-5", claseTd: "pr-5",
       celda: (p) => (
         <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
           <button onClick={() => setViendo(p.id)} title="Ver" className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"><Eye className="h-3.5 w-3.5" /> Ver</button>

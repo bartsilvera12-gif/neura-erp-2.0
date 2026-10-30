@@ -177,7 +177,7 @@ function TurnosContenido() {
                 key: "acc", titulo: "", claseTh: "w-24", claseTd: "px-3 py-2 text-right whitespace-nowrap", movil: "acciones",
                 celda: (t) => (
                   <>
-                    <button type="button" onClick={(e) => { e.stopPropagation(); setVer(t.id); }} title="Ver turno" aria-label="Ver turno" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Eye className="h-4 w-4" /></button>
+                    <button type="button" onClick={(e) => { e.stopPropagation(); setVer(t.id); }} title="Ver turno" aria-label="Ver turno" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 max-md:hidden"><Eye className="h-4 w-4" /></button>
                     <button type="button" onClick={(e) => { e.stopPropagation(); imprimirArchivo(`/api/caja/turnos/${t.id}/pdf`, `cierre-caja-${t.numero_caja}.pdf`).catch(() => {}); }} title="Imprimir cierre" aria-label="Imprimir cierre" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700"><Printer className="h-4 w-4" /></button>
                   </>
                 ),

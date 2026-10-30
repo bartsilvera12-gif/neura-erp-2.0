@@ -38,11 +38,8 @@ const valorDe = (a: FilaAjuste) => Number(a.valor_entrada) - Number(a.valor_sali
 
 /** Celular (< 768 px): cada documento es una tarjeta (la tabla de escritorio queda igual). */
 const columnasMovil: ColumnaTabla<FilaAjuste>[] = [
-  { key: "numero", titulo: "Documento", movil: "titulo", celda: (a) => <span className="font-mono">{a.numero}</span> },
-  {
-    key: "tipo", titulo: "Tipo", movil: "subtitulo",
-    celda: (a) => <><span className={`font-semibold ${a.tipo === "perdida" ? "text-rose-600" : "text-slate-600"}`}>{a.tipo === "perdida" ? "Pérdida" : "Ajuste"}</span> · {motivoAjuste(a.motivo)}</>,
-  },
+  { key: "tipo", titulo: "Tipo", movil: "titulo", celda: (a) => <>{a.tipo === "perdida" ? "Pérdida" : "Ajuste"} · {motivoAjuste(a.motivo)}</> },
+  { key: "numero", titulo: "Documento", movil: "subtitulo", celda: (a) => a.numero },
   {
     key: "valor", titulo: "Valor al costo", movil: "valor",
     celda: (a) => {
@@ -54,7 +51,7 @@ const columnasMovil: ColumnaTabla<FilaAjuste>[] = [
   { key: "estado", titulo: "Estado", movil: "chip", celda: (a) => { const e = ESTADO_AJUSTE[a.estado]; return <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ${e.clase}`}>{e.label}</span>; } },
   { key: "deposito", titulo: "Depósito", movil: "dato", celda: (a) => a.deposito.nombre },
   {
-    key: "unidades", titulo: "Unidades", movil: "dato",
+    key: "unidades", titulo: "Unidades", movil: "detalle",
     celda: (a) => sinMover(a) ? "—" : (
       <span className="tabular-nums">
         {Number(a.total_entrada) > 0 ? <span className="font-semibold text-emerald-700">+{cant(a.total_entrada)} </span> : null}
@@ -64,7 +61,7 @@ const columnasMovil: ColumnaTabla<FilaAjuste>[] = [
     ),
   },
   { key: "fecha", titulo: "Cargado", movil: "dato", celda: (a) => fechaHora(a.created_at) },
-  { key: "items", titulo: "Productos", movil: "dato", celda: (a) => a.items },
+  { key: "items", titulo: "Productos", movil: "dato", celda: (a) => `${a.items} ${Number(a.items) === 1 ? "producto" : "productos"}` },
   { key: "usuario", titulo: "Usuario", movil: "detalle", celda: (a) => a.usuario_nombre ?? "—" },
   { key: "sucursal", titulo: "Sucursal", movil: "detalle", celda: (a) => a.deposito.sucursal },
   { key: "detalle", titulo: "Detalle", movil: "detalle", celda: (a) => a.detalle || "—" },

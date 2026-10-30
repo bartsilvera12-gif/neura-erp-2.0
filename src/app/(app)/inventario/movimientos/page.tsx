@@ -221,7 +221,7 @@ function Movimientos() {
     }
     cols.push(
       {
-        key: "costo", titulo: "Costo unit.", movil: "dato", claseTh: "text-right", claseTd: "whitespace-nowrap text-right text-xs tabular-nums text-slate-600",
+        key: "costo", titulo: "Costo unit.", movil: "detalle", claseTh: "text-right", claseTd: "whitespace-nowrap text-right text-xs tabular-nums text-slate-600",
         celda: (m) => gs(m.costo_unitario),
         celdaMovil: (m) => <span className="tabular-nums">{gs(m.costo_unitario)}</span>,
       },

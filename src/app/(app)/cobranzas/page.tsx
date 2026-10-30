@@ -33,10 +33,10 @@ const COLUMNAS: { id: string; h: string; right?: boolean; key: SortKey | null; k
   { id: "cuotas", h: "Cuotas venc.", right: true, key: "cuotas", kind: "num", movil: "dato" },
   { id: "tramo", h: "Tramo", key: "tramo", kind: "num", movil: "chip" },
   { id: "mensaje", h: "Mensaje del mes", key: "mensaje", kind: "date", hint: "Último mensaje enviado al cliente este mes desde Conversaciones", movil: "detalle" },
-  { id: "ultimo", h: "Último pago", key: "ultimo", kind: "date", movil: "dato" },
+  { id: "ultimo", h: "Último pago", key: "ultimo", kind: "date", movil: "detalle" },
   { id: "prox", h: "Próx. venc.", key: "prox", kind: "date", movil: "dato" },
   { id: "promesa", h: "Promesa de pago", key: "promesa", kind: "date", movil: "chip" },
-  { id: "enviada", h: "Cobranza enviada", key: null, kind: null, hint: "Marca manual: tildá cuando ya le enviaste la cobranza este mes", movil: "acciones" },
+  { id: "enviada", h: "Cobranza enviada", key: null, kind: null, hint: "Marca manual: tildá cuando ya le enviaste la cobranza este mes", movil: "pie" },
   { id: "accion", h: "Acción", right: true, key: null, kind: null, movil: "oculto" }, // en la tarjeta, tocarla abre el detalle
 ];
 
@@ -275,17 +275,9 @@ export default function SeguimientoCobranzasPage() {
     };
     // En la tarjeta: textos sin recortar y etiquetas que se entienden solas.
     const movil: Record<string, (r: FilaSeguimiento) => React.ReactNode> = {
-      cliente: (r) => (
-        <>
-          {r.c.cliente_label}
-          {r.c.categoria ? (
-            <span className="mt-0.5 flex items-center gap-1 text-[11px] font-normal text-slate-500">
-              <span aria-hidden className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: r.c.categoria_color || "#94a3b8" }} />
-              {r.c.categoria}
-            </span>
-          ) : null}
-        </>
-      ),
+      cliente: (r) => r.c.cliente_label,
+      cuotas: (r) => (r.cuotas_vencidas ? `${r.cuotas_vencidas} ${r.cuotas_vencidas === 1 ? "cuota vencida" : "cuotas vencidas"}` : null),
+      prox: (r) => (r.proximo_vencimiento ? `vence ${fechaCorta(r.proximo_vencimiento)}` : null),
       total: (r) => <span className="text-rose-700">{gs(r.total_adeudado)}</span>,
       promesa: (r) => (r.c.promesa_fecha ? (
         <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[10px] font-semibold ${promesaCls(r)}`}>

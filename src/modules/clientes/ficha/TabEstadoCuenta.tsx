@@ -162,7 +162,7 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
       },
     },
     {
-      key: "acc", titulo: "Acción", movil: "acciones", claseTh: "text-right", claseTd: "text-right whitespace-nowrap",
+      key: "acc", titulo: "Acción", movil: "pie", claseTh: "text-right", claseTd: "text-right whitespace-nowrap",
       celda: (v) => accionesVenta(v, true),
       // En la tarjeta "Ver" sobra: tocar la tarjeta ya abre la venta.
       celdaMovil: (v) => accionesVenta(v, false),
@@ -221,7 +221,7 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
       celda: (k) => <span className={k.anulado_at ? "text-slate-400 line-through" : "text-slate-800"}>{gs(k.total)}</span>,
     },
     {
-      key: "acc", titulo: "Acción", movil: "acciones", claseTh: "text-right", claseTd: "text-right whitespace-nowrap",
+      key: "acc", titulo: "Acción", movil: "pie", claseTh: "text-right", claseTd: "text-right whitespace-nowrap",
       celda: (k) => (
         <div className="flex flex-nowrap items-center justify-end gap-2">
           <button

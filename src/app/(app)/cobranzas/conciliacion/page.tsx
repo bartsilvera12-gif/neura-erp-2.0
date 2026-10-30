@@ -284,7 +284,7 @@ function Conciliacion() {
       ) : <span className="text-slate-300">—</span>),
     },
     {
-      key: "acciones", titulo: "Acciones", movil: "acciones", claseTh: "text-right",
+      key: "acciones", titulo: "Acciones", movil: "pie", claseTh: "text-right",
       celda: (c) => (
         <div className="flex flex-wrap items-center justify-end gap-1.5 text-xs">
           {c.comprobante_path ? (

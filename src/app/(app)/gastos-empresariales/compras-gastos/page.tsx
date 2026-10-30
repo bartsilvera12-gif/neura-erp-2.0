@@ -399,13 +399,10 @@ function columnasLista(h: { onEditar: (r: Fila) => void; onEliminar: (r: Fila) =
     {
       key: "tipo", titulo: "Tipo", movil: "chip",
       celda: (r) => <ChipTipo r={r} />,
-      celdaMovil: (r) => (
-        <span className="inline-flex max-w-full flex-wrap items-center gap-1.5">
-          <ChipTipo r={r} />
-          {r.estado !== "vigente" ? <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO[r.estado].c}`}>{ESTADO[r.estado].t}</span> : null}
-          {!r.con_comprobante ? <span className="rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700">Sin comprobante</span> : null}
-        </span>
-      ),
+      // Un solo chip en el celular: el estado si no está vigente; si no, el tipo.
+      celdaMovil: (r) => (r.estado !== "vigente"
+        ? <span className={`whitespace-nowrap rounded-full px-2 py-0.5 text-xs font-medium ${ESTADO[r.estado].c}`}>{ESTADO[r.estado].t}</span>
+        : <ChipTipo r={r} />),
     },
     {
       key: "comprobante", titulo: "Comprobante", claseTd: "text-xs text-slate-500", movil: "dato",
@@ -420,9 +417,10 @@ function columnasLista(h: { onEditar: (r: Fila) => void; onEliminar: (r: Fila) =
           </>
         );
       },
+      celdaMovil: (r) => (r.con_comprobante ? r.comprobante ?? r.tipo_comprobante ?? null : <span className="text-amber-700">Sin comprobante</span>),
     },
     // En tablet (768–1023) la sucursal se omite para que la tabla entre mejor (se ve en el detalle).
-    { key: "sucursal", titulo: "Sucursal", claseTh: "max-lg:hidden", claseTd: "text-xs text-slate-500 max-lg:hidden", movil: "dato", celda: (r) => r.sucursal_nombre ?? "—" },
+    { key: "sucursal", titulo: "Sucursal", claseTh: "max-lg:hidden", claseTd: "text-xs text-slate-500 max-lg:hidden", movil: "oculto", celda: (r) => r.sucursal_nombre ?? "—" },
     {
       key: "fecha", titulo: "Fecha", claseTd: "whitespace-nowrap text-xs text-slate-500", movil: "dato",
       celda: (r) => (
@@ -441,6 +439,7 @@ function columnasLista(h: { onEditar: (r: Fila) => void; onEliminar: (r: Fila) =
           {r.tipo === "mixta" ? <span className="block text-[10px] font-normal text-slate-400">merc. {gs(r.total_mercaderia)} · gasto {gs(r.total_gastos)}</span> : null}
         </>
       ),
+      celdaMovil: (r) => <span className={r.estado === "anulado" ? "text-slate-400 line-through" : ""}>{monto(r.total, r.moneda)}</span>,
     },
     {
       key: "estado", titulo: "Estado", claseTh: "text-center", claseTd: "text-center", movil: "oculto",
@@ -452,12 +451,12 @@ function columnasLista(h: { onEditar: (r: Fila) => void; onEliminar: (r: Fila) =
       ),
     },
     {
-      key: "acciones", titulo: "", claseTh: "pr-4", claseTd: "pr-4", movil: "acciones",
+      key: "acciones", titulo: "", claseTh: "pr-4", claseTd: "pr-4", movil: "pie",
       celda: (r) => r.origen === "gasto" && r.estado === "borrador" ? (
         // No abre la fila: las acciones tienen su propio click.
         <div className="flex items-center justify-end gap-1.5 text-xs max-md:text-[13px]" onClick={(e) => e.stopPropagation()}>
           <button onClick={() => h.onEditar(r)} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2 py-1 font-semibold text-white hover:bg-emerald-700 max-md:min-h-11 max-md:px-3"><Pencil className="h-3 w-3" /> Abrir y confirmar</button>
-          <button onClick={() => h.onEliminar(r)} aria-label="Eliminar borrador" className="inline-flex items-center justify-center gap-1 rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50 max-md:h-11 max-md:w-11"><Trash2 className="h-3 w-3 max-md:h-4 max-md:w-4" /></button>
+          <button onClick={() => h.onEliminar(r)} aria-label="Eliminar borrador" className="inline-flex items-center justify-center gap-1 rounded-lg px-2 py-1 text-rose-600 hover:bg-rose-50 max-md:h-11 max-md:w-11 max-md:!flex-none"><Trash2 className="h-3 w-3 max-md:h-4 max-md:w-4" /></button>
         </div>
       ) : null,
     },

@@ -89,6 +89,7 @@ export default function OrdenesPage() {
           </div>
         );
       },
+      celdaMovil: (o) => `Llegó ${num(o.recibidas ?? 0)} de ${num(o.unidades ?? 0)}`,
     },
     {
       key: "entrega", titulo: "Entrega", movil: "dato",

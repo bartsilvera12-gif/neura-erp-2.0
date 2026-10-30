@@ -32,21 +32,13 @@ const bajarRemision = (t: FilaTraslado) => void descargarArchivo(`/api/inventari
 
 /** Celular (< 768 px): cada traslado es una tarjeta (la tabla de escritorio queda igual). */
 const columnasMovil: ColumnaTabla<FilaTraslado>[] = [
-  { key: "numero", titulo: "Traslado", movil: "titulo", celda: (t) => <span className="font-mono">{t.numero}</span> },
   {
-    key: "ruta", titulo: "Origen → destino", movil: "subtitulo",
-    celda: (t) => (
-      <span className="flex min-w-0 flex-wrap items-center gap-x-1.5">
-        <span className="font-medium text-slate-700">{t.origen.nombre}</span>
-        <ArrowRight className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-        <span className="font-medium text-slate-700">{t.destino.nombre}</span>
-      </span>
-    ),
+    key: "ruta", titulo: "Origen → destino", movil: "titulo",
+    celda: (t) => <>{t.origen.nombre} <ArrowRight className="inline h-3.5 w-3.5 text-slate-400" /> {t.destino.nombre}</>,
   },
-  {
-    key: "unidades", titulo: "Unidades", movil: "valor",
-    celda: (t) => <>{cant(t.total_unidades)}<span className="block text-[11px] font-normal text-slate-400">{t.total_items} {t.total_items === 1 ? "producto" : "productos"}</span></>,
-  },
+  { key: "numero", titulo: "Traslado", movil: "subtitulo", celda: (t) => t.numero },
+  { key: "unidades", titulo: "Unidades", movil: "valor", celda: (t) => `${cant(t.total_unidades)} u.` },
+  { key: "items", titulo: "Productos", movil: "dato", celda: (t) => `${t.total_items} ${t.total_items === 1 ? "producto" : "productos"}` },
   {
     key: "estado", titulo: "Estado", movil: "chip",
     celda: (t) => {
@@ -60,9 +52,9 @@ const columnasMovil: ColumnaTabla<FilaTraslado>[] = [
     },
   },
   { key: "fecha", titulo: "Fecha", movil: "dato", celda: (t) => dia(t.fecha_inicio) },
-  { key: "valor", titulo: "Valor al costo", movil: "dato", celda: (t) => <span className="tabular-nums">{gs(t.valor_costo)}</span> },
-  { key: "remision", titulo: "Remisión", movil: "dato", celda: (t) => <span className="font-mono">{t.remision_numero}</span> },
-  { key: "usuario", titulo: "Enviado por", movil: "dato", celda: (t) => t.usuario_nombre ?? "—" },
+  { key: "valor", titulo: "Valor al costo", movil: "detalle", celda: (t) => <span className="tabular-nums">{gs(t.valor_costo)}</span> },
+  { key: "remision", titulo: "Remisión", movil: "detalle", celda: (t) => <span className="font-mono">{t.remision_numero}</span> },
+  { key: "usuario", titulo: "Enviado por", movil: "detalle", celda: (t) => t.usuario_nombre ?? "—" },
   {
     key: "sucursal", titulo: "Sucursales", movil: "detalle",
     celda: (t) => (t.origen.sucursal === t.destino.sucursal ? t.origen.sucursal : `${t.origen.sucursal} → ${t.destino.sucursal}`),
@@ -71,8 +63,8 @@ const columnasMovil: ColumnaTabla<FilaTraslado>[] = [
     key: "acc", titulo: "", movil: "acciones",
     celda: (t) => (
       <button type="button" onClick={() => bajarRemision(t)} aria-label="Descargar nota de remisión"
-        className="inline-flex h-11 items-center justify-center gap-1.5 rounded-lg px-2.5 text-[13px] font-medium text-slate-600 active:bg-slate-100">
-        <FileDown className="h-4 w-4" /> Remisión
+        className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 active:bg-slate-100">
+        <FileDown className="h-4 w-4" />
       </button>
     ),
   },

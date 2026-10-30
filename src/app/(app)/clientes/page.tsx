@@ -57,21 +57,10 @@ const TH = "whitespace-nowrap px-3 py-2 text-left text-[10px] font-semibold uppe
 const TD = "px-3 py-2.5";
 
 const COLUMNAS: Col[] = [
-  { key: "codigo", label: "Código", td: TD, render: (c) => <CodigoChip codigo={codigoCliente(c)} />, movil: "chip" },
+  { key: "codigo", label: "Código", td: TD, render: (c) => <CodigoChip codigo={codigoCliente(c)} />, movil: "oculto" },
   {
     key: "empresa_nombre", label: "Empresa / Nombre", required: true, td: TD, movil: "titulo",
-    // En la tarjeta: avatar + nombre + RUC / "Persona física" (la tarjeta entera abre la ficha).
-    renderMovil: (c) => (
-      <div className="flex items-start gap-2.5">
-        <Avatar nombre={c.nombre} />
-        <div className="min-w-0">
-          <p className="text-[15px] font-semibold leading-snug text-slate-900">{c.nombre}</p>
-          <p className="mt-0.5 text-[12px] font-normal text-slate-500">
-            {c.tipo_cliente === "empresa" ? (c.ruc || c.documento ? <>RUC {c.ruc || c.documento}</> : "Empresa") : "Persona física"}
-          </p>
-        </div>
-      </div>
-    ),
+    renderMovil: (c) => c.nombre,
     render: (c) => (
       <div className="flex min-w-56 items-center gap-2.5">
         <Avatar nombre={c.nombre} />
@@ -88,10 +77,11 @@ const COLUMNAS: Col[] = [
       </div>
     ),
   },
-  { key: "contacto", label: "Contacto", movil: "dato", td: `${TD} whitespace-nowrap text-sm text-slate-700`, render: (c) => (c.tipo_cliente === "empresa" ? c.nombre_contacto : c.ciudad) || "—" },
+  { key: "contacto", label: "Contacto", movil: "dato", td: `${TD} whitespace-nowrap text-sm text-slate-700`, render: (c) => (c.tipo_cliente === "empresa" ? c.nombre_contacto : c.ciudad) || "—",
+    renderMovil: (c) => (c.ruc || c.documento ? `RUC ${c.ruc || c.documento}` : c.tipo_cliente === "empresa" ? "Empresa" : "Persona física") },
   { key: "telefono", label: "Teléfono", movil: "dato", td: `${TD} whitespace-nowrap text-sm tabular-nums text-slate-600`, render: (c) => c.telefono || "—" },
   {
-    key: "suscripcion", label: "Suscripción activa", td: TD, movil: "chip",
+    key: "suscripcion", label: "Suscripción activa", td: TD, movil: "dato", renderMovil: (c) => c.suscripcion_activa || null,
     render: (c) => c.suscripcion_activa ? (
       <span className="inline-flex max-w-56 items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-[11px] font-semibold"
         style={{ borderColor: `${TEAL}4d`, backgroundColor: `${TEAL}1a`, color: TEAL }} title={c.suscripcion_activa}>
@@ -101,8 +91,13 @@ const COLUMNAS: Col[] = [
     ) : <span className="whitespace-nowrap text-xs italic text-slate-400">Sin suscripción</span>,
   },
   { key: "origen", label: "Origen", td: TD, render: (c) => <BadgeOrigen origen={c.origen} /> },
-  { key: "categoria", label: "Categoría", movil: "chip", td: `${TD} whitespace-nowrap`, render: (c) => <CategoriaChip nombre={c.categoria_nombre} color={c.categoria_color} /> },
-  { key: "estado", label: "Estado", movil: "chip", td: TD, render: (c) => <BadgeEstado estado={estadoDe(c)} /> },
+  { key: "categoria", label: "Categoría", movil: "oculto", td: `${TD} whitespace-nowrap`, render: (c) => <CategoriaChip nombre={c.categoria_nombre} color={c.categoria_color} /> },
+  // En el celular solo lo que pide atención: dado de baja / inactivo, o lo vencido.
+  {
+    key: "estado", label: "Estado", movil: "chip", td: TD, render: (c) => <BadgeEstado estado={estadoDe(c)} />,
+    renderMovil: (c) => (estadoDe(c) !== "activo" ? <BadgeEstado estado={estadoDe(c)} />
+      : Number(c.vencido) > 0 ? <span className="whitespace-nowrap text-[12px] font-semibold text-rose-600">vencido {gs(c.vencido)}</span> : null),
+  },
   { key: "desde", label: "Desde", td: `${TD} whitespace-nowrap text-xs tabular-nums text-slate-500`, render: (c) => fechaCorta(c.creado_at) },
   { key: "creado_por", label: "Creado por", td: `${TD} whitespace-nowrap text-xs text-slate-500`, render: (c) => c.creado_por_nombre || "—" },
   { key: "ruc_documento", label: "RUC / documento", td: `${TD} whitespace-nowrap text-sm text-slate-600`, render: (c) => c.ruc?.trim() || c.documento?.trim() || "—" },
@@ -119,6 +114,9 @@ const COLUMNAS: Col[] = [
         {Number(c.vencido) > 0 ? <p className="text-[11px] font-semibold text-rose-600">vencido {gs(c.vencido)}</p> : null}
       </div>
     ) : <span className="text-xs text-slate-400">Al día</span>,
+    renderMovil: (c) => (Number(c.deuda) > 0
+      ? <span className={Number(c.vencido) > 0 ? "text-rose-600" : "text-slate-900"}>{gs(c.deuda)}</span>
+      : <span className="text-[13px] font-normal text-slate-400">Al día</span>),
   },
   {
     key: "ultima_compra", label: "Última compra", td: `${TD} whitespace-nowrap text-xs tabular-nums text-slate-500`,
@@ -166,6 +164,8 @@ function urlLista(f: Filtros, pagina: number) {
 const aColumnaTabla = (c: Col): ColumnaTabla<Fila> => ({
   key: c.key, titulo: c.label, celda: c.render, claseTh: c.th, claseTd: c.td, movil: c.movil, celdaMovil: c.renderMovil,
 });
+// Solo en el celular: el avatar a la izquierda del renglón (en la tabla va junto al nombre).
+const COL_AVATAR: ColumnaTabla<Fila> = { key: "avatar", titulo: "", claseTh: "hidden", claseTd: "hidden", movil: "imagen", celda: (c) => <Avatar nombre={c.nombre} /> };
 
 export default function ClientesPage() {
   const router = useRouter();
@@ -324,7 +324,7 @@ export default function ClientesPage() {
   const hayFiltros = !!(q || borrador || estado !== "activos" || tipo || origen || categoria || deuda);
   const totalPaginas = Math.max(1, Math.ceil(total / POR_PAGINA));
   const visibleSet = useMemo(() => new Set(visibles), [visibles]);
-  const columnas = useMemo(() => COLUMNAS.filter((c) => visibleSet.has(c.key)).map(aColumnaTabla), [visibleSet]);
+  const columnas = useMemo(() => [COL_AVATAR, ...COLUMNAS.filter((c) => visibleSet.has(c.key)).map(aColumnaTabla)], [visibleSet]);
   const abrirFila = useCallback((c: Fila) => abrirFicha(c.id), [abrirFicha]);
   const intencionFila = useCallback((c: Fila, ya?: boolean) => onIntencion(c.id, ya), [onIntencion]);
   const filtrosActivos = [estado !== "activos", tipo, origen, categoria, deuda].filter(Boolean).length;

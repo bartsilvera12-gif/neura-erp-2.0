@@ -24,7 +24,8 @@
  *    Roles en el renglón (`movil`): imagen (a la izquierda) · titulo (una línea) · subtitulo y dato
  *    (la línea gris, máx. 4 datos, sin etiqueta) · valor (arriba a la derecha) · chip (el primero
  *    abajo a la derecha, el resto en la línea gris) · detalle (plegado, por defecto) · acciones
- *    (a la derecha, no abren la fila) · oculto.
+ *    (solo íconos como "⋯", a la derecha, no abren la fila) · pie (botones con texto, fila aparte
+ *    debajo, a todo el ancho) · oculto. Lo vacío (null, "", "—") no se muestra.
  *
  * 2) `TablaScroll` — tablas NATURALMENTE ANCHAS y numéricas (reportes, estados de cuenta,
  *    kardex, comparativos por mes): se mantiene la tabla en todas las pantallas, con scroll
@@ -38,7 +39,7 @@
  *    Regla práctica: si en el celular hay que COMPARAR columnas entre filas → TablaScroll; si
  *    hay que ENCONTRAR una fila y abrirla → TablaTarjetas.
  */
-import { memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, memo, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useMediaQuery } from "@/lib/ui/responsive";
 
@@ -46,7 +47,7 @@ import { useMediaQuery } from "@/lib/ui/responsive";
 export const MQ_TARJETAS = "(max-width: 767.98px)";
 export const useVistaTarjetas = () => useMediaQuery(MQ_TARJETAS);
 
-export type RolMovil = "imagen" | "titulo" | "subtitulo" | "valor" | "chip" | "dato" | "detalle" | "acciones" | "oculto";
+export type RolMovil = "imagen" | "titulo" | "subtitulo" | "valor" | "chip" | "dato" | "detalle" | "acciones" | "pie" | "oculto";
 
 export type ColumnaTabla<T> = {
   key: string;
@@ -161,6 +162,7 @@ const FilaTabla = memo(function FilaTabla<T>({ fila, columnas, onFila, onIntenci
 }) as <T>(p: { fila: T; columnas: ColumnaTabla<T>[]; onFila?: (f: T) => void; onIntencion?: (f: T, ya?: boolean) => void; onSinIntencion?: () => void; clase?: string; tdBase: string }) => ReactNode;
 
 const etiqueta = <T,>(c: ColumnaTabla<T>) => c.etiquetaMovil ?? (typeof c.titulo === "string" ? c.titulo : "");
+const conContenido = (n: ReactNode) => n != null && n !== false && n !== "" && n !== "—";
 
 const TarjetaFila = memo(function TarjetaFila<T>({ fila, columnas, onFila, onIntencion, clase }: {
   fila: T; columnas: ColumnaTabla<T>[]; onFila?: (f: T) => void; onIntencion?: (f: T, ya?: boolean) => void; clase?: string;
@@ -173,15 +175,17 @@ const TarjetaFila = memo(function TarjetaFila<T>({ fila, columnas, onFila, onInt
   const titulo = de("titulo")[0];
   const subtitulo = de("subtitulo");
   const valor = de("valor")[0];
-  const chips = de("chip");
+  const hay = (c: ColumnaTabla<T>) => conContenido(ver(c));
+  const chips = de("chip").filter(hay);
   const datos = de("dato").slice(0, 4);
   const detalle = [...de("dato").slice(4), ...de("detalle")];
-  const acciones = de("acciones");
+  const acciones = de("acciones").filter(hay);
+  const pie = de("pie").filter(hay);
 
-  // Renglón compacto (como una app de banco): título y valor arriba; abajo UNA línea gris con el
+  // Renglón compacto (como una app de banco): título y valor arriba; abajo la línea gris con el
   // subtítulo y los datos clave separados por " · ", y el estado (primer chip) a la derecha.
   // Tocar abre la ficha: con `onFila` no hay "Ver más" (el detalle ya muestra todo).
-  const meta = [...subtitulo, ...datos];
+  const meta = [...subtitulo, ...datos].filter(hay);
   const [chip, ...otrosChips] = chips;
   const conVerMas = detalle.length > 0 && !onFila;
 
@@ -193,26 +197,30 @@ const TarjetaFila = memo(function TarjetaFila<T>({ fila, columnas, onFila, onInt
         onClick={onFila ? () => onFila(fila) : undefined}
         onKeyDown={onFila ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onFila(fila); } } : undefined}
         onPointerDown={onIntencion ? () => onIntencion(fila, true) : undefined}
-        className={`flex min-h-[64px] items-center gap-2.5 px-3.5 py-2.5 ${onFila ? "cursor-pointer active:bg-slate-50" : ""}`}
+        className={`flex min-h-[68px] items-center gap-3 px-4 py-3 ${onFila ? "cursor-pointer active:bg-slate-50" : ""}`}
       >
         {imagen ? <div className="shrink-0">{ver(imagen)}</div> : null}
         <div className="min-w-0 flex-1">
-          <div className="flex items-baseline justify-between gap-3">
-            {/* Título en UNA línea: si la celda trae varias (nombre + detalle), queda la primera. */}
-            {titulo ? <div className="min-w-0 truncate text-[15px] font-semibold leading-snug text-slate-900 [&>*:not(:first-child)]:hidden [&_.block]:inline">{ver(titulo)}</div> : <span />}
-            {valor ? <div className="shrink-0 text-right text-[15px] font-semibold tabular-nums text-slate-900">{ver(valor)}</div> : null}
+          <div className="flex items-start justify-between gap-3">
+            {/* Título hasta 2 líneas: si la celda trae varias partes (nombre + detalle), queda la primera. */}
+            {titulo ? <div className="line-clamp-2 min-w-0 text-[15px] font-semibold leading-snug text-slate-900 [overflow-wrap:anywhere] [&>*:not(:first-child)]:hidden [&_.block]:inline">{ver(titulo)}</div> : <span />}
+            {valor ? <div className="shrink-0 text-right text-[15px] font-semibold leading-snug tabular-nums text-slate-900">{ver(valor)}</div> : null}
           </div>
           {meta.length || chip ? (
-            <div className="mt-0.5 flex items-center justify-between gap-3">
-              <div className="line-clamp-2 min-w-0 text-[13px] leading-snug text-slate-500 [overflow-wrap:anywhere] [&_.block]:inline [&_.font-mono]:font-sans [&_div]:inline [&_p]:inline">
-                {meta.map((c, i) => (
-                  <span key={c.key}>{i > 0 ? <span aria-hidden className="text-slate-300"> · </span> : null}{ver(c)}</span>
-                ))}
-                {otrosChips.map((c) => <span key={c.key} className="ml-1.5 inline-flex align-middle">{ver(c)}</span>)}
+            <div className="mt-1 flex items-center justify-between gap-3">
+              {/* Hasta 2 líneas; cada dato no se parte a la mitad. El punto separador queda recortado
+                  afuera cuando el dato arranca una línea (por el margen negativo + overflow). */}
+              <div className="max-h-[2.75em] min-w-0 overflow-hidden text-[13px] leading-snug text-slate-500 [overflow-wrap:anywhere] [&_.block]:inline [&_.block:not(:first-child)]:before:content-['_·_'] [&_.font-mono]:font-sans [&_span_div]:inline [&_span_p]:inline">
+                <div className="-ml-[0.9em] flex flex-wrap">
+                  {meta.map((c) => (
+                    <span key={c.key} className="relative max-w-full pl-[0.9em] before:absolute before:left-[0.3em] before:text-slate-300 before:content-['·']">{ver(c)}</span>
+                  ))}
+                </div>
               </div>
               {chip ? <span className="inline-flex max-w-[45%] shrink-0 justify-end text-right [&_.flex-col]:items-end">{ver(chip)}</span> : null}
             </div>
           ) : null}
+          {otrosChips.length ? <div className="mt-1.5 flex flex-wrap gap-1.5">{otrosChips.map((c) => <span key={c.key} className="inline-flex">{ver(c)}</span>)}</div> : null}
         </div>
         {/* Acciones (ej. "⋯") en el mismo renglón; no abren la fila. Sin acciones, la flecha. */}
         {acciones.length ? (
@@ -221,7 +229,13 @@ const TarjetaFila = memo(function TarjetaFila<T>({ fila, columnas, onFila, onInt
           </div>
         ) : onFila ? <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-slate-300" /> : null}
       </div>
-      <div className="px-3.5">
+      {/* Botones con texto en su propia fila: no le quitan lugar al nombre ni al monto. */}
+      {pie.length ? (
+        <div className="flex gap-2 px-4 pb-3 [&>div]:flex [&>div]:w-full [&>div]:gap-2 [&_a]:min-h-11 [&_a]:flex-1 [&_a]:justify-center [&_button]:min-h-11 [&_button]:flex-1 [&_button]:justify-center" onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}>
+          {pie.map((c) => <Fragment key={c.key}>{ver(c)}</Fragment>)}
+        </div>
+      ) : null}
+      <div className="px-4">
         {abierta && conVerMas ? (
           <dl className="mt-2 space-y-1.5 rounded-lg bg-slate-50 px-3 py-2.5">
             {detalle.map((c) => (

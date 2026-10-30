@@ -53,6 +53,7 @@ function columnasLista(etapas: Etapa[], onMover: (t: Tarjeta, etapa: string) => 
       claseTh: "hidden",
       claseTd: "hidden",
       celda: (p) => <span className="font-mono text-[12px]">{p.numero_control}{p.empresa && p.contacto ? ` · ${p.empresa}` : ""}</span>,
+      celdaMovil: (p) => (p.empresa && p.contacto ? p.empresa : null),
     },
     { key: "valor", titulo: "Valor", movil: "valor", claseTh: "text-right", claseTd: "whitespace-nowrap text-right font-semibold tabular-nums text-slate-800", celda: (p) => gsCompleto(p.valor_estimado) },
     { key: "tel", titulo: "Teléfono", movil: "dato", celda: (p) => <TelefonoCelda telefono={p.telefono} /> },
@@ -60,16 +61,16 @@ function columnasLista(etapas: Etapa[], onMover: (t: Tarjeta, etapa: string) => 
     {
       key: "etapa",
       titulo: "Etapa",
-      movil: "acciones",
+      movil: "pie",
       celda: (p) => {
         const tono = tonoEtapa(etapas.find((e) => e.codigo === p.etapa)?.color);
         return (
-          <div className="flex min-w-[9rem] items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+          <div className="flex min-w-[9rem] flex-1 items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
             <span className={`h-2 w-2 shrink-0 rounded-full ${tono.dot}`} />
             <Select
               compacto
               minWidth={150}
-              className="w-full max-md:max-w-[10rem]"
+              className="w-full"
               etiqueta="Cambiar etapa del prospecto"
               value={p.etapa}
               onChange={(v) => onMover(p, v)}
@@ -82,7 +83,7 @@ function columnasLista(etapas: Etapa[], onMover: (t: Tarjeta, etapa: string) => 
     {
       key: "resp",
       titulo: "Responsable",
-      movil: "dato",
+      movil: "oculto",
       celda: (p) =>
         p.responsable_nombre ? (
           <div className="flex items-center gap-1.5">
@@ -91,15 +92,15 @@ function columnasLista(etapas: Etapa[], onMover: (t: Tarjeta, etapa: string) => 
           </div>
         ) : <span className="text-[11px] italic text-slate-400">Sin responsable</span>,
     },
-    { key: "fecha", titulo: "Fecha", movil: "dato", claseTd: "text-[11px] tabular-nums text-slate-500 max-md:text-[13px]", celda: (p) => diaMes(p.created_at) },
+    { key: "fecha", titulo: "Fecha", movil: "oculto", claseTd: "text-[11px] tabular-nums text-slate-500 max-md:text-[13px]", celda: (p) => diaMes(p.created_at) },
     {
       key: "accion",
       titulo: "Acción",
-      movil: "acciones",
+      movil: "pie",
       claseTh: "text-right",
       claseTd: "text-right",
       celda: (p) => (
-        <span onClick={(e) => e.stopPropagation()}>
+        <span className="max-md:flex max-md:flex-1" onClick={(e) => e.stopPropagation()}>
           {p.cliente_id ? (
             <a href={`/clientes/${p.cliente_id}`} className="text-[11px] font-semibold text-emerald-600 hover:underline max-md:inline-flex max-md:min-h-11 max-md:items-center max-md:px-2 max-md:text-xs">Cliente creado</a>
           ) : (

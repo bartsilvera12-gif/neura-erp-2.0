@@ -12,6 +12,7 @@
  * "Tipo de servicio" del actual = categoría del cliente; además se filtra por plan.
  */
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { Banknote, CheckCircle2, Clock, Inbox, Loader2, Receipt, Search, Wallet, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -20,7 +21,7 @@ import { TZ_PY } from "@/lib/fecha/paraguay";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Select } from "@/components/Select";
 import { BarraFiltros, EncabezadoPagina, GrillaKpis } from "@/components/EncabezadoPagina";
-import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
+import { TablaTarjetas, useVistaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { RegistrarTransferencia } from "@/modules/cobranzas/RegistrarTransferencia";
 import { ROLES_REGISTRAR } from "@/modules/cobranzas/tipos";
 import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
@@ -257,6 +258,8 @@ function TablaPendientes({ filas, cargando, recargando, hayFiltros, onLimpiar, t
   totalMonto: number; totalSaldo: number; total: number; puedeCobrar: boolean;
   onTransferencia: (f: FilaPendiente) => void; onCaja: (f: FilaPendiente) => void;
 }) {
+  const router = useRouter();
+  const esMovil = useVistaTarjetas();
   if (cargando) return <Cargando texto="Cargando facturas…" />;
   if (filas.length === 0) {
     return hayFiltros ? (
@@ -281,16 +284,11 @@ function TablaPendientes({ filas, cargando, recargando, hayFiltros, onLimpiar, t
           {f.plan_nombre ? <span className="block text-[11px] text-slate-400">{f.plan_nombre}</span> : null}
         </>
       ),
-      celdaMovil: (f) => (
-        <>
-          <Link href={`/clientes/${f.cliente_id}`} className="-my-2.5 inline-block py-2.5 text-[#3F8E91] hover:underline">{f.cliente_nombre}</Link>
-          {f.plan_nombre ? <span className="block text-[11px] font-normal text-slate-400">{f.plan_nombre}</span> : null}
-        </>
-      ),
+      celdaMovil: (f) => f.cliente_nombre,
     },
-    { key: "tipo", titulo: "Tipo de cliente", movil: "dato", celda: (f) => <span className="inline-block max-w-[14rem] truncate align-bottom">{f.categoria_nombre ?? "Sin clasificar"}</span>, celdaMovil: (f) => f.categoria_nombre ?? "Sin clasificar" },
-    { key: "vendedor", titulo: "Vendedor", celda: (f) => <span className="inline-block max-w-[12rem] truncate align-bottom">{f.vendedor ?? "—"}</span>, celdaMovil: (f) => f.vendedor ?? "—" },
-    { key: "fecha", titulo: "Fecha", claseTd: "whitespace-nowrap", celda: (f) => fecha(f.fecha_emision) },
+    { key: "tipo", titulo: "Tipo de cliente", movil: "oculto", celda: (f) => <span className="inline-block max-w-[14rem] truncate align-bottom">{f.categoria_nombre ?? "Sin clasificar"}</span> },
+    { key: "vendedor", titulo: "Vendedor", movil: "oculto", celda: (f) => <span className="inline-block max-w-[12rem] truncate align-bottom">{f.vendedor ?? "—"}</span> },
+    { key: "fecha", titulo: "Fecha", movil: "oculto", claseTd: "whitespace-nowrap", celda: (f) => fecha(f.fecha_emision) },
     {
       key: "vence", titulo: "Vencimiento", movil: "dato", claseTd: "whitespace-nowrap",
       celda: (f) => (
@@ -299,8 +297,10 @@ function TablaPendientes({ filas, cargando, recargando, hayFiltros, onLimpiar, t
           {f.dias_atraso > 0 ? <span className="block text-[11px] font-semibold text-rose-600">{f.dias_atraso} {f.dias_atraso === 1 ? "día" : "días"} de atraso</span> : null}
         </>
       ),
+      celdaMovil: (f) => `vence ${fecha(f.vencimiento).slice(0, 5)}`,
     },
-    { key: "total", titulo: "Total", movil: "dato", claseTd: "whitespace-nowrap font-semibold tabular-nums text-slate-900", celda: (f) => gs(f.monto) },
+    // En el celular, el total solo si ya se pagó una parte (si no, es igual al saldo).
+    { key: "total", titulo: "Total", movil: "dato", claseTd: "whitespace-nowrap font-semibold tabular-nums text-slate-900", celda: (f) => gs(f.monto), celdaMovil: (f) => (Number(f.monto) !== Number(f.saldo) ? `de ${gs(f.monto)}` : null) },
     { key: "saldo", titulo: "Saldo", movil: "valor", claseTd: "whitespace-nowrap font-semibold tabular-nums text-amber-600", celda: (f) => gs(f.saldo), celdaMovil: (f) => <span className="text-amber-600">{gs(f.saldo)}</span> },
     {
       key: "estado", titulo: "Estado", movil: "chip", claseTd: "whitespace-nowrap",
@@ -328,7 +328,7 @@ function TablaPendientes({ filas, cargando, recargando, hayFiltros, onLimpiar, t
       },
     },
     {
-      key: "accion", titulo: "Acción", movil: "acciones", claseTd: "whitespace-nowrap",
+      key: "accion", titulo: "Acción", movil: "pie", claseTd: "whitespace-nowrap",
       celda: (f) => {
         const libre = Math.max(0, Number(f.saldo) - Number(f.en_aprobacion));
         return puedeCobrar ? (
@@ -350,6 +350,7 @@ function TablaPendientes({ filas, cargando, recargando, hayFiltros, onLimpiar, t
   return (
     <>
       <TablaTarjetas filas={filas} columnas={columnas} claveFila={(f) => f.id} cargando={recargando} minAncho={1040}
+        onFila={esMovil ? (f) => router.push(`/clientes/${f.cliente_id}`) : undefined}
         claseTabla="w-full text-sm" claseThead="bg-slate-50/80" thBase={TH} tdBase={TD} />
       {/* Suma de la vista completa (filtros incluidos), no solo de la página. */}
       <div role="status" className="flex flex-col gap-2 border-t-2 border-slate-100 bg-slate-50/80 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:px-5">
@@ -428,7 +429,7 @@ function TablaCobrados({ filas, cargando, recargando, hayFiltros, onLimpiar, tot
     { key: "usuario", titulo: "Usuario", movil: "dato", claseTd: "break-words [overflow-wrap:anywhere]", celda: (f) => f.usuario_nombre ?? "—" },
     { key: "hora", titulo: "Fecha y hora", claseTd: "min-w-[6rem] text-slate-500", celda: (f) => fechaHora(f.created_at) },
     {
-      key: "recibo", titulo: "Recibo", movil: "acciones", claseTd: "whitespace-nowrap",
+      key: "recibo", titulo: "Recibo", movil: "pie", claseTd: "whitespace-nowrap",
       celda: (f) => (
         <button type="button" onClick={() => recibo(f)} title={`Descargar el recibo ${f.numero_recibo}`}
           className="inline-flex items-center gap-1.5 rounded-md border border-[#4FAEB2]/30 bg-[#4FAEB2]/10 px-2.5 py-1 text-[11px] font-semibold text-[#3F8E91] transition-colors hover:bg-[#4FAEB2]/20 max-md:px-3.5 max-md:text-[13px]">

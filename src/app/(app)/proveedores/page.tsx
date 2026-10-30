@@ -178,16 +178,11 @@ export default function ProveedoresPage() {
       ),
       celdaMovil: (p) => {
         const tel = p.contacto_telefono || p.telefono;
-        return (
-          <>
-            {p.contacto ? <span className="block">{p.contacto}</span> : null}
-            {tel ? <a href={`tel:${tel}`} onClick={(e) => e.stopPropagation()} className="-my-3 inline-block py-3 text-[var(--brand)] hover:underline">{tel}</a> : !p.contacto ? "—" : null}
-          </>
-        );
+        return tel ? <a href={`tel:${tel}`} onClick={(e) => e.stopPropagation()} className="font-medium text-[var(--brand)]">{tel}</a> : p.contacto ?? null;
       },
     },
     { key: "condicion", titulo: "Condición", movil: "chip", celda: condicion },
-    { key: "rubros", titulo: "Rubros", movil: "chip", celda: rubros, celdaMovil: (p) => (p.categorias.length ? rubros(p) : null) },
+    { key: "rubros", titulo: "Rubros", movil: "detalle", celda: rubros, celdaMovil: (p) => (p.categorias.length ? rubros(p) : "—") },
     {
       key: "compras", titulo: "Compras", movil: "dato", claseTh: "text-right", claseTd: "text-right",
       celda: (p) => (
@@ -196,12 +191,7 @@ export default function ProveedoresPage() {
           {p.ultima_compra ? <p className="text-[11px] text-slate-400">última {fechaCorta(p.ultima_compra)}</p> : null}
         </>
       ),
-      celdaMovil: (p) => (
-        <>
-          <span className="font-semibold tabular-nums text-slate-800">{p.compras}</span>
-          {p.ultima_compra ? <span className="block text-[11px] text-slate-400">última {fechaCorta(p.ultima_compra)}</span> : null}
-        </>
-      ),
+      celdaMovil: (p) => `${p.compras} ${Number(p.compras) === 1 ? "compra" : "compras"}`,
     },
     { key: "acciones", titulo: "", movil: "acciones", claseTh: "w-px pr-5", claseTd: "pr-5", celda: accionesFila },
   ];
