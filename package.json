@@ -10,7 +10,8 @@
     "lint": "next lint",
     "provision": "node scripts/provision.mjs",
     "setup": "node scripts/setup.mjs",
-    "db:verify-rls": "node scripts/verify-rls.mjs"
+    "db:verify-rls": "node scripts/verify-rls.mjs",
+    "test:db": "node scripts/pruebas-db.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.5.2",
