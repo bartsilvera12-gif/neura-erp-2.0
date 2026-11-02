@@ -15,7 +15,7 @@ export const moduloInventario: Modulo = {
   panel: true,
   icon: "package",
   familia: "Operaciones",
-  roles: ["ADMIN", "CAJERO", "VENDEDOR"],
+  roles: ["ADMIN", "SUPERVISOR", "CAJERO", "VENDEDOR"],
   children: [
     { label: "Productos", href: "/inventario", palabras: ["stock", "existencias", "articulos", "mercaderia", "precios"] },
     // Receta 72: recetas de los platos (Menú) y preparaciones. Muestra costos → "ver costos".
