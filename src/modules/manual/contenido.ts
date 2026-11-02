@@ -255,7 +255,13 @@ export const GUIAS: Guia[] = [
         { t: "El cajero entra a Nueva venta y arriba ve las mesas que pidieron la cuenta. Toca la mesa y se carga sola.", marca: "Mesas por cobrar" },
         { t: "Después cobra como en una venta común." },
       ] },
-      { consejo: "El cliente puede dividir la cuenta desde su celular. A la caja llega cada parte por separado." },
+      { img: "mesa-partes", alt: "Mesa con la cuenta separada en partes", texto: "El cliente puede dividir la cuenta desde su celular. A la caja llega cada parte por separado.", pasos: [
+        { t: "Si la cuenta está dividida, tocá Cobrar en la parte de esa persona. También podés cobrar todo junto.", marca: "Laura" },
+      ] },
+      { img: "mesa-parte-cargada", alt: "La parte de una persona cargada para cobrar", pasos: [
+        { t: "Mirá el total: es solo lo de esa persona.", marca: "Total a cobrar" },
+        { t: "Tocá Aceptar y cobrar. La cuenta se cierra sola cuando se paga la última parte.", marca: "Aceptar y cobrar" },
+      ] },
       { ojo: "Las ventas de mesa no comisionan." },
     ],
   },
@@ -302,11 +308,13 @@ export const GUIAS: Guia[] = [
       { img: "inventario-produccion", alt: "Pantalla de Producción", pasos: [
         { t: "Entrá a Inventario › Producción y tocá Fabricar.", marca: "Fabricar" },
       ] },
-      { img: "fabricar", alt: "Ventana para fabricar", pasos: [
+      { img: "fabricar-datos", alt: "Ventana para fabricar con un producto elegido", pasos: [
         { t: "Elegí qué fabricás. Solo aparecen los productos de tipo Fabricado que tienen receta.", marca: "Qué fabricás *" },
         { t: "Elegí el depósito de donde salen las materias primas.", marca: "Depósito *" },
-        { t: "Cargá cuánto hacés y cuánto salió de verdad: si esperabas 40 y salieron 38, queda la merma y el costo real." },
-        { t: "Tocá Fabricar. Bajan las materias primas y sube el stock del producto." },
+        { t: "Escribí cuánto vas a fabricar. Si no sabés, Usar el máximo pone todo lo que alcanza.", marca: "Vas a fabricar *" },
+        { t: "En Salió de verdad cargá lo que salió: si esperabas 40 y salieron 38, queda registrada la merma.", marca: "Salió de verdad" },
+        { t: "Acá ves qué materias primas se van a usar y si alcanzan. Abajo está el costo.", marca: "Materias primas que se usan" },
+        { t: "Tocá el botón Fabricar, al final de la ventana. Bajan las materias primas y sube el stock del producto." },
       ] },
       { ojo: "Si no alcanzan las materias primas, no te deja fabricar: comprá primero." },
     ],
@@ -453,7 +461,12 @@ export const GUIAS: Guia[] = [
       ] },
       { img: "orden-detalle", alt: "Detalle de una orden de compra", pasos: [
         { t: "Mirá cuánto falta de cada producto.", marca: "Llegaron 42 de 54 unidades" },
-        { t: "Cuando llegue la mercadería, tocá Recibir y cargá la factura. Ahí recién sube el stock.", marca: "Recibir" },
+        { t: "Cuando llegue la mercadería, tocá Recibir mercadería.", marca: "Recibir" },
+      ] },
+      { img: "recibir-orden", alt: "Pantalla para recibir una orden de compra", pasos: [
+        { t: "Copiá el número de la factura del proveedor.", marca: "Número *" },
+        { t: "Corregí la cantidad a lo que llegó de verdad. Lo que no llegó queda pendiente en la orden.", marca: "Cantidad" },
+        { t: "Al final, tocá Registrar compra. Ahí recién sube el stock." },
       ] },
     ],
   },
@@ -531,7 +544,7 @@ export const GUIAS: Guia[] = [
       { img: "crm-nuevo", alt: "Formulario de nuevo prospecto", pasos: [
         { t: "Completá la empresa y la persona de contacto.", marca: "EMPRESA *" },
         { t: "Marcá qué le interesa.", marca: "SERVICIOS / PRODUCTOS DE INTERÉS *" },
-        { t: "Más abajo, en Seguimiento, anotá qué vas a hacer y cuándo, para que no se te pase." },
+        { t: "Anotá qué vas a hacer y cuándo, para que no se te pase.", marca: "PRÓXIMA ACCIÓN" },
       ] },
     ],
   },
