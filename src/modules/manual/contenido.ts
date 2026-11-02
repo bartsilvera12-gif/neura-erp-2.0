@@ -47,10 +47,10 @@ export const LLEGAR: Record<string, [string, string?]> = {
 /** La captura del panel que abre cada sección del menú. */
 export const PANELES: Record<string, string> = {
   Caja: "panel-caja", Inventario: "panel-inventario", "Gastos empresariales": "panel-gastos", Comercial: "panel-comercial",
-  Finanzas: "panel-finanzas", Omnicanal: "panel-omnicanal", Configuración: "panel-config", "RR HH": "rrhh-lista",
+  Finanzas: "panel-finanzas", Omnicanal: "panel-omnicanal", Configuración: "panel-config", "RR HH": "rrhh-panel",
 };
 /** La captura donde se ve la sección en el menú, si no es la de Inicio. */
-export const MENUS: Record<string, string> = { "RR HH": "rrhh-lista" };
+export const MENUS: Record<string, string> = { "RR HH": "rrhh-panel" };
 
 export const GUIAS: Guia[] = [
   // ── Primeros pasos ───────────────────────────────────────────────────────────

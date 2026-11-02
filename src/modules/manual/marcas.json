@@ -2653,30 +2653,15 @@
   "rrhh-lista": {
    "Falta cargar": {
     "x": 89,
-    "y": 44.2
+    "y": 49.5
    },
    "Admin Demo": {
     "x": 20.9,
-    "y": 44.2
+    "y": 49.4
    },
    "Laura Benítez": {
     "x": 20.9,
-    "y": 54.4
-   },
-   "RR HH": {
-    "x": 7.9,
-    "y": 75.2,
-    "lado": "der"
-   },
-   "Personal": {
-    "x": 9.8,
-    "y": 80.2,
-    "lado": "der"
-   },
-   "Liquidaciones": {
-    "x": 12.4,
-    "y": 85.2,
-    "lado": "der"
+    "y": 59.6
    }
   },
   "rrhh-ficha": {
@@ -2916,8 +2901,8 @@
     "y": 20.8
    },
    "Cerrar el mes": {
-    "x": 93.6,
-    "y": 23,
+    "x": 92.6,
+    "y": 22.9,
     "lado": "abajo"
    },
    "Laura Benítez": {
@@ -3019,6 +3004,21 @@
     "x": 57.5,
     "y": 64.2,
     "z": 1.25
+   }
+  },
+  "rrhh-panel": {
+   "Personal": {
+    "x": 21.3,
+    "y": 38.5
+   },
+   "Liquidaciones": {
+    "x": 47.6,
+    "y": 38.5
+   },
+   "RR HH": {
+    "x": 7.9,
+    "y": 75.2,
+    "lado": "der"
    }
   }
  }

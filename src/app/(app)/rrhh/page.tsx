@@ -31,7 +31,7 @@ export default function PaginaPersonal() {
 
   return (
     <div className="space-y-4">
-      <EncabezadoPagina kicker="RR HH" titulo="Personal" subtitulo="Datos, salario, ausencias, vacaciones e historial de cada persona."
+      <EncabezadoPagina kicker="RR HH" titulo="Personal" subtitulo="Datos, salario, ausencias, vacaciones e historial de cada persona." volver={{ href: "/rrhh/panel", label: "RR HH" }}
         acciones={<Link href="/rrhh/liquidaciones" className={BOTON}><ReceiptText className="h-4 w-4" /> Liquidaciones</Link>} />
 
       {faltan > 0 ? (
