@@ -48,12 +48,14 @@
     "y": 2
    },
    "Caja": {
-    "x": 4,
-    "y": 27.4
+    "x": 6.9,
+    "y": 27.4,
+    "lado": "der"
    },
    "Buscar…": {
-    "x": 0.6,
-    "y": 14.3
+    "x": 8.2,
+    "y": 14.3,
+    "lado": "der"
    },
    "Manual": {
     "x": 68.2,
@@ -84,40 +86,49 @@
     "y": 12.8
    },
    "Inicio": {
-    "x": 4,
-    "y": 19.2
+    "x": 7.3,
+    "y": 19.2,
+    "lado": "der"
    },
    "Comercial": {
-    "x": 4,
-    "y": 23.3
+    "x": 9.9,
+    "y": 23.3,
+    "lado": "der"
    },
    "Finanzas": {
-    "x": 4,
-    "y": 31.5
+    "x": 9,
+    "y": 31.5,
+    "lado": "der"
    },
    "Gastos empresariales": {
-    "x": 4,
-    "y": 35.6
+    "x": 15.8,
+    "y": 35.6,
+    "lado": "der"
    },
    "Inventario": {
-    "x": 4,
-    "y": 39.7
+    "x": 9.6,
+    "y": 39.7,
+    "lado": "der"
    },
    "Reportes": {
-    "x": 4,
-    "y": 43.8
+    "x": 9.3,
+    "y": 43.8,
+    "lado": "der"
    },
    "Omnicanal": {
-    "x": 4,
-    "y": 47.9
+    "x": 10.2,
+    "y": 47.9,
+    "lado": "der"
    },
    "Soporte": {
-    "x": 4,
-    "y": 52
+    "x": 8.9,
+    "y": 52,
+    "lado": "der"
    },
    "Configuración": {
-    "x": 4,
-    "y": 56.1
+    "x": 11.9,
+    "y": 56.1,
+    "lado": "der"
    }
   },
   "caja-turnos": {
@@ -1191,12 +1202,14 @@
     "y": 2
    },
    "Caja": {
-    "x": 4,
-    "y": 27.4
+    "x": 6.9,
+    "y": 27.4,
+    "lado": "der"
    },
    "Buscar…": {
-    "x": 0.6,
-    "y": 14.3
+    "x": 8.2,
+    "y": 14.3,
+    "lado": "der"
    },
    "Manual": {
     "x": 68.2,
@@ -1227,40 +1240,49 @@
     "y": 12.8
    },
    "Inicio": {
-    "x": 4,
-    "y": 19.2
+    "x": 7.3,
+    "y": 19.2,
+    "lado": "der"
    },
    "Comercial": {
-    "x": 4,
-    "y": 23.3
+    "x": 9.9,
+    "y": 23.3,
+    "lado": "der"
    },
    "Finanzas": {
-    "x": 4,
-    "y": 31.5
+    "x": 9,
+    "y": 31.5,
+    "lado": "der"
    },
    "Gastos empresariales": {
-    "x": 4,
-    "y": 35.6
+    "x": 15.8,
+    "y": 35.6,
+    "lado": "der"
    },
    "Inventario": {
-    "x": 4,
-    "y": 39.7
+    "x": 9.6,
+    "y": 39.7,
+    "lado": "der"
    },
    "Reportes": {
-    "x": 4,
-    "y": 43.8
+    "x": 9.3,
+    "y": 43.8,
+    "lado": "der"
    },
    "Omnicanal": {
-    "x": 4,
-    "y": 47.9
+    "x": 10.2,
+    "y": 47.9,
+    "lado": "der"
    },
    "Soporte": {
-    "x": 4,
-    "y": 52
+    "x": 8.9,
+    "y": 52,
+    "lado": "der"
    },
    "Configuración": {
-    "x": 4,
-    "y": 56.1
+    "x": 11.9,
+    "y": 56.1,
+    "lado": "der"
    }
   },
   "caja-turnos": {

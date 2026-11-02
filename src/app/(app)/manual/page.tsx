@@ -20,7 +20,8 @@ import marcasJson from "@/modules/manual/marcas.json";
 import { pantallaDeRuta, pantallasCatalogo, perfilVePantalla } from "@/modules/registry";
 
 type RubroImagen = "comercio" | "gastronomia";
-type Punto = { x: number; y: number };
+/** lado "der": la flecha entra desde la derecha, donde a la izquierda no hay lugar (el menú). */
+type Punto = { x: number; y: number; lado?: "der" };
 const MARCAS = marcasJson as unknown as Record<RubroImagen, Record<string, Record<string, Punto | null>>>;
 /** Las capturas son por rubro: la de otro rubro solo si la pantalla no existe en el tuyo. */
 const carpetaDe = (img: string, rubro: RubroImagen): RubroImagen => (MARCAS[rubro][img] ? rubro : rubro === "comercio" ? "gastronomia" : "comercio");
@@ -102,18 +103,19 @@ function Visor({ d, onAmpliar }: { d: Diapositiva; onAmpliar: () => void }) {
   const arriba = Math.min(0, Math.max(100 - 100 * altoImg, 50 - p.y * altoImg));
   const px = p.x * ZOOM + izq;
   const py = p.y * altoImg + arriba;
+  const der = p.lado === "der";
   return (
     <button type="button" onClick={onAmpliar} aria-label="Ver la pantalla completa"
       style={{ width: "min(100cqw, 160cqh)" }}
       className="relative mx-auto block aspect-[16/10] cursor-zoom-in overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt={d.alt ?? ""} onLoad={cargar} className={`absolute max-w-none ${proporcion ? "" : "opacity-0"}`} style={{ width: `${ZOOM * 100}%`, left: `${izq}%`, top: `${arriba}%` }} />
-      <span className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse 42% 38% at ${px + 13}% ${py}%, transparent 72%, rgba(15,23,42,.5) 100%)` }} />
-      <span className="pointer-events-none absolute -translate-x-full -translate-y-1/2" style={{ left: `${Math.max(px, 9)}%`, top: `${py}%` }}>
+      <span className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse 42% 38% at ${der ? px - 6 : px + 13}% ${py}%, transparent 72%, rgba(15,23,42,.5) 100%)` }} />
+      <span className={`pointer-events-none absolute -translate-y-1/2 ${der ? "" : "-translate-x-full"}`} style={{ left: `${der ? px : Math.max(px, 9)}%`, top: `${py}%` }}>
         <span className="relative grid h-9 w-9 place-items-center sm:h-11 sm:w-11">
           <span className="absolute inset-0 animate-ping rounded-full bg-rose-500/50" />
           <span className="relative grid h-full w-full place-items-center rounded-full bg-rose-600 text-white ring-2 ring-white">
-            <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />
+            {der ? <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden /> : <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />}
           </span>
         </span>
       </span>
@@ -239,8 +241,8 @@ function PantallaCompleta({ d }: { d: Diapositiva }) {
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={`/manual/${carpeta}/${d.img}.webp`} alt={d.alt ?? ""} className="block h-auto w-full" />
       {p ? (
-        <span className="absolute grid h-7 w-7 -translate-x-full -translate-y-1/2 place-items-center rounded-full bg-rose-600 text-white ring-2 ring-white" style={{ left: `${Math.max(p.x, 3)}%`, top: `${p.y}%` }}>
-          <ArrowRight className="h-4 w-4" aria-hidden />
+        <span className={`absolute grid h-7 w-7 -translate-y-1/2 place-items-center rounded-full bg-rose-600 text-white ring-2 ring-white ${p.lado === "der" ? "" : "-translate-x-full"}`} style={{ left: `${p.lado === "der" ? p.x : Math.max(p.x, 3)}%`, top: `${p.y}%` }}>
+          {p.lado === "der" ? <ArrowLeft className="h-4 w-4" aria-hidden /> : <ArrowRight className="h-4 w-4" aria-hidden />}
         </span>
       ) : null}
     </span>
