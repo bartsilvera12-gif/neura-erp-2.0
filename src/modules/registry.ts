@@ -13,7 +13,7 @@ import { moduloGastosEmpresariales } from "@/modules/compras/module";
 import { moduloSoporte } from "@/modules/soporte/module";
 import { moduloCrm } from "@/modules/crm/module";
 import { moduloOmnicanal } from "@/modules/conversaciones/module";
-import { moduloGestionClientes, moduloPlanes, moduloAgenda } from "@/modules/clientes/modulos-comerciales";
+import { moduloGestionClientes, moduloComisiones, moduloPlanes, moduloAgenda } from "@/modules/clientes/modulos-comerciales";
 import { moduloCobranzas, moduloConciliacion } from "@/modules/cobranzas/module";
 import { moduloPagos } from "@/modules/compras/modulos-finanzas";
 import { moduloProyectos } from "@/modules/proyectos/module";
@@ -33,6 +33,7 @@ const TODOS: Modulo[] = [
   moduloCrm,
   moduloPresupuestos,
   moduloGestionClientes,
+  moduloComisiones,
   moduloPlanes,
   moduloAgenda,
   moduloProyectos,

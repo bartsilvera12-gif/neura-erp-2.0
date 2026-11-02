@@ -16,6 +16,17 @@ export const moduloGestionClientes: Modulo = {
   familia: "Comercial",
 };
 
+// Receta 115: el Administrador ve a todos los vendedores; el resto, su comisión.
+export const moduloComisiones: Modulo = {
+  id: "comisiones",
+  label: "Comisiones",
+  palabras: ["vendedores", "escalas", "premios", "mi comision"],
+  href: "/comisiones",
+  grupo: "comercial",
+  icon: "percent",
+  familia: "Comercial",
+};
+
 export const moduloPlanes: Modulo = {
   id: "planes",
   label: "Planes",

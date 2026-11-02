@@ -15,6 +15,7 @@ const TARJETAS: TarjetaPanel[] = [
   { href: "/crm", titulo: "CRM Funnel", imagen: "/comercial/crm-pizarra-notas-reunion.webp", color: "214 40% 24%", posicion: "40% 30%" },
   { href: "/presupuestos", titulo: "Presupuestos", imagen: "/comercial/presupuestos-calculadora-notas.webp", color: "26 50% 24%", posicion: "35% 72%" },
   { href: "/clientes/gestion", titulo: "Gestión Clientes", imagen: "/comercial/gestion-lista-llamadas-libreta.webp", color: "152 34% 22%", posicion: "70% 40%" },
+  { href: "/comisiones", titulo: "Comisiones", imagen: "/comercial/presupuestos-calculadora-notas.webp", color: "168 38% 22%", posicion: "60% 45%" },
   { href: "/clientes/suscripciones", titulo: "Planes", imagen: "/comercial/planes-calendario-mensual.webp", color: "258 28% 30%", posicion: "50% 70%" },
   { href: "/clientes/agenda", titulo: "Agenda", imagen: "/comercial/agenda-planificador-escribiendo.webp", color: "196 45% 20%", posicion: "50% 40%" },
   { href: "/proyectos", titulo: "Proyectos", imagen: "/comercial/proyectos-tablero-kanban.webp", color: "352 38% 27%", posicion: "50% 20%" },

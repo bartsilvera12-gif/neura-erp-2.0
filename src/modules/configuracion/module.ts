@@ -25,6 +25,7 @@ export const moduloConfiguracion: Modulo = {
     { label: "Mesas y QR", href: "/configuracion/mesas", permiso: "configuracion", funcion: "mesas" },
     // Receta 75: rubro (Comercio / Gastronomía) y funciones. Neura puede ocultarla (solo por SQL).
     { label: "Rubro y funciones", href: "/configuracion/funciones", permiso: "configuracion", funcion: "rubro" },
+    { label: "Comisiones", href: "/configuracion/comisiones", permiso: "configuracion", palabras: ["escalas", "politica de comisiones"] },
     { label: "Usuarios", href: "/configuracion/usuarios", permiso: "administrar_usuarios", palabras: ["perfiles", "permisos", "empleados", "cajeros"] },
   ],
   atajos: [{ label: "Facturación electrónica (SIFEN)", href: "/configuracion/facturacion-electronica" }],

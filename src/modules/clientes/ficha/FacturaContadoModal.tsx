@@ -5,9 +5,10 @@
  * IVA. Emite un servicio puntual sin productos ni caja; queda como factura pendiente que
  * vence hoy en el Estado de cuenta y se cobra con "Registrar pago".
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { apiFetchCache } from "@/lib/api/cache-cliente";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { Select } from "@/components/Select";
 import { AVISO_SIN_RUC } from "@/modules/empresa/tipos";
@@ -32,20 +33,29 @@ export function FacturaContadoModal({ clienteId, clienteNombre, ruc, avisoRuc, m
   const [monto, setMonto] = useState(0);
   const [descripcion, setDescripcion] = useState("Venta al contado");
   const [iva, setIva] = useState<"10%" | "5%" | "exenta">("10%");
+  const [comisionable, setComisionable] = useState(false);
+  const [vendedor, setVendedor] = useState("");
+  const [vendedores, setVendedores] = useState<{ id: string; nombre: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const usd = moneda === "USD";
+
+  useEffect(() => {
+    if (!comisionable || vendedores.length) return;
+    apiFetchCache<{ id: string; nombre: string }[]>("/api/usuarios").then(setVendedores).catch((e: Error) => setError(e.message));
+  }, [comisionable, vendedores.length]);
 
   async function emitir(e: React.FormEvent) {
     e.preventDefault();
     if (!ruc) { setError(avisoRuc || AVISO_SIN_RUC); return; }
     if (!(monto > 0)) { setError("El monto debe ser mayor a 0."); return; }
+    if (comisionable && !vendedor) { setError("Elegí el vendedor que se lleva la comisión."); return; }
     setBusy(true);
     setError(null);
     try {
       const r = await apiFetch<{ numero_control: string }>(`/api/clientes/${clienteId}/factura-contado`, {
         method: "POST",
-        body: JSON.stringify({ monto, descripcion: descripcion.trim() || null, tipo_iva: iva }),
+        body: JSON.stringify({ monto, descripcion: descripcion.trim() || null, tipo_iva: iva, comisionable, vendedor_usuario_id: comisionable ? vendedor : null }),
       });
       onEmitida(`Factura ${r.numero_control} emitida. Queda pendiente de cobro en el Estado de cuenta.`);
     } catch (err) {
@@ -94,6 +104,18 @@ export function FacturaContadoModal({ clienteId, clienteNombre, ruc, avisoRuc, m
             <Select value={iva} onChange={(v) => setIva(v as typeof iva)} block etiqueta="IVA"
               options={[["10%", "IVA 10%"], ["5%", "IVA 5%"], ["exenta", "Exenta"]]} />
           </div>
+          <label className="flex min-h-11 cursor-pointer items-center gap-2.5 sm:min-h-0">
+            <input type="checkbox" className="h-4 w-4 shrink-0 accent-[#4FAEB2]" checked={comisionable}
+              onChange={(e) => { setComisionable(e.target.checked); if (!e.target.checked) setVendedor(""); }} />
+            <span className="text-sm text-slate-700">Esta factura es comisionable</span>
+          </label>
+          {comisionable ? (
+            <div>
+              <span className={LABEL}>Vendedor de la comisión *</span>
+              <Select value={vendedor} onChange={setVendedor} block etiqueta="Vendedor de la comisión"
+                options={[["", "— Elegí un vendedor —"], ...vendedores.map((v): [string, string] => [v.id, v.nombre])]} />
+            </div>
+          ) : null}
           {error ? <p className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p> : null}
         </div>
 

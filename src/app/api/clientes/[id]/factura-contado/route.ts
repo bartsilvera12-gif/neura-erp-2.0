@@ -13,16 +13,23 @@ const cuerpo = z.object({
   monto: z.coerce.number().positive("El monto debe ser mayor a 0"),
   descripcion: z.string().trim().max(200).nullish(),
   tipo_iva: z.enum(["10%", "5%", "exenta"]),
-});
+  // Receta 115: si comisiona y qué vendedor se la lleva.
+  comisionable: z.boolean().default(false),
+  vendedor_usuario_id: z.string().uuid().nullish(),
+}).refine((v) => !v.comisionable || v.vendedor_usuario_id, { message: "Elegí el vendedor que se lleva la comisión" });
 
 export const POST = withTenant(
   async (ctx, req, input) => {
     const id = idDeRuta(req, "clientes");
     if (!id) return ERR.invalid("Falta el id del cliente");
-    const { data, error } = await ctx.db.rpc("emitir_factura_contado", {
+    const { data, error } = await ctx.db.rpc<{ venta_id: string }>("emitir_factura_contado", {
       p_cliente: id, p_monto: input.monto, p_descripcion: input.descripcion ?? null, p_tipo_iva: input.tipo_iva,
     });
-    if (error) return errorDb(error, "No se pudo emitir la factura");
+    if (error || !data) return errorDb(error, "No se pudo emitir la factura");
+    const marca = await ctx.db.rpc("venta_marcar_comision", {
+      p_venta: data.venta_id, p_comisionable: input.comisionable, p_vendedor: input.comisionable ? input.vendedor_usuario_id ?? null : null,
+    });
+    if (marca.error) console.error("[factura-contado] comisión", marca.error.message);
     return created(data);
   },
   { roles: ["ADMIN", "VENDEDOR", "CAJERO", "SUPERVISOR"], body: cuerpo },
