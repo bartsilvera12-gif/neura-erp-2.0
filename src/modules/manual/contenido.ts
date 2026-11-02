@@ -657,7 +657,7 @@ export const GUIAS: Guia[] = [
     id: "reportes", grupo: "Reportes", ruta: "/reportes", titulo: "Sacar un reporte", resumen: "Todos los números, en Excel o PDF.",
     bloques: [
       { img: "reportes", alt: "Lista de reportes", pasos: [
-        { t: "Entrá a Reportes y tocá Ver reporte en el que necesitás. Ponele las fechas, y bajalo en Excel o PDF.", marca: "Ver reporte" },
+        { t: "Entrá a Reportes y tocá la tarjeta del que necesitás. Ponele las fechas, y bajalo en Excel o PDF.", marca: "Estado de cuenta" },
         { t: "Cierre de caja por día: cuánto se vendió y cobró cada día.", marca: "Cierre de caja por día" },
         { t: "Productos vendidos: qué se vende más y cuánto te deja.", marca: "Productos vendidos" },
         { t: "Cuentas por cobrar y por pagar: lo que te deben y lo que debés.", marca: "Cuentas por cobrar" },

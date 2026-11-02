@@ -129,19 +129,19 @@
   "venta-credito": {
    "Crédito": {
     "x": 58.5,
-    "y": 31.6
+    "y": 24.9
    },
    "Cliente *": {
     "x": 21.3,
-    "y": 28
+    "y": 21.3
    },
    "Cuotas": {
     "x": 46.4,
-    "y": 35.8
+    "y": 29.1
    },
    "Vence en": {
     "x": 52,
-    "y": 35.8
+    "y": 29.1
    }
   },
   "caja-retiro": {
@@ -164,20 +164,20 @@
   },
   "caja-cerrar": {
    "¿Cuánto efectivo contaste?": {
-    "x": 13.6,
-    "y": 36
+    "x": 12.9,
+    "y": 35
    },
    "Ver de dónde sale": {
-    "x": 13.6,
-    "y": 32.5
+    "x": 12.9,
+    "y": 31.4
    },
    "OTRAS FORMAS DE PAGO · SE CONFIRMAN": {
-    "x": 13.6,
-    "y": 47.9
+    "x": 12.9,
+    "y": 47.1
    },
    "Observación (opcional)": {
-    "x": 12.3,
-    "y": 70.9
+    "x": 11.6,
+    "y": 70.6
    }
   },
   "caja-ordenes": {
@@ -266,7 +266,7 @@
     "y": 31.4
    },
    "STOCK": {
-    "x": 74.3,
+    "x": 73.5,
     "y": 37.4
    },
    "Exportar Excel": {
@@ -774,10 +774,6 @@
    }
   },
   "reportes": {
-   "Ver reporte": {
-    "x": 42.4,
-    "y": 27.2
-   },
    "Cierre de caja por día": {
     "x": 21.3,
     "y": 57.7
@@ -797,6 +793,10 @@
    "Registro de comprobantes (RG 90)": {
     "x": 74,
     "y": 27.5
+   },
+   "Estado de cuenta": {
+    "x": 21.4,
+    "y": 24.1
    }
   },
   "reporte-ejemplo": {
@@ -1837,10 +1837,6 @@
    }
   },
   "reportes": {
-   "Ver reporte": {
-    "x": 42.4,
-    "y": 27.2
-   },
    "Cierre de caja por día": {
     "x": 21.3,
     "y": 57.7
@@ -1860,6 +1856,10 @@
    "Registro de comprobantes (RG 90)": {
     "x": 74,
     "y": 27.5
+   },
+   "Estado de cuenta": {
+    "x": 21.4,
+    "y": 24.1
    }
   },
   "reporte-ejemplo": {
