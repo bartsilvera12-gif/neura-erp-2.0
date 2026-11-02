@@ -6,8 +6,8 @@ export type BaseCalculo = "pago_registrado" | "factura_emitida" | "factura_pagad
 export type Escala = { orden: number; desde_monto: number; hasta_monto: number | null; porcentaje_comision: number; premio_fijo: number | null };
 
 export type LineaDatos = {
-  tipo: "pago" | "factura_emitida" | "factura_pagada";
-  cliente_id: string;
+  tipo: "pago" | "nota_credito" | "factura_emitida" | "factura_pagada";
+  cliente_id: string | null;
   cliente_label: string;
   factura_id: string;
   numero_factura: string | null;
@@ -19,9 +19,6 @@ export type LineaDatos = {
   pendiente_por_comisionar: number;
   comisionable: boolean | null;
   tiene_suscripcion: boolean;
-  recurrente: boolean;
-  /** Bases por factura: la línea comisiona siempre (igual que en sistemas-propio). */
-  forzar: boolean;
   cliente_alta: string | null;
   factura_monto_total: number;
   vendedor_usuario_id: string | null;
@@ -40,7 +37,6 @@ export type ACobrarDatos = {
   vendedor_usuario_id: string;
   comisionable: boolean | null;
   tiene_suscripcion: boolean;
-  recurrente: boolean;
   monto_suscripcion: number | null;
 };
 
@@ -63,7 +59,7 @@ export type DatosComisiones =
       nombres: Record<string, string>;
     };
 
-export type Linea = Omit<LineaDatos, "comisionable" | "tiene_suscripcion" | "recurrente" | "forzar"> & {
+export type Linea = Omit<LineaDatos, "comisionable" | "tiene_suscripcion"> & {
   comisiona: boolean;
   origen: Origen;
   comision_estimada_linea: number;

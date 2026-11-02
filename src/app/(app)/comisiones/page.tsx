@@ -113,7 +113,7 @@ function Totales({ r }: { r: VendedorFila }) {
 }
 
 const motivoExclusion = (l: Linea) =>
-  l.origen === "override_excluir" ? l.override_motivo || "Excluido manualmente" : l.origen === "factura" ? "Venta marcada como no comisionable" : "No es venta nueva (cliente recurrente o suscripción)";
+  l.origen === "override_excluir" ? l.override_motivo || "Excluido manualmente" : l.origen === "factura" ? "Venta marcada como no comisionable" : "Venta de suscripción";
 
 type CtxExcluir = { busy: string | null; abrir: (l: Linea) => void; quitar: (pagoId: string) => void };
 
@@ -246,7 +246,7 @@ function ModalExcluir({ objetivo, busy, onCancelar, onConfirmar }: { objetivo: L
       <p className="text-xs text-slate-500">{objetivo.cliente_label} · {objetivo.numero_factura ?? "—"} · {gs(objetivo.monto_base)}</p>
       <label className="mt-4 block">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-slate-500">Motivo (obligatorio)</span>
-        <textarea autoFocus rows={3} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ej.: cliente recurrente, no es venta nueva"
+        <textarea autoFocus rows={3} maxLength={500} value={motivo} onChange={(e) => setMotivo(e.target.value)} placeholder="Ej.: venta cargada a otro vendedor"
           className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm outline-none focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)]" />
       </label>
       <div className="mt-4 flex justify-end gap-2 max-sm:[&>button]:min-h-11 max-sm:[&>button]:flex-1">
@@ -270,7 +270,7 @@ function ModalExcluidas({ filas, periodo, ctx, onClose }: { filas: VendedorFila[
   ];
   return (
     <Modal titulo={`${excluidas.length} línea${excluidas.length === 1 ? "" : "s"} no comisiona${excluidas.length === 1 ? "" : "n"}`} onClose={onClose} size="xl">
-      <p className="mb-3 text-xs text-slate-500">{periodo} · Total excluido: {gs(excluidas.reduce((s, l) => s + l.monto_base, 0))}. Las de clientes sin vendedor se cuentan aparte.</p>
+      <p className="mb-3 text-xs text-slate-500">{periodo} · Total excluido: {gs(excluidas.reduce((s, l) => s + l.monto_base, 0))}. Las que no tienen vendedor se cuentan aparte.</p>
       <div className="overflow-hidden rounded-xl border border-amber-200">
         <TablaTarjetas filas={excluidas} columnas={columnas} claveFila={(l) => `${l.pago_id ?? ""}-${l.factura_id}`} minAncho={720} thBase={TH} tdBase={TD}
           vacio={<p className="px-4 py-10 text-center text-sm text-slate-500">No hay líneas excluidas en este mes.</p>} />
@@ -449,7 +449,7 @@ export default function ComisionesPage() {
               <div className="mt-4 flex flex-wrap items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
                 <p className="flex max-w-3xl items-start gap-2.5 text-sm text-amber-900">
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
-                  Hay {k.fuentes_sin_vendedor} {k.fuentes_sin_vendedor === 1 ? "movimiento" : "movimientos"} de clientes sin vendedor asignado. Asigná un vendedor responsable en la ficha del cliente para incluirlos en el cálculo.
+                  Hay {k.fuentes_sin_vendedor} {k.fuentes_sin_vendedor === 1 ? "movimiento" : "movimientos"} sin vendedor: la venta no tiene quién la registró ni vendedor en el cliente. Asigná un vendedor en la ficha del cliente para incluirlos en el cálculo.
                 </p>
                 <Link href="/clientes" className="shrink-0 rounded-xl border border-amber-300 bg-white px-3 py-1.5 text-xs font-semibold text-amber-800 hover:bg-amber-100 max-sm:flex max-sm:min-h-11 max-sm:w-full max-sm:items-center max-sm:justify-center">Ir a Clientes</Link>
               </div>
@@ -478,7 +478,7 @@ export default function ComisionesPage() {
           </section>
           <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm max-sm:p-4">
             <div>
-              <p className="font-semibold text-slate-900">Mis clientes y movimientos</p>
+              <p className="font-semibold text-slate-900">Mis ventas y movimientos</p>
               <p className="mt-0.5 text-xs text-slate-500">{propia.lineas.filter((l) => l.comisiona).length} movimiento{propia.lineas.filter((l) => l.comisiona).length === 1 ? "" : "s"} · Pendiente de cobro {gs(propia.a_cobrar_total)}</p>
             </div>
             <Movimientos r={propia} ocultarExcluidos />
@@ -490,7 +490,7 @@ export default function ComisionesPage() {
         <div className="rounded-2xl border border-slate-200 bg-white px-4 py-12 text-center shadow-sm">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full border border-[var(--brand)]/25 bg-[var(--brand-50)] text-[var(--brand)]"><Percent className="h-5 w-5" /></div>
           <p className="text-sm font-semibold text-slate-800">Todavía no tenés movimientos comisionables en este período.</p>
-          <p className="mx-auto mt-1 max-w-md text-xs text-slate-500">Cuando tus clientes registren movimientos dentro del período, vas a verlos acá.</p>
+          <p className="mx-auto mt-1 max-w-md text-xs text-slate-500">Cuando se cobren tus ventas o pedidos de este período, vas a verlos acá.</p>
         </div>
       )}
 

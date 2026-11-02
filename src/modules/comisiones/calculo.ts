@@ -31,17 +31,16 @@ export function repartoProporcional(total: number, montos: number[]): number[] {
   return partes;
 }
 
-/** Excluir/incluir manual del mes → marca de la venta → venta sin suscripción de un cliente no recurrente. */
+/** Excluir/incluir manual del mes → marca de la venta → toda venta que no sea de suscripción (receta 116). */
 export function resolverComisionable(input: {
   override: "incluir" | "excluir" | null;
   comisionable: boolean | null;
   tieneSuscripcion: boolean;
-  recurrente: boolean;
 }): { comisiona: boolean; origen: Origen } {
   if (input.override === "excluir") return { comisiona: false, origen: "override_excluir" };
   if (input.override === "incluir") return { comisiona: true, origen: "override_incluir" };
   if (input.comisionable !== null) return { comisiona: input.comisionable, origen: "factura" };
-  return { comisiona: !input.tieneSuscripcion && !input.recurrente, origen: "auto" };
+  return { comisiona: !input.tieneSuscripcion, origen: "auto" };
 }
 
 export function progresoEscala(base: number, escalas: Escala[]): ProgresoEscala {
@@ -83,15 +82,13 @@ export function armarPreview(datos: DatosComisiones, mes: string): PreviewComisi
   const nombre = (id: string) => datos.nombres[id] ?? "Sin nombre";
   const overrides = new Map(datos.overrides.map((o) => [o.pago_id, o]));
 
-  // Líneas con su decisión; las de un cliente sin vendedor solo cuentan para el aviso.
+  // Líneas con su decisión; las que no tienen vendedor solo cuentan para el aviso.
   let sinVendedor = 0;
   const porVendedor = new Map<string, Linea[]>();
   for (const l of datos.lineas) {
     if (!l.vendedor_usuario_id) { sinVendedor++; continue; }
     const ov = l.pago_id ? overrides.get(l.pago_id) ?? null : null;
-    const { comisiona, origen } = l.forzar
-      ? { comisiona: true, origen: "auto" as Origen }
-      : resolverComisionable({ override: ov?.decision ?? null, comisionable: l.comisionable, tieneSuscripcion: l.tiene_suscripcion, recurrente: l.recurrente });
+    const { comisiona, origen } = resolverComisionable({ override: ov?.decision ?? null, comisionable: l.comisionable, tieneSuscripcion: l.tiene_suscripcion });
     const lista = porVendedor.get(l.vendedor_usuario_id) ?? [];
     lista.push({
       tipo: l.tipo, cliente_id: l.cliente_id, cliente_label: l.cliente_label, factura_id: l.factura_id, numero_factura: l.numero_factura,
@@ -106,7 +103,7 @@ export function armarPreview(datos: DatosComisiones, mes: string): PreviewComisi
   // A cobrar: solo lo comisionable (sin excluir/incluir: esa decisión es por pago, y acá no hay pago).
   const aCobrar = new Map<string, ACobrarVendedor>();
   for (const f of datos.a_cobrar) {
-    const { comisiona } = resolverComisionable({ override: null, comisionable: f.comisionable, tieneSuscripcion: f.tiene_suscripcion, recurrente: f.recurrente });
+    const { comisiona } = resolverComisionable({ override: null, comisionable: f.comisionable, tieneSuscripcion: f.tiene_suscripcion });
     if (!comisiona) continue;
     const g: ACobrarVendedor = aCobrar.get(f.vendedor_usuario_id) ?? { vendedor_usuario_id: f.vendedor_usuario_id, vendedor_nombre: nombre(f.vendedor_usuario_id), total_a_cobrar: 0, facturas: [] as ACobrarDatos[] };
     g.total_a_cobrar = redondear(g.total_a_cobrar + Number(f.saldo_pendiente));
