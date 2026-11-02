@@ -98,8 +98,10 @@ function Visor({ d, onAmpliar }: { d: Diapositiva; onAmpliar: () => void }) {
   }
   const r = proporcion ?? 0.75;
   const altoImg = (ZOOM * r) / PROP_VISOR; // alto de la imagen, en altos de visor
-  // El lugar a tocar queda un poco a la izquierda del centro: el botón sigue hacia la derecha.
-  const izq = Math.min(0, Math.max(100 - 100 * ZOOM, 38 - p.x * ZOOM));
+  // El lugar a tocar queda a la izquierda del centro: lo señalado sigue hacia la derecha.
+  // En la mitad derecha de la pantalla, más todavía, para no cortar montos ni botones anchos.
+  const aLaDerecha = p.x >= 50;
+  const izq = Math.min(0, Math.max(100 - 100 * ZOOM, (aLaDerecha ? 22 : 38) - p.x * ZOOM));
   const arriba = Math.min(0, Math.max(100 - 100 * altoImg, 50 - p.y * altoImg));
   const px = p.x * ZOOM + izq;
   const py = p.y * altoImg + arriba;
@@ -110,7 +112,7 @@ function Visor({ d, onAmpliar }: { d: Diapositiva; onAmpliar: () => void }) {
       className="relative mx-auto block aspect-[16/10] cursor-zoom-in overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt={d.alt ?? ""} onLoad={cargar} className={`absolute max-w-none ${proporcion ? "" : "opacity-0"}`} style={{ width: `${ZOOM * 100}%`, left: `${izq}%`, top: `${arriba}%` }} />
-      <span className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse 42% 38% at ${der ? px - 6 : px + 13}% ${py}%, transparent 72%, rgba(15,23,42,.5) 100%)` }} />
+      <span className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse ${aLaDerecha ? 62 : 42}% 38% at ${der ? px - 6 : aLaDerecha ? px + 26 : px + 13}% ${py}%, transparent 72%, rgba(15,23,42,.5) 100%)` }} />
       <span className={`pointer-events-none absolute -translate-y-1/2 ${der ? "" : "-translate-x-full"}`} style={{ left: `${der ? px : Math.max(px, 9)}%`, top: `${py}%` }}>
         <span className="relative grid h-9 w-9 place-items-center sm:h-11 sm:w-11">
           <span className="absolute inset-0 animate-ping rounded-full bg-rose-500/50" />
