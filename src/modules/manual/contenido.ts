@@ -499,7 +499,7 @@ export const GUIAS: Guia[] = [
         { t: "Tocá la orden para ver cuánto llegó.", marca: "OC-000001" },
       ] },
       { img: "orden-detalle", alt: "Detalle de una orden de compra", pasos: [
-        { t: "Mirá cuánto falta de cada producto.", marca: "Llegaron 42 de 54 unidades" },
+        { t: "Mirá cuánto llegó de lo que pediste.", marca: "Llegaron 42 de 54 unidades" },
         { t: "Cuando llegue la mercadería, tocá Recibir mercadería.", marca: "Recibir" },
       ] },
       { img: "recibir-orden", alt: "Pantalla para recibir una orden de compra", pasos: [

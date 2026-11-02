@@ -21,7 +21,7 @@ import { pantallaDeRuta, pantallasCatalogo, perfilVePantalla } from "@/modules/r
 
 type RubroImagen = "comercio" | "gastronomia";
 /** lado "der": la flecha entra desde la derecha, donde a la izquierda no hay lugar (el menú). */
-type Punto = { x: number; y: number; lado?: "der" };
+type Punto = { x: number; y: number; lado?: "der"; z?: number };
 const MARCAS = marcasJson as unknown as Record<RubroImagen, Record<string, Record<string, Punto | null>>>;
 /** Las capturas son por rubro: la de otro rubro solo si la pantalla no existe en el tuyo. */
 const carpetaDe = (img: string, rubro: RubroImagen): RubroImagen => (MARCAS[rubro][img] ? rubro : rubro === "comercio" ? "gastronomia" : "comercio");
@@ -97,13 +97,15 @@ function Visor({ d, onAmpliar }: { d: Diapositiva; onAmpliar: () => void }) {
     );
   }
   const r = proporcion ?? 0.75;
-  const altoImg = (ZOOM * r) / PROP_VISOR; // alto de la imagen, en altos de visor
+  const zoom = p.z ?? ZOOM; // las zonas anchas llevan menos zoom, para verse enteras
+  const altoImg = (zoom * r) / PROP_VISOR; // alto de la imagen, en altos de visor
   // El lugar a tocar queda a la izquierda del centro: lo señalado sigue hacia la derecha.
   // En la mitad derecha de la pantalla, más todavía, para no cortar montos ni botones anchos.
   const aLaDerecha = p.x >= 50;
-  const izq = Math.min(0, Math.max(100 - 100 * ZOOM, (aLaDerecha ? 22 : 38) - p.x * ZOOM));
+  const izq = Math.min(0, Math.max(100 - 100 * zoom, (aLaDerecha ? 22 : 38) - p.x * zoom));
+  const luz = ZOOM / zoom;
   const arriba = Math.min(0, Math.max(100 - 100 * altoImg, 50 - p.y * altoImg));
-  const px = p.x * ZOOM + izq;
+  const px = p.x * zoom + izq;
   const py = p.y * altoImg + arriba;
   const der = p.lado === "der";
   return (
@@ -111,8 +113,8 @@ function Visor({ d, onAmpliar }: { d: Diapositiva; onAmpliar: () => void }) {
       style={{ width: "min(100cqw, 160cqh)" }}
       className="relative mx-auto block aspect-[16/10] cursor-zoom-in overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={d.alt ?? ""} onLoad={cargar} className={`absolute max-w-none ${proporcion ? "" : "opacity-0"}`} style={{ width: `${ZOOM * 100}%`, left: `${izq}%`, top: `${arriba}%` }} />
-      <span className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse ${aLaDerecha ? 62 : 42}% 38% at ${der ? px - 6 : aLaDerecha ? px + 26 : px + 13}% ${py}%, transparent 72%, rgba(15,23,42,.5) 100%)` }} />
+      <img src={src} alt={d.alt ?? ""} onLoad={cargar} className={`absolute max-w-none ${proporcion ? "" : "opacity-0"}`} style={{ width: `${zoom * 100}%`, left: `${izq}%`, top: `${arriba}%` }} />
+      <span className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse ${(aLaDerecha ? 62 : 42) * luz}% ${38 * luz}% at ${der ? px - 6 : aLaDerecha ? px + 26 : px + 13 * luz}% ${py}%, transparent 72%, rgba(15,23,42,.5) 100%)` }} />
       <span className={`pointer-events-none absolute -translate-y-1/2 ${der ? "" : "-translate-x-full"}`} style={{ left: `${der ? px : Math.max(px, 9)}%`, top: `${py}%` }}>
         <span className="relative grid h-9 w-9 place-items-center sm:h-11 sm:w-11">
           <span className="absolute inset-0 animate-ping rounded-full bg-rose-500/50" />

@@ -27,7 +27,8 @@
   "venta-cobrar": {
    "Efectivo": {
     "x": 27.4,
-    "y": 35.6
+    "y": 35.6,
+    "z": 1.3
    },
    "Gs. 50.000": {
     "x": 45.6,
@@ -216,15 +217,18 @@
   "caja-cerrar": {
    "¿Cuánto efectivo contaste?": {
     "x": 12.9,
-    "y": 35
+    "y": 35,
+    "z": 1.6
    },
    "Ver de dónde sale": {
     "x": 12.9,
-    "y": 31.4
+    "y": 31.4,
+    "z": 1.6
    },
    "OTRAS FORMAS DE PAGO · SE CONFIRMAN": {
     "x": 12.9,
-    "y": 47.1
+    "y": 47.1,
+    "z": 1.6
    },
    "Observación (opcional)": {
     "x": 11.6,
@@ -314,7 +318,8 @@
   "inventario-productos": {
    "Categoría: Todas": {
     "x": 46.4,
-    "y": 31.4
+    "y": 31.4,
+    "z": 1.4
    },
    "STOCK": {
     "x": 73.5,
@@ -408,7 +413,8 @@
   "inventario-movimientos": {
    "Ventas": {
     "x": 37.4,
-    "y": 26.1
+    "y": 26.1,
+    "z": 1.4
    },
    "Todos los depósitos": {
     "x": 47.8,
@@ -470,7 +476,8 @@
   "compra-nueva": {
    "Mercadería": {
     "x": 21.3,
-    "y": 21.6
+    "y": 21.6,
+    "z": 1.5
    },
    "Proveedor *": {
     "x": 21.6,
@@ -520,7 +527,8 @@
   "orden-detalle": {
    "Llegaron 42 de 54 unidades": {
     "x": 57.9,
-    "y": 15.4
+    "y": 15.4,
+    "z": 1.6
    },
    "Recibir": {
     "x": 83.1,
@@ -566,7 +574,8 @@
   "pago-proveedor": {
    "¿Cuánto le pagás?": {
     "x": 25.3,
-    "y": 22.5
+    "y": 22.5,
+    "z": 1.5
    },
    "Solo lo vencido": {
     "x": 37.6,
@@ -574,7 +583,8 @@
    },
    "Facturas que pagás": {
     "x": 25.3,
-    "y": 36.3
+    "y": 36.3,
+    "z": 1.5
    },
    "Pagar Gs.": {
     "x": 61.5,
@@ -672,7 +682,8 @@
    },
    "Abiertos": {
     "x": 21,
-    "y": 25.5
+    "y": 25.5,
+    "z": 1.3
    }
   },
   "presupuesto-nuevo": {
@@ -728,7 +739,8 @@
    },
    "POR VENDEDOR": {
     "x": 20.9,
-    "y": 53
+    "y": 53,
+    "z": 1
    }
   },
   "planes": {
@@ -796,8 +808,8 @@
   "pago-cobrar": {},
   "conciliacion": {
    "Pendiente": {
-    "x": 69.5,
-    "y": 46
+    "x": 21,
+    "y": 29.7
    },
    "Cargar extracto (Excel o CSV)": {
     "x": 31.5,
@@ -811,7 +823,8 @@
   "cobranzas": {
    "Total adeudado": {
     "x": 21.3,
-    "y": 24.8
+    "y": 24.8,
+    "z": 1.5
    },
    "Tramo 3": {
     "x": 69.8,
@@ -919,7 +932,8 @@
    },
    "Pendientes": {
     "x": 32,
-    "y": 25.3
+    "y": 25.3,
+    "z": 1.5
    },
    "Tomar": {
     "x": 73.7,
@@ -991,11 +1005,13 @@
   "config-funciones": {
    "BASE, INCLUIDA EN TODOS LOS RUBROS": {
     "x": 22.8,
-    "y": 31.6
+    "y": 31.6,
+    "z": 1
    },
    "Comercio": {
     "x": 22,
-    "y": 42.5
+    "y": 42.5,
+    "z": 1
    }
   },
   "config-comisiones": {
@@ -1005,7 +1021,8 @@
    },
    "Desde": {
     "x": 22.6,
-    "y": 74.9
+    "y": 74.9,
+    "z": 1.35
    },
    "Agregar escala": {
     "x": 21.6,
@@ -1023,7 +1040,8 @@
    },
    "Cantidad": {
     "x": 22.9,
-    "y": 82.2
+    "y": 82.2,
+    "z": 1.6
    },
    "Registrar compra": {
     "x": 72.9,
@@ -1033,7 +1051,8 @@
   "crm-seguimiento": {
    "PRÓXIMA ACCIÓN": {
     "x": 23.3,
-    "y": 26.8
+    "y": 26.8,
+    "z": 1.5
    }
   },
   "panel-caja": {
@@ -1370,15 +1389,18 @@
   "caja-cerrar": {
    "¿Cuánto efectivo contaste?": {
     "x": 12.9,
-    "y": 35
+    "y": 35,
+    "z": 1.6
    },
    "Ver de dónde sale": {
     "x": 12.9,
-    "y": 31.4
+    "y": 31.4,
+    "z": 1.6
    },
    "OTRAS FORMAS DE PAGO · SE CONFIRMAN": {
     "x": 12.9,
-    "y": 47.1
+    "y": 47.1,
+    "z": 1.6
    },
    "Observación (opcional)": {
     "x": 11.6,
@@ -1526,7 +1548,8 @@
   "caja-cocina": {
    "Todas": {
     "x": 20,
-    "y": 29.9
+    "y": 29.9,
+    "z": 1.6
    },
    "Para preparar": {
     "x": 20,
@@ -1560,7 +1583,8 @@
    },
    "COMPLETAS": {
     "x": 23.7,
-    "y": 39.6
+    "y": 39.6,
+    "z": 1.5
    },
    "ALCANZA PARA": {
     "x": 83.5,
@@ -1582,7 +1606,8 @@
    },
    "COSTO POR PORCIÓN": {
     "x": 22.6,
-    "y": 19.7
+    "y": 19.7,
+    "z": 1.4
    },
    "Opciones": {
     "x": 36.7,
@@ -1614,7 +1639,8 @@
   "inventario-productos": {
    "Categoría: Todas": {
     "x": 46.1,
-    "y": 31.4
+    "y": 31.4,
+    "z": 1.4
    },
    "STOCK": {
     "x": 75.4,
@@ -1636,7 +1662,8 @@
   "producto-nuevo": {
    "Reventa": {
     "x": 57.6,
-    "y": 15.3
+    "y": 15.3,
+    "z": 1.7
    },
    "Nombre *": {
     "x": 65.9,
@@ -1716,7 +1743,8 @@
   "inventario-movimientos": {
    "Ventas": {
     "x": 37.4,
-    "y": 26.1
+    "y": 26.1,
+    "z": 1.4
    },
    "Todos los depósitos": {
     "x": 47.8,
@@ -1778,7 +1806,8 @@
   "compra-nueva": {
    "Mercadería": {
     "x": 21.3,
-    "y": 21.6
+    "y": 21.6,
+    "z": 1.5
    },
    "Proveedor *": {
     "x": 21.6,
@@ -1828,7 +1857,8 @@
   "orden-detalle": {
    "Llegaron 42 de 54 unidades": {
     "x": 57.9,
-    "y": 15.4
+    "y": 15.4,
+    "z": 1.6
    },
    "Recibir": {
     "x": 83.1,
@@ -1874,7 +1904,8 @@
   "pago-proveedor": {
    "¿Cuánto le pagás?": {
     "x": 25.3,
-    "y": 22.5
+    "y": 22.5,
+    "z": 1.5
    },
    "Solo lo vencido": {
     "x": 37.6,
@@ -1882,7 +1913,8 @@
    },
    "Facturas que pagás": {
     "x": 25.3,
-    "y": 36.3
+    "y": 36.3,
+    "z": 1.5
    },
    "Pagar Gs.": {
     "x": 61.5,
@@ -1980,7 +2012,8 @@
    },
    "Abiertos": {
     "x": 21,
-    "y": 25.5
+    "y": 25.5,
+    "z": 1.3
    }
   },
   "presupuesto-nuevo": {
@@ -2036,7 +2069,8 @@
    },
    "POR VENDEDOR": {
     "x": 20.9,
-    "y": 53
+    "y": 53,
+    "z": 1
    }
   },
   "planes": {
@@ -2104,8 +2138,8 @@
   "pago-cobrar": {},
   "conciliacion": {
    "Pendiente": {
-    "x": 69.5,
-    "y": 46
+    "x": 21,
+    "y": 29.7
    },
    "Cargar extracto (Excel o CSV)": {
     "x": 31.5,
@@ -2119,7 +2153,8 @@
   "cobranzas": {
    "Total adeudado": {
     "x": 21.3,
-    "y": 24.8
+    "y": 24.8,
+    "z": 1.5
    },
    "Tramo 3": {
     "x": 69.8,
@@ -2227,7 +2262,8 @@
    },
    "Pendientes": {
     "x": 32,
-    "y": 25.3
+    "y": 25.3,
+    "z": 1.5
    },
    "Tomar": {
     "x": 73.7,
@@ -2299,11 +2335,13 @@
   "config-funciones": {
    "BASE, INCLUIDA EN TODOS LOS RUBROS": {
     "x": 22.8,
-    "y": 31.6
+    "y": 31.6,
+    "z": 1
    },
    "Comercio": {
     "x": 22,
-    "y": 42.5
+    "y": 42.5,
+    "z": 1
    }
   },
   "config-comisiones": {
@@ -2313,7 +2351,8 @@
    },
    "Desde": {
     "x": 22.6,
-    "y": 74.9
+    "y": 74.9,
+    "z": 1.35
    },
    "Agregar escala": {
     "x": 21.6,
@@ -2351,7 +2390,8 @@
   "venta-cobrar": {
    "Efectivo": {
     "x": 27.4,
-    "y": 35.6
+    "y": 35.6,
+    "z": 1.3
    },
    "Gs. 50.000": {
     "x": 45.6,
@@ -2385,7 +2425,8 @@
    },
    "Materias primas que se usan": {
     "x": 25.3,
-    "y": 45.9
+    "y": 45.9,
+    "z": 1.6
    }
   },
   "recibir-orden": {
@@ -2395,7 +2436,8 @@
    },
    "Cantidad": {
     "x": 22.9,
-    "y": 82.2
+    "y": 82.2,
+    "z": 1.6
    },
    "Registrar compra": {
     "x": 72.9,
@@ -2405,7 +2447,8 @@
   "mesa-partes": {
    "Laura": {
     "x": 33.1,
-    "y": 50.4
+    "y": 50.4,
+    "z": 1.5
    },
    "Carlos": {
     "x": 33.1,
@@ -2425,7 +2468,8 @@
   "crm-seguimiento": {
    "PRÓXIMA ACCIÓN": {
     "x": 23.3,
-    "y": 26.8
+    "y": 26.8,
+    "z": 1.5
    }
   },
   "panel-caja": {
