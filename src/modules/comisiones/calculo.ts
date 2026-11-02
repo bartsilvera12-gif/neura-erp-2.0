@@ -81,12 +81,15 @@ export function armarPreview(datos: DatosComisiones, mes: string): PreviewComisi
 
   const nombre = (id: string) => datos.nombres[id] ?? "Sin nombre";
   const overrides = new Map(datos.overrides.map((o) => [o.pago_id, o]));
+  // RR HH: marcado "Comisiona: no" (receta 118).
+  const noComisionan = new Set(datos.no_comisionan ?? []);
 
   // Líneas con su decisión; las que no tienen vendedor solo cuentan para el aviso.
   let sinVendedor = 0;
   const porVendedor = new Map<string, Linea[]>();
   for (const l of datos.lineas) {
     if (!l.vendedor_usuario_id) { sinVendedor++; continue; }
+    if (noComisionan.has(l.vendedor_usuario_id)) continue;
     const ov = l.pago_id ? overrides.get(l.pago_id) ?? null : null;
     const { comisiona, origen } = resolverComisionable({ override: ov?.decision ?? null, comisionable: l.comisionable, tieneSuscripcion: l.tiene_suscripcion });
     const lista = porVendedor.get(l.vendedor_usuario_id) ?? [];
@@ -103,6 +106,7 @@ export function armarPreview(datos: DatosComisiones, mes: string): PreviewComisi
   // A cobrar: solo lo comisionable (sin excluir/incluir: esa decisión es por pago, y acá no hay pago).
   const aCobrar = new Map<string, ACobrarVendedor>();
   for (const f of datos.a_cobrar) {
+    if (noComisionan.has(f.vendedor_usuario_id)) continue;
     const { comisiona } = resolverComisionable({ override: null, comisionable: f.comisionable, tieneSuscripcion: f.tiene_suscripcion });
     if (!comisiona) continue;
     const g: ACobrarVendedor = aCobrar.get(f.vendedor_usuario_id) ?? { vendedor_usuario_id: f.vendedor_usuario_id, vendedor_nombre: nombre(f.vendedor_usuario_id), total_a_cobrar: 0, facturas: [] as ACobrarDatos[] };
@@ -115,7 +119,7 @@ export function armarPreview(datos: DatosComisiones, mes: string): PreviewComisi
   let recurrenciaTotal = 0;
   for (const r of datos.recurrencia) {
     recurrenciaTotal += Number(r.monto);
-    if (!r.vendedor_usuario_id) continue;
+    if (!r.vendedor_usuario_id || noComisionan.has(r.vendedor_usuario_id)) continue;
     recurrencia.set(r.vendedor_usuario_id, [...(recurrencia.get(r.vendedor_usuario_id) ?? []), r]);
   }
 

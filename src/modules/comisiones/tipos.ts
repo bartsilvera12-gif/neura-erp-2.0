@@ -53,6 +53,7 @@ export type DatosComisiones =
       politica: { id: string; nombre: string; base_calculo: BaseCalculo };
       escalas: Escala[];
       overrides: OverrideDatos[];
+      no_comisionan?: string[];
       lineas: LineaDatos[];
       a_cobrar: ACobrarDatos[];
       recurrencia: RecurrenciaDatos[];

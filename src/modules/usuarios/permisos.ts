@@ -25,7 +25,7 @@ export type Permiso =
   | "registrar_compras" | "anular_compras" | "registrar_gastos" | "anular_gastos" | "pagar_proveedores"
   | "editar_productos" | "ajustes_inventario" | "registrar_perdidas" | "aprobar_perdidas" | "crear_traslados" | "recibir_traslados" | "fabricar"
   | "ver_cierres_caja" | "ver_reportes_financieros" | "exportar"
-  | "administrar_usuarios" | "configuracion";
+  | "administrar_usuarios" | "configuracion" | "administrar_rrhh";
 
 export type DefPermiso = {
   id: Permiso;
@@ -105,6 +105,7 @@ export const GRUPOS_PERMISOS: { id: string; label: string; permisos: DefPermiso[
     permisos: [
       { id: "administrar_usuarios", label: "Administrar usuarios y perfiles", descripcion: "Crea usuarios, les cambia el perfil, los desactiva y arma los perfiles con sus permisos.", niveles: ["ADMIN"], sensible: true },
       { id: "configuracion", label: "Configuración del sistema", descripcion: "Cambia la configuración: cajas, sucursales y depósitos, bancos, categorías, etapas, colas y demás ajustes.", niveles: ["ADMIN"], sensible: true },
+      { id: "administrar_rrhh", label: "Administrar RR HH y salarios", descripcion: "Ve y edita los datos del personal, salarios, ausencias, vacaciones y liquidaciones.", niveles: ["ADMIN"], sensible: true },
     ],
   },
 ];
