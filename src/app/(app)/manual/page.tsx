@@ -45,11 +45,11 @@ function norm(s: string) {
 }
 
 function textoDeGuia(g: Guia) {
-  return norm([g.titulo, g.resumen, ...g.bloques.flatMap((b) => [b.texto, b.consejo, b.ojo, ...(b.pasos ?? []).map((p) => p.t)])].filter(Boolean).join(" "));
+  return norm([g.titulo, g.resumen, ...g.bloques.flatMap((b) => [b.texto, b.consejo, b.ojo, ...(b.pasos ?? []).flatMap((p) => [p.t, p.d])])].filter(Boolean).join(" "));
 }
 
 type Nota = { tipo: "consejo" | "ojo"; texto: string };
-type Diapositiva = { frase: string; img?: string; alt?: string; marca?: string; intro?: string; notas: Nota[] };
+type Diapositiva = { frase: string; aclara?: string; img?: string; alt?: string; marca?: string; intro?: string; notas: Nota[] };
 
 /** Una guía se recorre de a una frase por pantalla. */
 function diapositivas(g: Guia, rubro: RubroImagen): Diapositiva[] {
@@ -58,7 +58,7 @@ function diapositivas(g: Guia, rubro: RubroImagen): Diapositiva[] {
     if (b.rubro && b.rubro !== rubro) continue;
     const pasos = b.pasos ?? [];
     if (b.texto && !pasos.length) out.push({ frase: b.texto, img: b.img, alt: b.alt, notas: [] });
-    pasos.forEach((p, i) => out.push({ frase: p.t, img: b.img, alt: b.alt, marca: p.marca, intro: i === 0 ? b.texto : undefined, notas: [] }));
+    pasos.forEach((p, i) => out.push({ frase: p.t, aclara: p.d, img: b.img, alt: b.alt, marca: p.marca, intro: i === 0 ? b.texto : undefined, notas: [] }));
     const nota: Nota | null = b.consejo ? { tipo: "consejo", texto: b.consejo } : b.ojo ? { tipo: "ojo", texto: b.ojo } : null;
     if (nota) {
       if (out.length) out[out.length - 1].notas.push(nota);
@@ -179,7 +179,10 @@ function Recorrido({ guia, rubro }: { guia: Guia; rubro: RubroImagen }) {
       ) : (
         <>
           {d.intro ? <p className="shrink-0 text-base leading-relaxed text-slate-600">{d.intro}</p> : null}
-          <p className="shrink-0 text-xl font-semibold leading-snug text-slate-900 sm:text-2xl">{d.frase}</p>
+          <div className="shrink-0">
+            <p className="text-xl font-semibold leading-snug text-slate-900 sm:text-2xl">{d.frase}</p>
+            {d.aclara ? <p className="mt-1 text-base leading-relaxed text-slate-600">{d.aclara}</p> : null}
+          </div>
           {d.img ? (
             <div className="aspect-[16/10] w-full flex-none lg:aspect-auto lg:min-h-[160px] lg:flex-1" style={{ containerType: "size" }}>
               <Visor key={`${i}-${d.img}`} d={d} onAmpliar={() => setAmpliada(true)} />
