@@ -66,7 +66,7 @@ const cuerpo = z.discriminatedUnion("tipo", [
   z.object({
     tipo: z.literal("plantilla"),
     plantilla_id: z.string().min(1).max(80),
-    variables: z.record(z.string().max(500)).default({}),
+    variables: z.record(z.string(), z.string().max(500)).default({}),
   }),
 ]);
 

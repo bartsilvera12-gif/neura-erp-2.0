@@ -214,7 +214,7 @@ export const cuerpoPresupuesto = z.object({
     .array(
       z.object({
         // Solo productos del inventario (receta 64): sin líneas libres.
-        producto_id: z.string({ required_error: "En un presupuesto solo van productos del inventario", invalid_type_error: "En un presupuesto solo van productos del inventario" })
+        producto_id: z.string({ error: "En un presupuesto solo van productos del inventario" })
           .uuid("En un presupuesto solo van productos del inventario"),
         descripcion: texto(300),
         detalle: texto(1000),

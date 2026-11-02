@@ -10,7 +10,7 @@ import type { TenantContext } from "@/lib/api/with-tenant";
 import type { AgenteCola, Cola, DatosColas } from "@/modules/conversaciones/supervision";
 
 const entero = (min: number, max: number, campo: string) =>
-  z.coerce.number({ invalid_type_error: `${campo}: número inválido` }).int(`${campo}: tiene que ser entero`).min(min, `${campo}: mínimo ${min}`).max(max, `${campo}: máximo ${max}`);
+  z.coerce.number({ error: `${campo}: número inválido` }).int(`${campo}: tiene que ser entero`).min(min, `${campo}: mínimo ${min}`).max(max, `${campo}: máximo ${max}`);
 
 export const esquemaCola = z.object({
   nombre: z.string().trim().min(1, "Poné un nombre a la cola").max(80, "Nombre: máximo 80 caracteres"),
