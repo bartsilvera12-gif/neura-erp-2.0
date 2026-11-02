@@ -2651,17 +2651,14 @@
    }
   },
   "rrhh-lista": {
-   "Falta cargar": {
-    "x": 89,
-    "y": 49.5
-   },
-   "Admin Demo": {
-    "x": 20.9,
-    "y": 49.4
-   },
    "Laura Benítez": {
-    "x": 20.9,
-    "y": 59.6
+    "x": 24.6,
+    "y": 57.5
+   },
+   "Falta cargar": {
+    "x": 36.1,
+    "y": 32.5,
+    "lado": "abajo"
    }
   },
   "rrhh-ficha": {

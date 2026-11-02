@@ -153,7 +153,7 @@ export default function PaginaLiquidaciones() {
 
   return (
     <div className="space-y-4">
-      <EncabezadoPagina kicker="RR HH" titulo="Liquidaciones" subtitulo="Extracto del mes para revisar con el asesor. No genera pagos ni gastos." volver={{ href: "/rrhh/panel", label: "RR HH" }}
+      <EncabezadoPagina titulo="Liquidaciones" subtitulo="Extracto del mes para revisar con el asesor. No genera pagos ni gastos." volver={{ href: "/rrhh/panel", label: "RR HH" }}
         acciones={
           <div className="flex flex-wrap gap-2 max-sm:w-full max-sm:[&>*]:flex-1">
             {puedeExportar ? <button type="button" className={BOTON} disabled={!filas.length} onClick={() => void descargarArchivo(`/api/rrhh/liquidaciones/export?mes=${mes}`, `liquidacion-${mes}.xlsx`).catch((e: Error) => setError(e.message))}><Download className="h-4 w-4" /> Excel</button> : null}

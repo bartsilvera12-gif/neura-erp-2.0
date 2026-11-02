@@ -836,7 +836,7 @@ export const GUIAS: Guia[] = [
     bloques: [
       { texto: "Acá aparecen los usuarios del sistema. Para sumar a alguien, primero crealo en Configuración › Usuarios." },
       { img: "rrhh-lista", alt: "Lista del personal", pasos: [
-        { t: "Las personas sin datos dicen Falta cargar.", marca: "Falta cargar" },
+        { t: "En Falta cargar están las personas sin datos.", d: "En la lista dicen Cargar datos.", marca: "Falta cargar" },
         { t: "Tocá el nombre de la persona.", marca: "Laura Benítez" },
       ] },
       { img: "rrhh-ficha", alt: "Ficha de la persona", pasos: [
