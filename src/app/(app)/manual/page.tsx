@@ -15,7 +15,7 @@ import {
 import { CapaModal } from "@/components/CapaModal";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { rubroDe } from "@/modules/configuracion/funciones";
-import { GUIAS, type Guia } from "@/modules/manual/contenido";
+import { GUIAS, LLEGAR, PANELES, type Guia } from "@/modules/manual/contenido";
 import marcasJson from "@/modules/manual/marcas.json";
 import { pantallaDeRuta, pantallasCatalogo, perfilVePantalla } from "@/modules/registry";
 
@@ -54,6 +54,12 @@ type Diapositiva = { frase: string; aclara?: string; img?: string; alt?: string;
 /** Una guía se recorre de a una frase por pantalla. */
 function diapositivas(g: Guia, rubro: RubroImagen): Diapositiva[] {
   const out: Diapositiva[] = [];
+  const llegar = LLEGAR[g.id];
+  if (llegar) {
+    const [seccion, tarjeta] = llegar;
+    out.push({ frase: `En el menú de la izquierda, tocá ${seccion}.`, aclara: "En el celular, el menú se abre con el botón de las tres rayitas.", img: "inicio", marca: seccion, notas: [] });
+    if (tarjeta) out.push({ frase: `Tocá ${tarjeta}.`, img: PANELES[seccion], marca: tarjeta, notas: [] });
+  }
   for (const b of g.bloques) {
     if (b.rubro && b.rubro !== rubro) continue;
     const pasos = b.pasos ?? [];

@@ -22,6 +22,32 @@ export type Guia = {
 
 export const GRUPOS = ["Primeros pasos", "Caja y ventas", "Pedidos y mesas", "Cocina y recetas", "Inventario", "Compras y gastos", "Clientes y ventas", "Cobros", "Reportes", "Atención al cliente", "Configuración"];
 
+/** Cómo se llega a la pantalla de cada guía: la sección del menú y la tarjeta de su panel. */
+export const LLEGAR: Record<string, [string, string?]> = {
+  "abrir-caja": ["Caja", "Apertura y cierre"], retiro: ["Caja", "Apertura y cierre"], "cerrar-caja": ["Caja", "Apertura y cierre"],
+  vender: ["Caja", "Nueva venta"], factura: ["Caja", "Nueva venta"], credito: ["Caja", "Nueva venta"],
+  ordenes: ["Caja", "Órdenes de venta"], "nota-credito": ["Caja", "Órdenes de venta"],
+  pedidos: ["Caja", "Pedidos"], mesas: ["Caja", "Pedidos de mesas"], cocina: ["Caja", "Cocina"],
+  "mesas-config": ["Configuración", "Mesas y QR"],
+  recetas: ["Inventario", "Recetas"], produccion: ["Inventario", "Producción"],
+  productos: ["Inventario", "Productos"], "producto-nuevo": ["Inventario", "Productos"], ajustes: ["Inventario", "Ajustes y pérdidas"],
+  traslados: ["Inventario", "Traslados"], movimientos: ["Inventario", "Movimientos"], vencimientos: ["Inventario", "Vencimientos"],
+  categorias: ["Inventario", "Categorías"], depositos: ["Inventario", "Depósitos"],
+  compra: ["Gastos empresariales", "Compras y gastos"], "orden-compra": ["Gastos empresariales", "Órdenes de compra"],
+  proveedor: ["Gastos empresariales", "Proveedores"], "pagar-proveedor": ["Gastos empresariales", "Pagos a proveedores"], recurrentes: ["Gastos empresariales", "Recurrentes"],
+  cliente: ["Comercial", "Clientes"], crm: ["Comercial", "CRM Funnel"], presupuestos: ["Comercial", "Presupuestos"], gestion: ["Comercial", "Gestión Clientes"],
+  comisiones: ["Comercial", "Comisiones"], planes: ["Comercial", "Planes"], agenda: ["Comercial", "Agenda"],
+  "cobrar-deuda": ["Finanzas", "Pagos"], conciliacion: ["Finanzas", "Conciliación"], cobranzas: ["Finanzas", "Cobranzas"],
+  reportes: ["Reportes"], omnicanal: ["Omnicanal", "Conversaciones"], soporte: ["Soporte"],
+  empresa: ["Configuración", "Datos de la empresa"], facturacion: ["Configuración", "Tickets y facturación"], usuarios: ["Configuración", "Usuarios"],
+  rubro: ["Configuración", "Rubro y funciones"], "config-comisiones": ["Configuración", "Comisiones"],
+};
+/** La captura del panel que abre cada sección del menú. */
+export const PANELES: Record<string, string> = {
+  Caja: "panel-caja", Inventario: "panel-inventario", "Gastos empresariales": "panel-gastos", Comercial: "panel-comercial",
+  Finanzas: "panel-finanzas", Omnicanal: "panel-omnicanal", Configuración: "panel-config",
+};
+
 export const GUIAS: Guia[] = [
   // ── Primeros pasos ───────────────────────────────────────────────────────────
   {
@@ -87,7 +113,7 @@ export const GUIAS: Guia[] = [
     id: "abrir-caja", grupo: "Caja y ventas", ruta: "/caja/turnos", titulo: "Abrir la caja", resumen: "Lo primero del día: sin caja abierta no se puede vender.",
     bloques: [
       { img: "caja-turnos", alt: "Pantalla Apertura y cierre", pasos: [
-        { t: "Entrá a Caja › Apertura y cierre y tocá Abrir caja.", marca: "Abrir caja" },
+        { t: "Tocá Abrir caja.", marca: "Abrir caja" },
       ] },
       { img: "caja-abrir", alt: "Ventana para abrir una caja", pasos: [
         { t: "Elegí la caja que vas a usar.", d: "Las que dicen Abierta ya están en uso.", marca: "Caja 2" },
@@ -101,7 +127,6 @@ export const GUIAS: Guia[] = [
     id: "vender", grupo: "Caja y ventas", ruta: "/caja/nueva", titulo: "Hacer una venta", resumen: "De buscar el producto a entregar el ticket.",
     bloques: [
       { img: "venta-buscar", alt: "Buscador de productos con resultados", pasos: [
-        { t: "Entrá a Caja › Nueva venta." },
         { t: "Pasá el lector por el código de barras, o escribí el nombre del producto.", marca: "Arroz" },
         { t: "Tocá el producto en la lista, o apretá Enter para agregar el primero.", marca: "Arroz 1 kg" },
       ] },
@@ -149,8 +174,10 @@ export const GUIAS: Guia[] = [
   {
     id: "retiro", grupo: "Caja y ventas", ruta: "/caja/turnos", titulo: "Sacar o poner plata en la caja", resumen: "Depósitos, retiros del dueño y cambio extra.",
     bloques: [
+      { img: "caja-turnos", alt: "Cajas con el botón de retiro", pasos: [
+        { t: "Tocá Retiro / ingreso en tu caja.", marca: "Retiro / ingreso" },
+      ] },
       { img: "caja-retiro", alt: "Ventana de retiro de efectivo", pasos: [
-        { t: "En Apertura y cierre, tocá Retiro / ingreso en tu caja." },
         { t: "Elegí Retiro si sale plata o Ingreso si entra.", marca: "Retiro" },
         { t: "Elegí el motivo.", d: "Si es otro, explicalo en el detalle.", marca: "Depósito en banco" },
         { t: "Escribí el monto.", d: "Arriba del botón ves cuánto debería haber en la caja.", marca: "Monto en efectivo" },
@@ -163,7 +190,7 @@ export const GUIAS: Guia[] = [
     id: "cerrar-caja", grupo: "Caja y ventas", ruta: "/caja/turnos", titulo: "Cerrar la caja", resumen: "Contar la plata y terminar el turno.",
     bloques: [
       { img: "caja-turnos", alt: "Pantalla Apertura y cierre con las cajas abiertas", pasos: [
-        { t: "Entrá a Caja › Apertura y cierre y tocá Cerrar en tu caja.", marca: "Cerrar" },
+        { t: "Tocá Cerrar en tu caja.", marca: "Cerrar" },
       ] },
       { img: "caja-cerrar", alt: "Ventana de cierre de caja con el arqueo", pasos: [
         { t: "Contá el efectivo del cajón sin mirar la pantalla y escribí el total.", d: "También podés cargarlo por billete.", marca: "¿Cuánto efectivo contaste?" },
@@ -178,7 +205,6 @@ export const GUIAS: Guia[] = [
     id: "ordenes", grupo: "Caja y ventas", ruta: "/caja", titulo: "Buscar una venta y anularla", resumen: "Ver qué se vendió, reimprimir o deshacer una venta.",
     bloques: [
       { img: "caja-ordenes", alt: "Lista de órdenes de venta", pasos: [
-        { t: "Entrá a Caja › Órdenes de venta." },
         { t: "Usá los filtros para achicar la lista por fecha, caja o forma de pago.", marca: "Todas las fechas" },
         { t: "Tocá una venta para ver el detalle.", marca: "VTA-005075" },
       ] },
@@ -195,7 +221,7 @@ export const GUIAS: Guia[] = [
     id: "nota-credito", grupo: "Caja y ventas", ruta: "/caja/notas-credito", titulo: "Devolver un producto (nota de crédito)", resumen: "El cliente devuelve algo o le hacés un descuento después de la venta.",
     bloques: [
       { pasos: [
-        { t: "Entrá a Caja › Órdenes de venta, abrí la venta y tocá Nota de crédito." },
+        { t: "Abrí la venta y tocá Nota de crédito." },
       ] },
       { img: "nc-modal", alt: "Ventana de nota de crédito", pasos: [
         { t: "Si devuelve mercadería, dejá Devolver productos.", marca: "Devolver productos" },
@@ -216,7 +242,6 @@ export const GUIAS: Guia[] = [
     id: "pedidos", grupo: "Pedidos y mesas", ruta: "/caja/pedidos", titulo: "Pedidos de mostrador", resumen: "El vendedor arma el pedido y la caja lo cobra.",
     bloques: [
       { img: "caja-pedidos", alt: "Pantalla de pedidos de mostrador", pasos: [
-        { t: "Entrá a Caja › Pedidos." },
         { t: "Buscá los productos arriba o escaneá el código." },
         { t: "Si el cliente te da sus datos, elegilo.", d: "No es obligatorio.", marca: "Cliente (opcional)" },
         { t: "Si hace falta, escribí una aclaración.", marca: "Nota (opcional)" },
@@ -234,7 +259,7 @@ export const GUIAS: Guia[] = [
     id: "mesas-config", grupo: "Pedidos y mesas", ruta: "/configuracion/mesas", titulo: "Crear mesas e imprimir los QR", resumen: "Se hace una sola vez, al empezar.",
     bloques: [
       { img: "config-mesas", alt: "Lista de mesas con sus QR", pasos: [
-        { t: "Entrá a Configuración › Mesas y QR y tocá Nueva mesa.", marca: "Nueva mesa" },
+        { t: "Tocá Nueva mesa.", marca: "Nueva mesa" },
         { t: "Tocá Imprimir QR y pegá cada uno en su mesa.", marca: "Imprimir QR" },
         { t: "En Estaciones de cocina creás los sectores que preparan: Plancha, Barra, Pizzería…", marca: "Estaciones de cocina" },
       ] },
@@ -291,7 +316,6 @@ export const GUIAS: Guia[] = [
     bloques: [
       { texto: "Primero tienen que existir los productos: cada ingrediente como «Materia prima» y cada plato como «Menú». Mirá la guía «Cargar un producto nuevo»." },
       { img: "inventario-recetas", alt: "Lista de recetas con costo y margen", pasos: [
-        { t: "Entrá a Inventario › Recetas." },
         { t: "Tocá un plato para cargarle sus ingredientes, cantidades y merma.", marca: "Empanada de carne" },
         { t: "Acá ves cuántas recetas están completas.", d: "También a cuáles les falta un ingrediente y cuáles no tienen receta.", marca: "COMPLETAS" },
         { t: "Mirá para cuántas porciones te alcanza.", d: "La tabla también muestra el costo y el margen.", marca: "ALCANZA PARA" },
@@ -313,7 +337,7 @@ export const GUIAS: Guia[] = [
     id: "produccion", grupo: "Cocina y recetas", ruta: "/inventario/produccion", titulo: "Fabricar por tanda", resumen: "Lo que hacés vos para vender después, como bolsas de maní.",
     bloques: [
       { img: "inventario-produccion", alt: "Pantalla de Producción", pasos: [
-        { t: "Entrá a Inventario › Producción y tocá Fabricar.", marca: "Fabricar" },
+        { t: "Tocá Fabricar.", marca: "Fabricar" },
       ] },
       { img: "fabricar-datos", alt: "Ventana para fabricar con un producto elegido", pasos: [
         { t: "Elegí qué fabricás.", d: "Solo aparecen los productos de tipo Fabricado que tienen receta.", marca: "Qué fabricás *" },
@@ -332,7 +356,6 @@ export const GUIAS: Guia[] = [
     id: "productos", grupo: "Inventario", ruta: "/inventario", titulo: "Ver tus productos y su stock", resumen: "Cuánto hay, cuánto cuesta y a cuánto se vende.",
     bloques: [
       { img: "inventario-productos", alt: "Lista de productos", pasos: [
-        { t: "Entrá a Inventario › Productos." },
         { t: "Con estos filtros ves una categoría o un depósito.", marca: "Categoría: Todas" },
         { t: "Cada fila muestra el costo, el precio, el stock y el margen.", marca: "STOCK" },
         { t: "Bajá la lista en Excel con Exportar Excel.", marca: "Exportar Excel" },
@@ -345,7 +368,7 @@ export const GUIAS: Guia[] = [
     id: "producto-nuevo", grupo: "Inventario", ruta: "/inventario", titulo: "Cargar un producto nuevo", resumen: "Nombre, precio e IVA.",
     bloques: [
       { img: "inventario-productos", alt: "Lista de productos", pasos: [
-        { t: "En Productos, tocá Nuevo producto.", marca: "Nuevo producto" },
+        { t: "Tocá Nuevo producto.", marca: "Nuevo producto" },
       ] },
       { img: "producto-nuevo", alt: "Formulario de nuevo producto", rubro: "gastronomia", pasos: [
         { t: "Elegí el tipo de producto.", d: "Reventa se vende tal cual. Menú es un plato con receta. Materia prima es un ingrediente. Fabricado lo hacés vos y tiene stock.", marca: "Reventa" },
@@ -382,8 +405,10 @@ export const GUIAS: Guia[] = [
   {
     id: "traslados", grupo: "Inventario", ruta: "/inventario/traslados", titulo: "Pasar mercadería a otro depósito", resumen: "Entre depósitos o sucursales, con nota de remisión.",
     bloques: [
+      { img: "inventario-traslados", alt: "Lista de traslados", pasos: [
+        { t: "Tocá Nuevo traslado.", marca: "Nuevo traslado" },
+      ] },
       { img: "traslado-nuevo", alt: "Formulario de nuevo traslado", pasos: [
-        { t: "En Inventario › Traslados, tocá Nuevo traslado." },
         { t: "Elegí de dónde sale.", marca: "Sale de" },
         { t: "Elegí a dónde llega.", marca: "Llega a" },
         { t: "Buscá los productos y escribí las cantidades.", marca: "Productos" },
@@ -402,7 +427,6 @@ export const GUIAS: Guia[] = [
     id: "movimientos", grupo: "Inventario", ruta: "/inventario/movimientos", titulo: "Averiguar por qué cambió el stock", resumen: "Cada entrada y salida, con quién la hizo.",
     bloques: [
       { img: "inventario-movimientos", alt: "Lista de movimientos de inventario", pasos: [
-        { t: "Entrá a Inventario › Movimientos." },
         { t: "Filtrá por tipo: ventas, traslados, ajustes, pérdidas…", marca: "Ventas" },
         { t: "Elegí el depósito.", marca: "Todos los depósitos" },
         { t: "Bajalo en Excel si lo necesitás.", marca: "Exportar Excel" },
@@ -446,7 +470,7 @@ export const GUIAS: Guia[] = [
     id: "compra", grupo: "Compras y gastos", ruta: "/gastos-empresariales/compras-gastos", titulo: "Cargar una compra o un gasto", resumen: "La factura del proveedor: suma stock y actualiza costos.",
     bloques: [
       { img: "compras-gastos", alt: "Lista de compras y gastos", pasos: [
-        { t: "Entrá a Gastos empresariales › Compras y gastos y tocá Nueva compra o gasto.", marca: "Nueva compra o gasto" },
+        { t: "Tocá Nueva compra o gasto.", marca: "Nueva compra o gasto" },
       ] },
       { img: "compra-nueva", alt: "Formulario de nueva compra", pasos: [
         { t: "Elegí qué es.", d: "Mercadería suma stock, Gasto es alquiler o luz, y Mixta lleva las dos cosas.", marca: "Mercadería" },
@@ -462,8 +486,11 @@ export const GUIAS: Guia[] = [
   {
     id: "orden-compra", grupo: "Compras y gastos", ruta: "/compras/ordenes", titulo: "Pedirle mercadería a un proveedor", resumen: "La orden de compra: qué pediste y cuánto llegó.",
     bloques: [
+      { img: "compras-ordenes", alt: "Lista de órdenes de compra", pasos: [
+        { t: "Tocá Nueva orden.", marca: "Nueva orden" },
+      ] },
       { img: "orden-nueva", alt: "Formulario de orden de compra", pasos: [
-        { t: "En Órdenes de compra, tocá Nueva orden y elegí el proveedor.", marca: "Proveedor *" },
+        { t: "Elegí el proveedor.", marca: "Proveedor *" },
         { t: "Buscá los productos a pedir.", marca: "Buscá los productos que le vas a pedir." },
         { t: "Este botón muestra lo que está bajo el stock mínimo.", d: "Así no te olvidás de nada.", marca: "Ver qué está por debajo del stock mínimo" },
         { t: "Tocá Crear orden de compra.", d: "Después podés bajar el PDF y mandárselo.", marca: "Crear orden de compra" },
@@ -485,8 +512,10 @@ export const GUIAS: Guia[] = [
   {
     id: "proveedor", grupo: "Compras y gastos", ruta: "/proveedores", titulo: "Cargar un proveedor", resumen: "A quién le comprás.",
     bloques: [
+      { img: "proveedores", alt: "Lista de proveedores", pasos: [
+        { t: "Tocá Nuevo proveedor.", marca: "Nuevo proveedor" },
+      ] },
       { img: "proveedor-nuevo", alt: "Formulario de nuevo proveedor", pasos: [
-        { t: "En Proveedores, tocá Nuevo proveedor." },
         { t: "Solo la razón social es obligatoria.", marca: "Razón social *" },
         { t: "Agregá el RUC: lo vas a necesitar para las facturas.", marca: "RUC (opcional)" },
         { t: "Elegí cómo le pagás normalmente.", marca: "Cómo le pagás" },
@@ -528,7 +557,7 @@ export const GUIAS: Guia[] = [
     id: "cliente", grupo: "Clientes y ventas", ruta: "/clientes", titulo: "Cargar un cliente", resumen: "Sus datos, para venderle a crédito o facturarle.",
     bloques: [
       { img: "clientes", alt: "Lista de clientes", pasos: [
-        { t: "Entrá a Comercial › Clientes y tocá Nuevo cliente.", marca: "Nuevo cliente" },
+        { t: "Tocá Nuevo cliente.", marca: "Nuevo cliente" },
       ] },
       { img: "cliente-nuevo", alt: "Formulario de nuevo cliente", pasos: [
         { t: "Elegí si es una persona o una empresa.", marca: "Persona" },
@@ -567,7 +596,7 @@ export const GUIAS: Guia[] = [
     id: "presupuestos", grupo: "Clientes y ventas", ruta: "/presupuestos", titulo: "Hacer un presupuesto", resumen: "Cotizar y convertirlo en venta si te dicen que sí.",
     bloques: [
       { img: "presupuestos", alt: "Lista de presupuestos", pasos: [
-        { t: "Entrá a Comercial › Presupuestos y tocá Nuevo presupuesto.", marca: "Nuevo presupuesto" },
+        { t: "Tocá Nuevo presupuesto.", marca: "Nuevo presupuesto" },
         { t: "En estas pestañas sabés en qué quedó cada uno.", marca: "Abiertos" },
       ] },
       { img: "presupuesto-nuevo", alt: "Formulario de nuevo presupuesto", pasos: [
@@ -598,7 +627,7 @@ export const GUIAS: Guia[] = [
     bloques: [
       { texto: "Comisionás por lo que vendés. Si armaste un pedido y lo cobró la caja, la venta es tuya. Si la registraste directo en Nueva venta, también." },
       { img: "comisiones", alt: "Pantalla de Comisiones con cifras del mes", pasos: [
-        { t: "Entrá a Comercial › Comisiones y elegí el mes.", marca: "MES A CONSULTAR" },
+        { t: "Elegí el mes.", marca: "MES A CONSULTAR" },
         { t: "Base comisionable es lo que cuenta para tu comisión.", marca: "BASE COMISIONABLE" },
         { t: "Comisión estimada es lo que llevás ganado hasta hoy.", marca: "COMISIÓN ESTIMADA" },
         { t: "Pendiente de cobro es lo vendido que todavía no te pagaron.", marca: "TOTAL PENDIENTE DE COBRO" },
@@ -616,7 +645,7 @@ export const GUIAS: Guia[] = [
         { t: "Cada mes, tocá Emitir cuotas para generar lo que tienen que pagar.", marca: "Emitir cuotas de Noviembre 2026 (1)" },
       ] },
       { img: "planes-lista", alt: "Lista de planes", pasos: [
-        { t: "En Planes, tocá Nuevo plan para crear lo que ofrecés.", marca: "Nuevo plan" },
+        { t: "Tocá Nuevo plan para crear lo que ofrecés.", marca: "Nuevo plan" },
         { t: "Cada plan tiene un solo plazo: si querés uno a 6 meses y otro a 12, creá dos planes.", marca: "PLAZO" },
       ] },
       { consejo: "Una suscripción pausada no genera cuotas. Sirve si el cliente deja por un tiempo y después vuelve." },
@@ -625,8 +654,10 @@ export const GUIAS: Guia[] = [
   {
     id: "agenda", grupo: "Clientes y ventas", ruta: "/clientes/agenda", titulo: "Agendar una cita", resumen: "Reuniones y visitas, con recordatorio.",
     bloques: [
+      { img: "agenda", alt: "Agenda de la semana", pasos: [
+        { t: "Tocá Nueva cita.", marca: "Nueva cita" },
+      ] },
       { img: "agenda-nueva", alt: "Formulario de nueva cita", pasos: [
-        { t: "En Comercial › Agenda, tocá Nueva cita." },
         { t: "Poné un título claro.", marca: "Título *" },
         { t: "Elegí quiénes participan.", d: "Todos reciben el recordatorio.", marca: "Responsables *" },
         { t: "Elegí la fecha y la hora de inicio.", marca: "Fecha *" },
@@ -641,7 +672,6 @@ export const GUIAS: Guia[] = [
     id: "cobrar-deuda", grupo: "Cobros", ruta: "/pagos", titulo: "Registrar el pago de una deuda", resumen: "Un cliente vino a pagar lo que debía.",
     bloques: [
       { img: "pagos", alt: "Lista de facturas pendientes de cobro", pasos: [
-        { t: "Entrá a Finanzas › Pagos." },
         { t: "En Pendientes está lo que te deben.", marca: "Pendientes" },
         { t: "Buscá por el nombre del cliente.", marca: "BUSCAR POR NOMBRE DE CLIENTE" },
       ] },
@@ -687,7 +717,7 @@ export const GUIAS: Guia[] = [
     id: "reportes", grupo: "Reportes", ruta: "/reportes", titulo: "Sacar un reporte", resumen: "Todos los números, en Excel o PDF.",
     bloques: [
       { img: "reportes", alt: "Lista de reportes", pasos: [
-        { t: "Entrá a Reportes y tocá la tarjeta del que necesitás.", d: "Adentro elegís las fechas y lo bajás en Excel o PDF.", marca: "Estado de cuenta" },
+        { t: "Tocá la tarjeta del reporte que necesitás.", d: "Adentro elegís las fechas y lo bajás en Excel o PDF.", marca: "Estado de cuenta" },
         { t: "Cierre de caja por día: cuánto se vendió y cobró cada día.", marca: "Cierre de caja por día" },
         { t: "Productos vendidos: qué se vende más y cuánto te deja.", marca: "Productos vendidos" },
         { t: "Cuentas por cobrar y por pagar: lo que te deben y lo que debés.", marca: "Cuentas por cobrar" },
@@ -759,7 +789,7 @@ export const GUIAS: Guia[] = [
     id: "usuarios", grupo: "Configuración", ruta: "/configuracion/usuarios", titulo: "Crear usuarios para tu equipo", resumen: "Cada empleado con su acceso.",
     bloques: [
       { img: "config-usuarios", alt: "Lista de usuarios", pasos: [
-        { t: "Entrá a Configuración › Usuarios y tocá Nuevo usuario.", marca: "Nuevo usuario" },
+        { t: "Tocá Nuevo usuario.", marca: "Nuevo usuario" },
         { t: "En la lista ves si cada uno está conectado y cuándo entró por última vez.", marca: "CONEXIÓN" },
       ] },
       { img: "usuario-nuevo", alt: "Formulario de nuevo usuario", pasos: [

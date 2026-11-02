@@ -48,7 +48,7 @@
     "y": 2
    },
    "Caja": {
-    "x": 3.8,
+    "x": 4,
     "y": 27.4
    },
    "Buscar…": {
@@ -82,6 +82,42 @@
    "Todas las sucursales": {
     "x": 82.5,
     "y": 12.8
+   },
+   "Inicio": {
+    "x": 4,
+    "y": 19.2
+   },
+   "Comercial": {
+    "x": 4,
+    "y": 23.3
+   },
+   "Finanzas": {
+    "x": 4,
+    "y": 31.5
+   },
+   "Gastos empresariales": {
+    "x": 4,
+    "y": 35.6
+   },
+   "Inventario": {
+    "x": 4,
+    "y": 39.7
+   },
+   "Reportes": {
+    "x": 4,
+    "y": 43.8
+   },
+   "Omnicanal": {
+    "x": 4,
+    "y": 47.9
+   },
+   "Soporte": {
+    "x": 4,
+    "y": 52
+   },
+   "Configuración": {
+    "x": 4,
+    "y": 56.1
    }
   },
   "caja-turnos": {
@@ -91,6 +127,10 @@
    },
    "Cerrar": {
     "x": 32.7,
+    "y": 70.1
+   },
+   "Retiro / ingreso": {
+    "x": 22.9,
     "y": 70.1
    }
   },
@@ -342,6 +382,10 @@
    "En tránsito": {
     "x": 79.5,
     "y": 36.7
+   },
+   "Nuevo traslado": {
+    "x": 85.8,
+    "y": 10.7
    }
   },
   "traslado-detalle": {
@@ -456,6 +500,10 @@
    "OC-000001": {
     "x": 20.1,
     "y": 37.4
+   },
+   "Nueva orden": {
+    "x": 87.4,
+    "y": 19.8
    }
   },
   "orden-detalle": {
@@ -976,6 +1024,164 @@
     "x": 23.3,
     "y": 26.8
    }
+  },
+  "panel-caja": {
+   "Nueva venta": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Apertura y cierre": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Órdenes de venta": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Notas de crédito": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Pedidos": {
+    "x": 47.6,
+    "y": 47.4
+   }
+  },
+  "panel-inventario": {
+   "Productos": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Movimientos": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Traslados": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Ajustes y pérdidas": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Vencimientos": {
+    "x": 47.6,
+    "y": 47.4
+   },
+   "Categorías": {
+    "x": 74,
+    "y": 47.4
+   },
+   "Depósitos": {
+    "x": 21.3,
+    "y": 64
+   }
+  },
+  "panel-gastos": {
+   "Compras y gastos": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Órdenes de compra": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Proveedores": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Pagos a proveedores": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Recurrentes": {
+    "x": 47.6,
+    "y": 47.4
+   }
+  },
+  "panel-comercial": {
+   "Clientes": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "CRM Funnel": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Presupuestos": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Gestión Clientes": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Comisiones": {
+    "x": 47.6,
+    "y": 47.4
+   },
+   "Planes": {
+    "x": 74,
+    "y": 47.4
+   },
+   "Agenda": {
+    "x": 21.3,
+    "y": 64
+   }
+  },
+  "panel-finanzas": {
+   "Cobranzas": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Conciliación": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Pagos": {
+    "x": 74,
+    "y": 30.8
+   }
+  },
+  "panel-omnicanal": {
+   "Conversaciones": {
+    "x": 21.3,
+    "y": 30.8
+   }
+  },
+  "panel-config": {
+   "Datos de la empresa": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Tickets y facturación": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Rubro y funciones": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Comisiones": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Usuarios": {
+    "x": 47.6,
+    "y": 47.4
+   }
+  },
+  "proveedores": {
+   "Nuevo proveedor": {
+    "x": 86.7,
+    "y": 20.1
+   }
+  },
+  "agenda": {
+   "Nueva cita": {
+    "x": 88.9,
+    "y": 15
+   }
   }
  },
  "gastronomia": {
@@ -985,7 +1191,7 @@
     "y": 2
    },
    "Caja": {
-    "x": 3.8,
+    "x": 4,
     "y": 27.4
    },
    "Buscar…": {
@@ -1019,6 +1225,42 @@
    "Todas las sucursales": {
     "x": 82.5,
     "y": 12.8
+   },
+   "Inicio": {
+    "x": 4,
+    "y": 19.2
+   },
+   "Comercial": {
+    "x": 4,
+    "y": 23.3
+   },
+   "Finanzas": {
+    "x": 4,
+    "y": 31.5
+   },
+   "Gastos empresariales": {
+    "x": 4,
+    "y": 35.6
+   },
+   "Inventario": {
+    "x": 4,
+    "y": 39.7
+   },
+   "Reportes": {
+    "x": 4,
+    "y": 43.8
+   },
+   "Omnicanal": {
+    "x": 4,
+    "y": 47.9
+   },
+   "Soporte": {
+    "x": 4,
+    "y": 52
+   },
+   "Configuración": {
+    "x": 4,
+    "y": 56.1
    }
   },
   "caja-turnos": {
@@ -1028,6 +1270,10 @@
    },
    "Cerrar": {
     "x": 32.7,
+    "y": 70.1
+   },
+   "Retiro / ingreso": {
+    "x": 22.9,
     "y": 70.1
    }
   },
@@ -1433,6 +1679,10 @@
    "En tránsito": {
     "x": 79.5,
     "y": 36.7
+   },
+   "Nuevo traslado": {
+    "x": 85.8,
+    "y": 10.7
    }
   },
   "traslado-detalle": {
@@ -1547,6 +1797,10 @@
    "OC-000001": {
     "x": 20.1,
     "y": 37.4
+   },
+   "Nueva orden": {
+    "x": 87.4,
+    "y": 19.8
    }
   },
   "orden-detalle": {
@@ -2150,6 +2404,184 @@
    "PRÓXIMA ACCIÓN": {
     "x": 23.3,
     "y": 26.8
+   }
+  },
+  "panel-caja": {
+   "Nueva venta": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Apertura y cierre": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Órdenes de venta": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Notas de crédito": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Pedidos de mesas": {
+    "x": 47.6,
+    "y": 47.4
+   },
+   "Cocina": {
+    "x": 74,
+    "y": 47.4
+   },
+   "Pedidos": {
+    "x": 21.3,
+    "y": 64
+   }
+  },
+  "panel-inventario": {
+   "Productos": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Recetas": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Producción": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Movimientos": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Traslados": {
+    "x": 47.6,
+    "y": 47.4
+   },
+   "Ajustes y pérdidas": {
+    "x": 74,
+    "y": 47.4
+   },
+   "Vencimientos": {
+    "x": 21.3,
+    "y": 64
+   },
+   "Categorías": {
+    "x": 47.6,
+    "y": 64
+   },
+   "Depósitos": {
+    "x": 74,
+    "y": 64
+   }
+  },
+  "panel-gastos": {
+   "Compras y gastos": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Órdenes de compra": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Proveedores": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Pagos a proveedores": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Recurrentes": {
+    "x": 47.6,
+    "y": 47.4
+   }
+  },
+  "panel-comercial": {
+   "Clientes": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "CRM Funnel": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Presupuestos": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Gestión Clientes": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Comisiones": {
+    "x": 47.6,
+    "y": 47.4
+   },
+   "Planes": {
+    "x": 74,
+    "y": 47.4
+   },
+   "Agenda": {
+    "x": 21.3,
+    "y": 64
+   }
+  },
+  "panel-finanzas": {
+   "Cobranzas": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Conciliación": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Pagos": {
+    "x": 74,
+    "y": 30.8
+   }
+  },
+  "panel-omnicanal": {
+   "Conversaciones": {
+    "x": 21.3,
+    "y": 30.8
+   }
+  },
+  "panel-config": {
+   "Datos de la empresa": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Tickets y facturación": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Mesas y QR": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Rubro y funciones": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Comisiones": {
+    "x": 47.6,
+    "y": 47.4
+   },
+   "Usuarios": {
+    "x": 74,
+    "y": 47.4
+   }
+  },
+  "proveedores": {
+   "Nuevo proveedor": {
+    "x": 86.7,
+    "y": 20.1
+   }
+  },
+  "agenda": {
+   "Nueva cita": {
+    "x": 88.9,
+    "y": 15
    }
   }
  }
