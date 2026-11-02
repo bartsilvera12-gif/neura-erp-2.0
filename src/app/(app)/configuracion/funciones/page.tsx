@@ -16,7 +16,8 @@ import { apiFetch } from "@/lib/api/client-fetch";
 import { recargarUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Aviso, Interruptor, Tarjeta } from "@/modules/facturacion/ui";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO } from "@/modules/inventario/ui";
-import { rubroDe, URL_FUNCIONES, type FuncionesEmpresa, type Rubro } from "@/modules/configuracion/funciones";
+import { rubroDe, URL_FUNCIONES, type FuncionesEmpresa, type FuncionPantalla, type Rubro } from "@/modules/configuracion/funciones";
+import { pantallasCatalogo } from "@/modules/registry";
 
 type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean };
 
@@ -43,6 +44,14 @@ const PRESET: Record<Exclude<Rubro, "personalizado">, Borrador> = {
 };
 
 const plural = (n: number, s: string, p: string) => `${n} ${n === 1 ? s : p}`;
+
+/** Las pantallas propias de un rubro salen del menú real: lo que dice acá es lo que se ve. */
+function pantallasDelRubro(r: Exclude<Rubro, "personalizado">) {
+  const preset = PRESET[r];
+  const propias = (Object.keys(preset) as (keyof Borrador)[]).filter((k) => preset[k]);
+  const catalogo = pantallasCatalogo();
+  return propias.flatMap((f) => catalogo.filter((p) => p.funcion === (f as FuncionPantalla)).map((p) => p.label));
+}
 
 export default function RubroFuncionesPage() {
   const [cfg, setCfg] = useState<FuncionesEmpresa | null>(null);
@@ -183,6 +192,12 @@ export default function RubroFuncionesPage() {
                   </span>
                 </span>
                 <span className="mt-2 block text-xs leading-relaxed text-slate-500">{r.resumen}</span>
+                <span className="mt-2.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Pantallas propias</span>
+                <span className="mt-1 flex flex-wrap gap-1">
+                  {pantallasDelRubro(r.key).map((p) => (
+                    <span key={p} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">{p}</span>
+                  ))}
+                </span>
               </button>
             );
           })}
@@ -190,7 +205,7 @@ export default function RubroFuncionesPage() {
       </Tarjeta>
 
       {/* ── Funciones ─────────────────────────────────────────────────────── */}
-      <Tarjeta icono={<Sparkles className="h-4 w-4" />} titulo="Funciones" detalle="La Caja, el inventario y las compras funcionan igual con todo apagado.">
+      <Tarjeta icono={<Sparkles className="h-4 w-4" />} titulo="Funciones" detalle="La Caja, el inventario y las compras funcionan igual con todo apagado. Al prender Mesas y QR o Cocina, los perfiles Cajero y Supervisor ya las reciben; Recetas y Producción quedan para el Administrador. Se ajusta en Usuarios › Perfiles y permisos.">
         <div className="space-y-2.5">
           <Interruptor
             activo={b.mesas}

@@ -111,6 +111,14 @@ export const GRUPOS_PERMISOS: { id: string; label: string; permisos: DefPermiso[
 
 export const PERMISOS: DefPermiso[] = GRUPOS_PERMISOS.flatMap((g) => g.permisos);
 export const TODOS_LOS_PERMISOS: Permiso[] = PERMISOS.map((p) => p.id);
+
+/** Permisos que solo tienen sentido con una función de la empresa prendida (receta 75). */
+export const FUNCION_DE_PERMISO: Partial<Record<Permiso, import("@/modules/configuracion/funciones").FuncionId>> = {
+  pedidos_mesas: "mesas",
+  cocina: "cocina",
+  pedidos_mostrador: "pedidos",
+  fabricar: "recetas",
+};
 export const permisoDef = (id: string) => PERMISOS.find((p) => p.id === id);
 
 /** ¿Este permiso funciona con este nivel base? */

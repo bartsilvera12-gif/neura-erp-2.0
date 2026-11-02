@@ -16,7 +16,9 @@ import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import { MQ_ESCRITORIO, useMediaQuery } from "@/lib/ui/responsive";
 import { ORDEN_FAMILIAS, pantallasCatalogo, type Pantalla } from "@/modules/registry";
 import { iconoModulo } from "@/modules/icons";
-import { GRUPOS_PERMISOS, NIVELES, nivelLabel, permisoAplica, permisoDef, TODOS_LOS_PERMISOS, type DefPermiso } from "@/modules/usuarios/permisos";
+import { FUNCION_DE_PERMISO, GRUPOS_PERMISOS, NIVELES, nivelLabel, permisoAplica, permisoDef, TODOS_LOS_PERMISOS, type DefPermiso } from "@/modules/usuarios/permisos";
+import { funcionActiva, pantallaConFuncionVisible } from "@/modules/configuracion/funciones";
+import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT, ModalDocumento } from "@/modules/inventario/ui";
 import { Historial } from "@/modules/usuarios/ui/Historial";
 import { VistaPrevia } from "@/modules/usuarios/ui/VistaPrevia";
@@ -83,6 +85,16 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
   onCambio: () => void;
 }) {
   const catalogo = useMemo(() => pantallasCatalogo(), []);
+  // Lo de una función apagada de la empresa no se muestra, pero lo guardado en el perfil se conserva:
+  // al prenderla vuelve como estaba. Por eso `limpio` y `duplicar` siguen usando el catálogo entero.
+  const funciones = useUsuario()?.funciones;
+  const visibles = useMemo(() => catalogo.filter((p) => pantallaConFuncionVisible(p.funcion, funciones)), [catalogo, funciones]);
+  const gruposPermisos = useMemo(
+    () => GRUPOS_PERMISOS
+      .map((g) => ({ ...g, permisos: g.permisos.filter((p) => { const f = FUNCION_DE_PERMISO[p.id]; return !f || funcionActiva(funciones, f); }) }))
+      .filter((g) => g.permisos.length),
+    [funciones],
+  );
   const escritorio = useMediaQuery(MQ_ESCRITORIO);
   const [sel, setSel] = useState<string | null>(null);
   const [b, setB] = useState<Borrador | null>(null);
@@ -190,7 +202,7 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
   // ── Pantallas: árbol familia → módulo → pantalla ─────────────────────────
   const arbol = useMemo(() => {
     const fam = new Map<string, Map<string, Pantalla[]>>();
-    for (const p of catalogo) {
+    for (const p of visibles) {
       if (!fam.has(p.familia)) fam.set(p.familia, new Map());
       const m = fam.get(p.familia)!;
       if (!m.has(p.moduloId)) m.set(p.moduloId, []);
@@ -199,7 +211,7 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
     return [...fam.entries()]
       .sort((a, z) => (ORDEN_FAMILIAS.indexOf(a[0]) + 1 || 99) - (ORDEN_FAMILIAS.indexOf(z[0]) + 1 || 99))
       .map(([familia, mods]) => ({ familia, modulos: [...mods.values()] }));
-  }, [catalogo]);
+  }, [visibles]);
 
   const marcada = (h: string) => !!b && (b.todo || b.pantallas.includes(h));
   const estadoGrupo = (ps: Pantalla[]): boolean | "algunos" => {
@@ -394,8 +406,8 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
                   </div>
                   {!soloLectura ? (
                     <div className="flex gap-1 text-xs font-semibold max-sm:-ml-2 max-sm:text-[13px]">
-                      <button type="button" onClick={() => alternarPantallas(catalogo, true)} className="rounded-lg px-2 py-1 text-[var(--brand)] hover:bg-[var(--brand-50)] max-sm:min-h-11 max-sm:px-3">Marcar todo</button>
-                      <button type="button" onClick={() => alternarPantallas(catalogo, false)} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 max-sm:min-h-11 max-sm:px-3">Ninguna</button>
+                      <button type="button" onClick={() => alternarPantallas(visibles, true)} className="rounded-lg px-2 py-1 text-[var(--brand)] hover:bg-[var(--brand-50)] max-sm:min-h-11 max-sm:px-3">Marcar todo</button>
+                      <button type="button" onClick={() => alternarPantallas(visibles, false)} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 max-sm:min-h-11 max-sm:px-3">Ninguna</button>
                     </div>
                   ) : null}
                 </div>
@@ -452,7 +464,7 @@ export function VistaPerfiles({ perfiles, cargando, error, onCambio }: {
                   <p className="text-xs text-slate-500">Acciones delicadas. Se controlan también en el servidor y en la base: aunque alguien llame directo, sin el permiso no puede.</p>
                 </div>
                 <div className="divide-y divide-slate-100">
-                  {GRUPOS_PERMISOS.map((g) => {
+                  {gruposPermisos.map((g) => {
                     const eg = estadoPermisos(g.permisos);
                     return (
                       <div key={g.id} className="px-4 py-3 sm:px-5 sm:py-3.5">

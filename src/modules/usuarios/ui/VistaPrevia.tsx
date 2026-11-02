@@ -3,8 +3,10 @@
 /** "Este perfil ve…": el menú que va a tener y lo que puede (y no) hacer. */
 import { Building2, Check, Eye, Percent, X } from "lucide-react";
 import { ORDEN_FAMILIAS, pantallasCatalogo, perfilVePantalla, type Pantalla } from "@/modules/registry";
-import { GRUPOS_PERMISOS, permisoAplica, type PerfilSesion } from "@/modules/usuarios/permisos";
+import { FUNCION_DE_PERMISO, GRUPOS_PERMISOS, permisoAplica, type PerfilSesion } from "@/modules/usuarios/permisos";
 import { iconoModulo } from "@/modules/icons";
+import { funcionActiva, type Funciones } from "@/modules/configuracion/funciones";
+import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 
 export type PerfilBorrador = {
   nivel_base: string;
@@ -16,12 +18,12 @@ export type PerfilBorrador = {
 };
 
 /** Menú (familia → módulo → pantallas) que vería el perfil. */
-export function menuDelPerfil(b: PerfilBorrador, catalogo: Pantalla[] = pantallasCatalogo()) {
+export function menuDelPerfil(b: PerfilBorrador, catalogo: Pantalla[] = pantallasCatalogo(), funciones?: Funciones | null) {
   const sesion: PerfilSesion = {
     id: null, nombre: null, codigo: b.todo ? "ADMIN" : null, todo: b.todo, alcance: b.alcance_sucursal,
     tope_descuento_pct: b.tope_descuento_pct, pantallas: b.pantallas, permisos: b.permisos,
   };
-  const visibles = catalogo.filter((p) => perfilVePantalla(p, b.nivel_base, sesion));
+  const visibles = catalogo.filter((p) => perfilVePantalla(p, b.nivel_base, sesion, funciones));
   const familias = new Map<string, Map<string, { label: string; icon?: string; pantallas: Pantalla[] }>>();
   for (const p of visibles) {
     if (!familias.has(p.familia)) familias.set(p.familia, new Map());
@@ -40,9 +42,13 @@ export function VistaPrevia({ b, compacta = false, sinTope = false }: {
   /** La columna que la contiene ya scrollea entera: sin alto máximo propio. */
   sinTope?: boolean;
 }) {
-  const menu = menuDelPerfil(b);
+  const funciones = useUsuario()?.funciones;
+  const menu = menuDelPerfil(b, undefined, funciones);
   const total = menu.reduce((n, f) => n + f.modulos.reduce((m, x) => m + x.pantallas.length, 0), 0);
-  const permisos = GRUPOS_PERMISOS.flatMap((g) => g.permisos).filter((p) => permisoAplica(p, b.nivel_base));
+  const permisos = GRUPOS_PERMISOS.flatMap((g) => g.permisos).filter((p) => {
+    const f = FUNCION_DE_PERMISO[p.id];
+    return permisoAplica(p, b.nivel_base) && (!f || funcionActiva(funciones, f));
+  });
   const si = permisos.filter((p) => b.todo || b.permisos.includes(p.id));
   const no = permisos.filter((p) => !(b.todo || b.permisos.includes(p.id)) && p.sensible);
 
