@@ -4,7 +4,7 @@
  * /manual — Manual de usuario. Muestra las guías del rubro activo que el perfil puede usar: cada guía
  * declara su pantalla, y se aplica la misma regla que al menú (funciones de la empresa + perfil).
  */
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { createContext, Suspense, useContext, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowLeft, ArrowRight, BookOpen, ChevronRight, Lightbulb, Search, X } from "lucide-react";
@@ -16,7 +16,11 @@ import { GRUPOS, GUIAS, type Bloque, type Guia } from "@/modules/manual/contenid
 import marcasJson from "@/modules/manual/marcas.json";
 import { pantallaDeRuta, pantallasCatalogo, perfilVePantalla } from "@/modules/registry";
 
-const MARCAS = marcasJson as unknown as Record<string, Record<string, { x: number; y: number } | null>>;
+type RubroImagen = "comercio" | "gastronomia";
+const MARCAS = marcasJson as unknown as Record<RubroImagen, Record<string, Record<string, { x: number; y: number } | null>>>;
+/** Las capturas son por rubro: la de otro rubro solo si la pantalla no existe en el tuyo. */
+const carpetaDe = (img: string, rubro: RubroImagen): RubroImagen => (MARCAS[rubro][img] ? rubro : rubro === "comercio" ? "gastronomia" : "comercio");
+const ContextoRubro = createContext<RubroImagen>("comercio");
 
 const NOMBRE_RUBRO = { comercio: "Comercio", gastronomia: "Gastronomía", personalizado: "tu negocio" };
 
@@ -46,16 +50,19 @@ function Imagen({ b, desde, onAmpliar }: { b: Bloque; desde: number; onAmpliar: 
 }
 
 function ImagenConMarcas({ b, desde }: { b: Bloque; desde: number }) {
-  const m = MARCAS[b.img ?? ""] ?? {};
+  const rubro = useContext(ContextoRubro);
+  const carpeta = carpetaDe(b.img ?? "", rubro);
+  const m = MARCAS[carpeta][b.img ?? ""] ?? {};
   return (
     <span className="relative block w-full">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={`/manual/${b.img}.webp`} alt={b.alt ?? ""} loading="lazy" className="block h-auto w-full" />
+      <img src={`/manual/${carpeta}/${b.img}.webp`} alt={b.alt ?? ""} loading="lazy" className="block h-auto w-full" />
       {(b.pasos ?? []).map((p, i) => {
         const pos = p.marca ? m[p.marca] : null;
         if (!pos) return null;
         return (
-          <span key={i} className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${Math.max(pos.x, 1.5)}%`, top: `${pos.y}%` }}>
+          // A la izquierda del botón, para no taparle el texto.
+          <span key={i} className="absolute -translate-x-full -translate-y-1/2" style={{ left: `${Math.max(pos.x, 2.5)}%`, top: `${pos.y}%` }}>
             <Numero n={desde + i} chico />
           </span>
         );
@@ -65,10 +72,11 @@ function ImagenConMarcas({ b, desde }: { b: Bloque; desde: number }) {
 }
 
 function Contenido({ guia, onAmpliar }: { guia: Guia; onAmpliar: (b: Bloque, desde: number) => void }) {
+  const rubro = useContext(ContextoRubro);
   let cuenta = 0;
   return (
     <div className="space-y-5">
-      {guia.bloques.map((b, i) => {
+      {guia.bloques.filter((b) => !b.rubro || b.rubro === rubro).map((b, i) => {
         const desde = cuenta + 1;
         cuenta += b.pasos?.length ?? 0;
         return (
@@ -120,17 +128,18 @@ function Manual() {
   const arriba = useRef<HTMLDivElement>(null);
 
   const rubro = me?.funciones ? rubroDe(me.funciones) : "comercio";
+  const rubroImagen: RubroImagen = rubro === "personalizado" ? (me?.funciones?.mesas ? "gastronomia" : "comercio") : rubro;
   const guias = useMemo(() => {
     if (!me) return [];
     const catalogo = pantallasCatalogo();
     return GUIAS.filter((g) => {
-      if (g.rubro && g.rubro !== (rubro === "personalizado" ? (me.funciones?.mesas ? "gastronomia" : "comercio") : rubro)) return false;
+      if (g.rubro && g.rubro !== rubroImagen) return false;
       if (!g.ruta) return true;
       if (g.ruta === "/") return true;
       const p = pantallaDeRuta(g.ruta, catalogo);
       return p ? perfilVePantalla(p, me.rol, me.perfil, me.funciones) : false;
     });
-  }, [me, rubro]);
+  }, [me, rubroImagen]);
 
   const lista = useMemo(() => {
     const n = norm(q.trim());
@@ -148,6 +157,7 @@ function Manual() {
 
   if (guia) {
     return (
+      <ContextoRubro.Provider value={rubroImagen}>
       <div ref={arriba} className="mx-auto max-w-4xl space-y-5 pb-12">
         <Link href="/manual" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-slate-500 no-underline hover:text-slate-800 lg:min-h-0">
           <ArrowLeft className="h-4 w-4" /> Todas las guías
@@ -188,6 +198,7 @@ function Manual() {
           </CapaModal>
         ) : null}
       </div>
+      </ContextoRubro.Provider>
     );
   }
 

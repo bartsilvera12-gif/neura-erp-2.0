@@ -1,856 +1,2066 @@
 {
- "inicio": {
-  "2": {
-   "x": 75,
-   "y": 2.5
+ "comercio": {
+  "venta-buscar": {
+   "Arroz": {
+    "x": 21.3,
+    "y": 44.4
+   },
+   "Arroz 1 kg": {
+    "x": 26.4,
+    "y": 51.1
+   }
   },
-  "Caja": {
-   "x": 3.8,
-   "y": 34.2
+  "venta-item": {
+   "ARROZ1K": {
+    "x": 26.1,
+    "y": 68.3
+   },
+   "Total a cobrar": {
+    "x": 64.3,
+    "y": 86.7
+   },
+   "Aceptar y cobrar": {
+    "x": 64.3,
+    "y": 92.3
+   }
   },
-  "Buscar…": {
-   "x": 0.6,
-   "y": 17.8
+  "venta-cobrar": {
+   "Efectivo": {
+    "x": 27.4,
+    "y": 35.6
+   },
+   "Gs. 50.000": {
+    "x": 45.6,
+    "y": 69
+   },
+   "Agregar otra forma de pago (mixto)": {
+    "x": 25.3,
+    "y": 52.1
+   },
+   "Cobrar e imprimir": {
+    "x": 61.2,
+    "y": 79.2
+   }
   },
-  "admin@demo.neura.com.py": {
-   "x": 80.9,
-   "y": 3
+  "inicio": {
+   "2": {
+    "x": 75,
+    "y": 2
+   },
+   "Caja": {
+    "x": 3.8,
+    "y": 27.4
+   },
+   "Buscar…": {
+    "x": 0.6,
+    "y": 14.3
+   },
+   "Manual": {
+    "x": 68.2,
+    "y": 3.2
+   },
+   "admin@demo.neura.com.py": {
+    "x": 80.9,
+    "y": 2.4
+   },
+   "VENTAS DE HOY": {
+    "x": 21.3,
+    "y": 19.7
+   },
+   "ESTE MES": {
+    "x": 52.5,
+    "y": 19.7
+   },
+   "TICKET PROMEDIO": {
+    "x": 68.1,
+    "y": 19.7
+   },
+   "GANANCIA BRUTA DEL MES": {
+    "x": 83.7,
+    "y": 20.5
+   },
+   "Todas las sucursales": {
+    "x": 82.5,
+    "y": 12.8
+   }
   },
-  "VENTAS DE HOY": {
-   "x": 21.3,
-   "y": 24.7
+  "caja-turnos": {
+   "Abrir caja": {
+    "x": 67.8,
+    "y": 10.8
+   },
+   "Cerrar": {
+    "x": 32.7,
+    "y": 70.1
+   }
   },
-  "ESTE MES": {
-   "x": 52.5,
-   "y": 24.7
+  "caja-abrir": {
+   "Caja 2": {
+    "x": 51.2,
+    "y": 33.7
+   },
+   "Gs. 100.000": {
+    "x": 39,
+    "y": 62.9
+   },
+   "Abrir Caja 2": {
+    "x": 57.6,
+    "y": 80.8
+   }
   },
-  "TICKET PROMEDIO": {
-   "x": 68.1,
-   "y": 24.7
+  "venta-vacia": {
+   "Buscar por nombre o RUC…": {
+    "x": 21.3,
+    "y": 31.6
+   },
+   "Solo ticket": {
+    "x": 83.6,
+    "y": 31.6
+   },
+   "Factura": {
+    "x": 71.6,
+    "y": 31.6
+   },
+   "Facturar como cliente ocasional (X)": {
+    "x": 71.5,
+    "y": 35.3
+   }
   },
-  "GANANCIA BRUTA DEL MES": {
-   "x": 83.7,
-   "y": 25.7
+  "venta-credito": {
+   "Crédito": {
+    "x": 58.5,
+    "y": 31.6
+   },
+   "Cliente *": {
+    "x": 21.3,
+    "y": 28
+   },
+   "Cuotas": {
+    "x": 46.4,
+    "y": 35.8
+   },
+   "Vence en": {
+    "x": 52,
+    "y": 35.8
+   }
   },
-  "Todas las sucursales": {
-   "x": 82.5,
-   "y": 16
+  "caja-retiro": {
+   "Retiro": {
+    "x": 37.1,
+    "y": 35
+   },
+   "Depósito en banco": {
+    "x": 34.1,
+    "y": 44.2
+   },
+   "Monto en efectivo": {
+    "x": 34.1,
+    "y": 60.2
+   },
+   "Registrar retiro": {
+    "x": 55,
+    "y": 73.7
+   }
+  },
+  "caja-cerrar": {
+   "¿Cuánto efectivo contaste?": {
+    "x": 13.6,
+    "y": 36
+   },
+   "Ver de dónde sale": {
+    "x": 13.6,
+    "y": 32.5
+   },
+   "OTRAS FORMAS DE PAGO · SE CONFIRMAN": {
+    "x": 13.6,
+    "y": 47.9
+   },
+   "Observación (opcional)": {
+    "x": 12.3,
+    "y": 70.9
+   }
+  },
+  "caja-ordenes": {
+   "Todas las fechas": {
+    "x": 51,
+    "y": 30.9
+   },
+   "VTA-005075": {
+    "x": 21.9,
+    "y": 67.1
+   }
+  },
+  "venta-detalle": {
+   "Ver comprobante": {
+    "x": 56.7,
+    "y": 78.7
+   },
+   "Corregir": {
+    "x": 66.5,
+    "y": 46.5
+   },
+   "Anular venta": {
+    "x": 29.1,
+    "y": 78.7
+   },
+   "Nota de crédito": {
+    "x": 43.5,
+    "y": 78.7
+   }
+  },
+  "nc-modal": {
+   "Devolver productos": {
+    "x": 25.6,
+    "y": 39.9
+   },
+   "Descuento por monto": {
+    "x": 49.8,
+    "y": 39.9
+   },
+   "Devolver todo": {
+    "x": 67.6,
+    "y": 44.7
+   },
+   "Motivo *": {
+    "x": 25.3,
+    "y": 55.5
+   },
+   "Emitir nota": {
+    "x": 64.2,
+    "y": 68.7
+   }
+  },
+  "caja-nc": {
+   "NC-000001": {
+    "x": 21.6,
+    "y": 48
+   }
+  },
+  "caja-pedidos": {
+   "Cliente (opcional)": {
+    "x": 21.3,
+    "y": 42.2
+   },
+   "Nota (opcional)": {
+    "x": 41.9,
+    "y": 42.2
+   },
+   "Enviar a caja": {
+    "x": 45.4,
+    "y": 53.9
+   },
+   "Pedidos de hoy": {
+    "x": 65.5,
+    "y": 15.6
+   }
+  },
+  "venta-porcobrar-pedido": {
+   "Pedidos por cobrar": {
+    "x": 24.1,
+    "y": 21.6
+   }
+  },
+  "inventario-productos": {
+   "Categoría: Todas": {
+    "x": 46.4,
+    "y": 31.4
+   },
+   "STOCK": {
+    "x": 74.3,
+    "y": 37.4
+   },
+   "Exportar Excel": {
+    "x": 62,
+    "y": 18.7
+   },
+   "Importar Excel": {
+    "x": 85.3,
+    "y": 18.7
+   }
+  },
+  "producto-nuevo": {
+   "Nombre *": {
+    "x": 65.9,
+    "y": 14
+   },
+   "SKU *": {
+    "x": 65.9,
+    "y": 21.4
+   },
+   "Código de barras (opcional)": {
+    "x": 56.6,
+    "y": 28.7
+   },
+   "Nuevo producto": {
+    "x": 56.6,
+    "y": 2.8
+   }
+  },
+  "inventario-ajustes": {
+   "Nueva pérdida": {
+    "x": 73.6,
+    "y": 10.8
+   },
+   "Nuevo ajuste": {
+    "x": 86,
+    "y": 10.8
+   }
+  },
+  "ajuste-nuevo": {
+   "Casa central › Depósito principal": {
+    "x": 39.3,
+    "y": 24.9
+   },
+   "Conteo físico": {
+    "x": 68.9,
+    "y": 24.9
+   },
+   "Productos": {
+    "x": 21.6,
+    "y": 41.5
+   },
+   "Aplicar ajuste": {
+    "x": 89.1,
+    "y": 64.3
+   }
+  },
+  "traslado-nuevo": {
+   "Sale de": {
+    "x": 21.6,
+    "y": 21.7
+   },
+   "Llega a": {
+    "x": 61,
+    "y": 21.7
+   },
+   "Productos": {
+    "x": 21.6,
+    "y": 34.2
+   }
+  },
+  "inventario-traslados": {
+   "En tránsito": {
+    "x": 79.5,
+    "y": 36.7
+   }
+  },
+  "traslado-detalle": {
+   "Recibir en": {
+    "x": 62.8,
+    "y": 73.7
+   }
+  },
+  "inventario-movimientos": {
+   "Ventas": {
+    "x": 37.4,
+    "y": 26.1
+   },
+   "Todos los depósitos": {
+    "x": 47.8,
+    "y": 32.8
+   },
+   "Exportar Excel": {
+    "x": 88.3,
+    "y": 18.7
+   }
+  },
+  "inventario-vencimientos": {
+   "VENCIDOS": {
+    "x": 22.6,
+    "y": 26.2
+   },
+   "VENCEN EN 30 DÍAS": {
+    "x": 49.3,
+    "y": 26.2
+   },
+   "Próximos 30 días": {
+    "x": 83.6,
+    "y": 39.5
+   }
+  },
+  "inventario-categorias": {
+   "Nombre": {
+    "x": 21.6,
+    "y": 29.5
+   },
+   "Es una categoría principal": {
+    "x": 50.1,
+    "y": 32.8
+   },
+   "Crear categoría": {
+    "x": 83.8,
+    "y": 32.8
+   }
+  },
+  "inventario-depositos": {
+   "Nueva sucursal": {
+    "x": 88.8,
+    "y": 18.7
+   },
+   "Depósito principal": {
+    "x": 23.8,
+    "y": 37.6
+   },
+   "Agregar depósito": {
+    "x": 21.6,
+    "y": 42.9
+   }
+  },
+  "compras-gastos": {
+   "Nueva compra o gasto": {
+    "x": 33,
+    "y": 27.5
+   }
+  },
+  "compra-nueva": {
+   "Mercadería": {
+    "x": 21.3,
+    "y": 21.6
+   },
+   "Proveedor *": {
+    "x": 21.6,
+    "y": 37.7
+   },
+   "Número *": {
+    "x": 33.4,
+    "y": 44.4
+   },
+   "Contado": {
+    "x": 21.9,
+    "y": 54.2
+   },
+   "Productos": {
+    "x": 24.4,
+    "y": 65.9
+   }
+  },
+  "orden-nueva": {
+   "Proveedor *": {
+    "x": 21.6,
+    "y": 23.3
+   },
+   "Buscá los productos que le vas a pedir.": {
+    "x": 24.5,
+    "y": 45.2
+   },
+   "Ver qué está por debajo del stock mínimo": {
+    "x": 35.4,
+    "y": 66.2
+   },
+   "Crear orden de compra": {
+    "x": 72.9,
+    "y": 49.5
+   }
+  },
+  "compras-ordenes": {
+   "OC-000001": {
+    "x": 20.1,
+    "y": 37.4
+   }
+  },
+  "orden-detalle": {
+   "Llegaron 42 de 54 unidades": {
+    "x": 57.9,
+    "y": 15.4
+   },
+   "Recibir": {
+    "x": 83.1,
+    "y": 96.3
+   }
+  },
+  "proveedor-nuevo": {
+   "Razón social *": {
+    "x": 56.6,
+    "y": 14
+   },
+   "RUC (opcional)": {
+    "x": 77.7,
+    "y": 21.4
+   },
+   "Cómo le pagás": {
+    "x": 56.6,
+    "y": 69.5
+   },
+   "Crear proveedor": {
+    "x": 85.3,
+    "y": 96.3
+   }
+  },
+  "compras-pagos": {
+   "A PAGAR": {
+    "x": 17.4,
+    "y": 24.4
+   },
+   "Vencidas": {
+    "x": 62.6,
+    "y": 43.4
+   },
+   "Pagos realizados": {
+    "x": 24.5,
+    "y": 36.2
+   },
+   "Pagar": {
+    "x": 90.7,
+    "y": 52.9
+   }
+  },
+  "pago-proveedor": {
+   "¿Cuánto le pagás?": {
+    "x": 25.3,
+    "y": 22.5
+   },
+   "Solo lo vencido": {
+    "x": 37.6,
+    "y": 29.8
+   },
+   "Facturas que pagás": {
+    "x": 25.3,
+    "y": 36.3
+   },
+   "Pagar Gs.": {
+    "x": 61.5,
+    "y": 93.9
+   }
+  },
+  "compras-recurrentes": {
+   "Nueva plantilla": {
+    "x": 88.2,
+    "y": 22.1
+   },
+   "Generar gastos de noviembre (3)": {
+    "x": 74.3,
+    "y": 29.1
+   }
+  },
+  "clientes": {
+   "Nuevo cliente": {
+    "x": 89.5,
+    "y": 18.7
+   }
+  },
+  "cliente-nuevo": {
+   "Persona": {
+    "x": 18.3,
+    "y": 24.7
+   },
+   "NOMBRE Y APELLIDO *": {
+    "x": 18.3,
+    "y": 29.4
+   },
+   "RUC O CI *": {
+    "x": 50.3,
+    "y": 29.4
+   },
+   "TELÉFONO *": {
+    "x": 18.3,
+    "y": 45.3
+   },
+   "DATOS PARA FACTURACIÓN": {
+    "x": 19.2,
+    "y": 58
+   },
+   "Guardar cliente": {
+    "x": 71.5,
+    "y": 93.7
+   }
+  },
+  "cliente-ficha": {
+   "Ver ficha completa": {
+    "x": 37.9,
+    "y": 21.7
+   },
+   "Editar": {
+    "x": 74.6,
+    "y": 84.1
+   },
+   "Dar de baja": {
+    "x": 16.6,
+    "y": 84.1
+   }
+  },
+  "crm": {
+   "Contactado": {
+    "x": 41.9,
+    "y": 26.6
+   },
+   "Nuevo prospecto": {
+    "x": 87.5,
+    "y": 14.5
+   },
+   "Transformar a cliente": {
+    "x": 21.8,
+    "y": 52
+   },
+   "Solo hoy": {
+    "x": 74.9,
+    "y": 20.5
+   }
+  },
+  "crm-nuevo": {
+   "EMPRESA *": {
+    "x": 23.3,
+    "y": 29.8
+   },
+   "SERVICIOS / PRODUCTOS DE INTERÉS *": {
+    "x": 23.3,
+    "y": 67
+   }
+  },
+  "presupuestos": {
+   "Nuevo presupuesto": {
+    "x": 77.8,
+    "y": 18.7
+   },
+   "Abiertos": {
+    "x": 21,
+    "y": 25.5
+   }
+  },
+  "presupuesto-nuevo": {
+   "Cliente *": {
+    "x": 21.6,
+    "y": 25.1
+   },
+   "Validez": {
+    "x": 44.9,
+    "y": 42.4
+   },
+   "Condición propuesta": {
+    "x": 44.9,
+    "y": 51.6
+   }
+  },
+  "presupuesto-detalle": {
+   "Descargar PDF": {
+    "x": 24.9,
+    "y": 35.4
+   },
+   "Seguimiento": {
+    "x": 78.9,
+    "y": 35.4
+   },
+   "Convertir a venta": {
+    "x": 11.2,
+    "y": 35.4
+   }
+  },
+  "gestion-clientes": {
+   "Buscá un cliente": {
+    "x": 41,
+    "y": 34.7
+   }
+  },
+  "comisiones": {
+   "MES A CONSULTAR": {
+    "x": 70.4,
+    "y": 24.3
+   },
+   "BASE COMISIONABLE": {
+    "x": 23.3,
+    "y": 37.6
+   },
+   "COMISIÓN ESTIMADA": {
+    "x": 38.2,
+    "y": 37.6
+   },
+   "TOTAL PENDIENTE DE COBRO": {
+    "x": 53.2,
+    "y": 38.3
+   },
+   "POR VENDEDOR": {
+    "x": 20.9,
+    "y": 53
+   }
+  },
+  "planes": {
+   "Suscripciones": {
+    "x": 21.4,
+    "y": 24.3
+   },
+   "Emitir cuotas de Noviembre 2026 (1)": {
+    "x": 77.9,
+    "y": 18.7
+   }
+  },
+  "planes-lista": {
+   "Nuevo plan": {
+    "x": 30.1,
+    "y": 36.1
+   },
+   "PLAZO": {
+    "x": 37.8,
+    "y": 40.6
+   }
+  },
+  "agenda-nueva": {
+   "Título *": {
+    "x": 31.3,
+    "y": 18.5
+   },
+   "Responsables *": {
+    "x": 31.3,
+    "y": 25.2
+   },
+   "Fecha *": {
+    "x": 31.3,
+    "y": 45.6
+   },
+   "30m": {
+    "x": 39.5,
+    "y": 52.5
+   },
+   "Cliente existente": {
+    "x": 31.7,
+    "y": 60.2
+   }
+  },
+  "pagos": {
+   "Pendientes": {
+    "x": 70,
+    "y": 16.5
+   },
+   "BUSCAR POR NOMBRE DE CLIENTE": {
+    "x": 21.3,
+    "y": 32.7
+   }
+  },
+  "pagos-acciones": {
+   "En caja": {
+    "x": 90.9,
+    "y": 52.7
+   },
+   "Cobrar": {
+    "x": 86.2,
+    "y": 52.7
+   }
+  },
+  "pago-cobrar": {},
+  "conciliacion": {
+   "Pendiente": {
+    "x": 69.5,
+    "y": 46
+   },
+   "Cargar extracto (Excel o CSV)": {
+    "x": 31.5,
+    "y": 24.1
+   },
+   "Registrar transferencia": {
+    "x": 51.6,
+    "y": 24.1
+   }
+  },
+  "cobranzas": {
+   "Total adeudado": {
+    "x": 21.3,
+    "y": 24.8
+   },
+   "Tramo 3": {
+    "x": 69.8,
+    "y": 41.5
+   },
+   "Promesas hoy": {
+    "x": 70,
+    "y": 24.9
+   }
+  },
+  "cobranza-detalle": {
+   "DEUDA TOTAL": {
+    "x": 57.9,
+    "y": 18
+   },
+   "Registrar pago": {
+    "x": 88.1,
+    "y": 50.4
+   }
+  },
+  "reportes": {
+   "Ver reporte": {
+    "x": 42.4,
+    "y": 27.2
+   },
+   "Cierre de caja por día": {
+    "x": 21.3,
+    "y": 57.7
+   },
+   "Productos vendidos": {
+    "x": 74,
+    "y": 70.9
+   },
+   "Cuentas por cobrar": {
+    "x": 21.3,
+    "y": 40.8
+   },
+   "Existencias por depósito": {
+    "x": 74,
+    "y": 87.8
+   },
+   "Registro de comprobantes (RG 90)": {
+    "x": 74,
+    "y": 27.5
+   }
+  },
+  "reporte-ejemplo": {
+   "Este mes": {
+    "x": 23.6,
+    "y": 25.5
+   },
+   "Cajero: Todos": {
+    "x": 39.5,
+    "y": 25.6
+   },
+   "Exportar Excel": {
+    "x": 75.3,
+    "y": 18.5
+   },
+   "Descargar PDF": {
+    "x": 87.9,
+    "y": 18.5
+   }
+  },
+  "conversaciones": {
+   "Mías": {
+    "x": 20.4,
+    "y": 16
+   },
+   "Sin asignar": {
+    "x": 26.8,
+    "y": 16
+   },
+   "Disponible": {
+    "x": 89.7,
+    "y": 14
+   },
+   "Respuestas": {
+    "x": 50.4,
+    "y": 18.3
+   },
+   "Pedro Gómez": {
+    "x": 24.8,
+    "y": 25.5
+   }
+  },
+  "soporte": {
+   "Dashboard": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Tickets": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Mis tickets": {
+    "x": 74,
+    "y": 30.8
+   }
+  },
+  "soporte-tickets": {
+   "Cargar ticket": {
+    "x": 84.1,
+    "y": 17.9
+   },
+   "Pendientes": {
+    "x": 32,
+    "y": 25.3
+   },
+   "Tomar": {
+    "x": 73.7,
+    "y": 45
+   }
+  },
+  "config-empresa": {
+   "Razón social *": {
+    "x": 21.6,
+    "y": 30.9
+   },
+   "Nombre de fantasía (opcional)": {
+    "x": 21.6,
+    "y": 40.1
+   },
+   "RUC (opcional)": {
+    "x": 58.6,
+    "y": 40.1
+   }
+  },
+  "config-facturacion": {
+   "Sin factura fiscal": {
+    "x": 24.7,
+    "y": 33.9
+   },
+   "Facturación electrónica SIFEN": {
+    "x": 49.5,
+    "y": 33.9
+   },
+   "Autoimpresor / factura impresa": {
+    "x": 74.3,
+    "y": 33.9
+   }
+  },
+  "config-usuarios": {
+   "Nuevo usuario": {
+    "x": 86.1,
+    "y": 31.6
+   },
+   "CONEXIÓN": {
+    "x": 78.8,
+    "y": 45
+   }
+  },
+  "usuario-nuevo": {
+   "Nombre *": {
+    "x": 16.6,
+    "y": 14.4
+   },
+   "Email *": {
+    "x": 16.6,
+    "y": 27.8
+   },
+   "Perfil *": {
+    "x": 16.6,
+    "y": 37.8
+   },
+   "Sucursal": {
+    "x": 37.9,
+    "y": 37.8
+   }
+  },
+  "perfiles": {
+   "Nuevo perfil": {
+    "x": 20,
+    "y": 32
+   }
+  },
+  "config-funciones": {
+   "BASE, INCLUIDA EN TODOS LOS RUBROS": {
+    "x": 22.8,
+    "y": 31.6
+   },
+   "Comercio": {
+    "x": 26.4,
+    "y": 42.5
+   }
+  },
+  "config-comisiones": {
+   "Base de cálculo": {
+    "x": 22.6,
+    "y": 29.6
+   },
+   "Desde": {
+    "x": 22.6,
+    "y": 74.9
+   },
+   "Agregar escala": {
+    "x": 21.6,
+    "y": 91.9
+   },
+   "Guardar política": {
+    "x": 85.4,
+    "y": 98.9
+   }
   }
  },
- "caja-turnos": {
-  "Abrir caja": {
-   "x": 67.8,
-   "y": 13.5
-  },
-  "Cerrar": {
-   "x": 32.7,
-   "y": 87.6
-  }
- },
- "caja-abrir": {
-  "Caja 2": {
-   "x": 51.2,
-   "y": 29.6
-  },
-  "Gs. 100.000": {
-   "x": 39,
-   "y": 66.1
-  },
-  "Abrir Caja 2": {
-   "x": 57.6,
-   "y": 88.5
-  }
- },
- "venta-vacia": {
-  "Buscar por nombre o RUC…": {
-   "x": 21.3,
-   "y": 32.1
-  },
-  "Solo ticket": {
-   "x": 83.6,
-   "y": 32.1
-  },
-  "Factura": {
-   "x": 71.6,
-   "y": 32.1
-  },
-  "Facturar como cliente ocasional (X)": {
-   "x": 71.5,
-   "y": 35.8
-  }
- },
- "venta-credito": {
-  "Crédito": {
-   "x": 58.5,
-   "y": 32.1
-  },
-  "Cliente *": {
-   "x": 21.3,
-   "y": 28.5
-  },
-  "Cuotas": {
-   "x": 46.4,
-   "y": 36.3
-  },
-  "Vence en": {
-   "x": 52,
-   "y": 36.3
-  }
- },
- "caja-retiro": {
-  "Retiro": {
-   "x": 37.1,
-   "y": 31.2
-  },
-  "Depósito en banco": {
-   "x": 34.1,
-   "y": 42.7
-  },
-  "Monto en efectivo": {
-   "x": 34.1,
-   "y": 62.7
-  },
-  "Registrar retiro": {
-   "x": 55,
-   "y": 79.7
-  }
- },
- "caja-cerrar": {
-  "¿Cuánto efectivo contaste?": {
-   "x": 12.9,
-   "y": 29.3
-  },
-  "Ver de dónde sale": {
-   "x": 12.9,
-   "y": 24.5
-  },
-  "OTRAS FORMAS DE PAGO · SE CONFIRMAN": {
-   "x": 12.9,
-   "y": 46
-  },
-  "Observación (opcional)": {
-   "x": 11.6,
-   "y": 78.3
-  }
- },
- "caja-ordenes": {
-  "Todas las fechas": {
-   "x": 51,
-   "y": 38.6
-  },
-  "VTA-005075": {
-   "x": 21.9,
-   "y": 58.4
-  }
- },
- "caja-nc": {
-  "NC-000001": {
-   "x": 21.6,
-   "y": 60
-  }
- },
- "caja-pedidos": {
-  "Cliente (opcional)": {
-   "x": 21.3,
-   "y": 52.7
-  },
-  "Nota (opcional)": {
-   "x": 41.9,
-   "y": 52.7
-  },
-  "Enviar a caja": {
-   "x": 45.4,
-   "y": 67.3
-  },
-  "Pedidos de hoy": {
-   "x": 65.5,
-   "y": 19.6
-  }
- },
- "config-mesas": {
-  "Nueva mesa": {
-   "x": 30.9,
-   "y": 30.1
-  },
-  "Imprimir QR": {
-   "x": 20,
-   "y": 30.1
-  },
-  "Estaciones de cocina": {
-   "x": 25.4,
-   "y": 37.2
-  }
- },
- "mesa-nueva": {
-  "Sucursal *": {
-   "x": 33.8,
-   "y": 34
-  },
-  "Nombre *": {
-   "x": 33.8,
-   "y": 43.2
-  },
-  "Zona (opcional)": {
-   "x": 33.8,
-   "y": 52.4
-  },
-  "Guardar": {
-   "x": 49.9,
-   "y": 73.8
-  }
- },
- "caja-mesas": {
-  "Sonido": {
-   "x": 84.5,
-   "y": 25.9
-  },
-  "Nuevos": {
-   "x": 20,
-   "y": 32
-  },
-  "Cuentas abiertas": {
-   "x": 59.8,
-   "y": 32
-  }
- },
- "caja-cocina": {
-  "Todas": {
-   "x": 20,
-   "y": 24
-  },
-  "Para preparar": {
-   "x": 20,
-   "y": 28.3
-  },
-  "En preparación": {
-   "x": 46.5,
-   "y": 28.3
-  },
-  "Listos para llevar": {
-   "x": 72.9,
-   "y": 28.3
-  },
-  "Imprimir al llegar": {
-   "x": 22.9,
-   "y": 19.2
-  },
-  "Pantalla completa": {
-   "x": 44.3,
-   "y": 19.2
-  }
- },
- "inventario-recetas": {
-  "Empanada de carne": {
-   "x": 25.2,
-   "y": 76.6
-  },
-  "COMPLETAS": {
-   "x": 23.7,
-   "y": 49.5
-  },
-  "ALCANZA PARA": {
-   "x": 83.5,
-   "y": 71.3
-  },
-  "Nueva preparación": {
-   "x": 31.9,
-   "y": 32.6
-  }
- },
- "recetas-extras": {
-  "Nuevo extra": {
-   "x": 85.6,
-   "y": 42.8
-  }
- },
- "inventario-produccion": {
-  "Fabricar": {
-   "x": 89.3,
-   "y": 13.4
-  }
- },
- "inventario-productos": {
-  "Categoría: Todas": {
-   "x": 46.1,
-   "y": 39.2
-  },
-  "STOCK": {
-   "x": 75.4,
-   "y": 52.5
-  },
-  "Exportar Excel": {
-   "x": 62,
-   "y": 23.4
-  },
-  "Importar Excel": {
-   "x": 85.3,
-   "y": 23.4
-  }
- },
- "producto-nuevo": {
-  "Reventa": {
-   "x": 57.6,
-   "y": 19.1
-  },
-  "Nombre *": {
-   "x": 65.9,
-   "y": 45.7
-  },
-  "SKU *": {
-   "x": 65.9,
-   "y": 54.9
-  },
-  "Código de barras (opcional)": {
-   "x": 56.6,
-   "y": 64.1
-  }
- },
- "inventario-ajustes": {
-  "Nueva pérdida": {
-   "x": 73.6,
-   "y": 13.5
-  },
-  "Nuevo ajuste": {
-   "x": 86,
-   "y": 13.4
-  }
- },
- "ajuste-nuevo": {
-  "Casa central › Depósito principal": {
-   "x": 39.3,
-   "y": 31.2
-  },
-  "Conteo físico": {
-   "x": 68.9,
-   "y": 31.2
-  },
-  "Productos": {
-   "x": 21.6,
-   "y": 51.9
-  },
-  "Aplicar ajuste": {
-   "x": 89.1,
-   "y": 80.3
-  }
- },
- "traslado-nuevo": {
-  "Sale de": {
-   "x": 21.6,
-   "y": 27.1
-  },
-  "Llega a": {
-   "x": 61,
-   "y": 27.1
-  },
-  "Productos": {
-   "x": 21.6,
-   "y": 42.7
-  }
- },
- "inventario-traslados": {
-  "En tránsito": {
-   "x": 21.9,
-   "y": 32.9
-  }
- },
- "inventario-movimientos": {
-  "Ventas": {
-   "x": 37.4,
-   "y": 32.6
-  },
-  "Todos los depósitos": {
-   "x": 47.8,
-   "y": 41
-  },
-  "Exportar Excel": {
-   "x": 88.3,
-   "y": 23.3
-  }
- },
- "inventario-vencimientos": {
-  "VENCIDOS": {
-   "x": 22.6,
-   "y": 32.7
-  },
-  "VENCEN EN 30 DÍAS": {
-   "x": 49.3,
-   "y": 32.7
-  },
-  "Próximos 30 días": {
-   "x": 83.6,
-   "y": 49.4
-  }
- },
- "inventario-categorias": {
-  "Nombre": {
-   "x": 21.6,
-   "y": 36.9
-  },
-  "Es una categoría principal": {
-   "x": 49.7,
-   "y": 41
-  },
-  "Crear categoría": {
-   "x": 82.9,
-   "y": 40.9
-  }
- },
- "inventario-depositos": {
-  "Nueva sucursal": {
-   "x": 88.8,
-   "y": 14.9
-  },
-  "Depósito principal": {
-   "x": 23.8,
-   "y": 30.1
-  },
-  "Agregar depósito": {
-   "x": 21.6,
-   "y": 34.3
-  }
- },
- "compras-gastos": {
-  "Nueva compra o gasto": {
-   "x": 33,
-   "y": 34.3
-  }
- },
- "compra-nueva": {
-  "Mercadería": {
-   "x": 21.3,
-   "y": 29.7
-  },
-  "Proveedor *": {
-   "x": 21.6,
-   "y": 51.8
-  },
-  "Número *": {
-   "x": 33.2,
-   "y": 61
-  },
-  "Contado": {
-   "x": 21.9,
-   "y": 74.5
-  },
-  "Productos": {
-   "x": 21.7,
-   "y": 95.7
-  }
- },
- "orden-nueva": {
-  "Proveedor *": {
-   "x": 21.6,
-   "y": 20.5
-  },
-  "Buscá los productos que le vas a pedir.": {
-   "x": 22.9,
-   "y": 56.3
-  },
-  "Ver qué está por debajo del stock mínimo": {
-   "x": 35.4,
-   "y": 58.2
-  },
-  "Crear orden de compra": {
-   "x": 72.9,
-   "y": 43.6
-  }
- },
- "compras-ordenes": {
-  "OC-000001": {
-   "x": 20.1,
-   "y": 46.7
-  }
- },
- "proveedor-nuevo": {
-  "Razón social *": {
-   "x": 56.6,
-   "y": 17.5
-  },
-  "RUC (opcional)": {
-   "x": 77.2,
-   "y": 26.7
-  },
-  "Cómo le pagás": {
-   "x": 56.6,
-   "y": 86.8
-  },
-  "Crear proveedor": {
-   "x": 85.3,
-   "y": 95.4
-  }
- },
- "compras-pagos": {
-  "A PAGAR": {
-   "x": 21.6,
-   "y": 33.6
-  },
-  "Vencidas": {
-   "x": 51.1,
-   "y": 61.6
-  },
-  "Pagos realizados": {
-   "x": 31.4,
-   "y": 51.8
-  }
- },
- "compras-recurrentes": {
-  "Nueva plantilla": {
-   "x": 88.2,
-   "y": 27.6
-  },
-  "Generar gastos de noviembre (3)": {
-   "x": 74.3,
-   "y": 36.3
-  }
- },
- "clientes": {
-  "Nuevo cliente": {
-   "x": 88.7,
-   "y": 23.3
-  }
- },
- "cliente-nuevo": {
-  "Persona": {
-   "x": 18.3,
-   "y": 30.7
-  },
-  "NOMBRE Y APELLIDO *": {
-   "x": 18.3,
-   "y": 36.6
-  },
-  "RUC O CI *": {
-   "x": 49.9,
-   "y": 36.6
-  },
-  "TELÉFONO *": {
-   "x": 18.3,
-   "y": 56.5
-  },
-  "DATOS PARA FACTURACIÓN": {
-   "x": 19.2,
-   "y": 72.4
-  },
-  "Guardar cliente": {
-   "x": 71.5,
-   "y": 92.3
-  }
- },
- "crm": {
-  "Contactado": {
-   "x": 41.9,
-   "y": 33.2
-  },
-  "Nuevo prospecto": {
-   "x": 87.5,
-   "y": 18.1
-  },
-  "Transformar a cliente": {
-   "x": 21.8,
-   "y": 65
-  },
-  "Solo hoy": {
-   "x": 74.9,
-   "y": 25.6
-  }
- },
- "crm-nuevo": {
-  "EMPRESA *": {
-   "x": 23.3,
-   "y": 29.8
-  },
-  "SERVICIOS / PRODUCTOS DE INTERÉS *": {
-   "x": 23.3,
-   "y": 67
-  },
-  "PRÓXIMA ACCIÓN": {
-   "x": 23.3,
-   "y": 92.7
-  }
- },
- "presupuestos": {
-  "Nuevo presupuesto": {
-   "x": 77.8,
-   "y": 14.9
-  },
-  "Abiertos": {
-   "x": 21,
-   "y": 20.4
-  },
-  "Aceptados": {
-   "x": 55.8,
-   "y": 20.4
-  }
- },
- "gestion-clientes": {
-  "Buscá un cliente": {
-   "x": 41,
-   "y": 40.9
-  }
- },
- "comisiones": {},
- "planes": {
-  "Planes": {
-   "x": 30.2,
-   "y": 30.5
-  },
-  "Suscripciones": {
-   "x": 20,
-   "y": 20.7
-  },
-  "Emitir cuotas de Noviembre 2026 (1)": {
-   "x": 77.9,
-   "y": 23.3
-  }
- },
- "agenda-nueva": {
-  "Título *": {
-   "x": 31.3,
-   "y": 20.9
-  },
-  "Responsables *": {
-   "x": 31.3,
-   "y": 30.1
-  },
-  "Fecha *": {
-   "x": 31.3,
-   "y": 58.2
-  },
-  "30m": {
-   "x": 39.5,
-   "y": 67.8
-  },
-  "Cliente existente": {
-   "x": 31.7,
-   "y": 78.2
-  }
- },
- "pagos": {
-  "Pendientes": {
-   "x": 70.1,
-   "y": 14.5
-  },
-  "BUSCAR POR NOMBRE DE CLIENTE": {
-   "x": 21.3,
-   "y": 28.8
-  }
- },
- "pago-cobrar": {},
- "conciliacion": {
-  "Pendiente": {
-   "x": 20,
-   "y": 23.7
-  },
-  "Cargar extracto (Excel o CSV)": {
-   "x": 31.5,
-   "y": 19.3
-  },
-  "Registrar transferencia": {
-   "x": 51.6,
-   "y": 19.3
-  }
- },
- "cobranzas": {
-  "Total adeudado Gs. 1.382.300": {
-   "x": 21.3,
-   "y": 31.1
-  },
-  "Tramo 3": {
-   "x": 69.8,
-   "y": 51.8
-  },
-  "Promesas hoy": {
-   "x": 70,
-   "y": 31.1
-  }
- },
- "reportes": {
-  "Ver reporte": {
-   "x": 42.4,
-   "y": 27.2
-  },
-  "Cierre de caja por día": {
-   "x": 21.3,
-   "y": 57.7
-  },
-  "Productos vendidos": {
-   "x": 74,
-   "y": 70.9
-  },
-  "Cuentas por cobrar": {
-   "x": 21.3,
-   "y": 40.8
-  },
-  "Existencias por depósito": {
-   "x": 74,
-   "y": 87.8
-  },
-  "Registro de comprobantes (RG 90)": {
-   "x": 74,
-   "y": 27.5
-  }
- },
- "conversaciones": {
-  "Mías": {
-   "x": 20.4,
-   "y": 12.8
-  },
-  "Sin asignar": {
-   "x": 26.8,
-   "y": 12.8
-  },
-  "Disponible": {
-   "x": 89.7,
-   "y": 11.2
-  },
-  "Respuestas": {
-   "x": 50.4,
-   "y": 14.7
-  }
- },
- "soporte": {
-  "Dashboard": {
-   "x": 21.3,
-   "y": 38.5
-  },
-  "Tickets": {
-   "x": 47.6,
-   "y": 38.5
-  },
-  "Mis tickets": {
-   "x": 74,
-   "y": 38.5
-  }
- },
- "config-empresa": {
-  "Razón social *": {
-   "x": 21.6,
-   "y": 38.6
-  },
-  "Nombre de fantasía (opcional)": {
-   "x": 21.6,
-   "y": 50.2
-  },
-  "RUC (opcional)": {
-   "x": 58.6,
-   "y": 50.2
-  }
- },
- "config-facturacion": {
-  "Sin factura fiscal": {
-   "x": 24.7,
-   "y": 42.4
-  },
-  "Facturación electrónica SIFEN": {
-   "x": 49.5,
-   "y": 42.4
-  },
-  "Autoimpresor / factura impresa": {
-   "x": 74.3,
-   "y": 42.4
-  }
- },
- "config-usuarios": {
-  "Nuevo usuario": {
-   "x": 86.1,
-   "y": 39.5
-  },
-  "CONEXIÓN": {
-   "x": 78.8,
-   "y": 56.2
-  }
- },
- "usuario-nuevo": {
-  "Nombre *": {
-   "x": 16.6,
-   "y": 19.8
-  },
-  "Email *": {
-   "x": 16.6,
-   "y": 38.2
-  },
-  "Perfil *": {
-   "x": 16.6,
-   "y": 51.9
-  },
-  "Sucursal": {
-   "x": 37.9,
-   "y": 51.9
-  }
- },
- "perfiles": {
-  "Nuevo perfil": {
-   "x": 20,
-   "y": 40
-  }
- },
- "config-funciones": {
-  "BASE, INCLUIDA EN TODOS LOS RUBROS": {
-   "x": 22.8,
-   "y": 43.4
-  },
-  "Comercio": {
-   "x": 26.4,
-   "y": 58.5
-  }
- },
- "config-comisiones": {
-  "Base de cálculo": {
-   "x": 22.6,
-   "y": 26
-  },
-  "Desde": {
-   "x": 22.6,
-   "y": 67.4
-  },
-  "Agregar escala": {
-   "x": 21.6,
-   "y": 74.4
-  },
-  "Guardar política": {
-   "x": 86.2,
-   "y": 80.5
-  }
- },
- "venta-buscar": {
-  "Arroz": {
-   "x": 21.3,
-   "y": 44.9
-  },
-  "Arroz 1 kg": {
-   "x": 26.4,
-   "y": 51.6
-  }
- },
- "venta-item": {
-  "ARROZ1K": {
-   "x": 26.1,
-   "y": 68.8
-  },
-  "Total a cobrar": {
-   "x": 64.3,
-   "y": 86.7
-  },
-  "Aceptar y cobrar": {
-   "x": 64.3,
-   "y": 92.3
-  }
- },
- "venta-cobrar": {
-  "Efectivo": {
-   "x": 27.4,
-   "y": 35.6
-  },
-  "Gs. 50.000": {
-   "x": 45.6,
-   "y": 69
-  },
-  "Agregar otra forma de pago (mixto)": {
-   "x": 25.3,
-   "y": 52.1
-  },
-  "Cobrar e imprimir": {
-   "x": 61.2,
-   "y": 79.2
+ "gastronomia": {
+  "inicio": {
+   "2": {
+    "x": 75,
+    "y": 2
+   },
+   "Caja": {
+    "x": 3.8,
+    "y": 27.4
+   },
+   "Buscar…": {
+    "x": 0.6,
+    "y": 14.3
+   },
+   "Manual": {
+    "x": 68.2,
+    "y": 3.2
+   },
+   "admin@demo.neura.com.py": {
+    "x": 80.9,
+    "y": 2.4
+   },
+   "VENTAS DE HOY": {
+    "x": 21.3,
+    "y": 19.7
+   },
+   "ESTE MES": {
+    "x": 52.5,
+    "y": 19.7
+   },
+   "TICKET PROMEDIO": {
+    "x": 68.1,
+    "y": 19.7
+   },
+   "GANANCIA BRUTA DEL MES": {
+    "x": 83.7,
+    "y": 20.5
+   },
+   "Todas las sucursales": {
+    "x": 82.5,
+    "y": 12.8
+   }
+  },
+  "caja-turnos": {
+   "Abrir caja": {
+    "x": 67.8,
+    "y": 10.8
+   },
+   "Cerrar": {
+    "x": 32.7,
+    "y": 70.1
+   }
+  },
+  "caja-abrir": {
+   "Caja 2": {
+    "x": 51.2,
+    "y": 33.7
+   },
+   "Gs. 100.000": {
+    "x": 39,
+    "y": 62.9
+   },
+   "Abrir Caja 2": {
+    "x": 57.6,
+    "y": 80.8
+   }
+  },
+  "venta-vacia": {
+   "Buscar por nombre o RUC…": {
+    "x": 21.3,
+    "y": 31.6
+   },
+   "Solo ticket": {
+    "x": 83.6,
+    "y": 31.6
+   },
+   "Factura": {
+    "x": 71.6,
+    "y": 31.6
+   },
+   "Facturar como cliente ocasional (X)": {
+    "x": 71.5,
+    "y": 35.3
+   }
+  },
+  "venta-credito": {
+   "Crédito": {
+    "x": 58.5,
+    "y": 31.6
+   },
+   "Cliente *": {
+    "x": 21.3,
+    "y": 28
+   },
+   "Cuotas": {
+    "x": 46.4,
+    "y": 35.8
+   },
+   "Vence en": {
+    "x": 52,
+    "y": 35.8
+   }
+  },
+  "caja-retiro": {
+   "Retiro": {
+    "x": 37.1,
+    "y": 35
+   },
+   "Depósito en banco": {
+    "x": 34.1,
+    "y": 44.2
+   },
+   "Monto en efectivo": {
+    "x": 34.1,
+    "y": 60.2
+   },
+   "Registrar retiro": {
+    "x": 55,
+    "y": 73.7
+   }
+  },
+  "caja-cerrar": {
+   "¿Cuánto efectivo contaste?": {
+    "x": 12.9,
+    "y": 35
+   },
+   "Ver de dónde sale": {
+    "x": 12.9,
+    "y": 31.4
+   },
+   "OTRAS FORMAS DE PAGO · SE CONFIRMAN": {
+    "x": 12.9,
+    "y": 47.1
+   },
+   "Observación (opcional)": {
+    "x": 11.6,
+    "y": 70.6
+   }
+  },
+  "caja-ordenes": {
+   "Todas las fechas": {
+    "x": 51,
+    "y": 30.9
+   },
+   "VTA-005075": {
+    "x": 21.9,
+    "y": 67.1
+   }
+  },
+  "venta-detalle": {
+   "Ver comprobante": {
+    "x": 56.7,
+    "y": 78.7
+   },
+   "Corregir": {
+    "x": 66.5,
+    "y": 46.5
+   },
+   "Anular venta": {
+    "x": 29.1,
+    "y": 78.7
+   },
+   "Nota de crédito": {
+    "x": 43.5,
+    "y": 78.7
+   }
+  },
+  "nc-modal": {
+   "Devolver productos": {
+    "x": 25.6,
+    "y": 39.9
+   },
+   "Descuento por monto": {
+    "x": 49.8,
+    "y": 39.9
+   },
+   "Devolver todo": {
+    "x": 67.6,
+    "y": 44.7
+   },
+   "Motivo *": {
+    "x": 25.3,
+    "y": 55.5
+   },
+   "Emitir nota": {
+    "x": 64.2,
+    "y": 68.7
+   }
+  },
+  "caja-nc": {
+   "NC-000001": {
+    "x": 21.6,
+    "y": 48
+   }
+  },
+  "caja-pedidos": {
+   "Cliente (opcional)": {
+    "x": 21.3,
+    "y": 42.2
+   },
+   "Nota (opcional)": {
+    "x": 41.9,
+    "y": 42.2
+   },
+   "Enviar a caja": {
+    "x": 45.4,
+    "y": 53.9
+   },
+   "Pedidos de hoy": {
+    "x": 65.5,
+    "y": 15.6
+   }
+  },
+  "config-mesas": {
+   "Nueva mesa": {
+    "x": 30.9,
+    "y": 24.1
+   },
+   "Imprimir QR": {
+    "x": 20,
+    "y": 24.1
+   },
+   "Estaciones de cocina": {
+    "x": 25.4,
+    "y": 29.7
+   }
+  },
+  "mesa-nueva": {
+   "Sucursal *": {
+    "x": 33.8,
+    "y": 37.2
+   },
+   "Nombre *": {
+    "x": 33.8,
+    "y": 44.5
+   },
+   "Zona (opcional)": {
+    "x": 33.8,
+    "y": 51.9
+   },
+   "Guardar": {
+    "x": 49.9,
+    "y": 69
+   }
+  },
+  "caja-mesas": {
+   "Sonido": {
+    "x": 84.5,
+    "y": 18.8
+   },
+   "Nuevos": {
+    "x": 20,
+    "y": 23.3
+   },
+   "Aceptar": {
+    "x": 34.2,
+    "y": 36.9
+   },
+   "Rechazar": {
+    "x": 21.3,
+    "y": 36.9
+   },
+   "Cuentas abiertas": {
+    "x": 59.8,
+    "y": 23.3
+   }
+  },
+  "venta-porcobrar-mesa": {
+   "Mesas por cobrar": {
+    "x": 24.1,
+    "y": 21.6
+   }
+  },
+  "caja-cocina": {
+   "Todas": {
+    "x": 20,
+    "y": 29.9
+   },
+   "Para preparar": {
+    "x": 20,
+    "y": 35.3
+   },
+   "En preparación": {
+    "x": 46.5,
+    "y": 35.3
+   },
+   "Listos para llevar": {
+    "x": 72.9,
+    "y": 35.3
+   },
+   "Imprimir al llegar": {
+    "x": 22.9,
+    "y": 24.1
+   },
+   "Pantalla completa": {
+    "x": 44.3,
+    "y": 24.1
+   },
+   "Listo": {
+    "x": 65.2,
+    "y": 57.9
+   }
+  },
+  "inventario-recetas": {
+   "Empanada de carne": {
+    "x": 25.2,
+    "y": 61.3
+   },
+   "COMPLETAS": {
+    "x": 23.7,
+    "y": 39.6
+   },
+   "ALCANZA PARA": {
+    "x": 83.5,
+    "y": 57.1
+   },
+   "Nueva preparación": {
+    "x": 31.9,
+    "y": 26.1
+   }
+  },
+  "receta-detalle": {
+   "Ingredientes": {
+    "x": 21.6,
+    "y": 37.9
+   },
+   "Rendimiento *": {
+    "x": 21.6,
+    "y": 28.1
+   },
+   "COSTO POR PORCIÓN": {
+    "x": 22.6,
+    "y": 19.7
+   },
+   "Opciones": {
+    "x": 36.7,
+    "y": 14.2
+   }
+  },
+  "recetas-extras": {
+   "Nuevo extra": {
+    "x": 85.6,
+    "y": 34.3
+   }
+  },
+  "inventario-produccion": {
+   "Fabricar": {
+    "x": 89.3,
+    "y": 10.7
+   }
+  },
+  "fabricar": {
+   "Qué fabricás *": {
+    "x": 25.3,
+    "y": 48.3
+   },
+   "Depósito *": {
+    "x": 56.9,
+    "y": 48.3
+   }
+  },
+  "inventario-productos": {
+   "Categoría: Todas": {
+    "x": 46.1,
+    "y": 31.4
+   },
+   "STOCK": {
+    "x": 75.4,
+    "y": 42
+   },
+   "Exportar Excel": {
+    "x": 62,
+    "y": 18.7
+   },
+   "Importar Excel": {
+    "x": 85.3,
+    "y": 18.7
+   }
+  },
+  "producto-nuevo": {
+   "Reventa": {
+    "x": 57.6,
+    "y": 15.3
+   },
+   "Nombre *": {
+    "x": 65.9,
+    "y": 36.6
+   },
+   "SKU *": {
+    "x": 65.9,
+    "y": 44
+   },
+   "Código de barras (opcional)": {
+    "x": 56.6,
+    "y": 51.3
+   },
+   "Nuevo producto": {
+    "x": 56.6,
+    "y": 2.8
+   }
+  },
+  "inventario-ajustes": {
+   "Nueva pérdida": {
+    "x": 73.6,
+    "y": 10.8
+   },
+   "Nuevo ajuste": {
+    "x": 86,
+    "y": 10.8
+   }
+  },
+  "ajuste-nuevo": {
+   "Casa central › Depósito principal": {
+    "x": 39.3,
+    "y": 24.9
+   },
+   "Conteo físico": {
+    "x": 68.9,
+    "y": 24.9
+   },
+   "Productos": {
+    "x": 21.6,
+    "y": 41.5
+   },
+   "Aplicar ajuste": {
+    "x": 89.1,
+    "y": 64.3
+   }
+  },
+  "traslado-nuevo": {
+   "Sale de": {
+    "x": 21.6,
+    "y": 21.7
+   },
+   "Llega a": {
+    "x": 61,
+    "y": 21.7
+   },
+   "Productos": {
+    "x": 21.6,
+    "y": 34.2
+   }
+  },
+  "inventario-traslados": {
+   "En tránsito": {
+    "x": 79.5,
+    "y": 36.7
+   }
+  },
+  "traslado-detalle": {
+   "Recibir en": {
+    "x": 62.8,
+    "y": 73.7
+   }
+  },
+  "inventario-movimientos": {
+   "Ventas": {
+    "x": 37.4,
+    "y": 26.1
+   },
+   "Todos los depósitos": {
+    "x": 47.8,
+    "y": 32.8
+   },
+   "Exportar Excel": {
+    "x": 88.3,
+    "y": 18.7
+   }
+  },
+  "inventario-vencimientos": {
+   "VENCIDOS": {
+    "x": 22.6,
+    "y": 26.2
+   },
+   "VENCEN EN 30 DÍAS": {
+    "x": 49.3,
+    "y": 26.2
+   },
+   "Próximos 30 días": {
+    "x": 83.6,
+    "y": 39.5
+   }
+  },
+  "inventario-categorias": {
+   "Nombre": {
+    "x": 21.6,
+    "y": 29.5
+   },
+   "Es una categoría principal": {
+    "x": 50.1,
+    "y": 32.8
+   },
+   "Crear categoría": {
+    "x": 83.8,
+    "y": 32.8
+   }
+  },
+  "inventario-depositos": {
+   "Nueva sucursal": {
+    "x": 88.8,
+    "y": 18.7
+   },
+   "Depósito principal": {
+    "x": 23.8,
+    "y": 37.6
+   },
+   "Agregar depósito": {
+    "x": 21.6,
+    "y": 42.9
+   }
+  },
+  "compras-gastos": {
+   "Nueva compra o gasto": {
+    "x": 33,
+    "y": 27.5
+   }
+  },
+  "compra-nueva": {
+   "Mercadería": {
+    "x": 21.3,
+    "y": 21.6
+   },
+   "Proveedor *": {
+    "x": 21.6,
+    "y": 37.7
+   },
+   "Número *": {
+    "x": 33.4,
+    "y": 44.4
+   },
+   "Contado": {
+    "x": 21.9,
+    "y": 54.2
+   },
+   "Productos": {
+    "x": 24.4,
+    "y": 65.9
+   }
+  },
+  "orden-nueva": {
+   "Proveedor *": {
+    "x": 21.6,
+    "y": 23.3
+   },
+   "Buscá los productos que le vas a pedir.": {
+    "x": 24.5,
+    "y": 45.2
+   },
+   "Ver qué está por debajo del stock mínimo": {
+    "x": 35.4,
+    "y": 66.2
+   },
+   "Crear orden de compra": {
+    "x": 72.9,
+    "y": 49.5
+   }
+  },
+  "compras-ordenes": {
+   "OC-000001": {
+    "x": 20.1,
+    "y": 37.4
+   }
+  },
+  "orden-detalle": {
+   "Llegaron 42 de 54 unidades": {
+    "x": 57.9,
+    "y": 15.4
+   },
+   "Recibir": {
+    "x": 83.1,
+    "y": 96.3
+   }
+  },
+  "proveedor-nuevo": {
+   "Razón social *": {
+    "x": 56.6,
+    "y": 14
+   },
+   "RUC (opcional)": {
+    "x": 77.7,
+    "y": 21.4
+   },
+   "Cómo le pagás": {
+    "x": 56.6,
+    "y": 69.5
+   },
+   "Crear proveedor": {
+    "x": 85.3,
+    "y": 96.3
+   }
+  },
+  "compras-pagos": {
+   "A PAGAR": {
+    "x": 17.4,
+    "y": 24.4
+   },
+   "Vencidas": {
+    "x": 62.6,
+    "y": 43.4
+   },
+   "Pagos realizados": {
+    "x": 24.5,
+    "y": 36.2
+   },
+   "Pagar": {
+    "x": 90.7,
+    "y": 52.9
+   }
+  },
+  "pago-proveedor": {
+   "¿Cuánto le pagás?": {
+    "x": 25.3,
+    "y": 22.5
+   },
+   "Solo lo vencido": {
+    "x": 37.6,
+    "y": 29.8
+   },
+   "Facturas que pagás": {
+    "x": 25.3,
+    "y": 36.3
+   },
+   "Pagar Gs.": {
+    "x": 61.5,
+    "y": 93.9
+   }
+  },
+  "compras-recurrentes": {
+   "Nueva plantilla": {
+    "x": 88.2,
+    "y": 22.1
+   },
+   "Generar gastos de noviembre (3)": {
+    "x": 74.3,
+    "y": 29.1
+   }
+  },
+  "clientes": {
+   "Nuevo cliente": {
+    "x": 89.5,
+    "y": 18.7
+   }
+  },
+  "cliente-nuevo": {
+   "Persona": {
+    "x": 18.3,
+    "y": 24.7
+   },
+   "NOMBRE Y APELLIDO *": {
+    "x": 18.3,
+    "y": 29.4
+   },
+   "RUC O CI *": {
+    "x": 50.3,
+    "y": 29.4
+   },
+   "TELÉFONO *": {
+    "x": 18.3,
+    "y": 45.3
+   },
+   "DATOS PARA FACTURACIÓN": {
+    "x": 19.2,
+    "y": 58
+   },
+   "Guardar cliente": {
+    "x": 71.5,
+    "y": 93.7
+   }
+  },
+  "cliente-ficha": {
+   "Ver ficha completa": {
+    "x": 37.9,
+    "y": 21.7
+   },
+   "Editar": {
+    "x": 74.6,
+    "y": 84.1
+   },
+   "Dar de baja": {
+    "x": 16.6,
+    "y": 84.1
+   }
+  },
+  "crm": {
+   "Contactado": {
+    "x": 41.9,
+    "y": 26.6
+   },
+   "Nuevo prospecto": {
+    "x": 87.5,
+    "y": 14.5
+   },
+   "Transformar a cliente": {
+    "x": 21.8,
+    "y": 52
+   },
+   "Solo hoy": {
+    "x": 74.9,
+    "y": 20.5
+   }
+  },
+  "crm-nuevo": {
+   "EMPRESA *": {
+    "x": 23.3,
+    "y": 29.8
+   },
+   "SERVICIOS / PRODUCTOS DE INTERÉS *": {
+    "x": 23.3,
+    "y": 67
+   }
+  },
+  "presupuestos": {
+   "Nuevo presupuesto": {
+    "x": 77.8,
+    "y": 18.7
+   },
+   "Abiertos": {
+    "x": 21,
+    "y": 25.5
+   }
+  },
+  "presupuesto-nuevo": {
+   "Cliente *": {
+    "x": 21.6,
+    "y": 25.1
+   },
+   "Validez": {
+    "x": 44.9,
+    "y": 42.4
+   },
+   "Condición propuesta": {
+    "x": 44.9,
+    "y": 51.6
+   }
+  },
+  "presupuesto-detalle": {
+   "Descargar PDF": {
+    "x": 24.9,
+    "y": 35.4
+   },
+   "Seguimiento": {
+    "x": 78.9,
+    "y": 35.4
+   },
+   "Convertir a venta": {
+    "x": 11.2,
+    "y": 35.4
+   }
+  },
+  "gestion-clientes": {
+   "Buscá un cliente": {
+    "x": 41,
+    "y": 34.7
+   }
+  },
+  "comisiones": {
+   "MES A CONSULTAR": {
+    "x": 70.4,
+    "y": 24.3
+   },
+   "BASE COMISIONABLE": {
+    "x": 23.3,
+    "y": 37.6
+   },
+   "COMISIÓN ESTIMADA": {
+    "x": 38.2,
+    "y": 37.6
+   },
+   "TOTAL PENDIENTE DE COBRO": {
+    "x": 53.2,
+    "y": 38.3
+   },
+   "POR VENDEDOR": {
+    "x": 20.9,
+    "y": 53
+   }
+  },
+  "planes": {
+   "Suscripciones": {
+    "x": 21.4,
+    "y": 24.3
+   },
+   "Emitir cuotas de Noviembre 2026 (1)": {
+    "x": 77.9,
+    "y": 18.7
+   }
+  },
+  "planes-lista": {
+   "Nuevo plan": {
+    "x": 30.1,
+    "y": 36.1
+   },
+   "PLAZO": {
+    "x": 37.8,
+    "y": 40.6
+   }
+  },
+  "agenda-nueva": {
+   "Título *": {
+    "x": 31.3,
+    "y": 18.5
+   },
+   "Responsables *": {
+    "x": 31.3,
+    "y": 25.2
+   },
+   "Fecha *": {
+    "x": 31.3,
+    "y": 45.6
+   },
+   "30m": {
+    "x": 39.5,
+    "y": 52.5
+   },
+   "Cliente existente": {
+    "x": 31.7,
+    "y": 60.2
+   }
+  },
+  "pagos": {
+   "Pendientes": {
+    "x": 70,
+    "y": 16.5
+   },
+   "BUSCAR POR NOMBRE DE CLIENTE": {
+    "x": 21.3,
+    "y": 32.7
+   }
+  },
+  "pagos-acciones": {
+   "En caja": {
+    "x": 90.9,
+    "y": 52.7
+   },
+   "Cobrar": {
+    "x": 86.2,
+    "y": 52.7
+   }
+  },
+  "pago-cobrar": {},
+  "conciliacion": {
+   "Pendiente": {
+    "x": 69.5,
+    "y": 46
+   },
+   "Cargar extracto (Excel o CSV)": {
+    "x": 31.5,
+    "y": 24.1
+   },
+   "Registrar transferencia": {
+    "x": 51.6,
+    "y": 24.1
+   }
+  },
+  "cobranzas": {
+   "Total adeudado": {
+    "x": 21.3,
+    "y": 24.8
+   },
+   "Tramo 3": {
+    "x": 69.8,
+    "y": 41.5
+   },
+   "Promesas hoy": {
+    "x": 70,
+    "y": 24.9
+   }
+  },
+  "cobranza-detalle": {
+   "DEUDA TOTAL": {
+    "x": 57.9,
+    "y": 18
+   },
+   "Registrar pago": {
+    "x": 88.1,
+    "y": 50.4
+   }
+  },
+  "reportes": {
+   "Ver reporte": {
+    "x": 42.4,
+    "y": 27.2
+   },
+   "Cierre de caja por día": {
+    "x": 21.3,
+    "y": 57.7
+   },
+   "Productos vendidos": {
+    "x": 74,
+    "y": 70.9
+   },
+   "Cuentas por cobrar": {
+    "x": 21.3,
+    "y": 40.8
+   },
+   "Existencias por depósito": {
+    "x": 74,
+    "y": 87.8
+   },
+   "Registro de comprobantes (RG 90)": {
+    "x": 74,
+    "y": 27.5
+   }
+  },
+  "reporte-ejemplo": {
+   "Este mes": {
+    "x": 23.6,
+    "y": 25.5
+   },
+   "Cajero: Todos": {
+    "x": 39.5,
+    "y": 25.6
+   },
+   "Exportar Excel": {
+    "x": 75.3,
+    "y": 18.5
+   },
+   "Descargar PDF": {
+    "x": 87.9,
+    "y": 18.5
+   }
+  },
+  "conversaciones": {
+   "Mías": {
+    "x": 20.4,
+    "y": 16
+   },
+   "Sin asignar": {
+    "x": 26.8,
+    "y": 16
+   },
+   "Disponible": {
+    "x": 89.7,
+    "y": 14
+   },
+   "Respuestas": {
+    "x": 50.4,
+    "y": 18.3
+   },
+   "Pedro Gómez": {
+    "x": 24.8,
+    "y": 25.5
+   }
+  },
+  "soporte": {
+   "Dashboard": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Tickets": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Mis tickets": {
+    "x": 74,
+    "y": 30.8
+   }
+  },
+  "soporte-tickets": {
+   "Cargar ticket": {
+    "x": 84.1,
+    "y": 17.9
+   },
+   "Pendientes": {
+    "x": 32,
+    "y": 25.3
+   },
+   "Tomar": {
+    "x": 73.7,
+    "y": 45
+   }
+  },
+  "config-empresa": {
+   "Razón social *": {
+    "x": 21.6,
+    "y": 30.9
+   },
+   "Nombre de fantasía (opcional)": {
+    "x": 21.6,
+    "y": 40.1
+   },
+   "RUC (opcional)": {
+    "x": 58.6,
+    "y": 40.1
+   }
+  },
+  "config-facturacion": {
+   "Sin factura fiscal": {
+    "x": 24.7,
+    "y": 33.9
+   },
+   "Facturación electrónica SIFEN": {
+    "x": 49.5,
+    "y": 33.9
+   },
+   "Autoimpresor / factura impresa": {
+    "x": 74.3,
+    "y": 33.9
+   }
+  },
+  "config-usuarios": {
+   "Nuevo usuario": {
+    "x": 86.1,
+    "y": 31.6
+   },
+   "CONEXIÓN": {
+    "x": 78.8,
+    "y": 45
+   }
+  },
+  "usuario-nuevo": {
+   "Nombre *": {
+    "x": 16.6,
+    "y": 14.4
+   },
+   "Email *": {
+    "x": 16.6,
+    "y": 27.8
+   },
+   "Perfil *": {
+    "x": 16.6,
+    "y": 37.8
+   },
+   "Sucursal": {
+    "x": 37.9,
+    "y": 37.8
+   }
+  },
+  "perfiles": {
+   "Nuevo perfil": {
+    "x": 20,
+    "y": 32
+   }
+  },
+  "config-funciones": {
+   "BASE, INCLUIDA EN TODOS LOS RUBROS": {
+    "x": 22.8,
+    "y": 31.6
+   },
+   "Comercio": {
+    "x": 26.4,
+    "y": 42.5
+   }
+  },
+  "config-comisiones": {
+   "Base de cálculo": {
+    "x": 22.6,
+    "y": 29.6
+   },
+   "Desde": {
+    "x": 22.6,
+    "y": 74.9
+   },
+   "Agregar escala": {
+    "x": 21.6,
+    "y": 91.9
+   },
+   "Guardar política": {
+    "x": 85.4,
+    "y": 98.9
+   }
+  },
+  "venta-buscar": {
+   "Arroz": {
+    "x": 21.3,
+    "y": 44.4
+   },
+   "Arroz 1 kg": {
+    "x": 26.4,
+    "y": 51.1
+   }
+  },
+  "venta-item": {
+   "ARROZ1K": {
+    "x": 26.1,
+    "y": 68.3
+   },
+   "Total a cobrar": {
+    "x": 64.3,
+    "y": 86.7
+   },
+   "Aceptar y cobrar": {
+    "x": 64.3,
+    "y": 92.3
+   }
+  },
+  "venta-cobrar": {
+   "Efectivo": {
+    "x": 27.4,
+    "y": 35.6
+   },
+   "Gs. 50.000": {
+    "x": 45.6,
+    "y": 69
+   },
+   "Agregar otra forma de pago (mixto)": {
+    "x": 25.3,
+    "y": 52.1
+   },
+   "Cobrar e imprimir": {
+    "x": 61.2,
+    "y": 79.2
+   }
   }
  }
 }
