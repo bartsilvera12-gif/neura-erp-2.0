@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
-import { PowerOff, ShieldAlert } from "lucide-react";
+import { BookOpen, PowerOff, ShieldAlert } from "lucide-react";
 import { browserClient } from "@/lib/supabase/browser";
 import { apiFetchCache, limpiarCache } from "@/lib/api/cache-cliente";
 import { EVENTO_RECARGAR_ME, ProveedorUsuario, type Usuario } from "@/lib/sesion/ContextoUsuario";
@@ -110,7 +110,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         usuario={me ?? { rol: "", email: emailSesion }}
         pathname={pathname}
         onLogout={async () => { await marcarSalida(); await browserClient().auth.signOut(); limpiarCache(); router.replace("/login"); }}
-        campana={<NotificacionesBell />}
+        campana={(
+          <>
+            <Link href="/manual" aria-label="Manual de usuario" title="Manual de usuario"
+              className="inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-sm font-medium text-slate-600 no-underline transition-colors hover:bg-slate-100 hover:text-slate-800">
+              <BookOpen className="h-5 w-5" aria-hidden />
+              <span className="hidden lg:inline">Manual</span>
+            </Link>
+            <NotificacionesBell />
+          </>
+        )}
       >
         <ProveedorUsuario value={me}>
           {funcionApagada?.funcion && funcionApagada.funcion !== "rubro" ? (
