@@ -2649,6 +2649,377 @@
     "x": 88.9,
     "y": 15
    }
+  },
+  "rrhh-lista": {
+   "Falta cargar": {
+    "x": 89,
+    "y": 44.2
+   },
+   "Admin Demo": {
+    "x": 20.9,
+    "y": 44.2
+   },
+   "Laura Benítez": {
+    "x": 20.9,
+    "y": 54.4
+   },
+   "RR HH": {
+    "x": 7.9,
+    "y": 75.2,
+    "lado": "der"
+   },
+   "Personal": {
+    "x": 9.8,
+    "y": 80.2,
+    "lado": "der"
+   },
+   "Liquidaciones": {
+    "x": 12.4,
+    "y": 85.2,
+    "lado": "der"
+   }
+  },
+  "rrhh-ficha": {
+   "Nombres *": {
+    "x": 21.6,
+    "y": 25
+   },
+   "Número de CI": {
+    "x": 72,
+    "y": 25
+   },
+   "Fecha de nacimiento": {
+    "x": 21.6,
+    "y": 29.1
+   },
+   "Número de contacto": {
+    "x": 46.8,
+    "y": 29.1
+   },
+   "Dirección": {
+    "x": 21.6,
+    "y": 34.3
+   },
+   "Contacto de emergencia: nombre": {
+    "x": 21.6,
+    "y": 38.5
+   },
+   "Fecha de ingreso *": {
+    "x": 21.6,
+    "y": 46.9
+   },
+   "Área de trabajo": {
+    "x": 72,
+    "y": 46.9
+   },
+   "Cómo cobra": {
+    "x": 21.6,
+    "y": 61.8
+   },
+   "Salario mensual (Gs.)": {
+    "x": 46.8,
+    "y": 61.8
+   },
+   "Aporta IPS": {
+    "x": 72,
+    "y": 63.1
+   },
+   "Comisiona": {
+    "x": 21.6,
+    "y": 67
+   },
+   "Lu": {
+    "x": 21.6,
+    "y": 74.7
+   },
+   "Entrada": {
+    "x": 21.6,
+    "y": 77.1
+   },
+   "Guardar": {
+    "x": 91,
+    "y": 84.2
+   },
+   "ANTIGÜEDAD": {
+    "x": 40.8,
+    "y": 13.6
+   },
+   "AGUINALDO ACUMULADO": {
+    "x": 80.2,
+    "y": 13.6
+   }
+  },
+  "rrhh-salario": {
+   "Salario mensual (Gs.)": {
+    "x": 46.8,
+    "y": 61.8
+   },
+   "Motivo del cambio *": {
+    "x": 72,
+    "y": 61.8
+   },
+   "Guardar": {
+    "x": 91,
+    "y": 85.3
+   }
+  },
+  "rrhh-ausencias": {
+   "Ausencias": {
+    "x": 29.7,
+    "y": 41,
+    "lado": "abajo"
+   },
+   "Registrar ausencia": {
+    "x": 83.9,
+    "y": 45.2
+   },
+   "Anular": {
+    "x": 91.2,
+    "y": 52.1
+   }
+  },
+  "rrhh-ausencia-nueva": {
+   "Fecha": {
+    "x": 33.8,
+    "y": 30,
+    "z": 1.5
+   },
+   "Días": {
+    "x": 33.8,
+    "y": 38.4,
+    "z": 1.5
+   },
+   "Tipo": {
+    "x": 33.8,
+    "y": 48.9,
+    "z": 1.5
+   },
+   "Descuenta del salario": {
+    "x": 33.8,
+    "y": 59.4,
+    "z": 1.5
+   },
+   "Motivo": {
+    "x": 33.8,
+    "y": 64.7,
+    "z": 1.5
+   },
+   "Guardar": {
+    "x": 66.2,
+    "y": 75.5,
+    "lado": "der",
+    "z": 1.5
+   }
+  },
+  "rrhh-vacaciones": {
+   "Vacaciones": {
+    "x": 38,
+    "y": 41,
+    "lado": "abajo"
+   },
+   "DISPONIBLES": {
+    "x": 21.2,
+    "y": 45.7
+   },
+   "GENERADOS": {
+    "x": 40.8,
+    "y": 45.7
+   },
+   "PRÓXIMOS": {
+    "x": 80.2,
+    "y": 45.7
+   },
+   "Cargar vacaciones": {
+    "x": 83.8,
+    "y": 60.2
+   },
+   "Anular": {
+    "x": 91.2,
+    "y": 67.1
+   }
+  },
+  "rrhh-vacacion-nueva": {
+   "Desde": {
+    "x": 33.8,
+    "y": 34.8,
+    "z": 1.5
+   },
+   "Hasta": {
+    "x": 33.8,
+    "y": 43.2,
+    "z": 1.5
+   },
+   "Días hábiles": {
+    "x": 33.8,
+    "y": 51.6,
+    "z": 1.5
+   },
+   "Guardar": {
+    "x": 66.2,
+    "y": 70.7,
+    "lado": "der",
+    "z": 1.5
+   }
+  },
+  "rrhh-historial": {
+   "Historial": {
+    "x": 55.6,
+    "y": 28.4,
+    "lado": "abajo"
+   },
+   "Agregar al historial": {
+    "x": 66.1,
+    "y": 31.3
+   },
+   "Cambio de salario": {
+    "x": 22.9,
+    "y": 46
+   },
+   "Ascenso o cambio de puesto": {
+    "x": 22.9,
+    "y": 57.6
+   }
+  },
+  "rrhh-historial-nota": {
+   "Tipo": {
+    "x": 33.8,
+    "y": 40.8,
+    "z": 1.5
+   },
+   "Qué pasó *": {
+    "x": 33.8,
+    "y": 49.2,
+    "z": 1.5
+   },
+   "Guardar": {
+    "x": 66.2,
+    "y": 64.8,
+    "lado": "der",
+    "z": 1.5
+   }
+  },
+  "rrhh-liquidaciones": {
+   "noviembre de 2026": {
+    "x": 20,
+    "y": 27
+   },
+   "NETO A COBRAR": {
+    "x": 21.2,
+    "y": 40.4
+   },
+   "IPS EMPRESA": {
+    "x": 80.2,
+    "y": 40.4
+   },
+   "Excel": {
+    "x": 79.2,
+    "y": 20.8
+   },
+   "Cerrar el mes": {
+    "x": 93.6,
+    "y": 23,
+    "lado": "abajo"
+   },
+   "Laura Benítez": {
+    "x": 20.9,
+    "y": 58.9
+   },
+   "Carlos Rojas": {
+    "x": 20.9,
+    "y": 54.4
+   },
+   "Faltan días": {
+    "x": 94.8,
+    "y": 54.5,
+    "lado": "der"
+   },
+   "Cerrada": {
+    "x": 88.2,
+    "y": 63.5
+   }
+  },
+  "rrhh-extracto": {
+   "Ausencias: 1 día": {
+    "x": 26.1,
+    "y": 40.2,
+    "z": 1.25
+   },
+   "Imponible": {
+    "x": 26.1,
+    "y": 43,
+    "z": 1.25
+   },
+   "Neto a cobrar": {
+    "x": 26.1,
+    "y": 48.6,
+    "z": 1.25
+   },
+   "Agregar": {
+    "x": 25.1,
+    "y": 62.8,
+    "z": 1.25
+   },
+   "Imprimir": {
+    "x": 50.5,
+    "y": 69.4,
+    "z": 1.25
+   },
+   "Guardar": {
+    "x": 63.1,
+    "y": 71.3,
+    "lado": "abajo",
+    "z": 1.25
+   },
+   "Cerrar": {
+    "x": 74.9,
+    "y": 69.4,
+    "lado": "der",
+    "z": 1.25
+   }
+  },
+  "rrhh-extra": {
+   "Extras y descuentos": {
+    "x": 25.1,
+    "y": 50.1,
+    "z": 1.25
+   },
+   "Aporta IPS": {
+    "x": 26.1,
+    "y": 65.4,
+    "z": 1.25
+   },
+   "Guardar": {
+    "x": 63.1,
+    "y": 80.6,
+    "lado": "abajo",
+    "z": 1.25
+   }
+  },
+  "rrhh-jornalero": {
+   "Días trabajados en el mes *": {
+    "x": 25.1,
+    "y": 51.4,
+    "z": 1.25
+   },
+   "Guardar": {
+    "x": 63.1,
+    "y": 71.2,
+    "lado": "abajo",
+    "z": 1.25
+   }
+  },
+  "rrhh-cerrada": {
+   "Reabrir": {
+    "x": 74.9,
+    "y": 64.2,
+    "lado": "der",
+    "z": 1.25
+   },
+   "Imprimir": {
+    "x": 57.5,
+    "y": 64.2,
+    "z": 1.25
+   }
   }
  }
 }

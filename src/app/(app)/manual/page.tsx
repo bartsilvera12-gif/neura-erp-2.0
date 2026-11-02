@@ -10,18 +10,18 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle, ArrowLeft, ArrowRight, BarChart3, Banknote, Check, ChefHat, ChevronRight, ClipboardList, Expand, Lightbulb, MessageCircle, Package,
-  Rocket, Search, Settings, ShoppingCart, Truck, Users, X,
+  Rocket, Search, Settings, ShoppingCart, Truck, Users, X, ArrowUp, IdCard,
 } from "lucide-react";
 import { CapaModal } from "@/components/CapaModal";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
 import { rubroDe } from "@/modules/configuracion/funciones";
-import { GUIAS, LLEGAR, PANELES, type Guia } from "@/modules/manual/contenido";
+import { GUIAS, LLEGAR, MENUS, PANELES, type Guia } from "@/modules/manual/contenido";
 import marcasJson from "@/modules/manual/marcas.json";
 import { pantallaDeRuta, pantallasCatalogo, perfilVePantalla } from "@/modules/registry";
 
 type RubroImagen = "comercio" | "gastronomia";
 /** lado "der": la flecha entra desde la derecha, donde a la izquierda no hay lugar (el menú). */
-type Punto = { x: number; y: number; lado?: "der"; z?: number };
+type Punto = { x: number; y: number; lado?: "der" | "abajo"; z?: number };
 const MARCAS = marcasJson as unknown as Record<RubroImagen, Record<string, Record<string, Punto | null>>>;
 /** Las capturas son por rubro: la de otro rubro solo si la pantalla no existe en el tuyo. */
 const carpetaDe = (img: string, rubro: RubroImagen): RubroImagen => (MARCAS[rubro][img] ? rubro : rubro === "comercio" ? "gastronomia" : "comercio");
@@ -37,6 +37,7 @@ const TEMAS: { grupo: string; titulo: string; detalle: string; Icono: ComponentT
   { grupo: "Cobros", titulo: "Cobrar deudas", detalle: "Quién te debe y cómo registrar el pago", Icono: Banknote },
   { grupo: "Reportes", titulo: "Ver mis números", detalle: "Reportes en Excel o PDF", Icono: BarChart3 },
   { grupo: "Atención al cliente", titulo: "Chats y soporte", detalle: "Responder a tus clientes", Icono: MessageCircle },
+  { grupo: "RR HH", titulo: "Mi personal", detalle: "Datos, ausencias, vacaciones y liquidación", Icono: IdCard },
   { grupo: "Configuración", titulo: "Configurar", detalle: "Empresa, usuarios y funciones", Icono: Settings },
   { grupo: "Primeros pasos", titulo: "Lo básico", detalle: "Cómo moverte por el sistema", Icono: Rocket },
 ];
@@ -58,7 +59,7 @@ function diapositivas(g: Guia, rubro: RubroImagen): Diapositiva[] {
   const llegar = LLEGAR[g.id];
   if (llegar) {
     const [seccion, tarjeta] = llegar;
-    out.push({ frase: `En el menú de la izquierda, tocá ${seccion}.`, aclara: "En el celular, el menú se abre con el botón de las tres rayitas.", img: "inicio", marca: seccion, notas: [] });
+    out.push({ frase: `En el menú de la izquierda, tocá ${seccion}.`, aclara: "En el celular, el menú se abre con el botón de las tres rayitas.", img: MENUS[seccion] ?? "inicio", marca: seccion, notas: [] });
     if (tarjeta) out.push({ frase: `Tocá ${tarjeta}.`, img: PANELES[seccion], marca: tarjeta, notas: [] });
   }
   for (const b of g.bloques) {
@@ -108,18 +109,19 @@ function Visor({ d, onAmpliar }: { d: Diapositiva; onAmpliar: () => void }) {
   const px = p.x * zoom + izq;
   const py = p.y * altoImg + arriba;
   const der = p.lado === "der";
+  const abajo = p.lado === "abajo"; // entre botones o pestañas, la flecha no tapa al vecino
   return (
     <button type="button" onClick={onAmpliar} aria-label="Ver la pantalla completa"
       style={{ width: "min(100cqw, 160cqh)" }}
       className="relative mx-auto block aspect-[16/10] cursor-zoom-in overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt={d.alt ?? ""} onLoad={cargar} className={`absolute max-w-none ${proporcion ? "" : "opacity-0"}`} style={{ width: `${zoom * 100}%`, left: `${izq}%`, top: `${arriba}%` }} />
-      <span className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse ${(aLaDerecha ? 62 : 42) * luz}% ${38 * luz}% at ${der ? px - 6 : aLaDerecha ? px + 26 : px + 13 * luz}% ${py}%, transparent 72%, rgba(15,23,42,.5) 100%)` }} />
-      <span className={`pointer-events-none absolute -translate-y-1/2 ${der ? "" : "-translate-x-full"}`} style={{ left: `${der ? px : Math.max(px, 9)}%`, top: `${py}%` }}>
+      <span className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse ${(aLaDerecha ? 62 : 42) * luz}% ${38 * luz}% at ${der ? px - 6 : abajo ? px : aLaDerecha ? px + 26 : px + 13 * luz}% ${py}%, transparent 72%, rgba(15,23,42,.5) 100%)` }} />
+      <span className={`pointer-events-none absolute ${abajo ? "-translate-x-1/2" : `-translate-y-1/2 ${der ? "" : "-translate-x-full"}`}`} style={{ left: `${der || abajo ? px : Math.max(px, 9)}%`, top: abajo ? `calc(${py}% + 4px)` : `${py}%` }}>
         <span className="relative grid h-9 w-9 place-items-center sm:h-11 sm:w-11">
           <span className="absolute inset-0 animate-ping rounded-full bg-rose-500/50" />
           <span className="relative grid h-full w-full place-items-center rounded-full bg-rose-600 text-white ring-2 ring-white">
-            {der ? <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden /> : <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />}
+            {abajo ? <ArrowUp className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden /> : der ? <ArrowLeft className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden /> : <ArrowRight className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden />}
           </span>
         </span>
       </span>

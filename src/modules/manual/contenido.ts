@@ -20,7 +20,7 @@ export type Guia = {
   bloques: Bloque[];
 };
 
-export const GRUPOS = ["Primeros pasos", "Caja y ventas", "Pedidos y mesas", "Cocina y recetas", "Inventario", "Compras y gastos", "Clientes y ventas", "Cobros", "Reportes", "Atención al cliente", "Configuración"];
+export const GRUPOS = ["Primeros pasos", "Caja y ventas", "Pedidos y mesas", "Cocina y recetas", "Inventario", "Compras y gastos", "Clientes y ventas", "Cobros", "Reportes", "Atención al cliente", "RR HH", "Configuración"];
 
 /** Cómo se llega a la pantalla de cada guía: la sección del menú y la tarjeta de su panel. */
 export const LLEGAR: Record<string, [string, string?]> = {
@@ -41,12 +41,16 @@ export const LLEGAR: Record<string, [string, string?]> = {
   reportes: ["Reportes"], omnicanal: ["Omnicanal", "Conversaciones"], soporte: ["Soporte"],
   empresa: ["Configuración", "Datos de la empresa"], facturacion: ["Configuración", "Tickets y facturación"], usuarios: ["Configuración", "Usuarios"],
   rubro: ["Configuración", "Rubro y funciones"], "config-comisiones": ["Configuración", "Comisiones"],
+  "rrhh-datos": ["RR HH", "Personal"], "rrhh-salario": ["RR HH", "Personal"], "rrhh-ausencia": ["RR HH", "Personal"], "rrhh-vacaciones": ["RR HH", "Personal"],
+  "rrhh-historial": ["RR HH", "Personal"], "rrhh-liquidacion": ["RR HH", "Liquidaciones"],
 };
 /** La captura del panel que abre cada sección del menú. */
 export const PANELES: Record<string, string> = {
   Caja: "panel-caja", Inventario: "panel-inventario", "Gastos empresariales": "panel-gastos", Comercial: "panel-comercial",
-  Finanzas: "panel-finanzas", Omnicanal: "panel-omnicanal", Configuración: "panel-config",
+  Finanzas: "panel-finanzas", Omnicanal: "panel-omnicanal", Configuración: "panel-config", "RR HH": "rrhh-lista",
 };
+/** La captura donde se ve la sección en el menú, si no es la de Inicio. */
+export const MENUS: Record<string, string> = { "RR HH": "rrhh-lista" };
 
 export const GUIAS: Guia[] = [
   // ── Primeros pasos ───────────────────────────────────────────────────────────
@@ -824,6 +828,142 @@ export const GUIAS: Guia[] = [
         { t: "Con Agregar escala sumás otro tramo.", marca: "Agregar escala" },
         { t: "Tocá Guardar política.", d: "Sin esto, nadie ve comisiones.", marca: "Guardar política" },
       ] },
+    ],
+  },
+  // ── RR HH ────────────────────────────────────────────────────────────────────
+  {
+    id: "rrhh-datos", grupo: "RR HH", ruta: "/rrhh", titulo: "Cargar los datos de una persona", resumen: "Datos personales, trabajo, salario y horario.",
+    bloques: [
+      { texto: "Acá aparecen los usuarios del sistema. Para sumar a alguien, primero crealo en Configuración › Usuarios." },
+      { img: "rrhh-lista", alt: "Lista del personal", pasos: [
+        { t: "Las personas sin datos dicen Falta cargar.", marca: "Falta cargar" },
+        { t: "Tocá el nombre de la persona.", marca: "Laura Benítez" },
+      ] },
+      { img: "rrhh-ficha", alt: "Ficha de la persona", pasos: [
+        { t: "Escribí su nombre.", marca: "Nombres *" },
+        { t: "Escribí su número de cédula.", marca: "Número de CI" },
+        { t: "Elegí su fecha de nacimiento.", marca: "Fecha de nacimiento" },
+        { t: "Escribí su teléfono.", marca: "Número de contacto" },
+        { t: "Escribí su dirección, barrio y ciudad.", marca: "Dirección" },
+        { t: "Escribí a quién llamar en una emergencia.", d: "Su nombre y su teléfono.", marca: "Contacto de emergencia: nombre" },
+        { t: "Elegí la fecha en que empezó a trabajar.", d: "De acá salen la antigüedad, las vacaciones y el aguinaldo.", marca: "Fecha de ingreso *" },
+        { t: "Escribí en qué área trabaja.", d: "Por ejemplo: Ventas, Caja o Depósito.", marca: "Área de trabajo" },
+        { t: "Elegí si es mensualero o jornalero.", marca: "Cómo cobra" },
+        { t: "Escribí cuánto gana.", d: "Si es jornalero, cuánto gana por día.", marca: "Salario mensual (Gs.)" },
+        { t: "Dejá prendido Aporta IPS si aporta.", marca: "Aporta IPS" },
+        { t: "Apagá Comisiona si no cobra comisión.", d: "Así deja de aparecer en Comisiones.", marca: "Comisiona" },
+        { t: "Tocá los días que trabaja.", marca: "Lu" },
+        { t: "Escribí a qué hora entra y a qué hora sale.", marca: "Entrada" },
+        { t: "Tocá Guardar.", marca: "Guardar" },
+        { t: "Arriba ves su antigüedad, sus vacaciones y su aguinaldo.", d: "Se calculan solos.", marca: "ANTIGÜEDAD" },
+      ] },
+      { ojo: "El correo, el perfil y la sucursal no se cambian acá. El perfil y la sucursal se cambian en Configuración › Usuarios." },
+    ],
+  },
+  {
+    id: "rrhh-salario", grupo: "RR HH", ruta: "/rrhh", titulo: "Cambiar el salario", resumen: "Un aumento queda guardado con su motivo.",
+    bloques: [
+      { img: "rrhh-lista", alt: "Lista del personal", pasos: [{ t: "Tocá el nombre de la persona.", marca: "Laura Benítez" }] },
+      { img: "rrhh-salario", alt: "Cambio de salario con su motivo", pasos: [
+        { t: "Escribí el salario nuevo.", marca: "Salario mensual (Gs.)" },
+        { t: "Escribí el motivo.", d: "Por ejemplo: aumento anual o ascenso.", marca: "Motivo del cambio *" },
+        { t: "Tocá Guardar.", marca: "Guardar" },
+      ] },
+      { consejo: "Los meses ya cerrados no cambian. El salario nuevo cuenta para los meses que todavía están abiertos." },
+    ],
+  },
+  {
+    id: "rrhh-ausencia", grupo: "RR HH", ruta: "/rrhh", titulo: "Registrar una ausencia", resumen: "Faltas, permisos y reposos.",
+    bloques: [
+      { img: "rrhh-lista", alt: "Lista del personal", pasos: [{ t: "Tocá el nombre de la persona.", marca: "Laura Benítez" }] },
+      { img: "rrhh-ausencias", alt: "Ausencias de la persona", pasos: [
+        { t: "Tocá Ausencias.", marca: "Ausencias" },
+        { t: "Tocá Registrar ausencia.", marca: "Registrar ausencia" },
+      ] },
+      { img: "rrhh-ausencia-nueva", alt: "Formulario de ausencia", pasos: [
+        { t: "Elegí el día en que faltó.", marca: "Fecha" },
+        { t: "Escribí cuántos días faltó.", d: "Medio día: 0,5. Si abarca dos meses, cargá una ausencia por mes.", marca: "Días" },
+        { t: "Elegí el tipo de ausencia.", marca: "Tipo" },
+        { t: "Mirá si descuenta del salario.", d: "Se prende o apaga solo según el tipo, y lo podés cambiar. Te muestra cuánto va a descontar.", marca: "Descuenta del salario" },
+        { t: "Escribí el motivo, si querés.", marca: "Motivo" },
+        { t: "Tocá Guardar.", d: "El descuento pasa solo a la liquidación del mes.", marca: "Guardar" },
+      ] },
+      { img: "rrhh-ausencias", alt: "Ausencias de la persona", pasos: [{ t: "Si te equivocaste, tocá Anular y escribí el motivo.", marca: "Anular" }] },
+      { ojo: "Con la liquidación del mes cerrada no se cargan ni se anulan ausencias de ese mes. Primero hay que reabrirla." },
+    ],
+  },
+  {
+    id: "rrhh-vacaciones", grupo: "RR HH", ruta: "/rrhh", titulo: "Cargar vacaciones", resumen: "Cuántos días le quedan y cuándo se los toma.",
+    bloques: [
+      { img: "rrhh-lista", alt: "Lista del personal", pasos: [{ t: "Tocá el nombre de la persona.", marca: "Laura Benítez" }] },
+      { img: "rrhh-vacaciones", alt: "Vacaciones de la persona", pasos: [
+        { t: "Tocá Vacaciones.", marca: "Vacaciones" },
+        { t: "Disponibles son los días que le quedan.", marca: "DISPONIBLES" },
+        { t: "Generados son los días que ganó por sus años completos.", d: "12 días hábiles por año hasta 5 años, 18 hasta 10 años y 30 después.", marca: "GENERADOS" },
+        { t: "Próximos son los días que gana en su próximo aniversario.", marca: "PRÓXIMOS" },
+        { t: "Tocá Cargar vacaciones.", marca: "Cargar vacaciones" },
+      ] },
+      { img: "rrhh-vacacion-nueva", alt: "Formulario de vacaciones", pasos: [
+        { t: "Elegí el primer día.", marca: "Desde" },
+        { t: "Elegí el último día.", marca: "Hasta" },
+        { t: "Escribí cuántos días hábiles son.", d: "Si son más de los disponibles, se puede cargar igual como adelanto.", marca: "Días hábiles" },
+        { t: "Tocá Guardar.", marca: "Guardar" },
+      ] },
+    ],
+  },
+  {
+    id: "rrhh-historial", grupo: "RR HH", ruta: "/rrhh", titulo: "Ver el historial de una persona", resumen: "Aumentos, cambios, ausencias y ascensos.",
+    bloques: [
+      { img: "rrhh-lista", alt: "Lista del personal", pasos: [{ t: "Tocá el nombre de la persona.", marca: "Laura Benítez" }] },
+      { img: "rrhh-historial", alt: "Historial de la persona", pasos: [
+        { t: "Tocá Historial.", marca: "Historial" },
+        { t: "Cada aumento muestra el salario de antes, el nuevo y el motivo.", d: "También quedan los demás cambios, las ausencias, las vacaciones y las liquidaciones cerradas.", marca: "Cambio de salario" },
+        { t: "Para sumar un ascenso o una felicitación, tocá Agregar al historial.", marca: "Agregar al historial" },
+      ] },
+      { img: "rrhh-historial-nota", alt: "Agregar al historial", pasos: [
+        { t: "Elegí el tipo.", d: "Ascenso, felicitación, capacitación, llamada de atención u otro.", marca: "Tipo" },
+        { t: "Escribí qué pasó.", marca: "Qué pasó *" },
+        { t: "Tocá Guardar.", marca: "Guardar" },
+      ] },
+    ],
+  },
+  {
+    id: "rrhh-liquidacion", grupo: "RR HH", ruta: "/rrhh/liquidaciones", titulo: "Preparar la liquidación del mes", resumen: "El extracto para revisar con tu asesor.",
+    bloques: [
+      { texto: "La liquidación es un extracto para revisar con tu asesor. No registra pagos ni gastos." },
+      { img: "rrhh-liquidaciones", alt: "Liquidaciones del mes", pasos: [
+        { t: "Elegí el mes.", marca: "noviembre de 2026" },
+        { t: "Neto a cobrar es la suma de lo que cobra cada persona.", marca: "NETO A COBRAR" },
+        { t: "IPS empresa es lo que aporta la empresa.", d: "No sale del salario de nadie.", marca: "IPS EMPRESA" },
+        { t: "Tocá el nombre de una persona para ver su extracto.", marca: "Laura Benítez" },
+      ] },
+      { img: "rrhh-extracto", alt: "Extracto de una persona", pasos: [
+        { t: "Las ausencias que descuentan ya están restadas.", d: "Un día vale el salario dividido 30. Si la persona comisiona, la comisión del mes también aparece sola.", marca: "Ausencias: 1 día" },
+        { t: "Imponible es sobre lo que se calcula el IPS.", marca: "Imponible" },
+        { t: "Neto a cobrar es lo que le queda a la persona.", marca: "Neto a cobrar" },
+        { t: "Para sumar o restar algo más, tocá Agregar.", marca: "Agregar" },
+      ] },
+      { img: "rrhh-extra", alt: "Agregar horas extra", pasos: [
+        { t: "Escribí qué es, elegí si suma o resta y escribí el monto.", d: "Por ejemplo: horas extra o un adelanto.", marca: "Extras y descuentos" },
+        { t: "Si suma, indicá si aporta IPS.", d: "Si no sabés, preguntale a tu asesor.", marca: "Aporta IPS" },
+        { t: "Tocá Guardar.", d: "El extracto se actualiza.", marca: "Guardar" },
+      ] },
+      { img: "rrhh-liquidaciones", alt: "Liquidaciones del mes", pasos: [{ t: "Si dice Faltan días, es un jornalero: tocá su nombre.", marca: "Faltan días" }] },
+      { img: "rrhh-jornalero", alt: "Extracto de un jornalero", pasos: [
+        { t: "Escribí cuántos días trabajó en el mes.", marca: "Días trabajados en el mes *" },
+        { t: "Tocá Guardar.", d: "Sin este dato no se puede cerrar.", marca: "Guardar" },
+      ] },
+      { img: "rrhh-extracto", alt: "Extracto de una persona", pasos: [
+        { t: "Tocá Imprimir para llevarle el extracto a tu asesor.", d: "Trae lugar para las firmas. También lo podés guardar como PDF.", marca: "Imprimir" },
+        { t: "Cuando esté revisado, tocá Cerrar.", d: "Queda fijo aunque después cambie el salario.", marca: "Cerrar" },
+      ] },
+      { img: "rrhh-liquidaciones", alt: "Liquidaciones del mes", pasos: [
+        { t: "Tocá Excel para bajar el mes completo.", d: "Trae a todas las personas, con su aguinaldo acumulado y sus vacaciones.", marca: "Excel" },
+        { t: "Con Cerrar el mes cerrás todas las que falten.", d: "Antes cargá los días de los jornaleros: si falta alguno, no cierra.", marca: "Cerrar el mes" },
+      ] },
+      { img: "rrhh-cerrada", alt: "Liquidación cerrada", pasos: [{ t: "Para corregir una cerrada, abrila y tocá Reabrir.", d: "Te pide el motivo, y queda en el historial.", marca: "Reabrir" }] },
+      { consejo: "El aguinaldo acumulado es una doceava parte de lo ganado en el año. Si hay meses sin cerrar, en mensualeros se estiman con el salario actual." },
+      { ojo: "Los cálculos son una ayuda. Tu asesor tiene que revisarlos antes de pagar." },
     ],
   },
 ];
