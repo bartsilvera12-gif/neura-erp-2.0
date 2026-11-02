@@ -55,7 +55,9 @@ export type LiquidacionResumen = { periodo: string; estado: "abierta" | "cerrada
 export type EventoRrhh = { id: string; accion: string; detalle: Record<string, unknown>; actor: string | null; created_at: string };
 
 export type FichaRrhh = {
-  usuario: { id: string; nombre: string; nombres: string; apellidos: string | null; ci: string | null; telefono: string | null; email: string | null; activo: boolean; perfil: string | null; sucursal: string | null };
+  usuario: { id: string; nombre: string; nombres: string; apellidos: string | null; ci: string | null; telefono: string | null; email: string | null; activo: boolean; perfil: string | null; sucursal: string | null; perfil_id: string | null; sucursal_id: string | null; es_yo: boolean };
+  perfiles: { id: string; nombre: string }[];
+  sucursales: { id: string; nombre: string; es_principal: boolean }[];
   legajo: Legajo | null;
   ausencias: Ausencia[];
   vacaciones: Vacacion[];

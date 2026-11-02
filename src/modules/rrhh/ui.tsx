@@ -9,6 +9,22 @@ export const INPUT = "min-h-11 w-full rounded-xl border border-slate-200 bg-whit
 export const BOTON = "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50 sm:min-h-9";
 export const BOTON_PRIMARIO = "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 py-2 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50 sm:min-h-9";
 
+/** Tarjeta de formulario con ícono, como Datos de la empresa. */
+export function Tarjeta({ icono, titulo, detalle, children, className = "" }: { icono: ReactNode; titulo: string; detalle?: string; children: ReactNode; className?: string }) {
+  return (
+    <section className={`min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-5 ${className}`}>
+      <header className="mb-4 flex items-start gap-3">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--brand-50,#eef7f7)] text-[var(--brand)]">{icono}</span>
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-slate-900">{titulo}</h2>
+          {detalle ? <p className="mt-0.5 text-xs text-slate-500">{detalle}</p> : null}
+        </div>
+      </header>
+      {children}
+    </section>
+  );
+}
+
 export function Campo({ label, children, ayuda, className = "" }: { label: string; children: ReactNode; ayuda?: string; className?: string }) {
   return (
     <div className={`min-w-0 ${className}`}>

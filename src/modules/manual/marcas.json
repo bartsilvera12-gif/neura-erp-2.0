@@ -2664,100 +2664,109 @@
   "rrhh-ficha": {
    "Nombres *": {
     "x": 21.6,
-    "y": 25
+    "y": 31.1
    },
    "Número de CI": {
-    "x": 72,
-    "y": 25
+    "x": 21.6,
+    "y": 36
    },
    "Fecha de nacimiento": {
-    "x": 21.6,
-    "y": 29.1
+    "x": 39.6,
+    "y": 36
    },
    "Número de contacto": {
-    "x": 46.8,
-    "y": 29.1
+    "x": 21.6,
+    "y": 41
    },
    "Dirección": {
-    "x": 21.6,
-    "y": 34.3
+    "x": 61.2,
+    "y": 31.1
    },
    "Contacto de emergencia: nombre": {
-    "x": 21.6,
-    "y": 38.5
+    "x": 61.2,
+    "y": 40.9
    },
    "Fecha de ingreso *": {
     "x": 21.6,
-    "y": 46.9
+    "y": 55
    },
    "Área de trabajo": {
-    "x": 72,
-    "y": 46.9
+    "x": 21.6,
+    "y": 61.4
+   },
+   "Perfil": {
+    "x": 21.6,
+    "y": 66.4
+   },
+   "Sucursal": {
+    "x": 39.6,
+    "y": 66.4
    },
    "Cómo cobra": {
-    "x": 21.6,
-    "y": 61.8
+    "x": 61.2,
+    "y": 54
    },
    "Salario mensual (Gs.)": {
-    "x": 46.8,
-    "y": 61.8
+    "x": 79.1,
+    "y": 54
    },
    "Aporta IPS": {
-    "x": 72,
-    "y": 63.1
+    "x": 61.2,
+    "y": 60.8
    },
    "Comisiona": {
-    "x": 21.6,
-    "y": 67
+    "x": 96.8,
+    "y": 60.8,
+    "lado": "der"
    },
    "Lu": {
     "x": 21.6,
-    "y": 74.7
+    "y": 81.8
    },
    "Entrada": {
-    "x": 21.6,
-    "y": 77.1
+    "x": 49.7,
+    "y": 79.7
    },
    "Guardar": {
-    "x": 91,
-    "y": 84.2
+    "x": 89.7,
+    "y": 87.8
    },
    "ANTIGÜEDAD": {
-    "x": 40.8,
-    "y": 13.6
+    "x": 73.5,
+    "y": 16.1
    },
    "AGUINALDO ACUMULADO": {
-    "x": 80.2,
-    "y": 13.6
+    "x": 86.4,
+    "y": 16.6
    }
   },
   "rrhh-salario": {
    "Salario mensual (Gs.)": {
-    "x": 46.8,
-    "y": 61.8
+    "x": 79.1,
+    "y": 54
    },
    "Motivo del cambio *": {
-    "x": 72,
-    "y": 61.8
+    "x": 61.2,
+    "y": 59
    },
    "Guardar": {
-    "x": 91,
-    "y": 85.3
+    "x": 89.7,
+    "y": 87.8
    }
   },
   "rrhh-ausencias": {
    "Ausencias": {
-    "x": 29.7,
-    "y": 41,
+    "x": 30.8,
+    "y": 40.7,
     "lado": "abajo"
    },
    "Registrar ausencia": {
     "x": 83.9,
-    "y": 45.2
+    "y": 56.5
    },
    "Anular": {
     "x": 91.2,
-    "y": 52.1
+    "y": 63.3
    }
   },
   "rrhh-ausencia-nueva": {
@@ -2795,29 +2804,29 @@
   },
   "rrhh-vacaciones": {
    "Vacaciones": {
-    "x": 38,
-    "y": 41,
+    "x": 39.7,
+    "y": 40.7,
     "lado": "abajo"
    },
    "DISPONIBLES": {
     "x": 21.2,
-    "y": 45.7
+    "y": 45
    },
    "GENERADOS": {
     "x": 40.8,
-    "y": 45.7
+    "y": 45
    },
    "PRÓXIMOS": {
     "x": 80.2,
-    "y": 45.7
+    "y": 45
    },
    "Cargar vacaciones": {
     "x": 83.8,
-    "y": 60.2
+    "y": 59.6
    },
    "Anular": {
     "x": 91.2,
-    "y": 67.1
+    "y": 66.4
    }
   },
   "rrhh-vacacion-nueva": {
@@ -2845,21 +2854,21 @@
   },
   "rrhh-historial": {
    "Historial": {
-    "x": 55.6,
-    "y": 28.4,
+    "x": 58.4,
+    "y": 36.6,
     "lado": "abajo"
    },
    "Agregar al historial": {
-    "x": 66.1,
-    "y": 31.3
+    "x": 83.9,
+    "y": 40.1
    },
    "Cambio de salario": {
     "x": 22.9,
-    "y": 46
+    "y": 59.2
    },
    "Ascenso o cambio de puesto": {
     "x": 22.9,
-    "y": 57.6
+    "y": 74.4
    }
   },
   "rrhh-historial-nota": {

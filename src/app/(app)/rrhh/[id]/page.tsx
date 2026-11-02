@@ -4,12 +4,14 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Award, Banknote, Briefcase, Clock, Loader2, MapPin, Plus, TrendingUp, UserRound } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { hoyPY } from "@/lib/fecha/paraguay";
+import { usePermiso } from "@/lib/sesion/ContextoUsuario";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { EventoDatos, EventoMotivo, EventoTarjeta, LineaTiempo } from "@/components/LineaTiempo";
 import { Modal } from "@/components/Modal";
+import { ScrollHorizontal } from "@/components/ScrollHorizontal";
 import { Select } from "@/components/Select";
 import { SelectorFecha } from "@/components/SelectorFecha";
 import { fechaCorta, gs } from "@/components/graficos/formato";
@@ -17,14 +19,14 @@ import { etiquetaMes } from "@/modules/comisiones/calculo";
 import { PIE_MODAL } from "@/modules/clientes/ui";
 import { aguinaldo, antiguedad, diasDelAnio, textoAntiguedad, vacaciones } from "@/modules/rrhh/calculo";
 import { TIPOS_AUSENCIA, TIPOS_NOTA, etiquetaAusencia, type EventoRrhh, type FichaRrhh, type Legajo, type TipoAusencia } from "@/modules/rrhh/tipos";
-import { BOTON, BOTON_PRIMARIO, Campo, CampoMonto, Cifra, INPUT, Interruptor, renglonesExtracto } from "@/modules/rrhh/ui";
+import { BOTON, BOTON_PRIMARIO, Campo, CampoMonto, Cifra, INPUT, Interruptor, Tarjeta, renglonesExtracto } from "@/modules/rrhh/ui";
 
 type Tab = "datos" | "ausencias" | "vacaciones" | "liquidaciones" | "historial";
 const DIAS: [number, string][] = [[1, "Lu"], [2, "Ma"], [3, "Mi"], [4, "Ju"], [5, "Vi"], [6, "Sá"], [7, "Do"]];
 
 const accion = (id: string, body: object) => apiFetch(`/api/rrhh/${id}`, { method: "POST", body: JSON.stringify(body) });
 
-type Form = Omit<Legajo, "fecha_ingreso"> & { fecha_ingreso: string; nombres: string; apellidos: string; ci: string; telefono: string; motivo_salario: string };
+type Form = Omit<Legajo, "fecha_ingreso"> & { fecha_ingreso: string; nombres: string; apellidos: string; ci: string; telefono: string; motivo_salario: string; perfil_id: string; sucursal_id: string };
 
 function armarForm(f: FichaRrhh): Form {
   const l = f.legajo;
@@ -34,7 +36,7 @@ function armarForm(f: FichaRrhh): Form {
     emergencia_nombre: l?.emergencia_nombre ?? "", emergencia_telefono: l?.emergencia_telefono ?? "", fecha_ingreso: l?.fecha_ingreso ?? "", fecha_egreso: l?.fecha_egreso ?? "",
     tipo_salario: l?.tipo_salario ?? "mensualero", salario: Number(l?.salario ?? 0), aporta_ips: l?.aporta_ips ?? true, comisiona: l?.comisiona ?? true, area: l?.area ?? "",
     horario_dias: l?.horario_dias ?? [1, 2, 3, 4, 5, 6], horario_entrada: l?.horario_entrada?.slice(0, 5) ?? "", horario_salida: l?.horario_salida?.slice(0, 5) ?? "", horario_nota: l?.horario_nota ?? "",
-    motivo_salario: "",
+    motivo_salario: "", perfil_id: f.usuario.perfil_id ?? "", sucursal_id: f.usuario.sucursal_id ?? "",
   };
 }
 
@@ -43,6 +45,7 @@ function Datos({ ficha, onGuardado }: { ficha: FichaRrhh; onGuardado: () => void
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [listo, setListo] = useState(false);
+  const puedeAcceso = usePermiso("administrar_usuarios");
   const set = <K extends keyof Form>(k: K, v: Form[K]) => { setF((x) => ({ ...x, [k]: v })); setListo(false); };
   const cambiaSalario = !!ficha.legajo && Number(ficha.legajo.salario) !== f.salario;
   const texto = (k: "nombres" | "apellidos" | "ci" | "telefono" | "direccion" | "barrio" | "ciudad" | "emergencia_nombre" | "emergencia_telefono" | "area" | "horario_nota") => (
@@ -52,8 +55,11 @@ function Datos({ ficha, onGuardado }: { ficha: FichaRrhh; onGuardado: () => void
   async function guardar() {
     setBusy(true);
     setError(null);
+    const { perfil_id, sucursal_id, ...sinAcceso } = f;
+    const cambio = perfil_id !== (ficha.usuario.perfil_id ?? "") || sucursal_id !== (ficha.usuario.sucursal_id ?? "");
+    const acceso = cambio ? { perfil_id, sucursal_id: sucursal_id || null } : undefined;
     try {
-      await apiFetch(`/api/rrhh/${ficha.usuario.id}`, { method: "PUT", body: JSON.stringify(f) });
+      await apiFetch(`/api/rrhh/${ficha.usuario.id}`, { method: "PUT", body: JSON.stringify({ ...sinAcceso, acceso }) });
       setListo(true);
       onGuardado();
     } catch (e) {
@@ -63,70 +69,81 @@ function Datos({ ficha, onGuardado }: { ficha: FichaRrhh; onGuardado: () => void
     }
   }
 
-  const seccion = "rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-5";
-  const titulo = "mb-3 text-sm font-semibold text-slate-900";
-  const grilla = "grid gap-3 sm:grid-cols-2 lg:grid-cols-3";
+  const grilla = "grid gap-3 sm:grid-cols-2";
+  const hayCambios = JSON.stringify(f) !== JSON.stringify(armarForm(ficha));
   return (
     <div className="space-y-4">
-      <section className={seccion}>
-        <h3 className={titulo}>Datos personales</h3>
-        <div className={grilla}>
-          <Campo label="Nombres *">{texto("nombres")}</Campo>
-          <Campo label="Apellidos">{texto("apellidos")}</Campo>
-          <Campo label="Número de CI">{texto("ci")}</Campo>
-          <Campo label="Fecha de nacimiento"><SelectorFecha block value={f.fecha_nacimiento ?? ""} onChange={(v) => set("fecha_nacimiento", v)} max={hoyPY()} /></Campo>
-          <Campo label="Número de contacto">{texto("telefono")}</Campo>
-          <Campo label="Correo" ayuda="Es su usuario para entrar: se cambia desde su cuenta."><input className={`${INPUT} bg-slate-50 text-slate-500`} value={ficha.usuario.email ?? ""} readOnly /></Campo>
-          <Campo label="Dirección">{texto("direccion")}</Campo>
-          <Campo label="Barrio">{texto("barrio")}</Campo>
-          <Campo label="Ciudad">{texto("ciudad")}</Campo>
-          <Campo label="Contacto de emergencia: nombre">{texto("emergencia_nombre")}</Campo>
-          <Campo label="Contacto de emergencia: teléfono">{texto("emergencia_telefono")}</Campo>
-        </div>
-      </section>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Tarjeta icono={<UserRound className="h-4 w-4" />} titulo="Datos personales" detalle="Quién es y cómo ubicarlo.">
+          <div className={grilla}>
+            <Campo label="Nombres *">{texto("nombres")}</Campo>
+            <Campo label="Apellidos">{texto("apellidos")}</Campo>
+            <Campo label="Número de CI">{texto("ci")}</Campo>
+            <Campo label="Fecha de nacimiento"><SelectorFecha block value={f.fecha_nacimiento ?? ""} onChange={(v) => set("fecha_nacimiento", v)} max={hoyPY()} /></Campo>
+            <Campo label="Número de contacto">{texto("telefono")}</Campo>
+            <Campo label="Correo" ayuda="Es su usuario para entrar."><input className={`${INPUT} bg-slate-50 text-slate-500`} value={ficha.usuario.email ?? ""} placeholder="Sin correo" readOnly /></Campo>
+          </div>
+        </Tarjeta>
 
-      <section className={seccion}>
-        <h3 className={titulo}>Trabajo</h3>
-        <div className={grilla}>
-          <Campo label="Fecha de ingreso *" ayuda="De acá salen la antigüedad, las vacaciones y el aguinaldo."><SelectorFecha block value={f.fecha_ingreso} onChange={(v) => set("fecha_ingreso", v)} /></Campo>
-          <Campo label="Fecha de salida" ayuda="Solo si dejó de trabajar."><SelectorFecha block value={f.fecha_egreso ?? ""} onChange={(v) => set("fecha_egreso", v)} /></Campo>
-          <Campo label="Área de trabajo">{texto("area")}</Campo>
-          <Campo label="Perfil" ayuda="Se cambia en Configuración › Usuarios."><input className={`${INPUT} bg-slate-50 text-slate-500`} value={ficha.usuario.perfil ?? "—"} readOnly /></Campo>
-          <Campo label="Sucursal" ayuda="Se cambia en Configuración › Usuarios."><input className={`${INPUT} bg-slate-50 text-slate-500`} value={ficha.usuario.sucursal ?? "Todas"} readOnly /></Campo>
-        </div>
-      </section>
+        <Tarjeta icono={<MapPin className="h-4 w-4" />} titulo="Dirección y emergencia" detalle="Dónde vive y a quién llamar si pasa algo.">
+          <div className={grilla}>
+            <Campo label="Dirección" className="sm:col-span-2">{texto("direccion")}</Campo>
+            <Campo label="Barrio">{texto("barrio")}</Campo>
+            <Campo label="Ciudad">{texto("ciudad")}</Campo>
+            <Campo label="Contacto de emergencia: nombre">{texto("emergencia_nombre")}</Campo>
+            <Campo label="Contacto de emergencia: teléfono">{texto("emergencia_telefono")}</Campo>
+          </div>
+        </Tarjeta>
 
-      <section className={seccion}>
-        <h3 className={titulo}>Salario</h3>
-        <div className={grilla}>
-          <Campo label="Cómo cobra"><Select block value={f.tipo_salario} onChange={(v) => set("tipo_salario", v as Form["tipo_salario"])} options={[["mensualero", "Mensualero"], ["jornalero", "Jornalero"]]} etiqueta="Cómo cobra" /></Campo>
-          <Campo label={f.tipo_salario === "jornalero" ? "Jornal por día (Gs.)" : "Salario mensual (Gs.)"}><CampoMonto valor={f.salario} onChange={(n) => set("salario", n)} /></Campo>
-          {cambiaSalario ? <Campo label="Motivo del cambio *" ayuda="Queda en el historial."><input className={INPUT} value={f.motivo_salario} onChange={(e) => set("motivo_salario", e.target.value)} placeholder="Ej: aumento anual, ascenso" /></Campo> : null}
-          <Interruptor valor={f.aporta_ips} onChange={(v) => set("aporta_ips", v)} label="Aporta IPS" />
-          <Interruptor valor={f.comisiona} onChange={(v) => set("comisiona", v)} label="Comisiona" ayuda="Si está apagado, sale de Comisiones." />
-        </div>
-      </section>
+        <Tarjeta icono={<Briefcase className="h-4 w-4" />} titulo="Trabajo" detalle="De la fecha de ingreso salen la antigüedad, las vacaciones y el aguinaldo.">
+          <div className={grilla}>
+            <Campo label="Fecha de ingreso *"><SelectorFecha block value={f.fecha_ingreso} onChange={(v) => set("fecha_ingreso", v)} /></Campo>
+            <Campo label="Fecha de salida" ayuda="Solo si dejó de trabajar."><SelectorFecha block value={f.fecha_egreso ?? ""} onChange={(v) => set("fecha_egreso", v)} /></Campo>
+            <Campo label="Área de trabajo" className="sm:col-span-2">{texto("area")}</Campo>
+            <Campo label="Perfil" ayuda={ficha.usuario.es_yo ? "Tu propio perfil lo cambia otro administrador." : "Define qué puede hacer en el sistema."}>
+              <Select block value={f.perfil_id} onChange={(v) => set("perfil_id", v)} etiqueta="Perfil" disabled={ficha.usuario.es_yo || !puedeAcceso} options={ficha.perfiles.map((p): [string, string] => [p.id, p.nombre])} />
+            </Campo>
+            <Campo label="Sucursal">
+              <Select block value={f.sucursal_id} onChange={(v) => set("sucursal_id", v)} etiqueta="Sucursal" disabled={!puedeAcceso}
+                options={[["", "Sin sucursal fija (usa la principal)"], ...ficha.sucursales.map((s): [string, string] => [s.id, s.nombre + (s.es_principal ? " (principal)" : "")])]} />
+            </Campo>
+          </div>
+        </Tarjeta>
 
-      <section className={seccion}>
-        <h3 className={titulo}>Horario de trabajo</h3>
-        <div className="mb-3 flex flex-wrap gap-1.5">
-          {DIAS.map(([n, l]) => {
-            const on = f.horario_dias.includes(n);
-            return <button key={n} type="button" aria-pressed={on} onClick={() => set("horario_dias", on ? f.horario_dias.filter((x) => x !== n) : [...f.horario_dias, n].sort())}
-              className={`h-11 w-11 rounded-xl border text-sm font-semibold transition-colors ${on ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-slate-200 bg-white text-slate-600"}`}>{l}</button>;
-          })}
-        </div>
-        <div className={grilla}>
-          <Campo label="Entrada"><input type="time" className={INPUT} value={f.horario_entrada ?? ""} onChange={(e) => set("horario_entrada", e.target.value)} /></Campo>
-          <Campo label="Salida"><input type="time" className={INPUT} value={f.horario_salida ?? ""} onChange={(e) => set("horario_salida", e.target.value)} /></Campo>
-          <Campo label="Nota" ayuda="Ej: sábados hasta las 12, turno cortado.">{texto("horario_nota")}</Campo>
-        </div>
-      </section>
+        <Tarjeta icono={<Banknote className="h-4 w-4" />} titulo="Salario" detalle="Cada cambio queda en el historial.">
+          <div className={grilla}>
+            <Campo label="Cómo cobra"><Select block value={f.tipo_salario} onChange={(v) => set("tipo_salario", v as Form["tipo_salario"])} options={[["mensualero", "Mensualero"], ["jornalero", "Jornalero"]]} etiqueta="Cómo cobra" /></Campo>
+            <Campo label={f.tipo_salario === "jornalero" ? "Jornal por día (Gs.)" : "Salario mensual (Gs.)"}><CampoMonto valor={f.salario} onChange={(n) => set("salario", n)} /></Campo>
+            {cambiaSalario ? <Campo label="Motivo del cambio *" ayuda="Queda en el historial." className="sm:col-span-2"><input className={INPUT} value={f.motivo_salario} onChange={(e) => set("motivo_salario", e.target.value)} placeholder="Ej: aumento anual, ascenso" /></Campo> : null}
+            <Interruptor valor={f.aporta_ips} onChange={(v) => set("aporta_ips", v)} label="Aporta IPS" ayuda="Le descuenta el 9 %." />
+            <Interruptor valor={f.comisiona} onChange={(v) => set("comisiona", v)} label="Comisiona" ayuda="Apagado, sale de Comisiones." />
+          </div>
+        </Tarjeta>
+
+        <Tarjeta icono={<Clock className="h-4 w-4" />} titulo="Horario de trabajo" detalle="Los días que trabaja y a qué hora entra y sale." className="xl:col-span-2">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-end">
+            <Campo label="Días">
+              <div className="flex flex-wrap gap-1.5">
+                {DIAS.map(([n, l]) => {
+                  const on = f.horario_dias.includes(n);
+                  return <button key={n} type="button" aria-pressed={on} onClick={() => set("horario_dias", on ? f.horario_dias.filter((x) => x !== n) : [...f.horario_dias, n].sort())}
+                    className={`h-11 w-11 rounded-xl border text-sm font-semibold transition-colors ${on ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-slate-200 bg-white text-slate-600"}`}>{l}</button>;
+                })}
+              </div>
+            </Campo>
+            <div className="grid flex-1 gap-3 sm:grid-cols-[140px_140px_1fr]">
+              <Campo label="Entrada"><input type="time" className={INPUT} value={f.horario_entrada ?? ""} onChange={(e) => set("horario_entrada", e.target.value)} /></Campo>
+              <Campo label="Salida"><input type="time" className={INPUT} value={f.horario_salida ?? ""} onChange={(e) => set("horario_salida", e.target.value)} /></Campo>
+              <Campo label="Nota">{texto("horario_nota")}</Campo>
+            </div>
+          </div>
+        </Tarjeta>
+      </div>
 
       {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
-      <div className="flex items-center justify-end gap-3">
-        {listo ? <span className="text-sm font-medium text-emerald-700">Guardado</span> : null}
-        <button type="button" onClick={() => void guardar()} disabled={busy} className={`${BOTON_PRIMARIO} max-sm:w-full`}>
+      <div className="sticky bottom-3 z-10 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
+        <span className={`text-sm ${listo ? "font-medium text-emerald-700" : "text-slate-500"}`}>{listo ? "Guardado" : hayCambios || !ficha.legajo ? "Tenés cambios sin guardar." : "Sin cambios."}</span>
+        <button type="button" onClick={() => void guardar()} disabled={busy || (!hayCambios && !!ficha.legajo)} className={BOTON_PRIMARIO}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar
         </button>
       </div>
@@ -167,6 +184,9 @@ function Ausencias({ ficha, onCambio }: { ficha: FichaRrhh; onCambio: () => void
   const jornalero = ficha.legajo?.tipo_salario === "jornalero";
   const salario = Number(ficha.legajo?.salario ?? 0);
   const n = Number(dias.replace(",", ".")) || 0;
+  const anio = hoyPY().slice(0, 4);
+  const delAnio = ficha.ausencias.filter((a) => !a.anulada_at && a.fecha.startsWith(anio));
+  const diasDe = (l: typeof delAnio) => l.reduce((s, a) => s + Number(a.dias), 0);
 
   async function guardar() {
     setBusy(true);
@@ -185,6 +205,11 @@ function Ausencias({ ficha, onCambio }: { ficha: FichaRrhh; onCambio: () => void
 
   return (
     <div className="space-y-3">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+        <Cifra label={`Días en ${anio}`} valor={diasDe(delAnio)} />
+        <Cifra label="Descuentan" valor={diasDe(delAnio.filter((a) => a.descuenta))} sub="Días" />
+        <Cifra label="No descuentan" valor={diasDe(delAnio.filter((a) => !a.descuenta))} sub="Días" />
+      </div>
       <div className="flex justify-end"><button type="button" className={`${BOTON_PRIMARIO} max-sm:w-full`} onClick={() => setNueva(true)}><Plus className="h-4 w-4" /> Registrar ausencia</button></div>
       {ficha.ausencias.length === 0 ? <p className="py-6 text-center text-sm text-slate-400">No tiene ausencias registradas.</p> : null}
       <ul className="space-y-2">
@@ -405,10 +430,47 @@ function Historial({ ficha, onCambio }: { ficha: FichaRrhh; onCambio: () => void
       setBusy(false);
     }
   }
+  const aumentos = ficha.historial.filter((e) => e.accion === "salario");
+  const alta = ficha.historial.find((e) => e.accion === "legajo_creado");
+  const evolucion = [
+    ...aumentos.map((e) => ({ id: e.id, fecha: e.created_at, monto: Number(e.detalle.despues), antes: Number(e.detalle.antes) })),
+    ...(alta ? [{ id: alta.id, fecha: alta.created_at, monto: Number(alta.detalle.salario), antes: 0 }] : []),
+  ];
+  const hitos = ficha.historial.filter((e) => e.accion === "nota").length;
   return (
-    <div className="max-w-3xl space-y-4">
-      <div className="flex justify-end"><button type="button" className={`${BOTON_PRIMARIO} max-sm:w-full`} onClick={() => setNueva(true)}><Plus className="h-4 w-4" /> Agregar al historial</button></div>
-      {ficha.historial.length === 0 ? <p className="py-6 text-center text-sm text-slate-400">Todavía no hay nada registrado.</p> : <LineaTiempo eventos={ficha.historial} clave={(e) => e.id} fecha={(e) => e.created_at} render={(e) => <Evento e={e} />} />}
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3 max-sm:flex-col max-sm:items-stretch">
+        <p className="text-sm text-slate-500">Todo lo que pasó con esta persona, de lo más nuevo a lo más viejo.</p>
+        <button type="button" className={BOTON_PRIMARIO} onClick={() => setNueva(true)}><Plus className="h-4 w-4" /> Agregar al historial</button>
+      </div>
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="min-w-0">
+          {ficha.historial.length === 0 ? <p className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-400">Todavía no hay nada registrado.</p> : <LineaTiempo eventos={ficha.historial} clave={(e) => e.id} fecha={(e) => e.created_at} render={(e) => <Evento e={e} />} />}
+        </div>
+        <aside className="space-y-4 lg:sticky lg:top-3">
+          <Tarjeta icono={<TrendingUp className="h-4 w-4" />} titulo="Evolución del salario">
+            {evolucion.length === 0 ? <p className="text-sm text-slate-400">Se arma cuando cargues su salario.</p> : (
+              <ol className="m-0 list-none space-y-2.5 p-0">
+                {evolucion.map((x, i) => (
+                  <li key={x.id} className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="text-slate-500">{fechaCorta(new Date(x.fecha).toLocaleDateString("sv-SE", { timeZone: "America/Asuncion" }))}</span>
+                    <span className={`tabular-nums ${i === 0 ? "font-semibold text-slate-900" : "text-slate-600"}`}>
+                      {gs(x.monto)}{x.antes > 0 && x.monto !== x.antes ? <span className={x.monto > x.antes ? " text-emerald-700" : " text-rose-700"}> {x.monto > x.antes ? "+" : ""}{(((x.monto - x.antes) / x.antes) * 100).toLocaleString("es-PY", { maximumFractionDigits: 1 })} %</span> : null}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </Tarjeta>
+          <Tarjeta icono={<Award className="h-4 w-4" />} titulo="En resumen">
+            <dl className="m-0 space-y-2 text-sm">
+              {([["Cambios de salario", aumentos.length], ["Ascensos y otros hitos", hitos], ["Ausencias", ficha.ausencias.filter((a) => !a.anulada_at).length], ["Vacaciones", ficha.vacaciones.filter((v) => !v.anulada_at).length]] as [string, number][]).map(([k, v]) => (
+                <div key={k} className="flex justify-between gap-3"><dt className="text-slate-500">{k}</dt><dd className="m-0 font-semibold tabular-nums text-slate-900">{v}</dd></div>
+              ))}
+            </dl>
+          </Tarjeta>
+        </aside>
+      </div>
       {nueva ? (
         <Modal titulo="Agregar al historial" onClose={busy ? () => {} : () => setNueva(false)}>
           <div className="space-y-3">
@@ -450,28 +512,51 @@ export default function PaginaFicha() {
   const tabs: [Tab, string][] = [["datos", "Datos"], ["ausencias", "Ausencias"], ["vacaciones", "Vacaciones"], ["liquidaciones", "Liquidaciones"], ["historial", "Historial"]];
 
   return (
-    <div className="space-y-4">
-      <EncabezadoPagina kicker="RR HH" titulo={ficha.usuario.nombre} subtitulo={[ficha.usuario.perfil, ficha.usuario.sucursal, l?.area].filter(Boolean).join(" · ")} volver={volver} />
-      {l && ag ? (
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Cifra label={l.tipo_salario === "jornalero" ? "Jornal" : "Salario"} valor={gs(l.salario)} sub={l.tipo_salario === "jornalero" ? "Por día" : "Mensual"} />
-          <Cifra label="Antigüedad" valor={textoAntiguedad(antiguedad(l.fecha_ingreso, corte))} sub={`Desde ${fechaCorta(l.fecha_ingreso)}`} />
-          <Cifra label="Vacaciones" valor={`${vacaciones(l.fecha_ingreso, corte, tomados).saldo} días`} sub="Disponibles" />
-          <Cifra label="Aguinaldo acumulado" valor={gs(ag.total)} sub={[ag.meses_cerrados ? `Cerrado: ${ag.meses_cerrados} ${ag.meses_cerrados === 1 ? "mes" : "meses"}` : "", ag.meses_estimados ? `Estimado: ${ag.meses_estimados} ${ag.meses_estimados === 1 ? "mes" : "meses"}` : ""].filter(Boolean).join(" · ") || "Sin meses cerrados"} />
+    <div className="space-y-4 pb-10">
+      <Link href={volver.href} className="-my-2 flex min-h-11 w-fit items-center gap-1 text-xs text-slate-400 no-underline hover:text-slate-600 sm:my-0 sm:min-h-0">← {volver.label}</Link>
+      <div className="overflow-hidden rounded-2xl border border-[var(--brand)]/40 bg-white shadow-sm">
+        <div className="flex items-center gap-3 bg-gradient-to-br from-white via-white to-[var(--brand-50)] px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
+          <span aria-hidden className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[var(--brand)] text-lg font-semibold text-white">{ficha.usuario.nombre.trim().split(/\s+/).slice(0, 2).map((x) => x[0]?.toUpperCase() ?? "").join("")}</span>
+          <div className="min-w-0 flex-1">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand)] max-sm:hidden">RR HH</p>
+            <h1 className="mt-0.5 text-xl font-semibold leading-tight tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{ficha.usuario.nombre}</h1>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+              {ficha.usuario.ci ? <span><span className="font-medium text-slate-400">CI:</span> {ficha.usuario.ci}</span> : null}
+              {ficha.usuario.telefono ? <span>{ficha.usuario.telefono}</span> : null}
+              {!ficha.usuario.activo ? <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">Inactivo</span>
+                : l?.fecha_egreso ? <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-700">Salió el {fechaCorta(l.fecha_egreso)}</span>
+                : l ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 font-semibold text-emerald-700">Activo</span>
+                : <span className="rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-700">Falta cargar sus datos</span>}
+            </div>
+          </div>
         </div>
-      ) : (
-        <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Cargá sus datos para poder registrar ausencias y vacaciones y liquidarle el mes.</p>
-      )}
-
-      <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none]" role="tablist">
-        {tabs.map(([t, label]) => {
-          const bloqueada = !l && t !== "datos" && t !== "historial";
-          return (
-            <button key={t} type="button" role="tab" aria-selected={tab === t} disabled={bloqueada} onClick={() => setTab(t)}
-              className={`min-h-11 shrink-0 rounded-xl px-3.5 text-sm font-semibold transition-colors disabled:opacity-40 sm:min-h-9 ${tab === t ? "bg-[var(--brand)] text-white" : "text-slate-600 hover:bg-slate-100"}`}>{label}</button>
-          );
-        })}
+        <div className="grid grid-cols-2 gap-px border-t border-slate-100 bg-slate-100 md:grid-cols-3 xl:grid-cols-6">
+          {([
+            ["Perfil", ficha.usuario.perfil ?? "—", ""],
+            ["Sucursal", ficha.usuario.sucursal ?? "Sin sucursal fija", ""],
+            ["Área", l?.area ?? "—", ""],
+            [l?.tipo_salario === "jornalero" ? "Jornal" : "Salario", l ? gs(l.salario) : "—", l ? (l.tipo_salario === "jornalero" ? "Por día" : "Por mes") : ""],
+            ["Antigüedad", l ? textoAntiguedad(antiguedad(l.fecha_ingreso, corte)) : "—", l ? `Desde ${fechaCorta(l.fecha_ingreso)}` : ""],
+            ["Aguinaldo acumulado", ag ? gs(ag.total) : "—", ag ? [ag.meses_cerrados ? `Cerrado: ${ag.meses_cerrados} ${ag.meses_cerrados === 1 ? "mes" : "meses"}` : "", ag.meses_estimados ? `Estimado: ${ag.meses_estimados} ${ag.meses_estimados === 1 ? "mes" : "meses"}` : ""].filter(Boolean).join(" · ") : ""],
+          ] as [string, string, string][]).map(([k, v, sub]) => (
+            <div key={k} className="min-w-0 bg-[#fcfdfd] px-3 py-3 sm:px-5 sm:py-3.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{k}</p>
+              <p className="mt-1 truncate text-sm font-semibold text-slate-900">{v}</p>
+              {sub ? <p className="mt-0.5 truncate text-[11px] text-slate-500">{sub}</p> : null}
+            </div>
+          ))}
+        </div>
+        <ScrollHorizontal role="tablist" className="border-t border-slate-100" claseFila="gap-0" dependencias={[tab]}>
+          {tabs.map(([t, label]) => {
+            const bloqueada = !l && t !== "datos" && t !== "historial";
+            return (
+              <button key={t} type="button" role="tab" aria-selected={tab === t} disabled={bloqueada} title={bloqueada ? "Primero guardá sus datos" : undefined} onClick={() => setTab(t)}
+                className={`min-h-11 shrink-0 whitespace-nowrap border-b-2 px-4 py-3 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-40 sm:px-5 ${tab === t ? "border-[var(--brand)] text-slate-900" : "border-transparent text-slate-500 hover:text-slate-700"}`}>{label}</button>
+            );
+          })}
+        </ScrollHorizontal>
       </div>
+      {!l ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Completá la <b>fecha de ingreso</b> y tocá <b>Guardar</b>: ahí se prenden Ausencias, Vacaciones y Liquidaciones.</p> : null}
 
       {tab === "datos" ? <Datos key={l ? "con" : "sin"} ficha={ficha} onGuardado={cargar} /> : null}
       {tab === "ausencias" && l ? <Ausencias ficha={ficha} onCambio={cargar} /> : null}

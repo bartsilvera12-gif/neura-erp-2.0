@@ -30,6 +30,8 @@ export const guardarLegajo = z.object({
   horario_salida: hora,
   horario_nota: texto(200),
   motivo_salario: texto(300),
+  // Solo si cambiaron: van por admin_actualizar_usuario.
+  acceso: z.object({ perfil_id: z.string().uuid(), sucursal_id: z.string().uuid().nullable() }).optional(),
 });
 
 export const accionFicha = z.discriminatedUnion("accion", [

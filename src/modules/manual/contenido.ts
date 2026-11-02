@@ -848,6 +848,8 @@ export const GUIAS: Guia[] = [
         { t: "Escribí a quién llamar en una emergencia.", d: "Su nombre y su teléfono.", marca: "Contacto de emergencia: nombre" },
         { t: "Elegí la fecha en que empezó a trabajar.", d: "De acá salen la antigüedad, las vacaciones y el aguinaldo.", marca: "Fecha de ingreso *" },
         { t: "Escribí en qué área trabaja.", d: "Por ejemplo: Ventas, Caja o Depósito.", marca: "Área de trabajo" },
+        { t: "Elegí su perfil.", d: "Define qué puede hacer en el sistema. Tu propio perfil lo cambia otro administrador.", marca: "Perfil" },
+        { t: "Elegí su sucursal.", marca: "Sucursal" },
         { t: "Elegí si es mensualero o jornalero.", marca: "Cómo cobra" },
         { t: "Escribí cuánto gana.", d: "Si es jornalero, cuánto gana por día.", marca: "Salario mensual (Gs.)" },
         { t: "Dejá prendido Aporta IPS si aporta.", marca: "Aporta IPS" },
@@ -857,7 +859,7 @@ export const GUIAS: Guia[] = [
         { t: "Tocá Guardar.", marca: "Guardar" },
         { t: "Arriba ves su antigüedad, sus vacaciones y su aguinaldo.", d: "Se calculan solos.", marca: "ANTIGÜEDAD" },
       ] },
-      { ojo: "El correo, el perfil y la sucursal no se cambian acá. El perfil y la sucursal se cambian en Configuración › Usuarios." },
+      { ojo: "El correo no se cambia acá: es su usuario para entrar." },
     ],
   },
   {

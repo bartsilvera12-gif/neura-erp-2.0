@@ -7,6 +7,7 @@
 import type { NextRequest } from "next/server";
 import { withTenant } from "@/lib/api/with-tenant";
 import { ERR, ok } from "@/lib/api/responses";
+import { invalidarSesiones } from "@/lib/api/resolve-session";
 import { errorDb } from "@/modules/clientes/suscripciones/server";
 import { accionFicha, guardarLegajo } from "@/modules/rrhh/esquemas";
 
@@ -27,7 +28,15 @@ export const GET = withTenant(async (ctx, req) => {
 export const PUT = withTenant(async (ctx, req, input) => {
   const id = idDe(req);
   if (!id) return ERR.invalid("Falta el id");
-  const { error } = await ctx.db.rpc("rrhh_guardar_legajo", { p_usuario: id, p: input });
+  // Primero el acceso: si sus reglas lo rechazan, no se guarda nada.
+  const { acceso, ...legajo } = input;
+  if (acceso) {
+    if (!ctx.puede("administrar_usuarios")) return ERR.forbidden();
+    const r = await ctx.db.rpc("admin_actualizar_usuario", { p_id: id, p: acceso });
+    if (r.error) return errorDb(r.error, "No se pudo cambiar el perfil o la sucursal");
+    invalidarSesiones();
+  }
+  const { error } = await ctx.db.rpc("rrhh_guardar_legajo", { p_usuario: id, p: legajo });
   if (error) return errorDb(error, "No se pudo guardar");
   return ok({ guardado: true });
 }, { permiso: "administrar_rrhh", body: guardarLegajo });
