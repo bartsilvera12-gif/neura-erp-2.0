@@ -18,6 +18,7 @@ import { Aviso, Interruptor, Tarjeta } from "@/modules/facturacion/ui";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO } from "@/modules/inventario/ui";
 import { rubroDe, URL_FUNCIONES, type FuncionesEmpresa, type FuncionPantalla, type Rubro } from "@/modules/configuracion/funciones";
 import { pantallasCatalogo } from "@/modules/registry";
+import { clienteConfig } from "@/cliente.config";
 
 type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean };
 
@@ -26,7 +27,7 @@ const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: 
     key: "comercio",
     titulo: "Comercio",
     ejemplos: "Ferretería, almacén, tienda",
-    resumen: "Caja, inventario y compras de siempre, con pedidos de mostrador. Sin mesas, cocina ni recetas.",
+    resumen: "Suma pedidos de mostrador. Sin mesas, cocina ni recetas.",
     Icono: Store,
   },
   {
@@ -51,6 +52,13 @@ function pantallasDelRubro(r: Exclude<Rubro, "personalizado">) {
   const propias = (Object.keys(preset) as (keyof Borrador)[]).filter((k) => preset[k]);
   const catalogo = pantallasCatalogo();
   return propias.flatMap((f) => catalogo.filter((p) => p.funcion === (f as FuncionPantalla)).map((p) => p.label));
+}
+
+/** La base también sale del menú real: los módulos de este cliente con pantallas que no dependen del rubro. */
+function modulosBase() {
+  const pantallas = pantallasCatalogo().filter((p) => !p.funcion);
+  const orden = (id: string) => clienteConfig.modulos.indexOf(id);
+  return [...new Map([...pantallas].sort((a, b) => orden(a.moduloId) - orden(b.moduloId)).map((p) => [p.moduloId, p.moduloLabel])).values()];
 }
 
 export default function RubroFuncionesPage() {
@@ -169,6 +177,14 @@ export default function RubroFuncionesPage() {
         detalle="Aplica las funciones típicas del rubro. Después podés ajustar cada una."
         acciones={rubro === "personalizado" ? <span className="inline-flex items-center justify-center rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-900 ring-1 ring-violet-200">Personalizado</span> : null}
       >
+        <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
+          <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Base, incluida en todos los rubros</span>
+          <span className="mt-1.5 flex flex-wrap gap-1">
+            {modulosBase().map((m) => (
+              <span key={m} className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200">{m}</span>
+            ))}
+          </span>
+        </div>
         <div role="radiogroup" aria-label="Rubro" className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
           {RUBROS.map((r) => {
             const sel = rubro === r.key;
