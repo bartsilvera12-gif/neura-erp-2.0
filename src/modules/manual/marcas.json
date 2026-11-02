@@ -2664,94 +2664,114 @@
   "rrhh-ficha": {
    "Nombres *": {
     "x": 21.6,
-    "y": 31.1
+    "y": 33.6
    },
    "Número de CI": {
     "x": 21.6,
-    "y": 36
+    "y": 38.5
    },
    "Fecha de nacimiento": {
     "x": 39.6,
-    "y": 36
+    "y": 38.5
    },
    "Número de contacto": {
     "x": 21.6,
-    "y": 41
+    "y": 43.6
    },
    "Dirección": {
     "x": 61.2,
-    "y": 31.1
+    "y": 33.6
    },
-   "Contacto de emergencia: nombre": {
+   "Ciudad": {
     "x": 61.2,
-    "y": 40.9
+    "y": 38.5
+   },
+   "Barrio": {
+    "x": 79.1,
+    "y": 38.5
+   },
+   "Correo *": {
+    "x": 39.6,
+    "y": 43.6
+   },
+   "Nombre del contacto": {
+    "x": 61.2,
+    "y": 46.3
+   },
+   "Parentesco": {
+    "x": 61.2,
+    "y": 51.2
+   },
+   "Teléfono del contacto": {
+    "x": 79.1,
+    "y": 51.2
    },
    "Fecha de ingreso *": {
     "x": 21.6,
-    "y": 55
+    "y": 64
    },
    "Área de trabajo": {
     "x": 21.6,
-    "y": 61.4
+    "y": 70.5
    },
    "Perfil": {
     "x": 21.6,
-    "y": 66.4
+    "y": 75.4
    },
    "Sucursal": {
     "x": 39.6,
-    "y": 66.4
+    "y": 75.4
    },
    "Cómo cobra": {
     "x": 61.2,
-    "y": 54
+    "y": 63
    },
    "Salario mensual (Gs.)": {
     "x": 79.1,
-    "y": 54
+    "y": 63
    },
    "Aporta IPS": {
     "x": 61.2,
-    "y": 60.8
+    "y": 69.9
    },
    "Comisiona": {
     "x": 96.8,
-    "y": 60.8,
+    "y": 69.9,
     "lado": "der"
    },
    "Lu": {
     "x": 21.6,
-    "y": 81.8
+    "y": 90.9
    },
    "Entrada": {
-    "x": 49.7,
-    "y": 79.7
+    "x": 49.8,
+    "y": 88.8
    },
    "Guardar": {
-    "x": 89.7,
-    "y": 87.8
+    "x": 85.3,
+    "y": 96
    },
    "ANTIGÜEDAD": {
     "x": 73.5,
-    "y": 16.1
+    "y": 18.5
    },
    "AGUINALDO ACUMULADO": {
     "x": 86.4,
-    "y": 16.6
+    "y": 19
    }
   },
   "rrhh-salario": {
    "Salario mensual (Gs.)": {
     "x": 79.1,
-    "y": 54
+    "y": 63
    },
    "Motivo del cambio *": {
     "x": 61.2,
-    "y": 59
+    "y": 68
    },
    "Guardar": {
-    "x": 89.7,
-    "y": 87.8
+    "x": 85.3,
+    "y": 96
    }
   },
   "rrhh-ausencias": {
@@ -2891,42 +2911,42 @@
   },
   "rrhh-liquidaciones": {
    "noviembre de 2026": {
-    "x": 20,
-    "y": 27
+    "x": 25.1,
+    "y": 31.6
    },
    "NETO A COBRAR": {
-    "x": 21.2,
-    "y": 40.4
+    "x": 21.6,
+    "y": 38.6
    },
    "IPS EMPRESA": {
-    "x": 80.2,
-    "y": 40.4
+    "x": 79.9,
+    "y": 38.6
    },
    "Excel": {
-    "x": 79.2,
-    "y": 20.8
+    "x": 77.3,
+    "y": 20
    },
    "Cerrar el mes": {
-    "x": 92.6,
-    "y": 22.9,
+    "x": 90.6,
+    "y": 22,
     "lado": "abajo"
    },
    "Laura Benítez": {
-    "x": 20.9,
-    "y": 58.9
+    "x": 20.1,
+    "y": 60.2
    },
    "Carlos Rojas": {
-    "x": 20.9,
-    "y": 54.4
+    "x": 20.1,
+    "y": 52.1
    },
    "Faltan días": {
-    "x": 94.8,
-    "y": 54.5,
+    "x": 93.7,
+    "y": 52.1,
     "lado": "der"
    },
    "Cerrada": {
-    "x": 88.2,
-    "y": 63.5
+    "x": 20.1,
+    "y": 68.3
    }
   },
   "rrhh-extracto": {

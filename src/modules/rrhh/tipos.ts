@@ -21,6 +21,8 @@ export type PersonaFila = {
 };
 
 export type Legajo = {
+  correo: string | null;
+  emergencia_parentesco: string | null;
   fecha_nacimiento: string | null;
   direccion: string | null;
   barrio: string | null;
@@ -39,6 +41,10 @@ export type Legajo = {
   horario_salida: string | null;
   horario_nota: string | null;
 };
+
+/** Quién es el contacto de emergencia. */
+export const PARENTESCOS = ["Madre", "Padre", "Esposo/a o pareja", "Hijo/a", "Hermano/a", "Otro familiar", "Amigo/a", "Otro"];
+export const RE_CORREO = /^[^\s@]+@[^\s@]+$/;
 
 export type TipoAusencia = "injustificada" | "permiso_sin_goce" | "permiso_con_goce" | "reposo";
 export const TIPOS_AUSENCIA: { id: TipoAusencia; label: string; descuenta: boolean }[] = [

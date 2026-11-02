@@ -844,8 +844,13 @@ export const GUIAS: Guia[] = [
         { t: "Escribí su número de cédula.", marca: "Número de CI" },
         { t: "Elegí su fecha de nacimiento.", marca: "Fecha de nacimiento" },
         { t: "Escribí su teléfono.", marca: "Número de contacto" },
-        { t: "Escribí su dirección, barrio y ciudad.", marca: "Dirección" },
-        { t: "Escribí a quién llamar en una emergencia.", d: "Su nombre y su teléfono.", marca: "Contacto de emergencia: nombre" },
+        { t: "Escribí su correo.", d: "Es obligatorio y tiene que tener @. No cambia el correo con el que entra al sistema.", marca: "Correo *" },
+        { t: "Escribí su dirección.", marca: "Dirección" },
+        { t: "Elegí su ciudad.", d: "Podés buscarla escribiendo. Si no está, elegí la última opción y escribila.", marca: "Ciudad" },
+        { t: "Elegí su barrio.", d: "La lista muestra solo los barrios de esa ciudad.", marca: "Barrio" },
+        { t: "Escribí el nombre de quién llamar en una emergencia.", marca: "Nombre del contacto" },
+        { t: "Elegí su parentesco.", d: "Por ejemplo: madre, hermano o pareja.", marca: "Parentesco" },
+        { t: "Escribí el teléfono de ese contacto.", marca: "Teléfono del contacto" },
         { t: "Elegí la fecha en que empezó a trabajar.", d: "De acá salen la antigüedad, las vacaciones y el aguinaldo.", marca: "Fecha de ingreso *" },
         { t: "Escribí en qué área trabaja.", d: "Por ejemplo: Ventas, Caja o Depósito.", marca: "Área de trabajo" },
         { t: "Elegí su perfil.", d: "Define qué puede hacer en el sistema. Tu propio perfil lo cambia otro administrador.", marca: "Perfil" },
@@ -859,7 +864,7 @@ export const GUIAS: Guia[] = [
         { t: "Tocá Guardar.", marca: "Guardar" },
         { t: "Arriba ves su antigüedad, sus vacaciones y su aguinaldo.", d: "Se calculan solos.", marca: "ANTIGÜEDAD" },
       ] },
-      { ojo: "El correo no se cambia acá: es su usuario para entrar." },
+      { ojo: "Sin un correo con @ no se puede guardar." },
     ],
   },
   {
@@ -934,7 +939,7 @@ export const GUIAS: Guia[] = [
     bloques: [
       { texto: "La liquidación es un extracto para revisar con tu asesor. No registra pagos ni gastos." },
       { img: "rrhh-liquidaciones", alt: "Liquidaciones del mes", pasos: [
-        { t: "Elegí el mes.", marca: "noviembre de 2026" },
+        { t: "Elegí el mes.", d: "Con las flechas pasás al anterior o al siguiente.", marca: "noviembre de 2026" },
         { t: "Neto a cobrar es la suma de lo que cobra cada persona.", marca: "NETO A COBRAR" },
         { t: "IPS empresa es lo que aporta la empresa.", d: "No sale del salario de nadie.", marca: "IPS EMPRESA" },
         { t: "Tocá el nombre de una persona para ver su extracto.", marca: "Laura Benítez" },

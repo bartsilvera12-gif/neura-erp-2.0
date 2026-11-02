@@ -12,6 +12,8 @@ export const guardarLegajo = z.object({
   apellidos: texto(120),
   ci: texto(20),
   telefono: texto(40),
+  correo: z.string().trim().max(150).regex(/^[^\s@]+@[^\s@]+$/, "Escribí un correo válido: tiene que tener @"),
+  emergencia_parentesco: texto(40),
   fecha_nacimiento: fechaOpcional,
   direccion: texto(200),
   barrio: texto(100),

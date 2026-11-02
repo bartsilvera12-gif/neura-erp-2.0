@@ -2,10 +2,12 @@
 do $$
 declare
   v_caj uuid := (select id from usuarios where auth_user_id = pg_temp.fx('cajero'));
-  v_base jsonb := jsonb_build_object('nombres', 'PRUEBA Cajero', 'fecha_ingreso', '2020-03-10', 'tipo_salario', 'mensualero', 'salario', 3000000, 'aporta_ips', true, 'comisiona', false, 'horario_dias', '[1,2,3]'::jsonb);
+  v_base jsonb := jsonb_build_object('nombres', 'PRUEBA Cajero', 'correo', 'cajero@prueba.invalid', 'fecha_ingreso', '2020-03-10', 'tipo_salario', 'mensualero', 'salario', 3000000, 'aporta_ips', true, 'comisiona', false, 'horario_dias', '[1,2,3]'::jsonb);
   v jsonb;
 begin
-  perform pg_temp.rechaza('RR HH: sin la fecha de ingreso no se guarda', format($q$select rrhh_guardar_legajo(%L, '{"nombres":"X","tipo_salario":"mensualero","salario":1}')$q$, v_caj), 'fecha de ingreso');
+  perform pg_temp.rechaza('RR HH: sin la fecha de ingreso no se guarda', format($q$select rrhh_guardar_legajo(%L, '{"nombres":"X","correo":"x@y","tipo_salario":"mensualero","salario":1}')$q$, v_caj), 'fecha de ingreso');
+  perform pg_temp.rechaza('RR HH: un correo sin @ no pasa', format($q$select rrhh_guardar_legajo(%L, %L)$q$, v_caj, v_base || '{"correo": "sinarroba"}'), 'tiene que tener @');
+  perform pg_temp.rechaza('RR HH: sin correo no se guarda', format($q$select rrhh_guardar_legajo(%L, %L)$q$, v_caj, v_base - 'correo'), 'tiene que tener @');
   perform rrhh_guardar_legajo(v_caj, v_base);
   v := rrhh_ficha(v_caj);
   perform pg_temp.igual('RR HH: el salario queda guardado', (v->'legajo'->>'salario')::numeric, 3000000);

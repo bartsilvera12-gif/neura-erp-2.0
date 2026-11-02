@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { Award, Banknote, Briefcase, Clock, Loader2, MapPin, Plus, TrendingUp, UserRound } from "lucide-react";
+import { ArrowLeft, Award, Banknote, Briefcase, Clock, Loader2, MapPin, Plus, TrendingUp, UserRound } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { usePermiso } from "@/lib/sesion/ContextoUsuario";
@@ -16,9 +16,10 @@ import { Select } from "@/components/Select";
 import { SelectorFecha } from "@/components/SelectorFecha";
 import { fechaCorta, gs } from "@/components/graficos/formato";
 import { etiquetaMes } from "@/modules/comisiones/calculo";
+import { CamposCiudadBarrio } from "@/modules/geo/CamposCiudadBarrio";
 import { PIE_MODAL } from "@/modules/clientes/ui";
 import { aguinaldo, antiguedad, diasDelAnio, textoAntiguedad, vacaciones } from "@/modules/rrhh/calculo";
-import { TIPOS_AUSENCIA, TIPOS_NOTA, etiquetaAusencia, type EventoRrhh, type FichaRrhh, type Legajo, type TipoAusencia } from "@/modules/rrhh/tipos";
+import { PARENTESCOS, RE_CORREO, TIPOS_AUSENCIA, TIPOS_NOTA, etiquetaAusencia, type EventoRrhh, type FichaRrhh, type Legajo, type TipoAusencia } from "@/modules/rrhh/tipos";
 import { BOTON, BOTON_PRIMARIO, Campo, CampoMonto, Cifra, INPUT, Interruptor, Tarjeta, renglonesExtracto } from "@/modules/rrhh/ui";
 
 type Tab = "datos" | "ausencias" | "vacaciones" | "liquidaciones" | "historial";
@@ -32,7 +33,7 @@ function armarForm(f: FichaRrhh): Form {
   const l = f.legajo;
   return {
     nombres: f.usuario.nombres, apellidos: f.usuario.apellidos ?? "", ci: f.usuario.ci ?? "", telefono: f.usuario.telefono ?? "",
-    fecha_nacimiento: l?.fecha_nacimiento ?? "", direccion: l?.direccion ?? "", barrio: l?.barrio ?? "", ciudad: l?.ciudad ?? "",
+    correo: l?.correo ?? f.usuario.email ?? "", emergencia_parentesco: l?.emergencia_parentesco ?? "", fecha_nacimiento: l?.fecha_nacimiento ?? "", direccion: l?.direccion ?? "", barrio: l?.barrio ?? "", ciudad: l?.ciudad ?? "",
     emergencia_nombre: l?.emergencia_nombre ?? "", emergencia_telefono: l?.emergencia_telefono ?? "", fecha_ingreso: l?.fecha_ingreso ?? "", fecha_egreso: l?.fecha_egreso ?? "",
     tipo_salario: l?.tipo_salario ?? "mensualero", salario: Number(l?.salario ?? 0), aporta_ips: l?.aporta_ips ?? true, comisiona: l?.comisiona ?? true, area: l?.area ?? "",
     horario_dias: l?.horario_dias ?? [1, 2, 3, 4, 5, 6], horario_entrada: l?.horario_entrada?.slice(0, 5) ?? "", horario_salida: l?.horario_salida?.slice(0, 5) ?? "", horario_nota: l?.horario_nota ?? "",
@@ -48,7 +49,7 @@ function Datos({ ficha, onGuardado }: { ficha: FichaRrhh; onGuardado: () => void
   const puedeAcceso = usePermiso("administrar_usuarios");
   const set = <K extends keyof Form>(k: K, v: Form[K]) => { setF((x) => ({ ...x, [k]: v })); setListo(false); };
   const cambiaSalario = !!ficha.legajo && Number(ficha.legajo.salario) !== f.salario;
-  const texto = (k: "nombres" | "apellidos" | "ci" | "telefono" | "direccion" | "barrio" | "ciudad" | "emergencia_nombre" | "emergencia_telefono" | "area" | "horario_nota") => (
+  const texto = (k: "nombres" | "apellidos" | "ci" | "telefono" | "direccion" | "emergencia_nombre" | "emergencia_telefono" | "area" | "horario_nota") => (
     <input className={INPUT} value={f[k] ?? ""} onChange={(e) => set(k, e.target.value)} />
   );
 
@@ -70,6 +71,8 @@ function Datos({ ficha, onGuardado }: { ficha: FichaRrhh; onGuardado: () => void
   }
 
   const grilla = "grid gap-3 sm:grid-cols-2";
+  const correoMal = !!f.correo?.trim() && !RE_CORREO.test(f.correo.trim());
+  const faltaCorreo = !RE_CORREO.test(f.correo?.trim() ?? "");
   const hayCambios = JSON.stringify(f) !== JSON.stringify(armarForm(ficha));
   return (
     <div className="space-y-4">
@@ -81,17 +84,21 @@ function Datos({ ficha, onGuardado }: { ficha: FichaRrhh; onGuardado: () => void
             <Campo label="Número de CI">{texto("ci")}</Campo>
             <Campo label="Fecha de nacimiento"><SelectorFecha block value={f.fecha_nacimiento ?? ""} onChange={(v) => set("fecha_nacimiento", v)} max={hoyPY()} /></Campo>
             <Campo label="Número de contacto">{texto("telefono")}</Campo>
-            <Campo label="Correo" ayuda="Es su usuario para entrar."><input className={`${INPUT} bg-slate-50 text-slate-500`} value={ficha.usuario.email ?? ""} placeholder="Sin correo" readOnly /></Campo>
+            <Campo label="Correo *" ayuda={correoMal ? undefined : "Para contactarlo. No cambia el correo con el que entra al sistema."}>
+              <input type="email" inputMode="email" autoComplete="off" aria-invalid={correoMal} className={`${INPUT} ${correoMal ? "border-rose-400 focus:border-rose-400 focus:ring-rose-100" : ""}`} value={f.correo ?? ""} onChange={(e) => set("correo", e.target.value)} placeholder="nombre@correo.com" />
+              {correoMal ? <p className="mt-1 text-[11px] font-medium text-rose-600">Tiene que tener @. Por ejemplo: nombre@correo.com</p> : null}
+            </Campo>
           </div>
         </Tarjeta>
 
         <Tarjeta icono={<MapPin className="h-4 w-4" />} titulo="Dirección y emergencia" detalle="Dónde vive y a quién llamar si pasa algo.">
           <div className={grilla}>
             <Campo label="Dirección" className="sm:col-span-2">{texto("direccion")}</Campo>
-            <Campo label="Barrio">{texto("barrio")}</Campo>
-            <Campo label="Ciudad">{texto("ciudad")}</Campo>
-            <Campo label="Contacto de emergencia: nombre">{texto("emergencia_nombre")}</Campo>
-            <Campo label="Contacto de emergencia: teléfono">{texto("emergencia_telefono")}</Campo>
+            <CamposCiudadBarrio ciudad={f.ciudad ?? ""} barrio={f.barrio ?? ""} onCiudad={(v) => set("ciudad", v)} onBarrio={(v) => set("barrio", v)} claseInput={INPUT} Campo={Campo} />
+            <p className="m-0 border-t border-slate-100 pt-3 text-xs font-semibold text-slate-700 sm:col-span-2">¿A quién llamamos en una emergencia?</p>
+            <Campo label="Nombre del contacto" className="sm:col-span-2"><input className={INPUT} value={f.emergencia_nombre ?? ""} onChange={(e) => set("emergencia_nombre", e.target.value)} placeholder="Ej: Rosa Benítez" /></Campo>
+            <Campo label="Parentesco"><Select block value={f.emergencia_parentesco ?? ""} onChange={(v) => set("emergencia_parentesco", v)} etiqueta="Parentesco" options={[["", "Elegí el parentesco"], ...PARENTESCOS.map((x): [string, string] => [x, x])]} /></Campo>
+            <Campo label="Teléfono del contacto"><input type="tel" inputMode="tel" className={INPUT} value={f.emergencia_telefono ?? ""} onChange={(e) => set("emergencia_telefono", e.target.value)} placeholder="Ej: 0981 123 456" /></Campo>
           </div>
         </Tarjeta>
 
@@ -141,9 +148,9 @@ function Datos({ ficha, onGuardado }: { ficha: FichaRrhh; onGuardado: () => void
       </div>
 
       {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
-      <div className="sticky bottom-3 z-10 flex items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white/95 px-4 py-3 shadow-lg backdrop-blur">
-        <span className={`text-sm ${listo ? "font-medium text-emerald-700" : "text-slate-500"}`}>{listo ? "Guardado" : hayCambios || !ficha.legajo ? "Tenés cambios sin guardar." : "Sin cambios."}</span>
-        <button type="button" onClick={() => void guardar()} disabled={busy || (!hayCambios && !!ficha.legajo)} className={BOTON_PRIMARIO}>
+      <div className="flex items-center justify-end gap-3 max-sm:flex-col max-sm:items-stretch">
+        {faltaCorreo ? <span className="text-sm text-rose-600 max-sm:text-center">Para guardar falta el correo, con su @.</span> : listo ? <span className="text-sm font-medium text-emerald-700 max-sm:text-center">Guardado</span> : null}
+        <button type="button" onClick={() => void guardar()} disabled={busy || faltaCorreo || (!hayCambios && !!ficha.legajo)} className={`${BOTON_PRIMARIO} sm:min-w-40`}>
           {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar
         </button>
       </div>
@@ -513,7 +520,9 @@ export default function PaginaFicha() {
 
   return (
     <div className="space-y-4 pb-10">
-      <Link href={volver.href} className="-my-2 flex min-h-11 w-fit items-center gap-1 text-xs text-slate-400 no-underline hover:text-slate-600 sm:my-0 sm:min-h-0">← {volver.label}</Link>
+      <Link href={volver.href} className="-ml-1 inline-flex min-h-9 w-fit items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 no-underline transition-colors hover:text-slate-800 max-md:min-h-11 max-md:pr-2">
+        <ArrowLeft className="h-3.5 w-3.5" /> {volver.label}
+      </Link>
       <div className="overflow-hidden rounded-2xl border border-[var(--brand)]/40 bg-white shadow-sm">
         <div className="flex items-center gap-3 bg-gradient-to-br from-white via-white to-[var(--brand-50)] px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
           <span aria-hidden className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-[var(--brand)] text-lg font-semibold text-white">{ficha.usuario.nombre.trim().split(/\s+/).slice(0, 2).map((x) => x[0]?.toUpperCase() ?? "").join("")}</span>
@@ -556,7 +565,7 @@ export default function PaginaFicha() {
           })}
         </ScrollHorizontal>
       </div>
-      {!l ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Completá la <b>fecha de ingreso</b> y tocá <b>Guardar</b>: ahí se prenden Ausencias, Vacaciones y Liquidaciones.</p> : null}
+      {!l ? <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">Completá el <b>correo</b> y la <b>fecha de ingreso</b>, y tocá <b>Guardar</b>: ahí se prenden Ausencias, Vacaciones y Liquidaciones.</p> : null}
 
       {tab === "datos" ? <Datos key={l ? "con" : "sin"} ficha={ficha} onGuardado={cargar} /> : null}
       {tab === "ausencias" && l ? <Ausencias ficha={ficha} onCambio={cargar} /> : null}

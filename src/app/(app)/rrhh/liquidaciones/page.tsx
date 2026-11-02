@@ -6,22 +6,23 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, Download, Loader2, Lock, Plus, Printer, Trash2, Unlock } from "lucide-react";
+import { AlertTriangle, ArrowLeft, ChevronLeft, ChevronRight, Download, Loader2, Lock, Plus, Printer, Trash2, Unlock } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { descargarArchivo } from "@/lib/api/client-blob";
 import { hoyPY } from "@/lib/fecha/paraguay";
 import { usePermiso } from "@/lib/sesion/ContextoUsuario";
-import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { Modal } from "@/components/Modal";
 import { Select } from "@/components/Select";
-import { TablaTarjetas } from "@/components/TablaResponsive";
 import { gs } from "@/components/graficos/formato";
 import { etiquetaMes } from "@/modules/comisiones/calculo";
 import { imprimirHtml } from "@/modules/mesas/imprimirComanda";
 import { PIE_MODAL } from "@/modules/clientes/ui";
 import type { Ajuste } from "@/modules/rrhh/calculo";
 import type { ExtractoFila, ExtractoMes } from "@/modules/rrhh/tipos";
-import { BOTON, BOTON_PRIMARIO, Campo, CampoMonto, Cifra, INPUT, Interruptor, htmlExtracto, renglonesExtracto } from "@/modules/rrhh/ui";
+import { BOTON, BOTON_PRIMARIO, Campo, CampoMonto, INPUT, Interruptor, htmlExtracto, renglonesExtracto } from "@/modules/rrhh/ui";
+
+/** Lo que falta resolver va primero. */
+const peso = (f: ExtractoFila) => (f.faltan_dias ? 0 : f.estado === "abierta" ? 1 : 2);
 
 function ultimosMeses(n: number): [string, string][] {
   const [a, m] = hoyPY().slice(0, 7).split("-").map(Number);
@@ -151,53 +152,112 @@ export default function PaginaLiquidaciones() {
     }
   }
 
+  const meses = ultimosMeses(24);
+  const pos = meses.findIndex(([m]) => m === mes);
+  const cerradas = filas.length - abiertas.length;
+  const ordenadas = [...filas].sort((a, b) => peso(a) - peso(b) || a.nombre.localeCompare(b.nombre, "es"));
+  const totales: [string, number, string][] = [
+    ["Neto a cobrar", sumar((f) => f.resultado.neto), "Lo que cobra el personal"],
+    ["Imponible", sumar((f) => f.resultado.imponible), "Base del IPS"],
+    ["IPS trabajadores", sumar((f) => f.resultado.ips_trabajador), "9 %, sale del salario"],
+    ["IPS empresa", sumar((f) => f.resultado.ips_empresa), "16,5 %, lo paga la empresa"],
+  ];
+
   return (
-    <div className="space-y-4">
-      <EncabezadoPagina titulo="Liquidaciones" subtitulo="Extracto del mes para revisar con el asesor. No genera pagos ni gastos." volver={{ href: "/rrhh/panel", label: "RR HH" }}
-        acciones={
-          <div className="flex flex-wrap gap-2 max-sm:w-full max-sm:[&>*]:flex-1">
-            {puedeExportar ? <button type="button" className={BOTON} disabled={!filas.length} onClick={() => void descargarArchivo(`/api/rrhh/liquidaciones/export?mes=${mes}`, `liquidacion-${mes}.xlsx`).catch((e: Error) => setError(e.message))}><Download className="h-4 w-4" /> Excel</button> : null}
-            <button type="button" className={BOTON_PRIMARIO} disabled={busy || !abiertas.length} onClick={() => void cerrarTodas()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />} Cerrar el mes</button>
+    <div className="space-y-4 pb-10">
+      <Link href="/rrhh/panel" className="-ml-1 inline-flex min-h-9 w-fit items-center gap-1 rounded-lg px-1 text-xs font-semibold text-slate-500 no-underline transition-colors hover:text-slate-800 max-md:min-h-11 max-md:pr-2">
+        <ArrowLeft className="h-3.5 w-3.5" /> RR HH
+      </Link>
+
+      <div className="overflow-hidden rounded-2xl border border-[var(--brand)]/40 bg-white shadow-sm">
+        <div className="bg-gradient-to-br from-white via-white to-[var(--brand-50)] px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand)]">Liquidaciones</p>
+              <h1 className="mt-0.5 text-xl font-semibold tracking-tight text-slate-900 first-letter:uppercase sm:text-2xl">{etiquetaMes(mes)}</h1>
+              <p className="mt-1 text-xs text-slate-500">Extracto para revisar con tu asesor. No genera pagos ni gastos.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2 max-sm:w-full max-sm:[&>*]:flex-1">
+              {puedeExportar ? <button type="button" className={BOTON} disabled={!filas.length} onClick={() => void descargarArchivo(`/api/rrhh/liquidaciones/export?mes=${mes}`, `liquidacion-${mes}.xlsx`).catch((e: Error) => setError(e.message))}><Download className="h-4 w-4" /> Excel</button> : null}
+              <button type="button" className={BOTON_PRIMARIO} disabled={busy || !abiertas.length} onClick={() => void cerrarTodas()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Lock className="h-4 w-4" />} Cerrar el mes</button>
+            </div>
           </div>
-        } />
-
-      <div className="max-w-xs"><Select block value={mes} onChange={setMes} options={ultimosMeses(24)} etiqueta="Mes" /></div>
-
-      {datos && datos.sin_legajo > 0 ? (
-        <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
-          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-          <span>{datos.sin_legajo === 1 ? "1 persona no sale acá porque" : `${datos.sin_legajo} personas no salen acá porque`} falta cargar sus datos. <Link href="/rrhh" className="font-semibold underline">Ir a Personal</Link></span>
-        </p>
-      ) : null}
-      {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
-
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Cifra label="Neto a cobrar" valor={gs(sumar((f) => f.resultado.neto))} />
-        <Cifra label="Imponible" valor={gs(sumar((f) => f.resultado.imponible))} />
-        <Cifra label="IPS trabajadores" valor={gs(sumar((f) => f.resultado.ips_trabajador))} />
-        <Cifra label="IPS empresa" valor={gs(sumar((f) => f.resultado.ips_empresa))} />
+          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-slate-200/70 pt-4">
+            <div className="flex items-center gap-1">
+              <button type="button" aria-label="Mes anterior" disabled={pos >= meses.length - 1} onClick={() => setMes(meses[pos + 1][0])} className={`${BOTON} w-11 px-0 sm:w-9`}><ChevronLeft className="h-4 w-4" /></button>
+              <div className="w-48"><Select block value={mes} onChange={setMes} options={meses} etiqueta="Mes" /></div>
+              <button type="button" aria-label="Mes siguiente" disabled={pos <= 0} onClick={() => setMes(meses[pos - 1][0])} className={`${BOTON} w-11 px-0 sm:w-9`}><ChevronRight className="h-4 w-4" /></button>
+            </div>
+            {filas.length ? (
+              <div className="min-w-48 flex-1">
+                <p className="text-xs font-medium text-slate-600">{cerradas} de {filas.length} {filas.length === 1 ? "cerrada" : "cerradas"}</p>
+                <span className="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-slate-200"><span className="block h-full rounded-full bg-[var(--brand)] transition-all" style={{ width: `${(cerradas / filas.length) * 100}%` }} /></span>
+              </div>
+            ) : null}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-px border-t border-slate-100 bg-slate-100 lg:grid-cols-4">
+          {totales.map(([k, v, sub]) => (
+            <div key={k} className="min-w-0 bg-[#fcfdfd] px-3 py-3 sm:px-5 sm:py-3.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500">{k}</p>
+              <p className="mt-1 truncate text-base font-semibold tabular-nums text-slate-900">{gs(v)}</p>
+              <p className="mt-0.5 truncate text-[11px] text-slate-500">{sub}</p>
+            </div>
+          ))}
+        </div>
       </div>
 
+      {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
       {!datos && !error ? <p className="text-sm text-slate-400">Cargando…</p> : null}
       {datos ? (
-        <TablaTarjetas
-          filas={filas}
-          claveFila={(f) => f.usuario_id}
-          onFila={(f) => setAbierta(f.usuario_id)}
-          columnas={[
-            { key: "nombre", titulo: "Nombre", movil: "titulo", celda: (f) => <span className="font-medium text-slate-900">{f.nombre}</span> },
-            { key: "tipo", titulo: "Tipo", movil: "subtitulo", celda: (f) => (f.resultado.tipo_salario === "jornalero" ? "Jornalero" : "Mensualero") },
-            { key: "ausencias", titulo: "Ausencias", movil: "dato", claseTd: "tabular-nums", celda: (f) => (f.resultado.dias_ausencia ? `${f.resultado.dias_ausencia} d` : "—") },
-            { key: "imponible", titulo: "Imponible", movil: "detalle", claseTh: "text-right", claseTd: "text-right tabular-nums", celda: (f) => gs(f.resultado.imponible) },
-            { key: "ips", titulo: "IPS", movil: "detalle", claseTh: "text-right", claseTd: "text-right tabular-nums", celda: (f) => gs(f.resultado.ips_trabajador) },
-            { key: "neto", titulo: "Neto", movil: "valor", claseTh: "text-right", claseTd: "text-right font-semibold tabular-nums", celda: (f) => gs(f.resultado.neto) },
-            { key: "estado", titulo: "Estado", movil: "chip", celda: (f) => (
-              f.estado === "cerrada" ? <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">Cerrada</span>
-              : f.faltan_dias ? <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">Faltan días</span>
-              : <span className="rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-700">Abierta</span>
-            ) },
-          ]}
-        />
+        ordenadas.length ? (
+          <ul className="m-0 list-none divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            {ordenadas.map((f) => {
+              const r = f.resultado;
+              const jornalero = r.tipo_salario === "jornalero";
+              const detalle = [jornalero ? "Jornalero" : "Mensualero", f.area, r.dias_ausencia ? `${r.dias_ausencia} ${r.dias_ausencia === 1 ? "día" : "días"} de ausencia` : null].filter(Boolean).join(" · ");
+              return (
+                <li key={f.usuario_id}>
+                  <button type="button" onClick={() => setAbierta(f.usuario_id)} className="flex min-h-[72px] w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 sm:gap-4 sm:px-5">
+                    <span aria-hidden className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[var(--brand-50)] text-sm font-semibold text-[var(--brand)]">{f.nombre.trim().split(/\s+/).slice(0, 2).map((x) => x[0]?.toUpperCase() ?? "").join("")}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-[15px] font-semibold text-slate-900">{f.nombre}</span>
+                      <span className="mt-0.5 block truncate text-[13px] text-slate-500">{detalle}</span>
+                    </span>
+                    <span className="hidden w-28 shrink-0 text-right lg:block">
+                      <span className="block text-sm tabular-nums text-slate-700">{f.faltan_dias ? "—" : gs(r.imponible)}</span>
+                      <span className="block text-xs text-slate-500">Imponible</span>
+                    </span>
+                    <span className="hidden w-24 shrink-0 text-right lg:block">
+                      <span className="block text-sm tabular-nums text-slate-700">{f.faltan_dias ? "—" : gs(r.ips_trabajador)}</span>
+                      <span className="block text-xs text-slate-500">IPS</span>
+                    </span>
+                    <span className="w-28 shrink-0 text-right">
+                      <span className="block text-sm font-semibold tabular-nums text-slate-900">{f.faltan_dias ? "—" : gs(r.neto)}</span>
+                      <span className="block text-xs text-slate-500 max-sm:hidden">Neto</span>
+                      <span className={`block text-xs font-medium sm:hidden ${f.estado === "cerrada" ? "text-emerald-700" : f.faltan_dias ? "text-amber-700" : "text-sky-700"}`}>{f.estado === "cerrada" ? "Cerrada" : f.faltan_dias ? "Faltan días" : "Abierta"}</span>
+                    </span>
+                    <span className="hidden w-24 shrink-0 justify-center sm:flex">
+                      {f.estado === "cerrada" ? <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">Cerrada</span>
+                        : f.faltan_dias ? <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-700">Faltan días</span>
+                        : <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-700">Abierta</span>}
+                    </span>
+                    <ChevronRight aria-hidden className="h-4 w-4 shrink-0 text-slate-300" />
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-sm text-slate-400">No hay nadie para liquidar en este mes.</p>
+        )
+      ) : null}
+
+      {datos && datos.sin_legajo > 0 ? (
+        <p className="flex items-start gap-2 text-[13px] text-slate-500">
+          <AlertTriangle aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
+          <span>{datos.sin_legajo === 1 ? "A 1 persona le faltan" : `A ${datos.sin_legajo} personas les faltan`} sus datos y no sale acá. <Link href="/rrhh" className="font-medium text-[var(--brand)]">Ir a Personal</Link></span>
+        </p>
       ) : null}
 
       {elegida && datos ? <ModalExtracto key={`${elegida.usuario_id}-${elegida.estado}`} f={elegida} mes={mes} periodo={datos.periodo} onClose={() => setAbierta(null)} onCambio={cargar} /> : null}
