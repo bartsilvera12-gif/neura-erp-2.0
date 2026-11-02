@@ -83,9 +83,9 @@ function Visor({ d, onAmpliar }: { d: Diapositiva; onAmpliar: () => void }) {
 
   if (!p) {
     return (
-      <button type="button" onClick={onAmpliar} aria-label="Ver la pantalla completa" className="block w-full cursor-zoom-in overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      <button type="button" onClick={onAmpliar} aria-label="Ver la pantalla completa" className="block h-full w-full cursor-zoom-in overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={d.alt ?? ""} className="block h-auto w-full" />
+        <img src={src} alt={d.alt ?? ""} className="block h-full w-full object-contain" />
       </button>
     );
   }
@@ -98,7 +98,8 @@ function Visor({ d, onAmpliar }: { d: Diapositiva; onAmpliar: () => void }) {
   const py = p.y * altoImg + arriba;
   return (
     <button type="button" onClick={onAmpliar} aria-label="Ver la pantalla completa"
-      className="relative block aspect-[16/10] w-full cursor-zoom-in overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
+      style={{ width: "min(100cqw, 160cqh)" }}
+      className="relative mx-auto block aspect-[16/10] cursor-zoom-in overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 shadow-sm">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt={d.alt ?? ""} onLoad={cargar} className={`absolute max-w-none ${proporcion ? "" : "opacity-0"}`} style={{ width: `${ZOOM * 100}%`, left: `${izq}%`, top: `${arriba}%` }} />
       <span className="pointer-events-none absolute inset-0" style={{ background: `radial-gradient(ellipse 42% 38% at ${px + 13}% ${py}%, transparent 72%, rgba(15,23,42,.5) 100%)` }} />
@@ -144,11 +145,12 @@ function Recorrido({ guia, rubro }: { guia: Guia; rubro: RubroImagen }) {
   const volver = tema ? `/manual?tema=${encodeURIComponent(tema.grupo)}` : "/manual";
 
   return (
-    <div className="mx-auto max-w-3xl space-y-4 pb-12">
-      <Link href={volver} className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-slate-500 no-underline hover:text-slate-800">
+    // Todo entra en la pantalla de una: la imagen toma el alto que queda.
+    <div className={`mx-auto flex max-w-4xl flex-col gap-3 ${d?.img ? "lg:h-[calc(100dvh-7.1rem)] lg:min-h-[480px]" : ""}`}>
+      <Link href={volver} className="-my-2 inline-flex min-h-11 shrink-0 items-center gap-1.5 self-start text-sm font-medium text-slate-500 no-underline hover:text-slate-800">
         <ArrowLeft className="h-4 w-4" /> Volver
       </Link>
-      <div>
+      <div className="shrink-0">
         <h1 className="text-2xl font-bold text-slate-900">{guia.titulo}</h1>
         {!fin ? (
           <div className="mt-2 flex items-center gap-3">
@@ -176,11 +178,15 @@ function Recorrido({ guia, rubro }: { guia: Guia; rubro: RubroImagen }) {
         </div>
       ) : (
         <>
-          {d.intro ? <p className="text-base leading-relaxed text-slate-600">{d.intro}</p> : null}
-          <p className="text-xl font-semibold leading-snug text-slate-900 sm:text-2xl">{d.frase}</p>
-          <Visor key={`${i}-${d.img}`} d={d} onAmpliar={() => setAmpliada(true)} />
+          {d.intro ? <p className="shrink-0 text-base leading-relaxed text-slate-600">{d.intro}</p> : null}
+          <p className="shrink-0 text-xl font-semibold leading-snug text-slate-900 sm:text-2xl">{d.frase}</p>
+          {d.img ? (
+            <div className="aspect-[16/10] w-full flex-none lg:aspect-auto lg:min-h-[160px] lg:flex-1" style={{ containerType: "size" }}>
+              <Visor key={`${i}-${d.img}`} d={d} onAmpliar={() => setAmpliada(true)} />
+            </div>
+          ) : null}
           {d.notas.map((n, k) => (
-            <p key={k} className={`flex gap-3 rounded-xl border px-4 py-3 text-base leading-relaxed ${n.tipo === "ojo" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
+            <p key={k} className={`flex shrink-0 gap-3 rounded-xl border px-4 py-2.5 text-sm leading-relaxed sm:text-base ${n.tipo === "ojo" ? "border-amber-200 bg-amber-50 text-amber-900" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`}>
               {n.tipo === "ojo" ? <AlertTriangle className="mt-1 h-5 w-5 shrink-0" aria-hidden /> : <Lightbulb className="mt-1 h-5 w-5 shrink-0" aria-hidden />}
               <span>{n.texto}</span>
             </p>
@@ -189,7 +195,7 @@ function Recorrido({ guia, rubro }: { guia: Guia; rubro: RubroImagen }) {
       )}
 
       {!fin ? (
-        <div className="sticky bottom-0 z-10 -mx-1 flex gap-2 bg-[#f6f8fa]/95 px-1 py-2 backdrop-blur">
+        <div className="flex shrink-0 gap-2">
           {i > 0 ? (
             <button type="button" onClick={() => setI(i - 1)} className="inline-flex min-h-14 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-base font-medium text-slate-700">
               <ArrowLeft className="h-5 w-5" /> Atrás
