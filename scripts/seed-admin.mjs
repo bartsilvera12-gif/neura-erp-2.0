@@ -4,11 +4,15 @@
  *
  *   node scripts/seed-admin.mjs --schema erp_republica --ssh zentra-app \
  *     --empresa "Ferretería República S.A." --email admin@republica.com.py --nombre "Juan Pérez" [--password ...]
+ *     [--rubro comercio|gastronomia] [--ocultar-rubro si]
  *
  * 1. Cuenta de acceso en Supabase Auth (con SUPABASE_SERVICE_ROLE_KEY de .env.local). Si el email ya
  *    tiene cuenta (el Auth es compartido por la flota) se usa esa, sin tocarle la contraseña.
  * 2. En el schema: la empresa (sus perfiles, primera sucursal, depósito, caja y catálogo de gastos
  *    los crea la base sola) y el usuario ADMIN con el perfil Administrador.
+ * 3. El rubro (Configuración › Rubro y funciones): Comercio, todo lo de cocina apagado (default);
+ *    Gastronomía, Mesas y QR, Cocina y Recetas prendidas y dadas a Cajero y Supervisor (receta 113).
+ *    --ocultar-rubro si: el cliente no ve esa pantalla (solo Neura lo cambia, por SQL).
  * Idempotente: si la empresa o el usuario ya están, no los duplica.
  */
 import { existsSync, readFileSync } from "node:fs";
@@ -28,6 +32,10 @@ const nombre = (args.nombre ?? "").trim();
 if (!/^[a-z][a-z0-9_]{1,62}$/.test(schema)) falla("Falta --schema erp_cliente");
 if (!empresa || !nombre || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) falla("Faltan --empresa, --nombre o un --email válido");
 if (!args.ssh && !args.db) falla("Falta --ssh <servidor> o --db <postgres://...>");
+const rubro = (args.rubro ?? "comercio").trim().toLowerCase();
+if (!["comercio", "gastronomia"].includes(rubro)) falla("--rubro tiene que ser comercio o gastronomia");
+const gastro = rubro === "gastronomia";
+const ocultarRubro = ["si", "sí", "true", "1"].includes(String(args["ocultar-rubro"] ?? "").toLowerCase());
 
 const env = existsSync(join(raiz, ".env.local")) ? readFileSync(join(raiz, ".env.local"), "utf8") : "";
 const leer = (k) => process.env[k] ?? new RegExp(`^${k}=(.*)$`, "m").exec(env)?.[1]?.trim();
@@ -67,9 +75,15 @@ insert into usuarios (empresa_id, auth_user_id, nombre, nombres, email, rol, act
 select e.id, :'auth'::uuid, :'nombre', :'nombre', :'email', 'ADMIN', true
   from (select id from empresas order by creado_at limit 1) e
  where not exists (select 1 from usuarios where auth_user_id = :'auth'::uuid);
-select 'empresa=' || (select nombre from empresas order by creado_at limit 1) || ' perfil=' || coalesce((select p.nombre from usuarios u join perfiles p on p.id = u.perfil_id where u.auth_user_id = :'auth'::uuid), 'NINGUNO');
+insert into empresa_funciones (empresa_id, mesas, cocina, recetas, pedidos, funciones_ocultas)
+select id, :'gastro'::boolean, :'gastro'::boolean, :'gastro'::boolean, true, :'ocultas'::boolean from (select id from empresas order by creado_at limit 1) e
+on conflict (empresa_id) do update set mesas = excluded.mesas, cocina = excluded.cocina, recetas = excluded.recetas,
+  funciones_ocultas = excluded.funciones_ocultas, updated_at = now();
+select rubro_dar_pantallas(id, :'gastro'::boolean, :'gastro'::boolean) from (select id from empresas order by creado_at limit 1) e where :'gastro'::boolean;
+select 'empresa=' || (select nombre from empresas order by creado_at limit 1) || ' perfil=' || coalesce((select p.nombre from usuarios u join perfiles p on p.id = u.perfil_id where u.auth_user_id = :'auth'::uuid), 'NINGUNO')
+  || ' rubro=' || (select case when mesas and cocina and recetas then 'Gastronomía' when not (mesas or cocina or recetas) then 'Comercio' else 'personalizado' end || case when funciones_ocultas then ' (oculto al cliente)' else '' end from empresa_funciones order by updated_at desc limit 1);
 `;
-const vars = ["-v", `schema=${schema}`, "-v", `empresa=${empresa}`, "-v", `nombre=${nombre}`, "-v", `email=${email}`, "-v", `auth=${authId}`];
+const vars = ["-v", `schema=${schema}`, "-v", `empresa=${empresa}`, "-v", `nombre=${nombre}`, "-v", `email=${email}`, "-v", `auth=${authId}`, "-v", `gastro=${gastro}`, "-v", `ocultas=${ocultarRubro}`];
 const r = args.ssh
   ? spawnSync("ssh", [args.ssh, `docker exec -i -e PGCLIENTENCODING=UTF8 supabase-db psql -U postgres -v ON_ERROR_STOP=1 -At ${vars.map((v) => `'${v.replace(/'/g, "'\\''")}'`).join(" ")} -f -`], { input: sql, encoding: "utf8" })
   : spawnSync("psql", [args.db, "-v", "ON_ERROR_STOP=1", "-At", ...vars, "-f", "-"], { input: sql, encoding: "utf8" });

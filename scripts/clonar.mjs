@@ -7,10 +7,10 @@
  * Con los datos del formulario hace, en orden y frenando en el primer error:
  *   1. revisa los datos (schema libre, carpeta, SSH, claves de la flota)
  *   2. copia el código a una carpeta nueva (el 2.0 queda como remoto "base")
- *   3. setup.mjs        → cliente.config.ts, logo y .env.local
+ *   3. setup.mjs        → cliente.config.ts (todos los módulos), logo y .env.local
  *   4. provision.mjs    → el schema desde db/canonical
  *   5. servidor         → schema y dominio en el .env de Supabase (solo si se tilda; hace respaldo)
- *   6. seed-admin.mjs   → empresa y usuario ADMIN
+ *   6. seed-admin.mjs   → empresa, usuario ADMIN y rubro (Comercio / Gastronomía)
  *   7. verify-rls.mjs y pruebas de plata y stock en el schema nuevo
  *   8. npm ci + build (si se tilda) y commit en el repo del cliente (y push si se tilda)
  * Si algo falla, se corrige y se vuelve a tocar "Clonar" con los mismos datos: retoma la misma
@@ -46,10 +46,7 @@ function validar(d) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.adminEmail ?? "")) e.push("El correo del administrador no es válido.");
   if (d.adminPassword && d.adminPassword.length < 8) e.push("La contraseña tiene que tener al menos 8 caracteres (o dejala vacía y se genera).");
   if (!/^#[0-9a-f]{6}$/i.test(d.color ?? "")) e.push("Color inválido: #RRGGBB.");
-  const mods = d.modulos ?? [];
-  if (!mods.length) e.push("Elegí al menos un módulo.");
-  const raros = mods.filter((m) => !MODULOS.includes(m));
-  if (raros.length) e.push(`Módulos que no existen: ${raros.join(", ")}.`);
+  if (!["comercio", "gastronomia"].includes(d.rubro)) e.push("Elegí el rubro: Comercio o Gastronomía.");
   if (!d.destino?.trim()) e.push("Falta la carpeta del clon.");
   if (d.repoCliente && !/^(https:\/\/|git@)\S+$/.test(d.repoCliente)) e.push("El repo del cliente tiene que ser una URL de git (https://… o git@…).");
   if (d.push && !d.repoCliente) e.push("Para subir el código hace falta el repo del cliente.");
@@ -160,7 +157,7 @@ async function clonar(d, enviar) {
   });
 
   await paso("personalizar", async () => {
-    const args = ["--cliente", d.nombre.trim(), "--schema", d.schema, "--dominio", d.dominio, "--color", d.color, "--modulos", d.modulos.join(",")];
+    const args = ["--cliente", d.nombre.trim(), "--schema", d.schema, "--dominio", d.dominio, "--color", d.color, "--modulos", MODULOS.join(",")];
     if (d.logo) {
       const ext = { "image/webp": ".webp", "image/png": ".png", "image/svg+xml": ".svg", "image/jpeg": ".jpg" }[d.logo.data.slice(5, d.logo.data.indexOf(";"))];
       const tmp = join(mkdtempSync(join(tmpdir(), "clonar-")), `logo${ext}`);
@@ -186,6 +183,7 @@ async function clonar(d, enviar) {
   await paso("admin", () => {
     const args = ["--schema", d.schema, "--ssh", d.ssh, "--empresa", d.razon.trim(), "--email", d.adminEmail.trim().toLowerCase(), "--nombre", d.adminNombre.trim()];
     if (d.adminPassword) args.push("--password", d.adminPassword);
+    args.push("--rubro", d.rubro, "--ocultar-rubro", d.ocultarRubro ? "si" : "no");
     return node("admin", "seed-admin.mjs", args, {
       ocultar: (l) => {
         const m = /Contraseña inicial: (\S+)/.exec(l);
@@ -221,14 +219,14 @@ async function clonar(d, enviar) {
     fin: true,
     resumen: {
       destino, schema: d.schema, dominio: d.dominio, admin: d.adminEmail.trim().toLowerCase(),
-      password: d.adminPassword ? null : password, servidor: !!d.servidor, compilado: !!d.compilar, subido: !!d.push,
+      rubro: d.rubro, password: d.adminPassword ? null : password, servidor: !!d.servidor, compilado: !!d.compilar, subido: !!d.push,
     },
   });
 }
 
 // ── Servidor web local ──────────────────────────────────────────────────────────────────────
 const html = () => readFileSync(join(raiz, "scripts", "clonar-formulario.html"), "utf8")
-  .replace("/*DATOS*/null", JSON.stringify({ modulos: MODULOS, padre: dirname(raiz), ssh: process.env.PRUEBAS_SSH || "zentra-app" }));
+  .replace("/*DATOS*/null", JSON.stringify({ padre: dirname(raiz), ssh: process.env.PRUEBAS_SSH || "zentra-app" }));
 
 const srv = http.createServer(async (req, res) => {
   if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {

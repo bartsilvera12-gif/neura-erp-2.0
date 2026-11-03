@@ -40,13 +40,13 @@
   .logo { margin-top: 5px; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border: 1px dashed #CBD5E1; border-radius: 12px; cursor: pointer; }
   .logo img { height: 28px; max-width: 120px; object-fit: contain; }
   .logo input { display: none; }
-  .modulos { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
-  .chip { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--linea); border-radius: 12px; cursor: pointer; font-size: 14px; user-select: none; }
-  .chip:has(input:checked) { border-color: var(--teal); background: var(--teal-suave); }
-  .chip input { accent-color: var(--teal-osc); width: 17px; height: 17px; }
-  .chip.fijo { opacity: .7; cursor: default; }
-  .acciones-mod { display: flex; gap: 14px; margin: -6px 0 12px; font-size: 13px; }
-  .acciones-mod button { border: 0; background: none; color: var(--teal-osc); font: inherit; font-weight: 600; cursor: pointer; padding: 10px 0; }
+  .rubros { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  @media (max-width: 640px) { .rubros { grid-template-columns: 1fr; } }
+  .rubro { display: flex; gap: 12px; padding: 14px; border: 1.5px solid var(--linea); border-radius: 14px; cursor: pointer; }
+  .rubro:has(input:checked) { border-color: var(--teal); background: var(--teal-suave); }
+  .rubro input { accent-color: var(--teal-osc); width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; }
+  .rubro b { display: block; font-size: 15px; }
+  .rubro small { color: var(--gris); }
   .opcion { display: flex; gap: 12px; padding: 12px; border: 1px solid var(--linea); border-radius: 14px; cursor: pointer; margin-top: 10px; }
   .opcion:has(input:checked) { border-color: var(--teal); background: var(--teal-suave); }
   .opcion input { accent-color: var(--teal-osc); width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; }
@@ -122,9 +122,14 @@
   </section>
 
   <section class="tarjeta">
-    <div class="cabeza"><span class="num">3</span><div><h2>Módulos</h2><small>Lo que va a ver en el menú</small></div></div>
-    <div class="acciones-mod"><button type="button" data-mod="todos">Todos</button><button type="button" data-mod="ninguno">Ninguno</button></div>
-    <div class="modulos" id="modulos"></div>
+    <div class="cabeza"><span class="num">3</span><div><h2>Rubro</h2><small>Qué funciones arrancan prendidas · el administrador lo puede cambiar después en Configuración › Rubro y funciones</small></div></div>
+    <div class="rubros">
+      <label class="rubro"><input type="radio" name="rubro" value="comercio" checked>
+        <span><b>Comercio</b><small>Ferretería, almacén, tienda, distribuidora. Caja, ventas, stock, compras, clientes y pedidos de mostrador. Nada de cocina.</small></span></label>
+      <label class="rubro"><input type="radio" name="rubro" value="gastronomia">
+        <span><b>Gastronomía</b><small>Restaurante, bar, cafetería. Todo lo de Comercio más Mesas y QR, Cocina y Recetas, ya dados a los perfiles Cajero y Supervisor.</small></span></label>
+    </div>
+    <label class="opcion"><input type="checkbox" name="ocultarRubro"><span><b>Ocultarle al cliente la pantalla Rubro y funciones</b><small>No la ve ni la puede cambiar; después solo Neura la vuelve a mostrar.</small></span></label>
   </section>
 
   <section class="tarjeta">
@@ -157,21 +162,12 @@
 
 <script>
 const DATOS = /*DATOS*/null;
-const NOMBRES = { caja: "Caja", inventario: "Inventario", "gastos-empresariales": "Gastos empresariales", clientes: "Clientes", crm: "CRM", presupuestos: "Presupuestos", "gestion-clientes": "Gestión de clientes", comisiones: "Comisiones", planes: "Planes", agenda: "Agenda", cobranzas: "Cobranzas", conciliacion: "Conciliación", pagos: "Pagos", conversaciones: "Omnicanal", soporte: "Soporte", reportes: "Reportes", rrhh: "RR HH", proyectos: "Proyectos", configuracion: "Configuración" };
 const PASOS = [["revisar", "Revisar los datos"], ["copiar", "Copiar el código"], ["personalizar", "Personalizar (nombre, logo, claves)"], ["base", "Armar la base"], ["servidor", "Configurar el servidor"], ["admin", "Empresa y administrador"], ["seguridad", "Revisión de seguridad"], ["pruebas", "Pruebas de plata y stock"], ["compilar", "Instalar y compilar"], ["git", "Guardar en git"]];
 
 const f = document.getElementById("f");
 const $ = (n) => f.elements[n];
 const sep = DATOS.padre.includes("\\") ? "\\" : "/";
 $("ssh").value = DATOS.ssh;
-
-// Módulos
-const caja = document.getElementById("modulos");
-for (const m of DATOS.modulos) {
-  const fijo = m === "configuracion";
-  caja.insertAdjacentHTML("beforeend", `<label class="chip${fijo ? " fijo" : ""}"><input type="checkbox" value="${m}" checked ${fijo ? "disabled" : ""}>${NOMBRES[m] ?? m}</label>`);
-}
-document.querySelectorAll("[data-mod]").forEach((b) => b.onclick = () => caja.querySelectorAll("input:not([disabled])").forEach((i) => (i.checked = b.dataset.mod === "todos")));
 
 // Autocompletar desde el nombre (hasta que la persona toque el campo)
 const slug = (s, j) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\b(s\.?a\.?|s\.?r\.?l\.?|e\.?a\.?s\.?)\b/g, "").replace(/[^a-z0-9]+/g, j).replace(new RegExp(`^\\${j}+|\\${j}+$`, "g"), "").slice(0, 40);
@@ -210,7 +206,7 @@ function datos() {
     color: $("color").value.trim(), adminNombre: $("adminNombre").value.trim(), adminEmail: $("adminEmail").value.trim(),
     adminPassword: $("adminPassword").value, schema: $("schema").value.trim().toLowerCase(), ssh: $("ssh").value.trim(),
     destino: $("destino").value.trim(), repoCliente: $("repoCliente").value.trim(),
-    modulos: [...caja.querySelectorAll("input:checked")].map((i) => i.value).concat("configuracion").filter((v, i, a) => a.indexOf(v) === i),
+    rubro: f.querySelector("input[name=rubro]:checked").value, ocultarRubro: $("ocultarRubro").checked,
     servidor: $("servidor").checked, compilar: $("compilar").checked, push: $("push").checked, logo,
   };
 }
@@ -287,7 +283,7 @@ function evento(ev) {
     pend.push(`Dominio <b>${esc(s.dominio)}</b> en Cloudflare apuntando al servidor de Coolify.`);
     if (!s.subido) pend.push("Subir el código al repo del cliente (git push -u origin main en la carpeta del clon).");
     document.getElementById("final").innerHTML = `<div class="final"><h4>Clon listo</h4>
-      Carpeta: <code>${esc(s.destino)}</code><br>Schema: <code>${esc(s.schema)}</code> · Admin: <code>${esc(s.admin)}</code>
+      Carpeta: <code>${esc(s.destino)}</code><br>Schema: <code>${esc(s.schema)}</code> · Rubro: ${s.rubro === "gastronomia" ? "Gastronomía" : "Comercio"} · Admin: <code>${esc(s.admin)}</code>
       ${s.password ? `<div class="clave"><code id="clave">${esc(s.password)}</code><button type="button" onclick="navigator.clipboard.writeText(document.getElementById('clave').textContent);this.textContent='Copiada'">Copiar</button></div><small>Contraseña inicial: se muestra solo ahora. Pasásela al cliente por un canal seguro.</small>` : ""}
       <h4 style="margin-top:12px">Falta</h4><ul>${pend.map((p) => `<li>${p}</li>`).join("")}</ul></div>`;
     return true;
