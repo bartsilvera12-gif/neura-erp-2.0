@@ -84,6 +84,7 @@ export function ProductoForm({
   const permisoEditar = usePermiso("editar_productos");
   const verCostos = permisoCostos || permisoEditar;
   const soloLectura = producto?.activo === false;
+  const [ivaAbierto, setIvaAbierto] = useState(false);
   const [unidadLibre, setUnidadLibre] = useState(false);
   const [f, setF] = useState({
     nombre: producto?.nombre ?? inicial?.nombre ?? "",
@@ -420,6 +421,13 @@ export function ProductoForm({
               </p>
             ) : null}
 
+            {/* El IVA casi siempre es 10 %: se ve en una línea y se cambia solo si hace falta. */}
+            {!ivaAbierto ? (
+              <p className="mt-3 flex items-center gap-2 text-xs text-slate-500">
+                IVA: <strong className="font-semibold text-slate-700">{IVAS.find(([v]) => v === f.tipo_iva)?.[1] ?? f.tipo_iva}</strong>
+                <button type="button" onClick={() => setIvaAbierto(true)} className="min-h-9 font-medium text-[var(--brand)] hover:underline max-sm:min-h-11">Cambiar</button>
+              </p>
+            ) : (
             <div className="mt-3">
               <span className={ET}>IVA</span>
               <div className="grid grid-cols-3 gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
@@ -432,6 +440,7 @@ export function ProductoForm({
                 ))}
               </div>
             </div>
+            )}
 
             {!esMP ? (<>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
