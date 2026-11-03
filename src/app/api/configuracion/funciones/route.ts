@@ -2,7 +2,7 @@
  * Configuración › Rubro y funciones (receta 75).
  *   GET /api/configuracion/funciones → funciones_empresa(): rubro, mesas, cocina, recetas, ocultas,
  *       puede_editar y (Administrador) cuentas_abiertas / pedidos_sin_cerrar / productos_recetas.
- *   PUT /api/configuracion/funciones { rubro?, mesas?, cocina?, recetas?, pedidos?, confirmar_recetas? }
+ *   PUT /api/configuracion/funciones { rubro?, mesas?, cocina?, recetas?, pedidos?, sorteos?, confirmar_recetas? }
  *       → funciones_empresa(). Solo ADMIN con "Configuración del sistema"; la base vuelve a validar
  *       (y rechaza si Neura ocultó la sección). Apagar Recetas con productos Menú/Materia prima
  *       activos sin confirmar → 409 { code: "confirmar_recetas", cantidad }.
@@ -20,11 +20,12 @@ export const dynamic = "force-dynamic";
 
 const esquema = z
   .object({
-    rubro: z.enum(["comercio", "gastronomia"], { message: "Rubro inválido" }),
+    rubro: z.enum(["comercio", "gastronomia", "sorteos"], { message: "Rubro inválido" }),
     mesas: z.boolean(),
     cocina: z.boolean(),
     recetas: z.boolean(),
     pedidos: z.boolean(),
+    sorteos: z.boolean(),
     confirmar_recetas: z.boolean(),
   })
   .strict()

@@ -36,7 +36,10 @@ if (r.status !== 0) { console.error(args.ssh ? errorRemoto(r, args.ssh) : r.stde
 // Públicas a propósito: entran con el token del QR de la mesa o del link del presupuesto.
 const PUBLICAS = new Set(["mesa_qr_activo", "mesa_menu_publico", "mesa_pedido_publico_crear", "mesa_pedidos_publico_estado", "mesa_publico_cuenta",
   "mesa_publico_dividir", "mesa_publico_pedir_cuenta", "mesa_publico_buscar_ruc", "mesa_publico_facturacion",
-  "presupuesto_publico", "presupuesto_publico_visto", "presupuesto_publico_responder"]);
+  "presupuesto_publico", "presupuesto_publico_visto", "presupuesto_publico_responder",
+  // Receta 123: página pública del sorteo, compra web, links de referido y punto de venta del vendedor (link + PIN).
+  "sorteo_publico", "sorteo_publico_libres", "sorteo_publico_comprar", "sorteo_publico_orden", "sorteo_publico_comprobante",
+  "sorteo_publico_numero", "sorteo_publico_lista", "sorteo_referido", "sorteo_vendedor_entrar", "sorteo_vendedor_vender"]);
 
 const filas = r.stdout.trim().split("\n").filter(Boolean).map((l) => l.split("|"));
 const de = (k) => filas.filter((f) => f[0] === k).map((f) => f[1]);

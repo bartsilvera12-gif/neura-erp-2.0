@@ -15,14 +15,14 @@ const cache: Map<string, Entrada> = (g.__erpFunciones ??= new Map<string, Entrad
 async function consultar(empresaId: string, schema: string): Promise<Funciones> {
   const { data, error } = await systemClient(schema)
     .from("empresa_funciones")
-    .select("mesas, cocina, recetas, pedidos, funciones_ocultas")
+    .select("mesas, cocina, recetas, pedidos, sorteos, funciones_ocultas")
     .eq("empresa_id", empresaId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return SIN_FUNCIONES;
-  const f = data as { mesas: boolean; cocina: boolean; recetas: boolean; pedidos?: boolean | null; funciones_ocultas: boolean };
+  const f = data as { mesas: boolean; cocina: boolean; recetas: boolean; pedidos?: boolean | null; sorteos?: boolean | null; funciones_ocultas: boolean };
   // Receta 77: sin la columna (schema viejo) o null → prendida.
-  return { mesas: !!f.mesas, cocina: !!f.cocina && !!f.mesas, recetas: !!f.recetas, pedidos: f.pedidos !== false, ocultas: !!f.funciones_ocultas };
+  return { mesas: !!f.mesas, cocina: !!f.cocina && !!f.mesas, recetas: !!f.recetas, pedidos: f.pedidos !== false, sorteos: !!f.sorteos, ocultas: !!f.funciones_ocultas };
 }
 
 export async function funcionesDeEmpresa(empresaId: string): Promise<Funciones> {
