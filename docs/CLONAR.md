@@ -10,6 +10,9 @@ stock y la revisión de seguridad da 0 problemas.
 
 ## La forma rápida: el formulario
 
+Versión corta para el equipo, con cómo preparar la computadora y la llave SSH:
+[PROGRAMADORES.md](PROGRAMADORES.md).
+
 ```bash
 npm run clonar
 ```
