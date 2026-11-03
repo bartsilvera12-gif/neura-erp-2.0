@@ -18,9 +18,9 @@ type Filtro = "todos" | "activos" | "faltan" | "inactivos";
 const iniciales = (nombre: string) => nombre.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
 
 /** Columna de la fila, solo en pantallas anchas. */
-function Columna({ titulo, valor, clase = "w-40" }: { titulo: string; valor: string; clase?: string }) {
+function Columna({ titulo, valor, clase = "w-32 2xl:w-40", desde = "xl:block" }: { titulo: string; valor: string; clase?: string; desde?: string }) {
   return (
-    <span className={`hidden min-w-0 shrink-0 lg:block ${clase}`}>
+    <span className={`hidden min-w-0 shrink-0 ${desde} ${clase}`}>
       <span className="block truncate text-sm text-slate-700">{valor}</span>
       <span className="block text-xs text-slate-500">{titulo}</span>
     </span>
@@ -36,12 +36,12 @@ function Fila({ p, hoy }: { p: PersonaFila; hoy: string }) {
         <span aria-hidden className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${p.activo ? "bg-[var(--brand-50)] text-[var(--brand)]" : "bg-slate-100 text-slate-400"}`}>{iniciales(p.nombre)}</span>
         <span className="min-w-0 flex-1">
           <span className={`block truncate text-[15px] font-semibold ${p.activo ? "text-slate-900" : "text-slate-500"}`}>{p.nombre}</span>
-          {detalle ? <span className="mt-0.5 block truncate text-[13px] text-slate-500 lg:hidden">{detalle}</span> : null}
-          <span className="mt-0.5 hidden truncate text-[13px] text-slate-500 lg:block">{p.ci ? `CI ${p.ci}` : p.email ?? "Sin CI cargada"}</span>
+          {detalle ? <span className="mt-0.5 block truncate text-[13px] text-slate-500 xl:hidden">{detalle}</span> : null}
+          <span className="mt-0.5 hidden truncate text-[13px] text-slate-500 xl:block">{p.ci ? `CI ${p.ci}` : p.email ?? "Sin CI cargada"}</span>
         </span>
         <Columna titulo="Perfil" valor={p.perfil ?? "—"} />
         <Columna titulo="Sucursal" valor={p.sucursal ?? "Sin sucursal fija"} />
-        <Columna titulo="Área" valor={p.area ?? "—"} clase="w-32" />
+        <Columna titulo="Área" valor={p.area ?? "—"} clase="w-32" desde="2xl:block" />
         {conDatos ? (
           <span className="hidden w-36 shrink-0 md:block">
             <span className="block truncate text-sm text-slate-700">{p.fecha_ingreso ? textoAntiguedad(antiguedad(p.fecha_ingreso, p.fecha_egreso && p.fecha_egreso < hoy ? p.fecha_egreso : hoy)) : "—"}</span>

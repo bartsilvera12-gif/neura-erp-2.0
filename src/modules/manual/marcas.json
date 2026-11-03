@@ -341,7 +341,7 @@
   "producto-nuevo": {
    "Nombre *": {
     "x": 65.9,
-    "y": 14
+    "y": 14.1
    },
    "SKU *": {
     "x": 65.9,
@@ -349,7 +349,7 @@
    },
    "Código de barras (opcional)": {
     "x": 56.6,
-    "y": 28.7
+    "y": 28.8
    }
   },
   "inventario-ajustes": {
@@ -1661,21 +1661,21 @@
   },
   "producto-nuevo": {
    "Reventa": {
-    "x": 57.6,
-    "y": 15.3,
+    "x": 56.6,
+    "y": 20.7,
     "z": 1.7
    },
    "Nombre *": {
     "x": 65.9,
-    "y": 36.6
+    "y": 35.1
    },
    "SKU *": {
     "x": 65.9,
-    "y": 44
+    "y": 42.4
    },
    "Código de barras (opcional)": {
     "x": 56.6,
-    "y": 51.3
+    "y": 49.8
    },
    "Nuevo producto": {
     "x": 56.6,
@@ -2664,92 +2664,92 @@
   "rrhh-ficha": {
    "Nombres *": {
     "x": 21.6,
-    "y": 33.6
+    "y": 33.5
    },
    "Número de CI": {
     "x": 21.6,
-    "y": 38.5
+    "y": 38.4
    },
    "Fecha de nacimiento": {
     "x": 39.6,
-    "y": 38.5
+    "y": 38.4
    },
    "Número de contacto": {
     "x": 21.6,
-    "y": 43.6
+    "y": 43.4
    },
    "Dirección": {
     "x": 61.2,
-    "y": 33.6
+    "y": 33.5
    },
    "Ciudad": {
     "x": 61.2,
-    "y": 38.5
+    "y": 38.4
    },
    "Barrio": {
     "x": 79.1,
-    "y": 38.5
+    "y": 38.4
    },
    "Correo *": {
     "x": 39.6,
-    "y": 43.6
+    "y": 43.4
    },
    "Nombre del contacto": {
     "x": 61.2,
-    "y": 46.3
+    "y": 46.1
    },
    "Parentesco": {
     "x": 61.2,
-    "y": 51.2
+    "y": 51.1
    },
    "Teléfono del contacto": {
     "x": 79.1,
-    "y": 51.2
+    "y": 51.1
    },
    "Fecha de ingreso *": {
     "x": 21.6,
-    "y": 64
+    "y": 63.8
    },
    "Área de trabajo": {
     "x": 21.6,
-    "y": 70.5
+    "y": 70.2
    },
    "Perfil": {
     "x": 21.6,
-    "y": 75.4
+    "y": 75.2
    },
    "Sucursal": {
     "x": 39.6,
-    "y": 75.4
+    "y": 75.2
    },
    "Cómo cobra": {
     "x": 61.2,
-    "y": 63
+    "y": 62.8
    },
    "Salario mensual (Gs.)": {
     "x": 79.1,
-    "y": 63
+    "y": 62.8
    },
    "Aporta IPS": {
     "x": 61.2,
-    "y": 69.9
+    "y": 69.6
    },
    "Comisiona": {
-    "x": 96.8,
-    "y": 69.9,
+    "x": 96,
+    "y": 69.6,
     "lado": "der"
    },
    "Lu": {
     "x": 21.6,
-    "y": 90.9
+    "y": 90.6
    },
    "Entrada": {
-    "x": 49.8,
-    "y": 88.8
+    "x": 49.7,
+    "y": 88.4
    },
    "Guardar": {
     "x": 85.3,
-    "y": 96
+    "y": 95.7
    },
    "ANTIGÜEDAD": {
     "x": 73.5,
@@ -2763,15 +2763,15 @@
   "rrhh-salario": {
    "Salario mensual (Gs.)": {
     "x": 79.1,
-    "y": 63
+    "y": 62.8
    },
    "Motivo del cambio *": {
     "x": 61.2,
-    "y": 68
+    "y": 67.8
    },
    "Guardar": {
     "x": 85.3,
-    "y": 96
+    "y": 95.7
    }
   },
   "rrhh-ausencias": {
