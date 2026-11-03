@@ -178,7 +178,7 @@ export default function ProveedoresPage() {
       ),
       celdaMovil: (p) => {
         const tel = p.contacto_telefono || p.telefono;
-        return tel ? <a href={`tel:${tel}`} onClick={(e) => e.stopPropagation()} className="font-medium text-[var(--brand)]">{tel}</a> : p.contacto ?? null;
+        return tel ? <a href={`tel:${tel}`} onClick={(e) => e.stopPropagation()} className="font-medium text-[var(--brand)] [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center">{tel}</a> : p.contacto ?? null;
       },
     },
     { key: "condicion", titulo: "Condición", movil: "chip", celda: condicion },

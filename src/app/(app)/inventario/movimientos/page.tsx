@@ -170,7 +170,7 @@ function Movimientos() {
           const href = hrefDocumento(m);
           const badge = m.origen.startsWith("anulacion") ? BADGE_ANULACION : ORIGEN_BADGE[m.origen] ?? ORIGEN_BADGE.ajuste;
           const numero = m.documento_numero ? (
-            href ? <Link href={href} className="font-mono font-semibold text-[var(--brand)] hover:underline [li_&]:inline-flex [li_&]:min-h-8 [li_&]:items-center">{m.documento_numero}</Link>
+            href ? <Link href={href} className="font-mono font-semibold text-[var(--brand)] hover:underline [li_&]:inline-flex [li_&]:min-h-8 [li_&]:items-center [@media(pointer:coarse)]:[li_&]:-my-1.5 [@media(pointer:coarse)]:[li_&]:min-h-11">{m.documento_numero}</Link>
             : <span className="font-mono font-semibold text-slate-600">{m.documento_numero}</span>
           ) : <span className="text-slate-300">sin documento</span>;
           // Tabla: etiqueta y número uno debajo del otro. Tarjeta (celular): en una línea.

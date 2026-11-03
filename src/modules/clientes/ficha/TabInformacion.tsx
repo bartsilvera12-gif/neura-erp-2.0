@@ -257,7 +257,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         </Tarjeta>
 
         <Tarjeta titulo="Contacto" icono={Phone} ancho>
-          <Dato label="Teléfono">{cliente.telefono ? <a href={`tel:${cliente.telefono.replace(/\s+/g, "")}`} className="hover:text-[var(--brand)] hover:underline">{cliente.telefono}</a> : null}</Dato>
+          <Dato label="Teléfono">{cliente.telefono ? <a href={`tel:${cliente.telefono.replace(/\s+/g, "")}`} className="hover:text-[var(--brand)] hover:underline [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center">{cliente.telefono}</a> : null}</Dato>
           <Dato label="Teléfono secundario">{cliente.telefono_secundario}</Dato>
           <Dato label="Email">{cliente.email ? <a href={`mailto:${cliente.email}`} className="break-all hover:text-[var(--brand)] hover:underline">{cliente.email}</a> : null}</Dato>
           <Dato label="Email secundario">{cliente.email_secundario}</Dato>

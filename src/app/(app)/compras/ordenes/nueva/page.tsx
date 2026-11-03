@@ -250,7 +250,7 @@ function NuevaOrden() {
               <div className="mt-4 rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center">
                 <Package className="mx-auto h-7 w-7 text-slate-300" />
                 <p className="mt-2 text-sm text-slate-500">Buscá los productos que le vas a pedir.</p>
-                <Link href="/reportes/stock-minimo" className="mt-1 inline-block text-xs font-semibold text-[var(--brand)] hover:underline">Ver qué está por debajo del stock mínimo</Link>
+                <Link href="/reportes/stock-minimo" className="mt-1 inline-block text-xs font-semibold text-[var(--brand)] hover:underline [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center">Ver qué está por debajo del stock mínimo</Link>
               </div>
             ) : (
               <ul className="mt-4 space-y-2">

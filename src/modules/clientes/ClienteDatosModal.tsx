@@ -170,7 +170,7 @@ export function ClienteDatosModal({ id, onCerrar, onCambio }: { id: string; onCe
                   <Dato label="Categoría">{c.categoria_nombre ? <CategoriaChip nombre={c.categoria_nombre} color={c.categoria_color} /> : null}</Dato>
                   <Dato label={empresa ? "Nombre o nombre comercial" : "Nombre y apellido"}>{c.nombre}</Dato>
                   <Dato label={empresa ? "RUC" : "RUC o CI"} mono>{c.documento}</Dato>
-                  <Dato label="Teléfono">{c.telefono ? <a href={`tel:${c.telefono.replace(/\s+/g, "")}`} className="hover:text-[var(--brand)] hover:underline">{c.telefono}</a> : null}</Dato>
+                  <Dato label="Teléfono">{c.telefono ? <a href={`tel:${c.telefono.replace(/\s+/g, "")}`} className="hover:text-[var(--brand)] hover:underline [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center">{c.telefono}</a> : null}</Dato>
                   <Dato label="Email">{c.email ? <a href={`mailto:${c.email}`} className="break-all hover:text-[var(--brand)] hover:underline">{c.email}</a> : null}</Dato>
                 </div>
               </Bloque>

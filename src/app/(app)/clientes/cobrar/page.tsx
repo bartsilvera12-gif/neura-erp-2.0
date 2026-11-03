@@ -80,7 +80,7 @@ export default function CuentasCobrarPage() {
       celda: (r) => (
         <>
           <Link href={`/clientes/${r.cliente_id}`} className="font-bold text-slate-900 hover:text-[var(--brand)]">{r.cliente_nombre}</Link>
-          <p className="text-[11px] text-slate-500">{r.cliente_telefono ? <a href={`tel:${r.cliente_telefono}`} className="hover:underline">{r.cliente_telefono}</a> : "sin teléfono"}</p>
+          <p className="text-[11px] text-slate-500">{r.cliente_telefono ? <a href={`tel:${r.cliente_telefono}`} className="hover:underline [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center">{r.cliente_telefono}</a> : "sin teléfono"}</p>
         </>
       ),
       celdaMovil: (r) => r.cliente_nombre,
@@ -90,7 +90,7 @@ export default function CuentasCobrarPage() {
       celda: (r) => (r.cliente_telefono ? (
         <a href={`tel:${r.cliente_telefono}`} onClick={(e) => e.stopPropagation()} className="-my-1.5 inline-flex min-h-11 items-center font-medium text-[var(--brand)] hover:underline">{r.cliente_telefono}</a>
       ) : "sin teléfono"),
-      celdaMovil: (r) => (r.cliente_telefono ? <a href={`tel:${r.cliente_telefono}`} onClick={(e) => e.stopPropagation()} className="font-medium text-[var(--brand)]">{r.cliente_telefono}</a> : null),
+      celdaMovil: (r) => (r.cliente_telefono ? <a href={`tel:${r.cliente_telefono}`} onClick={(e) => e.stopPropagation()} className="font-medium text-[var(--brand)] [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center">{r.cliente_telefono}</a> : null),
     },
     {
       key: "venta", titulo: "Venta", movil: "dato",

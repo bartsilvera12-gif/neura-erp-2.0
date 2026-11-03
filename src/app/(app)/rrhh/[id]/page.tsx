@@ -23,6 +23,10 @@ import { PARENTESCOS, RE_CORREO, TIPOS_AUSENCIA, TIPOS_NOTA, etiquetaAusencia, t
 import { BOTON, BOTON_PRIMARIO, Campo, CampoMonto, Cifra, INPUT, Interruptor, Tarjeta, renglonesExtracto } from "@/modules/rrhh/ui";
 
 type Tab = "datos" | "ausencias" | "vacaciones" | "liquidaciones" | "historial";
+/** Horas cada 15 min; si ya había una fuera de la grilla, se conserva. */
+const HORAS = Array.from({ length: 96 }, (_, i) => `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`);
+const opcionesHora = (v: string | null | undefined): [string, string][] =>
+  [["", "Sin hora"], ...[...new Set([...HORAS, ...(v ? [v.slice(0, 5)] : [])])].sort().map((h): [string, string] => [h, h])];
 const DIAS: [number, string][] = [[1, "Lu"], [2, "Ma"], [3, "Mi"], [4, "Ju"], [5, "Vi"], [6, "Sá"], [7, "Do"]];
 
 const accion = (id: string, body: object) => apiFetch(`/api/rrhh/${id}`, { method: "POST", body: JSON.stringify(body) });
@@ -139,8 +143,8 @@ function Datos({ ficha, onGuardado }: { ficha: FichaRrhh; onGuardado: () => void
               </div>
             </Campo>
             <div className="grid flex-1 gap-3 sm:grid-cols-[140px_140px_1fr]">
-              <Campo label="Entrada"><input type="time" className={INPUT} value={f.horario_entrada ?? ""} onChange={(e) => set("horario_entrada", e.target.value)} /></Campo>
-              <Campo label="Salida"><input type="time" className={INPUT} value={f.horario_salida ?? ""} onChange={(e) => set("horario_salida", e.target.value)} /></Campo>
+              <Campo label="Entrada"><Select block etiqueta="Entrada" value={f.horario_entrada ?? ""} onChange={(v) => set("horario_entrada", v)} options={opcionesHora(f.horario_entrada)} /></Campo>
+              <Campo label="Salida"><Select block etiqueta="Salida" value={f.horario_salida ?? ""} onChange={(v) => set("horario_salida", v)} options={opcionesHora(f.horario_salida)} /></Campo>
               <Campo label="Nota">{texto("horario_nota")}</Campo>
             </div>
           </div>

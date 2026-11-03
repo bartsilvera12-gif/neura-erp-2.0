@@ -400,7 +400,7 @@ export default function FacturacionElectronicaPage() {
             detalle={
               <>
                 {!cfg ? "RUC, razón social, dirección y actividad vienen precargados de " : "RUC, razón social, dirección y actividad se toman de "}
-                <Link href="/configuracion/empresa" className="inline-flex items-center gap-0.5 font-semibold text-[var(--brand)] hover:underline">Datos de la empresa <ArrowUpRight className="h-3 w-3" /></Link>
+                <Link href="/configuracion/empresa" className="inline-flex items-center gap-0.5 font-semibold text-[var(--brand)] hover:underline [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center">Datos de la empresa <ArrowUpRight className="h-3 w-3" /></Link>
                 {cfg ? " al crear; acá quedan los que van al XML." : ": revisalos antes de crear."}
               </>
             }

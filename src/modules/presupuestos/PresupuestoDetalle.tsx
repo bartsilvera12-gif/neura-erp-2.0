@@ -271,7 +271,7 @@ export function PresupuestoDetalle({ id, onCerrar, onCambio, avisoInicial }: {
                 <UserRound className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
                 <div className="min-w-0 text-sm">
                   {p.cliente_id ? (
-                    <Link href={`/clientes/${p.cliente_id}`} onClick={alSalir} className="font-semibold text-slate-900 [overflow-wrap:anywhere] hover:text-[var(--brand)]">{p.cliente_nombre}</Link>
+                    <Link href={`/clientes/${p.cliente_id}`} onClick={alSalir} className="font-semibold text-slate-900 [overflow-wrap:anywhere] hover:text-[var(--brand)] [@media(pointer:coarse)]:-my-3 [@media(pointer:coarse)]:inline-flex [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:items-center">{p.cliente_nombre}</Link>
                   ) : (
                     <><b className="font-semibold text-slate-900 [overflow-wrap:anywhere]">{p.cliente_nombre}</b> <span className="ml-1 rounded bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Prospecto</span></>
                   )}
