@@ -21,14 +21,18 @@ Tiene las claves maestras de Supabase:
 - No lo mandes por chat abierto ni por correo.
 - No lo copies a otro lado.
 
-**d. Creá tu llave SSH** para entrar al servidor:
+**d. Creá tu llave SSH** para el servidor. Al final poné tu nombre, sin espacios (ej. `juan.perez`):
 
 ```bash
-ssh-keygen -t ed25519 -f ~/.ssh/neura_zentra -C "tu-nombre"
+ssh-keygen -t ed25519 -f ~/.ssh/neura_zentra -C "tu.nombre"
 ```
 
 Mandale a quien administra el servidor **solo** el archivo `~/.ssh/neura_zentra.pub`, el que termina
 en `.pub`. El otro (`neura_zentra`, sin extensión) es privado y no sale de tu computadora.
+
+Es una llave **restringida**: entrás como el usuario `clonador`, que solo puede trabajar en la base de
+datos (crear el schema del cliente, cargar la empresa, correr las pruebas). No abre consola, no ve
+archivos del servidor y no puede reiniciar nada.
 
 **e. Cuando te confirme que la agregó**, sumá esto a `~/.ssh/config` (en Windows:
 `C:\Users\<vos>\.ssh\config`). La IP te la pasa él.
@@ -36,7 +40,7 @@ en `.pub`. El otro (`neura_zentra`, sin extensión) es privado y no sale de tu c
 ```
 Host zentra-app
     HostName <IP del servidor>
-    User ubuntu
+    User clonador
     IdentityFile ~/.ssh/neura_zentra
     IdentitiesOnly yes
     ServerAliveInterval 60
@@ -45,8 +49,11 @@ Host zentra-app
 **f. Probá la conexión.** Tiene que responder `ok`:
 
 ```bash
-ssh zentra-app echo ok
+echo "select 'ok';" | ssh zentra-app /usr/local/bin/erp-psql postgres At
 ```
+
+Cualquier otro comando (`ssh zentra-app`, `ssh zentra-app ls`…) responde "pedido no permitido": es
+lo esperado.
 
 ---
 
@@ -76,7 +83,7 @@ nombre se completan solos el schema, el dominio y la carpeta: revisalos.
 
 | Opción | Qué hacer |
 |---|---|
-| Configurar el servidor de Supabase | **Solo con permiso** de quien administra el servidor: corta unos segundos la conexión a todos los clientes. Si no, dejala sin tildar y pedile ese paso a él. |
+| Configurar el servidor de Supabase | **Dejala sin tildar.** Con tu llave no se puede (el formulario te frena antes de empezar): ese paso lo hace quien administra el servidor, y el resumen final te dice qué pedirle. |
 | Instalar y compilar | Dejala tildada: confirma que el clon arranca. Tarda unos minutos. |
 | Subir al repo del cliente | Solo si ya creaste el repo vacío en GitHub y pegaste su dirección. |
 
@@ -100,7 +107,10 @@ retoma la misma carpeta sin repetir lo hecho ni duplicar nada.
 | "El schema … ya existe" | Ese cliente ya tiene base. Elegí otro nombre o, si es el mismo cliente, usá la carpeta donde lo clonaste. |
 | "La carpeta … ya existe" | Elegí otra carpeta, o la del clon de ese mismo schema para retomarlo. |
 | "Falta … en el .env.local del 2.0" | No está el `.env.local` de la flota en la carpeta del 2.0 (paso 1c). |
-| Error de SSH | Probá `ssh zentra-app echo ok` (paso 1f). |
+| "no acepta tu llave SSH" | El administrador todavía no la agregó, o `~/.ssh/config` apunta a otro archivo (paso 1e). |
+| "No llego a zentra-app" | Revisá el `HostName` en `~/.ssh/config` (paso 1e). |
+| "falta erp-psql" | El servidor no tiene instalada la puerta: avisale al administrador. |
+| "necesita la llave del administrador" | Destildá "Configurar el servidor" y volvé a tocar Clonar. |
 | Falla una receta en "Armar la base" | Mandá el detalle ("Ver el detalle") a quien mantiene el 2.0. No la arregles en el clon. |
 
 ---
@@ -128,12 +138,28 @@ retoma la misma carpeta sin repetir lo hecho ni duplicar nada.
 
 ## Para quien administra el servidor
 
-- **Agregar la llave de un programador** (con su `.pub`), en el servidor:
+Los programadores entran con el usuario restringido `clonador`. Nunca agregues su llave a `ubuntu`:
+esa da acceso a toda la máquina.
+
+- **Instalación** (ya hecha el 3-nov-2026; repetirla no rompe nada), desde la carpeta del 2.0:
 
   ```bash
-  echo "<contenido del .pub>" >> ~/.ssh/authorized_keys
+  ssh zentra-app "sudo bash -s" < scripts/servidor/instalar-clonador.sh
   ```
 
-- **Si alguien deja el equipo**, borrá su línea de `~/.ssh/authorized_keys`.
-- **El paso del servidor de cada clon** (schema y dominio) está en [CLONAR.md](CLONAR.md), paso 4. El
-  formulario lo puede hacer solo, con respaldo, si se tilda la opción.
+  En Windows, desde Git Bash: PowerShell le agrega caracteres que rompen el script.
+- **Agregar la llave de un programador**, pegando su `.pub` completo:
+
+  ```bash
+  ssh zentra-app 'sudo erp-clonador-llave agregar "ssh-ed25519 AAAA... juan.perez"'
+  ```
+
+- **Si alguien deja el equipo:** `ssh zentra-app 'sudo erp-clonador-llave quitar juan.perez'`
+  (`lista` muestra quiénes tienen llave).
+- **Qué puede y qué no la llave restringida:**
+  - **Puede** correr `psql` en la base, como `postgres` o como `supabase_admin` (la receta 36b lo
+    necesita): todo lo de adentro de la base, de cualquier cliente.
+  - **No puede** abrir consola, leer archivos (ni el `.env` de Supabase), usar docker, reiniciar
+    servicios ni hacer túneles.
+- **El paso del servidor de cada clon** (schema y dominio) es tuyo: [CLONAR.md](CLONAR.md), paso 4. Con
+  tu llave (`ubuntu`) el formulario también lo puede hacer, con respaldo, si tildás la opción.

@@ -239,11 +239,12 @@ const html = () => readFileSync(join(raiz, "scripts", "clonar-formulario.html"),
   .replace("/*DATOS*/null", JSON.stringify({ padre: dirname(raiz), ssh: process.env.PRUEBAS_SSH || "zentra-app" }));
 
 const srv = http.createServer(async (req, res) => {
-  if (req.method === "GET" && (req.url === "/" || req.url === "/index.html")) {
+  const ruta = (req.url ?? "/").split("?")[0];
+  if (req.method === "GET" && (ruta === "/" || ruta === "/index.html")) {
     res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
     return res.end(html());
   }
-  if (req.method === "POST" && req.url === "/clonar") {
+  if (req.method === "POST" && ruta === "/clonar") {
     let cuerpo = "";
     for await (const c of req) { cuerpo += c; if (cuerpo.length > 8e6) return res.writeHead(413).end(); }
     res.writeHead(200, { "content-type": "application/x-ndjson; charset=utf-8", "cache-control": "no-store" });

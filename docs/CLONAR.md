@@ -41,8 +41,11 @@ Abajo está lo mismo a mano, paso por paso.
 ## 0. Antes de empezar
 
 - Node 22 y git.
-- Acceso por SSH al servidor de Supabase (`zentra-app` en `~/.ssh/config`). Con eso no hace falta
-  `psql` en tu máquina: los scripts lo usan del servidor.
+- Acceso por SSH al servidor de Supabase (`zentra-app` en `~/.ssh/config`). Los programadores usan
+  la llave restringida del usuario `clonador`, que solo puede correr `psql` por la puerta
+  `/usr/local/bin/erp-psql` (cómo se pide y se agrega: [PROGRAMADORES.md](PROGRAMADORES.md)). Todos los
+  scripts pasan por esa puerta, así que no hace falta `psql` en tu máquina. El paso 4 necesita la llave
+  del administrador.
 - El `.env.local` de la flota (URL de Supabase, anon key y service role key). Pedíselo a quien
   administra el servidor. **Nunca se sube al repo.**
 - Los datos del cliente:
@@ -176,7 +179,8 @@ npm run dev     # entrá con el admin en http://localhost:3000
 
 ## Borrar un clon (por ejemplo, uno de prueba)
 
-Además del schema, hay que sacar las tres cosas que quedan afuera. Con `psql -U supabase_admin`:
+Además del schema, hay que sacar las tres cosas que quedan afuera. Con `psql -U supabase_admin` (por
+SSH: `ssh zentra-app /usr/local/bin/erp-psql supabase_admin q`, con el SQL por la entrada):
 
 ```sql
 select cron.unschedule(jobid) from cron.job where jobname = 'chat_sla_erp_republica';
