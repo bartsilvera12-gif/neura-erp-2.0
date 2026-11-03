@@ -6,6 +6,32 @@ La guía larga, con cada paso a mano, está en [CLONAR.md](CLONAR.md). Esta hoja
 
 ## 1. Preparar tu computadora (una sola vez)
 
+### La forma fácil
+
+Pedile al administrador dos cosas: el `.env.local` de la flota y la IP del servidor. Después:
+
+1. Bajá el 2.0:
+   ```bash
+   git clone https://github.com/bartsilvera12-gif/neura-erp-2.0.git
+   ```
+2. Poné el `.env.local` en esa carpeta, al lado de `package.json`.
+3. Abrí la carpeta en Claude Code y escribile:
+
+   > Prepará mi computadora para clonar clientes: corré `npm run preparar -- --ip <la IP>` y decime qué falta.
+
+   O correlo vos mismo en una terminal, dentro de la carpeta.
+4. La primera vez te muestra una línea que empieza con `ssh-ed25519`: es tu llave pública. Mandásela al
+   administrador (no es secreta).
+5. Cuando te avise que la agregó, volvé a correr `npm run preparar`. Tiene que decir **"Listo: ya podés
+   clonar"**.
+
+El comando se puede repetir sin miedo: cada vez hace solo lo que falta (crear la llave, armar
+`~/.ssh/config`, probar la conexión) y te dice el próximo paso. Nunca muestra tu llave privada.
+
+### A mano, paso por paso
+
+Lo mismo que hace `npm run preparar`:
+
 **a. Instalá** [Node 22](https://nodejs.org) y [git](https://git-scm.com).
 
 **b. Traé el 2.0:**
