@@ -1,6 +1,6 @@
 /**
  * Storage de los comprobantes de transferencias (Conciliación bancaria): bucket PRIVADO
- * "cobros-comprobantes" (8 MB por archivo, JPG/PNG/WebP/PDF).
+ * "erp-cobros-comprobantes" (8 MB por archivo, JPG/PNG/WebP/PDF).
  *
  * Igual que los comprobantes de compra: el archivo lo sube el SERVIDOR con el cliente de
  * sistema y para verlo se emite una URL firmada de 1 hora. La ruta la arma siempre el
@@ -9,7 +9,7 @@
 import { systemClient } from "@/lib/supabase/clients";
 import { contenidoCoincide } from "@/lib/compras/storage";
 
-export const COBROS_BUCKET = "cobros-comprobantes";
+export const COBROS_BUCKET = "erp-cobros-comprobantes";
 export const COMPROBANTE_COBRO_MAX_BYTES = 8 * 1024 * 1024;
 const URL_TTL_S = 60 * 60;
 

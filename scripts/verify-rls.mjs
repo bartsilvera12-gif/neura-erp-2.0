@@ -2,7 +2,7 @@
 /**
  * verify-rls.mjs — revisa que el schema de un cliente esté cerrado. Solo lee.
  *
- *   node scripts/verify-rls.mjs --schema erp_republica --ssh zentra-app
+ *   node scripts/verify-rls.mjs --schema erp_republica --ssh neura-erp
  *
  * Falla si: una tabla no tiene RLS, anon puede leer o escribir una tabla, o anon puede ejecutar
  * una función del schema. Avisa (sin fallar) las tablas con RLS pero sin ninguna política: nadie

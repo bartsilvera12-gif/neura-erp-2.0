@@ -2,7 +2,7 @@
 /**
  * seed-admin.mjs — crea la empresa y su primer usuario ADMIN en el schema del cliente.
  *
- *   node scripts/seed-admin.mjs --schema erp_republica --ssh zentra-app \
+ *   node scripts/seed-admin.mjs --schema erp_republica --ssh neura-erp \
  *     --empresa "Ferretería República S.A." --email admin@republica.com.py --nombre "Juan Pérez" [--password ...]
  *     [--rubro comercio|gastronomia] [--ocultar-rubro si]
  *

@@ -7,7 +7,7 @@
  * Se puede correr las veces que haga falta; cada vez hace solo lo que falta:
  *   1. revisa Node, git y el .env.local de la flota en la raíz del 2.0
  *   2. crea la llave ~/.ssh/neura_zentra si no existe (sin contraseña: la usa el formulario solo)
- *   3. suma "Host zentra-app" (usuario clonador) a ~/.ssh/config si no está
+ *   3. suma "Host neura-erp" (usuario clonador) a ~/.ssh/config si no está
  *   4. prueba la conexión: si el servidor todavía no tiene la llave, muestra la línea para mandarle
  *      al administrador
  * Nunca muestra ni copia la llave privada, ni toca otros Host del ~/.ssh/config.
@@ -21,7 +21,7 @@ import { psqlRemoto, errorRemoto } from "./remoto.mjs";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, arr) => { if (a.startsWith("--")) acc.push([a.slice(2), arr[i + 1]]); return acc; }, []));
-const HOST = "zentra-app";
+const HOST = "neura-erp";
 const dirSsh = join(homedir(), ".ssh");
 const llave = join(dirSsh, "neura_zentra");
 const config = join(dirSsh, "config");

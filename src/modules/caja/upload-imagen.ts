@@ -1,18 +1,16 @@
 "use client";
 
-import { browserClient } from "@/lib/supabase/browser";
+import { apiForm } from "@/lib/api/client-fetch";
 
 /**
- * Sube una imagen de producto al bucket "productos" (público) y devuelve su URL.
- * El bucket es global del Supabase; el path lleva un uuid para no colisionar.
+ * Sube una imagen de producto y devuelve su URL pública. La sube el servidor
+ * (/api/productos/imagen) al bucket "erp-productos": desde el navegador nadie escribe en storage.
  */
 export async function subirImagenProducto(file: File): Promise<string> {
   if (!file.type.startsWith("image/")) throw new Error("El archivo debe ser una imagen.");
   if (file.size > 5 * 1024 * 1024) throw new Error("La imagen no puede superar 5 MB.");
-  const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const path = `prod/${crypto.randomUUID()}.${ext}`;
-  const sb = browserClient();
-  const { error } = await sb.storage.from("productos").upload(path, file, { contentType: file.type, upsert: false });
-  if (error) throw new Error(error.message);
-  return sb.storage.from("productos").getPublicUrl(path).data.publicUrl;
+  const form = new FormData();
+  form.append("file", file);
+  const { url } = await apiForm<{ url: string }>("/api/productos/imagen", form);
+  return url;
 }

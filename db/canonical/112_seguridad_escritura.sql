@@ -31,7 +31,15 @@ end $do$;
 grant authenticated to erp_funciones;
 -- postgres no es superusuario en Supabase: para pasarle las funciones (y poder reemplazarlas en
 -- recetas futuras) tiene que poder actuar como erp_funciones, y este necesita CREATE mientras dura.
-grant erp_funciones to postgres with inherit true, set true;
+-- (Postgres 16+ separa INHERIT y SET; en 15, el de producción, una membresía simple ya alcanza.)
+do $do$
+begin
+  if current_setting('server_version_num')::int >= 160000 then
+    execute 'grant erp_funciones to postgres with inherit true, set true';
+  else
+    execute 'grant erp_funciones to postgres';
+  end if;
+end $do$;
 grant usage, create on schema :"schema" to erp_funciones;
 -- inv_sesion no es de authenticated: la usan los controles de abajo.
 grant execute on function :"schema".inv_sesion(text[]) to erp_funciones;

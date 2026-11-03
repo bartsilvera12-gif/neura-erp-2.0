@@ -1,5 +1,5 @@
 /**
- * Storage de los comprobantes de compra: bucket PRIVADO "compras" (20 MB por archivo).
+ * Storage de los comprobantes de compra: bucket PRIVADO "erp-compras" (20 MB por archivo).
  *
  * El bucket no tiene políticas para la sesión del usuario: el archivo lo sube el
  * servidor y para verlo se emite una URL firmada de corta duración, ambas cosas con el
@@ -9,7 +9,7 @@
  */
 import { systemClient } from "@/lib/supabase/clients";
 
-export const COMPRAS_BUCKET = "compras";
+export const COMPRAS_BUCKET = "erp-compras";
 export const COMPROBANTE_MAX_BYTES = 20 * 1024 * 1024;
 const URL_TTL_S = 60 * 5;
 

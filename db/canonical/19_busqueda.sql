@@ -13,11 +13,14 @@ create extension if not exists unaccent with schema extensions;
 create extension if not exists pg_trgm with schema extensions;
 
 -- Texto normalizado: sin tildes y en minúsculas. Inmutable a propósito (diccionario fijo)
--- para poder usarlo en columnas generadas.
-create or replace function :"schema".norm(p text)
-returns text language sql immutable parallel safe as $$
-  select lower(extensions.unaccent('extensions.unaccent'::regdictionary, coalesce(p, '')))
-$$;
+-- para poder usarlo en columnas generadas. unaccent se usa del schema donde esté instalada
+-- (en producción está en public desde antes del 2.0; en el Supabase de prueba, en extensions).
+select format($f$create or replace function %I.norm(p text)
+returns text language sql immutable parallel safe as $b$
+  select lower(%I.unaccent(%L::regdictionary, coalesce(p, '')))
+$b$$f$, :'schema', n.nspname, n.nspname || '.unaccent')
+  from pg_extension e join pg_namespace n on n.oid = e.extnamespace where e.extname = 'unaccent'
+\gexec
 
 -- Igual pero sin separadores: "COC-COL-2L" → "coccol2l", "80.012.345-6" → "800123456".
 create or replace function :"schema".compacto(p text)

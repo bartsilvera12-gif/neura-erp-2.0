@@ -134,7 +134,7 @@ on conflict (empresa_id, lower(nombre)) do nothing;
 
 -- Bucket privado de comprobantes (sin políticas para la sesión: todo pasa por la API).
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('cobros-comprobantes', 'cobros-comprobantes', false, 8388608, array['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
+values ('erp-cobros-comprobantes', 'erp-cobros-comprobantes', false, 8388608, array['image/jpeg', 'image/png', 'image/webp', 'application/pdf'])
 on conflict (id) do update set public = false, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
 -- ── Helpers ──────────────────────────────────────────────────────────────────

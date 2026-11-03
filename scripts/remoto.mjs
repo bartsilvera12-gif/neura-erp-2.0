@@ -10,7 +10,7 @@ import { spawnSync } from "node:child_process";
 export const valorPsql = (v) => `'${String(v).replace(/[\r\n]+/g, " ").replace(/\\/g, "\\\\").replace(/'/g, "''")}'`;
 
 /**
- * @param {string} ssh   host de ~/.ssh/config (ej. zentra-app)
+ * @param {string} ssh   host de ~/.ssh/config (ej. neura-erp)
  * @param {string} sql
  * @param {{ usuario?: "postgres" | "supabase_admin", salida?: "q" | "At" | "qAt", sinCuerpos?: boolean, schema?: string, vars?: Record<string, unknown> }} [o]
  */

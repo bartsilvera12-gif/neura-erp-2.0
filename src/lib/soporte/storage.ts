@@ -1,5 +1,5 @@
 /**
- * Storage del módulo Soporte: bucket PRIVADO "soporte" (50 MB por archivo).
+ * Storage del módulo Soporte: bucket PRIVADO "erp-soporte" (50 MB por archivo).
  *
  * El bucket no tiene políticas para la sesión del usuario, así que las URLs
  * firmadas (subida y descarga) las emite el cliente de sistema. Vive en lib/ a
@@ -9,7 +9,7 @@
  */
 import { systemClient } from "@/lib/supabase/clients";
 
-export const SOPORTE_BUCKET = "soporte";
+export const SOPORTE_BUCKET = "erp-soporte";
 const URL_TTL_S = 60 * 10;
 
 export function prefijoArchivosTicket(empresaId: string, ticketId: string): string {

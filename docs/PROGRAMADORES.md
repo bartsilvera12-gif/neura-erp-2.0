@@ -64,7 +64,7 @@ archivos del servidor y no puede reiniciar nada.
 `C:\Users\<vos>\.ssh\config`). La IP te la pasa él.
 
 ```
-Host zentra-app
+Host neura-erp
     HostName <IP del servidor>
     User clonador
     IdentityFile ~/.ssh/neura_zentra
@@ -75,10 +75,10 @@ Host zentra-app
 **f. Probá la conexión.** Tiene que responder `ok`:
 
 ```bash
-echo "select 'ok';" | ssh zentra-app /usr/local/bin/erp-psql postgres At
+echo "select 'ok';" | ssh neura-erp /usr/local/bin/erp-psql postgres At
 ```
 
-Cualquier otro comando (`ssh zentra-app`, `ssh zentra-app ls`…) responde "pedido no permitido": es
+Cualquier otro comando (`ssh neura-erp`, `ssh neura-erp ls`…) responde "pedido no permitido": es
 lo esperado.
 
 ---
@@ -137,7 +137,7 @@ retoma la misma carpeta sin repetir lo hecho ni duplicar nada.
 | "La carpeta … ya existe" | Elegí otra carpeta, o la del clon de ese mismo schema para retomarlo. |
 | "Falta … en el .env.local del 2.0" | No está el `.env.local` de la flota en la carpeta del 2.0 (paso 1c). |
 | "no acepta tu llave SSH" | El administrador todavía no la agregó, o `~/.ssh/config` apunta a otro archivo (paso 1e). |
-| "No llego a zentra-app" | Revisá el `HostName` en `~/.ssh/config` (paso 1e). |
+| "No llego a neura-erp" | Revisá el `HostName` en `~/.ssh/config` (paso 1e). |
 | "falta erp-psql" o "falta erp-habilitar" | El servidor no tiene la puerta al día: avisale al administrador. |
 | Falla "Habilitar en Supabase" | Pasale el mensaje al administrador. La base ya quedó armada: cuando lo resuelva, tocá Clonar otra vez. |
 | Falla "Publicar" | Si dice "el despliegue terminó en failed", mirá los logs de la app en Coolify. Si no, pasale el mensaje al administrador. Tocar Clonar otra vez no duplica el repo, el dominio ni la app. |
@@ -154,7 +154,7 @@ retoma la misma carpeta sin repetir lo hecho ni duplicar nada.
   ```bash
   git fetch base
   git merge base/main
-  npm run provision -- --schema <schema del cliente> --ssh zentra-app
+  npm run provision -- --schema <schema del cliente> --ssh neura-erp
   ```
 
   `provision` aplica solo las recetas nuevas. Si `src/cliente.config.ts` da conflicto, quedate con la
@@ -175,19 +175,19 @@ esa da acceso a toda la máquina.
 - **Instalación** (ya hecha el 3-nov-2026; repetirla no rompe nada), desde la carpeta del 2.0:
 
   ```bash
-  ssh zentra-app "sudo bash -s" < scripts/servidor/instalar-clonador.sh
+  ssh neura-erp "sudo bash -s" < scripts/servidor/instalar-clonador.sh
   ```
 
   En Windows, desde Git Bash: PowerShell le agrega caracteres que rompen el script.
 - **Agregar la llave de un programador**, pegando su `.pub` completo:
 
   ```bash
-  ssh zentra-app 'sudo erp-clonador-llave agregar "ssh-ed25519 AAAA... juan.perez"'
+  ssh neura-erp 'sudo erp-clonador-llave agregar "ssh-ed25519 AAAA... juan.perez"'
   ```
 
-- **Si alguien deja el equipo:** `ssh zentra-app 'sudo erp-clonador-llave quitar juan.perez'`
+- **Si alguien deja el equipo:** `ssh neura-erp 'sudo erp-clonador-llave quitar juan.perez'`
   (`lista` muestra quiénes tienen llave).
-- **Quién clonó qué:** `ssh zentra-app 'sudo erp-clientes lista'` muestra cada cliente habilitado, con
+- **Quién clonó qué:** `ssh neura-erp 'sudo erp-clientes lista'` muestra cada cliente habilitado, con
   fecha, quién (el nombre de su llave), schema y dominio. `erp-clientes activos` lista los schemas que
   hoy sirve la API.
 - **Qué puede y qué no la llave restringida:**
@@ -203,11 +203,11 @@ esa da acceso a toda la máquina.
 - **Los tokens de publicar** están en `/etc/erp-clonar/tokens.env` (solo root): GitHub (crear repos
   en tu cuenta), Cloudflare (DNS de neura.com.py) y Coolify (crear y publicar apps), más los datos de
   Coolify (proyecto, servidor, build server). Si vencen o los cambiás, editá ese archivo:
-  `ssh zentra-app 'sudo nano /etc/erp-clonar/tokens.env'`. El de Coolify vence el 3-nov-2027.
+  `ssh neura-erp 'sudo nano /etc/erp-clonar/tokens.env'`. El de Coolify vence el 3-nov-2027.
 - **Un dominio propio del cliente** (ej. `sistema.ferreteria.com.py`) lo habilitás vos:
-  `ssh zentra-app 'erp-habilitar erp_ferreteria sistema.ferreteria.com.py'`. La publicación de un
+  `ssh neura-erp 'erp-habilitar erp_ferreteria sistema.ferreteria.com.py'`. La publicación de un
   dominio propio (DNS del cliente y dominio en Coolify) es a mano.
-- **Borrar un clon:** `ssh zentra-app 'erp-habilitar --quitar <schema> <dominio>'` y después el
+- **Borrar un clon:** `ssh neura-erp 'erp-habilitar --quitar <schema> <dominio>'` y después el
   schema ([CLONAR.md](CLONAR.md), "Borrar un clon").
 - **Después de actualizar el 2.0**, volvé a correr el instalador: es lo que pone al día
   `erp-habilitar` y la puerta.

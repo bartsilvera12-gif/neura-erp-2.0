@@ -52,11 +52,14 @@ chmod 755 /usr/local/bin/erp-psql
 cat > /usr/local/bin/erp-habilitar <<'EOF'
 #!/bin/bash
 # erp-habilitar — suma un clon del ERP 2.0 a Supabase: el schema a PGRST_DB_SCHEMAS y el dominio a
-# ADDITIONAL_REDIRECT_URLS (con respaldo del .env), reinicia rest y auth y lo anota en el registro.
+# ADDITIONAL_REDIRECT_URLS (con respaldo del .env), reinicia lo que cambió y lo anota en el registro.
 #   erp-habilitar <schema> <dominio>             (el formulario de clonar, al final)
 #   sudo erp-habilitar --quitar <schema> <dominio>   (solo el administrador: borrar un clon)
 # La llave restringida llega por erp-puerta (ERP_QUIEN = nombre de la llave) y solo puede
 # habilitar dominios <nombre>.neura.com.py.
+# Funciona en cualquier Supabase de docker: busca la carpeta por el contenedor supabase-db. Si el
+# .env repite una clave, vale (y se edita) la ÚLTIMA. Si el login ya acepta https://*.neura.com.py/**
+# no se suma el dominio y no se reinicia auth: solo rest (unos segundos sin API para todos).
 set -euo pipefail
 [[ $EUID -eq 0 ]] || exec sudo -n "$0" "$@"
 falla() { echo "erp-habilitar: $*" >&2; exit 1; }
@@ -65,14 +68,15 @@ quitar=""
 schema="${1:-}"; dominio="${2:-}"
 restringida="${ERP_QUIEN:-}"
 quien="${ERP_QUIEN:-administrador (${SUDO_USER:-root})}"
-dir=/home/ubuntu/supabase/docker
+dir=$(docker inspect supabase-db --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}')
 env="$dir/.env"
+[[ -f "$env" ]] || falla "no encuentro el .env de Supabase ($env)"
 registro=/var/log/erp-clientes.log
 
 [[ "$schema" =~ ^erp_[a-z0-9_]{1,58}$ ]] || falla "el schema tiene que empezar con erp_ (minúsculas, números y _)"
-[[ "$schema" != "erp_demo" ]] || falla "erp_demo no se toca"
 [[ "$dominio" =~ ^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$ ]] || falla "dominio inválido: $dominio"
 if [[ -n "$restringida" ]]; then
+  [[ "$schema" != "erp_demo" ]] || falla "erp_demo lo maneja el administrador"
   [[ -z "$quitar" ]] || falla "quitar un cliente lo hace el administrador"
   [[ "$dominio" =~ ^[a-z0-9-]+\.neura\.com\.py$ ]] || falla "con la llave restringida solo se habilitan dominios <nombre>.neura.com.py; un dominio propio del cliente lo habilita el administrador"
 fi
@@ -100,10 +104,14 @@ flock -w 120 9 || falla "hay otro clon habilitándose; probá en un minuto"
 nuevo=$(mktemp)
 trap 'rm -f "$nuevo" "$nuevo.2"' EXIT
 cp "$env" "$nuevo"
-cambios=0
-cambiar() {   # cambiar <sumar|sacar> <clave> <valor>
-  local accion="$1" clave="$2" valor="$3" actual final
-  actual=$(grep -m1 "^${clave}=" "$nuevo" | cut -d= -f2-) || falla "el .env no tiene $clave"
+servicios=()
+db() { docker exec -i supabase-db psql -U supabase_admin -d postgres -At -v ON_ERROR_STOP=1 "$@"; }
+valor_de() { grep "^${1}=" "$nuevo" | tail -1 | cut -d= -f2-; }
+cambiar() {   # cambiar <sumar|sacar> <clave> <valor> [servicio a reiniciar]
+  local accion="$1" clave="$2" valor="$3" servicio="${4:-}" actual final linea
+  linea=$(grep -n "^${clave}=" "$nuevo" | tail -1 | cut -d: -f1)
+  [[ -n "$linea" ]] || falla "el .env no tiene $clave"
+  actual=$(valor_de "$clave")
   if [[ ",${actual// /}," == *",${valor},"* ]]; then
     [[ "$accion" == "sumar" ]] && return 0
     final=$(tr ',' '\n' <<<"$actual" | sed 's/^ *//; s/ *$//' | { grep -vxF -- "$valor" || true; } | paste -sd, -)
@@ -111,18 +119,69 @@ cambiar() {   # cambiar <sumar|sacar> <clave> <valor>
     [[ "$accion" == "sacar" ]] && return 0
     final="${actual:+$actual,}$valor"
   fi
-  K="$clave" L="$clave=$final" awk 'index($0, ENVIRON["K"] "=") == 1 && !hecho { print ENVIRON["L"]; hecho = 1; next } { print }' "$nuevo" > "$nuevo.2"
+  N="$linea" L="$clave=$final" awk 'NR == ENVIRON["N"] { print ENVIRON["L"]; next } { print }' "$nuevo" > "$nuevo.2"
   cat "$nuevo.2" > "$nuevo"
-  cambios=$((cambios + 1))
+  [[ -n "$servicio" ]] && servicios+=("$servicio")
+  return 0
 }
 accion=$([[ -n "$quitar" ]] && echo sacar || echo sumar)
-cambiar "$accion" PGRST_DB_SCHEMAS "$schema"
-cambiar "$accion" ADDITIONAL_REDIRECT_URLS "https://$dominio/**"
 
-if (( cambios )); then
+# Si la API toma la lista de schemas de la base (pgrst.db_schemas del rol authenticator, como en
+# producción), esa es la que vale: se cambia ahí y se recarga en vivo, sin reiniciar rest. El .env
+# se actualiza igual, para que quede al día.
+en_base=$(db -c "select count(*) from pg_db_role_setting s join pg_roles r on r.oid = s.setrole, unnest(s.setconfig) c where r.rolname = 'authenticator' and c like 'pgrst.db_schemas=%'" </dev/null)
+recargado=""
+if (( en_base )); then
+  cambiar "$accion" PGRST_DB_SCHEMAS "$schema"
+  cambio=$(db -v s="$schema" -v q="${quitar:-}" <<'SQL' | tail -1
+select set_config('erp.s', :'s', false), set_config('erp.q', :'q', false), set_config('erp.cambio', '0', false);
+do $$
+declare r record; lista text[]; s text := current_setting('erp.s'); quitar bool := current_setting('erp.q') <> '';
+begin
+  for r in select x.setdatabase, c from pg_db_role_setting x join pg_roles ro on ro.oid = x.setrole, unnest(x.setconfig) c
+            where ro.rolname = 'authenticator' and c like 'pgrst.db_schemas=%' loop
+    lista := string_to_array(replace(substring(r.c from 18), ' ', ''), ',');
+    if quitar and s = any(lista) then lista := array_remove(lista, s);
+    elsif not quitar and not s = any(lista) then lista := lista || s;
+    else continue; end if;
+    if r.setdatabase = 0 then
+      execute format('alter role authenticator set pgrst.db_schemas = %L', array_to_string(lista, ','));
+    else
+      execute format('alter role authenticator in database %I set pgrst.db_schemas = %L', (select datname from pg_database where oid = r.setdatabase), array_to_string(lista, ','));
+    end if;
+    perform set_config('erp.cambio', '1', false);
+  end loop;
+end $$;
+select current_setting('erp.cambio');
+SQL
+)
+  if [[ "$cambio" == "1" ]]; then
+    db -c "notify pgrst, 'reload config'" -c "notify pgrst, 'reload schema'" </dev/null >/dev/null
+    recargado=1
+  fi
+else
+  cambiar "$accion" PGRST_DB_SCHEMAS "$schema" rest
+fi
+
+comodin='https://*.neura.com.py/**'
+login=$(docker inspect supabase-auth --format '{{range .Config.Env}}{{println .}}{{end}}' | grep '^GOTRUE_URI_ALLOW_LIST=' | cut -d= -f2- | tr -d ' "')
+if [[ "$dominio" =~ ^[a-z0-9-]+\.neura\.com\.py$ && ",$login," == *",${comodin},"* ]]; then
+  # El login ya acepta cualquier <nombre>.neura.com.py: no se suma el dominio ni se reinicia auth.
+  [[ -n "$quitar" ]] && cambiar sacar ADDITIONAL_REDIRECT_URLS "https://$dominio/**"
+else
+  cambiar "$accion" ADDITIONAL_REDIRECT_URLS "https://$dominio/**" auth
+fi
+
+hubo="$recargado"
+if ! cmp -s "$env" "$nuevo"; then
   cp -p "$env" "$env.bak-$(date +%Y%m%d-%H%M%S)"
   cat "$nuevo" > "$env"   # así conserva dueño y permisos
-  (cd "$dir" && docker compose up -d --no-deps rest auth) >&2 || falla "el .env quedó cambiado pero no pude reiniciar rest y auth: avisale al administrador"
+  hubo=1
+fi
+if (( ${#servicios[@]} )); then
+  (cd "$dir" && docker compose up -d --no-deps "${servicios[@]}") >&2 || falla "el .env quedó cambiado pero no pude reiniciar ${servicios[*]}: avisale al administrador"
+fi
+if [[ -n "$hubo" ]]; then
   resultado=$([[ -n "$quitar" ]] && echo quitado || echo habilitado)
 else
   resultado=$([[ -n "$quitar" ]] && echo "no estaba" || echo "ya estaba")
@@ -168,7 +227,8 @@ co() { curl -sS -m 120 -H "Authorization: Bearer $COOLIFY_TOKEN" -H "Content-Typ
 llaves_temporales() { gh "https://api.github.com/repos/$GITHUB_DUENO/$repo/keys" | jq -r '.[]? | select(.title == "clonar (temporal)") | .id'; }
 
 # Solo clones habilitados en Supabase (erp-habilitar ya revisó recetas, empresa y pruebas).
-grep -m1 '^PGRST_DB_SCHEMAS=' /home/ubuntu/supabase/docker/.env | cut -d= -f2- | tr ',' '\n' | grep -qx "$schema" \
+dir=$(docker inspect supabase-db --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}')
+grep '^PGRST_DB_SCHEMAS=' "$dir/.env" | tail -1 | cut -d= -f2- | tr ',' '\n' | grep -qx "$schema" \
   || falla "$schema todavía no está habilitado en Supabase (erp-habilitar)"
 
 case "$accion" in
@@ -302,7 +362,8 @@ case "${1:-lista}" in
   lista)
     { printf 'Fecha\tQuién\tSchema\tDominio\tResultado\n'; cat "$registro"; } | column -t -s $'\t' ;;
   activos)
-    grep -m1 '^PGRST_DB_SCHEMAS=' /home/ubuntu/supabase/docker/.env | cut -d= -f2- | tr ',' '\n' | grep '^erp_' ;;
+    dir=$(docker inspect supabase-db --format '{{ index .Config.Labels "com.docker.compose.project.working_dir" }}')
+    grep '^PGRST_DB_SCHEMAS=' "$dir/.env" | tail -1 | cut -d= -f2- | tr ',' '\n' | grep '^erp_' ;;
   *) echo "Uso: erp-clientes lista | activos" >&2; exit 1 ;;
 esac
 EOF

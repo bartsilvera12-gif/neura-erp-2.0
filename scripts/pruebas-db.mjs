@@ -6,7 +6,7 @@
  *   npm run test:db            solo el resumen y lo que falló
  *   npm run test:db -- -v      además cada prueba que pasó
  *
- * PRUEBAS_SSH (zentra-app) y PRUEBAS_SCHEMA (erp_demo) cambian dónde corre.
+ * PRUEBAS_SSH (neura-erp) y PRUEBAS_SCHEMA (erp_demo) cambian dónde corre.
  */
 import { errorRemoto, psqlRemoto } from "./remoto.mjs";
 import { readdirSync, readFileSync } from "node:fs";
@@ -14,7 +14,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const carpeta = join(dirname(fileURLToPath(import.meta.url)), "..", "db", "pruebas");
-const ssh = process.env.PRUEBAS_SSH || "zentra-app";
+const ssh = process.env.PRUEBAS_SSH || "neura-erp";
 const schema = process.env.PRUEBAS_SCHEMA || "erp_demo";
 const detallado = process.argv.includes("-v");
 

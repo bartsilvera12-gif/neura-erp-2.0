@@ -6,7 +6,7 @@
  */
 import { scopedServiceClient } from "@/lib/supabase/clients";
 
-export const SOPORTE_BUCKET = "soporte";
+export const SOPORTE_BUCKET = "erp-soporte";
 
 export function prefijoArchivosTicket(empresaId: string, ticketId: string): string {
   return `${empresaId}/${ticketId}/`;

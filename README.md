@@ -14,9 +14,9 @@ preparar la computadora y usarlo, en una hoja: **[docs/PROGRAMADORES.md](docs/PR
 
 ```bash
 npm run setup -- --cliente "Cliente X" --schema erp_clientex --dominio clientex.neura.com.py
-npm run provision -- --schema erp_clientex --ssh zentra-app
-npm run seed-admin -- --schema erp_clientex --ssh zentra-app --empresa "Cliente X S.A." --email admin@clientex.com --nombre "Nombre"
-npm run db:verify-rls -- --schema erp_clientex --ssh zentra-app
+npm run provision -- --schema erp_clientex --ssh neura-erp
+npm run seed-admin -- --schema erp_clientex --ssh neura-erp --empresa "Cliente X S.A." --email admin@clientex.com --nombre "Nombre"
+npm run db:verify-rls -- --schema erp_clientex --ssh neura-erp
 ```
 ## Reglas de oro (no negociables)
 

@@ -1,6 +1,8 @@
 # Clonar el ERP 2.0 para un cliente nuevo
 
-Cada cliente tiene **su propio repo y su propio schema** en el Supabase compartido. El código no
+Cada cliente tiene **su propio repo y su propio schema** en el Supabase de producción
+(`https://api.neura.com.py`), compartido con los demás sistemas de Neura. Todo
+lo del 2.0 empieza con `erp_` (schemas) o `erp-` (buckets) para no chocar con nada. El código no
 conoce a ningún cliente: lo único que cambia es `src/cliente.config.ts` y `.env.local`, y los dos
 los escribe `npm run setup`.
 
@@ -39,7 +41,7 @@ Abajo está lo mismo a mano, paso por paso.
 ## 0. Antes de empezar
 
 - Node 22 y git.
-- Acceso por SSH al servidor de Supabase (`zentra-app` en `~/.ssh/config`). Los programadores usan
+- Acceso por SSH al servidor de Supabase (`neura-erp` en `~/.ssh/config`). Los programadores usan
   la llave restringida del usuario `clonador`, que solo puede correr `psql` por la puerta
   `/usr/local/bin/erp-psql` (cómo se pide y se agrega: [PROGRAMADORES.md](PROGRAMADORES.md)). Todos los
   scripts pasan por esa puerta, así que no hace falta `psql` en tu máquina. El paso 4 necesita la llave
@@ -95,7 +97,7 @@ Rechaza `erp_demo`. Sin `--modulos` activa todos (es lo que usamos: el rubro va 
 ## 3. Armar la base
 
 ```bash
-npm run provision -- --schema erp_republica --ssh zentra-app
+npm run provision -- --schema erp_republica --ssh neura-erp
 ```
 
 Corre las recetas de `db/canonical` **por número** (00, 10, … 100, 120) y anota cada una en la tabla
@@ -113,32 +115,32 @@ Es la única parte que toca configuración compartida. La hace `erp-habilitar` e
 instala `scripts/servidor/instalar-clonador.sh`), después de los pasos 5 y 6:
 
 ```bash
-ssh zentra-app '/usr/local/bin/erp-habilitar erp_republica republica.neura.com.py'
+ssh neura-erp '/usr/local/bin/erp-habilitar erp_republica republica.neura.com.py'
 ```
 
-Revisa que el schema sea un clon armado (con `_recetas` y empresa), hace respaldo del `.env`, suma el
-schema y el dominio, reinicia `rest` y `auth` (unos segundos sin API para todos los clientes) y lo anota
+Revisa que el schema sea un clon armado (con `_recetas` y empresa), suma el schema a la API y lo anota
 en `/var/log/erp-clientes.log` (`sudo erp-clientes lista`). Volver a correrlo no cambia nada. Con la
 llave restringida solo acepta dominios `<nombre>.neura.com.py`; un dominio propio del cliente lo
 habilita el administrador con el mismo comando.
 
-A mano sería esto, en `/home/ubuntu/supabase/docker/.env`:
+**En producción (`/root/supabase/docker`) no se reinicia nada:**
+- La lista de schemas de la API vive en la base (`pgrst.db_schemas` del rol `authenticator`, que manda
+  sobre el `.env`). `erp-habilitar` la cambia ahí y avisa a la API (`notify pgrst, 'reload config'`):
+  recarga en vivo en unos segundos. El `.env` se actualiza igual, para que quede al día.
+- El login toma su lista de direcciones del `docker-compose.yml` (`GOTRUE_URI_ALLOW_LIST`, no del
+  `.env`). Ya acepta `https://*.neura.com.py/**` y `http://localhost:3000/**` (3-nov-2026), así que un
+  dominio `<nombre>.neura.com.py` no necesita nada. **Un dominio propio del cliente** sí: sumalo a
+  `GOTRUE_URI_ALLOW_LIST` en el `docker-compose.yml` (con respaldo) y recreá solo `auth`
+  (`docker compose up -d --no-deps auth`, unos segundos sin login para todos).
+- El `.env` repite claves (`SITE_URL`, `ADDITIONAL_REDIRECT_URLS`): vale la última.
 
-1. Hacé un respaldo: `cp .env .env.bak-$(date +%Y%m%d)`.
-2. En `PGRST_DB_SCHEMAS` sumá el schema: `…,erp_demo,erp_republica`.
-3. En `ADDITIONAL_REDIRECT_URLS` sumá el dominio: `…,https://republica.neura.com.py/**`.
-4. Recreá solo esos dos servicios:
-   ```bash
-   docker compose up -d --no-deps rest auth
-   ```
-
-Sin el paso 2 la app da error al leer datos; sin el 3, los links de invitación y de cambio de
-contraseña no vuelven al dominio del cliente.
+Sin el schema en la API la app da error al leer datos; sin el dominio en el login, los links de
+invitación y de cambio de contraseña no vuelven al dominio del cliente.
 
 ## 5. Empresa y administrador
 
 ```bash
-npm run seed-admin -- --schema erp_republica --ssh zentra-app \
+npm run seed-admin -- --schema erp_republica --ssh neura-erp \
   --empresa "Ferretería República S.A." --email admin@republica.com.py --nombre "Juan Pérez" \
   --rubro comercio            # o gastronomia; --ocultar-rubro si para que el cliente no lo cambie
 ```
@@ -152,7 +154,7 @@ duplica nada.
 ## 6. Verificar
 
 ```bash
-npm run db:verify-rls -- --schema erp_republica --ssh zentra-app
+npm run db:verify-rls -- --schema erp_republica --ssh neura-erp
 PRUEBAS_SCHEMA=erp_republica npm run test:db
 npm run build
 npm run dev     # entrá con el admin en http://localhost:3000
@@ -190,21 +192,21 @@ Con un dominio propio del cliente, a mano:
 
 - **Recetas:** nunca edites una receta que ya se aplicó en algún cliente. Un cambio de base es una
   receta nueva con el número siguiente, idempotente (`create or replace`, `if not exists`), y se
-  aplica con `npm run provision -- --schema <schema> --ssh zentra-app` (corre solo las nuevas).
+  aplica con `npm run provision -- --schema <schema> --ssh neura-erp` (corre solo las nuevas).
 - **Funciones nuevas:** `revoke execute … from public, anon` y `grant` a `authenticated` si la app
   la llama. Sin eso, `db:verify-rls` falla.
 - **Algo que sirve para todos los clientes:** hacelo en el 2.0, no en el clon.
 - **Traer arreglos del 2.0 al clon:**
   ```bash
   git fetch base && git merge base/main
-  npm run provision -- --schema erp_republica --ssh zentra-app
+  npm run provision -- --schema erp_republica --ssh neura-erp
   ```
   `src/cliente.config.ts` va a tener conflicto si el 2.0 lo cambió: quedate con el del cliente.
 
 ## Borrar un clon (por ejemplo, uno de prueba)
 
 Además del schema, hay que sacar las tres cosas que quedan afuera. Con `psql -U supabase_admin` (por
-SSH: `ssh zentra-app /usr/local/bin/erp-psql supabase_admin q`, con el SQL por la entrada):
+SSH: `ssh neura-erp /usr/local/bin/erp-psql supabase_admin q`, con el SQL por la entrada):
 
 ```sql
 select cron.unschedule(jobid) from cron.job where jobname = 'chat_sla_erp_republica';
@@ -213,7 +215,7 @@ drop schema if exists erp_republica cascade;
 ```
 
 Y quitarlo de Supabase (con la llave del administrador):
-`ssh zentra-app 'erp-habilitar --quitar erp_republica republica.neura.com.py'`.
+`ssh neura-erp 'erp-habilitar --quitar erp_republica republica.neura.com.py'`.
 
 ---
 

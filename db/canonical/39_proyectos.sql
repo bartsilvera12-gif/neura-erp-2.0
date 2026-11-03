@@ -214,7 +214,7 @@ create table if not exists :"schema".proyecto_archivos (
 );
 create index if not exists proy_archivos_idx on :"schema".proyecto_archivos (proyecto_id) where deleted_at is null;
 
-insert into storage.buckets (id, name, public, file_size_limit) values ('proyectos', 'proyectos', false, 52428800)
+insert into storage.buckets (id, name, public, file_size_limit) values ('erp-proyectos', 'erp-proyectos', false, 52428800)
 on conflict (id) do nothing;
 
 do $$

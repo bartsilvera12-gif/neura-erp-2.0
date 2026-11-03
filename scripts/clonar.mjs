@@ -255,7 +255,7 @@ async function clonar(d, enviar) {
 
 // ── Servidor web local ──────────────────────────────────────────────────────────────────────
 const html = () => readFileSync(join(raiz, "scripts", "clonar-formulario.html"), "utf8")
-  .replace("/*DATOS*/null", JSON.stringify({ padre: dirname(raiz), ssh: process.env.PRUEBAS_SSH || "zentra-app" }));
+  .replace("/*DATOS*/null", JSON.stringify({ padre: dirname(raiz), ssh: process.env.PRUEBAS_SSH || "neura-erp" }));
 
 const srv = http.createServer(async (req, res) => {
   const ruta = (req.url ?? "/").split("?")[0];

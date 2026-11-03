@@ -352,7 +352,7 @@ grant execute on function :"schema".chat_bandeja(text, text, uuid, uuid, timesta
 revoke execute on function :"schema".chat_avisar(text, text, jsonb) from public, anon, authenticated;
 
 -- Bucket privado para adjuntos del chat.
-insert into storage.buckets (id, name, public, file_size_limit) values ('chat', 'chat', false, 104857600)
+insert into storage.buckets (id, name, public, file_size_limit) values ('erp-chat', 'erp-chat', false, 104857600)
 on conflict (id) do nothing;
 
 -- Canal de prueba (simulador) para cada empresa que no tenga ninguno.

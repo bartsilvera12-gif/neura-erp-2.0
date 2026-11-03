@@ -2,7 +2,7 @@
  * Conversaciones — lo que necesita service-role (vive en lib/ a propósito: el cliente de
  * sistema no se importa desde una ruta).
  *
- *   · Bucket PRIVADO "chat": subida de adjuntos y URLs firmadas. La ruta del objeto la arma
+ *   · Bucket PRIVADO "erp-chat": subida de adjuntos y URLs firmadas. La ruta del objeto la arma
  *     el servidor (<empresa>/<conversación>/<uuid>-<nombre>), nunca el navegador.
  *   · chat_registrar_entrante (solo service_role): el simulador y el procesador del webhook.
  *   · chat_eventos (cola cruda del webhook, solo service_role).
@@ -11,7 +11,7 @@
  */
 import { systemClient } from "@/lib/supabase/clients";
 
-export const CHAT_BUCKET = "chat";
+export const CHAT_BUCKET = "erp-chat";
 const URL_TTL_S = 60 * 60;
 
 function bucket() {

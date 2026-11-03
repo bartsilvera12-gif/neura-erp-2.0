@@ -167,7 +167,7 @@ create table if not exists :"schema".soporte_ticket_archivos (
   ticket_id uuid not null references :"schema".soporte_tickets(id) on delete cascade,
   comentario_id uuid references :"schema".soporte_ticket_comentarios(id) on delete set null,
   nombre text not null,
-  storage_bucket text not null default 'soporte',
+  storage_bucket text not null default 'erp-soporte',
   storage_path text not null,
   mime text, size bigint,
   subido_por uuid references :"schema".usuarios(id) on delete set null,
@@ -291,7 +291,7 @@ grant select, insert, update, delete on :"schema".usuario_notificaciones to auth
 
 -- ── Bucket privado para adjuntos ────────────────────────────────────────────
 insert into storage.buckets (id, name, public, file_size_limit)
-values ('soporte', 'soporte', false, 52428800)
+values ('erp-soporte', 'erp-soporte', false, 52428800)
 on conflict (id) do nothing;
 
 -- ── Catálogos iniciales (los mismos del sistema actual) ─────────────────────

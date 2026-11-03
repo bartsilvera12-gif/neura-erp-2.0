@@ -36,5 +36,5 @@ grant select, insert, update, delete on :"schema".compras_comprobantes to authen
 
 -- --- Storage: bucket privado (sin políticas para la sesión del usuario: todo pasa por la API) ---
 insert into storage.buckets (id, name, public, file_size_limit)
-values ('compras', 'compras', false, 20971520)
+values ('erp-compras', 'erp-compras', false, 20971520)
 on conflict (id) do nothing;

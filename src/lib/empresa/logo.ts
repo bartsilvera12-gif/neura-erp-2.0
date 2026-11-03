@@ -1,7 +1,7 @@
 /**
  * Logo de la empresa (Configuración › Datos de la empresa › Logo de los documentos). Solo servidor.
  *
- *   · Bucket PÚBLICO `empresas-logos` (receta 62): un logo no es sensible y lo usa también el
+ *   · Bucket PÚBLICO `erp-empresas-logos` (recetas 62 y 122): un logo no es sensible y lo usa también el
  *     link público del presupuesto. Escribe SOLO el servidor con el cliente de sistema; la ruta
  *     la arma siempre el servidor: {schema}/{empresa}/logo-<marca>.{png|jpg} (el que usan los
  *     PDF) y {schema}/{empresa}/original-<marca>.{png|jpg} (receta 63: el original normalizado,
@@ -18,7 +18,7 @@ import { tenantSchema } from "@/lib/tenant/schema";
 import { logoDesdeOriginal, prepararOriginal, type FondoLogo, type LogoNormalizado } from "@/lib/empresa/logo-imagen";
 
 export type { FondoLogo, LogoNormalizado };
-export const LOGOS_BUCKET = "empresas-logos";
+export const LOGOS_BUCKET = "erp-empresas-logos";
 export const LOGO_MAX_BYTES = 2 * 1024 * 1024;
 
 /** Valida lo que subió el usuario, arma el original y el logo (con el fondo quitado si corresponde). */

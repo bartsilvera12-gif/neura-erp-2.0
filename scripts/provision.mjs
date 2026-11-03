@@ -4,7 +4,7 @@
  * canónicas (db/canonical/*.sql), LIMPIO e independiente. Idempotente.
  *
  *   node scripts/provision.mjs --schema erp_clientex --db "postgres://..."   (psql local)
- *   node scripts/provision.mjs --schema erp_clientex --ssh zentra-app        (psql del servidor, por SSH y erp-psql)
+ *   node scripts/provision.mjs --schema erp_clientex --ssh neura-erp        (psql del servidor, por SSH y erp-psql)
  *
  * No copia ningún schema vivo: cada cliente nace de los .sql canónicos. El nombre de
  * schema es el único parámetro. Corre con check_function_bodies=off (como pg_restore): una función

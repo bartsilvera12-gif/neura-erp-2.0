@@ -1,5 +1,5 @@
 /**
- * Storage del módulo Proyectos: bucket PRIVADO "proyectos" (50 MB por archivo).
+ * Storage del módulo Proyectos: bucket PRIVADO "erp-proyectos" (50 MB por archivo).
  *
  * Igual que Soporte: el bucket no tiene políticas para la sesión del usuario, así que
  * las URLs firmadas (subida y descarga) las emite el cliente de sistema, SIEMPRE dentro
@@ -8,7 +8,7 @@
  */
 import { systemClient } from "@/lib/supabase/clients";
 
-export const PROYECTOS_BUCKET = "proyectos";
+export const PROYECTOS_BUCKET = "erp-proyectos";
 const URL_TTL_S = 60 * 10;
 
 export function prefijoArchivosProyecto(empresaId: string, proyectoId: string): string {

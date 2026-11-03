@@ -40,7 +40,7 @@ alter table :"schema".empresas
 -- 2. Bucket (global del Supabase; público, escritura solo con service role)
 -- =============================================================================
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('empresas-logos', 'empresas-logos', true, 1048576, array['image/png', 'image/jpeg'])
+values ('erp-empresas-logos', 'erp-empresas-logos', true, 1048576, array['image/png', 'image/jpeg'])
 on conflict (id) do update set public = true, file_size_limit = excluded.file_size_limit, allowed_mime_types = excluded.allowed_mime_types;
 
 -- =============================================================================
