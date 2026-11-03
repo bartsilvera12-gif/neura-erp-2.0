@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clonar el ERP 2.0</title>
+<style>
+  :root {
+    --teal: #4FAEB2; --teal-osc: #3F8E91; --teal-suave: #EAF5F5; --tinta: #0F172A; --gris: #64748B;
+    --linea: #E2E8F0; --fondo: #F6F8FA; --blanco: #fff; --rojo: #E11D48; --rojo-suave: #FFF1F2; --ambar: #B45309; --ambar-suave: #FFFBEB; --verde: #059669;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--fondo); color: var(--tinta); font: 15px/1.45 "Plus Jakarta Sans", "Segoe UI", system-ui, sans-serif; }
+  header { background: linear-gradient(120deg, #0F3D40, #1E5F63); color: #fff; padding: 28px 16px 64px; }
+  header .dentro, main { max-width: 1180px; margin: 0 auto; }
+  header h1 { margin: 0; font-size: 26px; letter-spacing: -.01em; }
+  header p { margin: 6px 0 0; color: #CFE7E8; max-width: 640px; }
+  main { padding: 0 16px 48px; margin-top: -40px; display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr) 360px; align-items: start; }
+  @media (max-width: 960px) { main { grid-template-columns: 1fr; } }
+  .tarjeta { background: var(--blanco); border: 1px solid var(--linea); border-radius: 18px; box-shadow: 0 8px 30px -18px rgba(15, 61, 64, .35); }
+  form .tarjeta { padding: 20px; margin-bottom: 16px; }
+  .cabeza { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; }
+  .num { width: 32px; height: 32px; border-radius: 10px; background: var(--teal-suave); color: var(--teal-osc); display: grid; place-items: center; font-weight: 700; flex-shrink: 0; }
+  .cabeza h2 { margin: 0; font-size: 16px; }
+  .cabeza small { color: var(--gris); display: block; font-size: 12.5px; }
+  .grilla { display: grid; gap: 14px; grid-template-columns: 1fr 1fr; }
+  .grilla .ancho { grid-column: 1 / -1; }
+  @media (max-width: 640px) { .grilla { grid-template-columns: 1fr; } }
+  label.campo { display: block; font-size: 12.5px; font-weight: 600; color: #334155; }
+  label.campo span.ayuda { font-weight: 400; color: var(--gris); }
+  input[type=text], input[type=email], input[type=password], input[type=url] {
+    width: 100%; margin-top: 5px; padding: 11px 13px; border: 1px solid var(--linea); border-radius: 12px; font: inherit; background: #fff; color: var(--tinta);
+  }
+  input:focus { outline: none; border-color: var(--teal); box-shadow: 0 0 0 3px rgba(79, 174, 178, .2); }
+  input.mal { border-color: var(--rojo); }
+  .mono { font-family: ui-monospace, "Cascadia Code", Consolas, monospace; font-size: 13.5px; }
+  .color { display: flex; gap: 8px; margin-top: 5px; }
+  .color input[type=color] { width: 46px; height: 44px; border: 1px solid var(--linea); border-radius: 12px; padding: 4px; background: #fff; cursor: pointer; }
+  .color input[type=text] { margin-top: 0; }
+  .logo { margin-top: 5px; display: flex; align-items: center; gap: 12px; min-height: 44px; padding: 8px 12px; border: 1px dashed #CBD5E1; border-radius: 12px; cursor: pointer; }
+  .logo img { height: 28px; max-width: 120px; object-fit: contain; }
+  .logo input { display: none; }
+  .modulos { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px; }
+  .chip { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 8px 12px; border: 1px solid var(--linea); border-radius: 12px; cursor: pointer; font-size: 14px; user-select: none; }
+  .chip:has(input:checked) { border-color: var(--teal); background: var(--teal-suave); }
+  .chip input { accent-color: var(--teal-osc); width: 17px; height: 17px; }
+  .chip.fijo { opacity: .7; cursor: default; }
+  .acciones-mod { display: flex; gap: 14px; margin: -6px 0 12px; font-size: 13px; }
+  .acciones-mod button { border: 0; background: none; color: var(--teal-osc); font: inherit; font-weight: 600; cursor: pointer; padding: 10px 0; }
+  .opcion { display: flex; gap: 12px; padding: 12px; border: 1px solid var(--linea); border-radius: 14px; cursor: pointer; margin-top: 10px; }
+  .opcion:has(input:checked) { border-color: var(--teal); background: var(--teal-suave); }
+  .opcion input { accent-color: var(--teal-osc); width: 18px; height: 18px; margin-top: 2px; flex-shrink: 0; }
+  .opcion b { display: block; font-size: 14px; }
+  .opcion small { color: var(--gris); }
+  .opcion.cuidado:has(input:checked) { border-color: #F59E0B; background: var(--ambar-suave); }
+  .boton { width: 100%; min-height: 50px; border: 0; border-radius: 14px; background: var(--teal); color: #fff; font: inherit; font-weight: 700; font-size: 16px; cursor: pointer; }
+  .boton:hover { background: var(--teal-osc); }
+  .boton:disabled { background: #CBD5E1; cursor: not-allowed; }
+  .errores { background: var(--rojo-suave); color: #9F1239; border: 1px solid #FECDD3; border-radius: 12px; padding: 10px 14px; margin-bottom: 14px; font-size: 13.5px; }
+  .errores:empty { display: none; }
+  aside { position: sticky; top: 16px; }
+  aside .tarjeta { padding: 18px; }
+  aside h3 { margin: 0 0 4px; font-size: 15px; }
+  aside > .tarjeta > p { margin: 0 0 14px; color: var(--gris); font-size: 13px; }
+  ol.pasos { list-style: none; margin: 0; padding: 0; }
+  ol.pasos li { display: flex; gap: 10px; padding: 9px 0; border-top: 1px solid #F1F5F9; font-size: 14px; }
+  ol.pasos li:first-child { border-top: 0; }
+  .ico { width: 22px; height: 22px; border-radius: 50%; border: 2px solid #CBD5E1; flex-shrink: 0; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; margin-top: 1px; }
+  li.corre .ico { border-color: var(--teal); border-top-color: transparent; animation: gira .8s linear infinite; }
+  li.ok .ico { background: var(--verde); border-color: var(--verde); }
+  li.ok .ico::after { content: "✓"; }
+  li.salta .ico { background: #CBD5E1; border-color: #CBD5E1; }
+  li.salta .ico::after { content: "–"; }
+  li.error .ico { background: var(--rojo); border-color: var(--rojo); }
+  li.error .ico::after { content: "!"; }
+  li .ult { display: block; color: var(--gris); font-size: 12px; word-break: break-word; }
+  li.error .ult { color: var(--rojo); }
+  @keyframes gira { to { transform: rotate(360deg); } }
+  details.log { margin-top: 12px; font-size: 12.5px; }
+  details.log summary { cursor: pointer; color: var(--teal-osc); font-weight: 600; padding: 8px 0; }
+  details.log pre { max-height: 260px; overflow: auto; background: #0F172A; color: #CBD5E1; padding: 10px; border-radius: 10px; white-space: pre-wrap; margin: 0; }
+  .final { margin-top: 14px; padding: 14px; border-radius: 14px; background: #ECFDF5; border: 1px solid #A7F3D0; font-size: 13.5px; }
+  .final.malo { background: var(--rojo-suave); border-color: #FECDD3; color: #9F1239; }
+  .final h4 { margin: 0 0 6px; font-size: 14.5px; }
+  .final ul { margin: 6px 0 0; padding-left: 18px; }
+  .clave { display: flex; gap: 8px; align-items: center; margin: 8px 0; padding: 8px 10px; background: #fff; border-radius: 10px; border: 1px solid #A7F3D0; }
+  .clave code { flex: 1; word-break: break-all; }
+  .clave button { border: 1px solid var(--linea); background: #fff; border-radius: 8px; padding: 8px 10px; cursor: pointer; font: inherit; font-size: 12.5px; }
+</style>
+</head>
+<body>
+<header><div class="dentro">
+  <h1>Clonar el ERP 2.0 para un cliente</h1>
+  <p>Completá los datos y tocá Clonar. Se copia el código, se arma la base, se crea el administrador y se revisa todo. Si algo falla, corregís y volvés a tocar Clonar: sigue desde donde quedó.</p>
+</div></header>
+
+<main>
+<form id="f" novalidate>
+  <section class="tarjeta">
+    <div class="cabeza"><span class="num">1</span><div><h2>El cliente</h2><small>Cómo se va a ver la app</small></div></div>
+    <div class="grilla">
+      <label class="campo">Nombre del negocio<input type="text" name="nombre" placeholder="Ferretería República" autocomplete="off"></label>
+      <label class="campo">Razón social<input type="text" name="razon" placeholder="Ferretería República S.A." autocomplete="off"></label>
+      <label class="campo">Dominio <span class="ayuda">donde va a entrar</span><input type="text" name="dominio" class="mono" placeholder="republica.neura.com.py" autocomplete="off"></label>
+      <label class="campo">Color principal
+        <span class="color"><input type="color" id="colorPicker" value="#3F8E91" aria-label="Elegir color"><input type="text" name="color" class="mono" value="#3F8E91"></span>
+      </label>
+      <label class="campo ancho">Logo <span class="ayuda">opcional · .webp, .png, .svg o .jpg · sin logo queda el de Zentra</span>
+        <span class="logo" id="logoCaja"><img id="logoVista" alt="" hidden><span id="logoTxt">Tocá para elegir el logo</span><input type="file" id="logo" accept=".webp,.png,.svg,.jpg,.jpeg"></span>
+      </label>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <div class="cabeza"><span class="num">2</span><div><h2>El administrador</h2><small>El primer usuario: después crea a los demás</small></div></div>
+    <div class="grilla">
+      <label class="campo">Nombre y apellido<input type="text" name="adminNombre" placeholder="Juan Pérez" autocomplete="off"></label>
+      <label class="campo">Correo<input type="email" name="adminEmail" placeholder="admin@republica.com.py" autocomplete="off"></label>
+      <label class="campo ancho">Contraseña inicial <span class="ayuda">opcional · si la dejás vacía se genera una y se muestra una sola vez · si el correo ya tiene cuenta, no se cambia</span>
+        <input type="password" name="adminPassword" autocomplete="new-password"></label>
+    </div>
+  </section>
+
+  <section class="tarjeta">
+    <div class="cabeza"><span class="num">3</span><div><h2>Módulos</h2><small>Lo que va a ver en el menú</small></div></div>
+    <div class="acciones-mod"><button type="button" data-mod="todos">Todos</button><button type="button" data-mod="ninguno">Ninguno</button></div>
+    <div class="modulos" id="modulos"></div>
+  </section>
+
+  <section class="tarjeta">
+    <div class="cabeza"><span class="num">4</span><div><h2>Datos técnicos</h2><small>Se completan solos a partir del nombre; cambialos si hace falta</small></div></div>
+    <div class="grilla">
+      <label class="campo">Schema de la base <span class="ayuda">único, nunca erp_demo</span><input type="text" name="schema" class="mono" placeholder="erp_republica" autocomplete="off"></label>
+      <label class="campo">Servidor SSH<input type="text" name="ssh" class="mono" autocomplete="off"></label>
+      <label class="campo ancho">Carpeta del clon en esta computadora<input type="text" name="destino" class="mono" autocomplete="off"></label>
+      <label class="campo ancho">Repo del cliente en GitHub <span class="ayuda">opcional · vacío, el repo queda solo en esta computadora</span><input type="url" name="repoCliente" class="mono" placeholder="https://github.com/org/neura-erp-republica.git" autocomplete="off"></label>
+    </div>
+    <label class="opcion cuidado"><input type="checkbox" name="servidor"><span><b>Configurar el servidor de Supabase</b><small>Suma el schema y el dominio a la configuración compartida (con respaldo) y reinicia la API y el acceso unos segundos para todos los clientes. Sin esto lo hace a mano quien administra el servidor, y la app no lee datos hasta entonces.</small></span></label>
+    <label class="opcion"><input type="checkbox" name="compilar" checked><span><b>Instalar y compilar</b><small>npm ci y build en la carpeta del clon, para confirmar que arranca. Tarda unos minutos.</small></span></label>
+    <label class="opcion"><input type="checkbox" name="push"><span><b>Subir el código al repo del cliente</b><small>Hace push a la rama main del repo de arriba (tiene que existir y estar vacío).</small></span></label>
+  </section>
+
+  <div class="errores" id="errores"></div>
+  <button class="boton" id="boton" type="submit">Clonar</button>
+</form>
+
+<aside>
+  <div class="tarjeta">
+    <h3>Avance</h3>
+    <p id="estadoTxt">Todavía no empezó.</p>
+    <ol class="pasos" id="pasos"></ol>
+    <details class="log" id="logBox"><summary>Ver el detalle</summary><pre id="log"></pre></details>
+    <div id="final"></div>
+  </div>
+</aside>
+</main>
+
+<script>
+const DATOS = /*DATOS*/null;
+const NOMBRES = { caja: "Caja", inventario: "Inventario", "gastos-empresariales": "Gastos empresariales", clientes: "Clientes", crm: "CRM", presupuestos: "Presupuestos", "gestion-clientes": "Gestión de clientes", comisiones: "Comisiones", planes: "Planes", agenda: "Agenda", cobranzas: "Cobranzas", conciliacion: "Conciliación", pagos: "Pagos", conversaciones: "Omnicanal", soporte: "Soporte", reportes: "Reportes", rrhh: "RR HH", proyectos: "Proyectos", configuracion: "Configuración" };
+const PASOS = [["revisar", "Revisar los datos"], ["copiar", "Copiar el código"], ["personalizar", "Personalizar (nombre, logo, claves)"], ["base", "Armar la base"], ["servidor", "Configurar el servidor"], ["admin", "Empresa y administrador"], ["seguridad", "Revisión de seguridad"], ["pruebas", "Pruebas de plata y stock"], ["compilar", "Instalar y compilar"], ["git", "Guardar en git"]];
+
+const f = document.getElementById("f");
+const $ = (n) => f.elements[n];
+const sep = DATOS.padre.includes("\\") ? "\\" : "/";
+$("ssh").value = DATOS.ssh;
+
+// Módulos
+const caja = document.getElementById("modulos");
+for (const m of DATOS.modulos) {
+  const fijo = m === "configuracion";
+  caja.insertAdjacentHTML("beforeend", `<label class="chip${fijo ? " fijo" : ""}"><input type="checkbox" value="${m}" checked ${fijo ? "disabled" : ""}>${NOMBRES[m] ?? m}</label>`);
+}
+document.querySelectorAll("[data-mod]").forEach((b) => b.onclick = () => caja.querySelectorAll("input:not([disabled])").forEach((i) => (i.checked = b.dataset.mod === "todos")));
+
+// Autocompletar desde el nombre (hasta que la persona toque el campo)
+const slug = (s, j) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/\b(s\.?a\.?|s\.?r\.?l\.?|e\.?a\.?s\.?)\b/g, "").replace(/[^a-z0-9]+/g, j).replace(new RegExp(`^\\${j}+|\\${j}+$`, "g"), "").slice(0, 40);
+for (const n of ["schema", "dominio", "destino", "razon"]) $(n).addEventListener("input", () => ($(n).dataset.tocado = "1"));
+$("nombre").addEventListener("input", () => {
+  const v = $("nombre").value;
+  if (!$("schema").dataset.tocado) $("schema").value = v.trim() ? "erp_" + slug(v, "_") : "";
+  if (!$("dominio").dataset.tocado) $("dominio").value = v.trim() ? slug(v, "-") + ".neura.com.py" : "";
+  if (!$("destino").dataset.tocado) $("destino").value = v.trim() ? DATOS.padre + sep + "neura-erp-" + slug(v, "-") : "";
+  if (!$("razon").dataset.tocado) $("razon").value = v;
+});
+
+// Color
+const picker = document.getElementById("colorPicker");
+picker.oninput = () => ($("color").value = picker.value.toUpperCase());
+$("color").oninput = () => /^#[0-9a-f]{6}$/i.test($("color").value) && (picker.value = $("color").value);
+
+// Logo
+let logo = null;
+document.getElementById("logo").onchange = (e) => {
+  const a = e.target.files[0];
+  if (!a) return;
+  const r = new FileReader();
+  r.onload = () => {
+    logo = { nombre: a.name, data: r.result };
+    const img = document.getElementById("logoVista");
+    img.src = r.result; img.hidden = false;
+    document.getElementById("logoTxt").textContent = a.name + " · tocá para cambiarlo";
+  };
+  r.readAsDataURL(a);
+};
+
+function datos() {
+  return {
+    nombre: $("nombre").value.trim(), razon: $("razon").value.trim(), dominio: $("dominio").value.trim().toLowerCase(),
+    color: $("color").value.trim(), adminNombre: $("adminNombre").value.trim(), adminEmail: $("adminEmail").value.trim(),
+    adminPassword: $("adminPassword").value, schema: $("schema").value.trim().toLowerCase(), ssh: $("ssh").value.trim(),
+    destino: $("destino").value.trim(), repoCliente: $("repoCliente").value.trim(),
+    modulos: [...caja.querySelectorAll("input:checked")].map((i) => i.value).concat("configuracion").filter((v, i, a) => a.indexOf(v) === i),
+    servidor: $("servidor").checked, compilar: $("compilar").checked, push: $("push").checked, logo,
+  };
+}
+
+function revisar(d) {
+  const e = [];
+  const marca = (n, malo) => { $(n)?.classList.toggle("mal", malo); if (malo) e.push(n); };
+  marca("nombre", !d.nombre); marca("razon", !d.razon);
+  marca("dominio", !/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d.dominio));
+  marca("color", !/^#[0-9a-f]{6}$/i.test(d.color));
+  marca("adminNombre", !d.adminNombre);
+  marca("adminEmail", !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.adminEmail));
+  marca("adminPassword", !!d.adminPassword && d.adminPassword.length < 8);
+  marca("schema", !/^[a-z][a-z0-9_]{1,62}$/.test(d.schema) || d.schema === "erp_demo");
+  marca("ssh", !d.ssh); marca("destino", !d.destino);
+  marca("repoCliente", (!!d.repoCliente && !/^(https:\/\/|git@)\S+$/.test(d.repoCliente)) || (d.push && !d.repoCliente));
+  const textos = { nombre: "el nombre", razon: "la razón social", dominio: "el dominio", color: "el color", adminNombre: "el nombre del administrador", adminEmail: "un correo válido (con @)", adminPassword: "una contraseña de 8 o más (o vacía)", schema: "el schema (minúsculas, distinto de erp_demo)", ssh: "el servidor SSH", destino: "la carpeta", repoCliente: "el repo del cliente (para subir hace falta)" };
+  return e.length ? "Revisá " + e.map((k) => textos[k]).join(", ") + "." : "";
+}
+
+const lista = document.getElementById("pasos");
+const log = document.getElementById("log");
+function pintarPasos(d) {
+  lista.innerHTML = PASOS.map(([id, t]) => `<li id="p-${id}"><span class="ico"></span><span>${t}<span class="ult"></span></span></li>`).join("");
+}
+pintarPasos();
+
+f.onsubmit = async (ev) => {
+  ev.preventDefault();
+  const d = datos();
+  const err = revisar(d);
+  document.getElementById("errores").textContent = err;
+  if (err) return;
+  const boton = document.getElementById("boton");
+  boton.disabled = true; boton.textContent = "Clonando…";
+  pintarPasos(); log.textContent = ""; document.getElementById("final").innerHTML = "";
+  document.getElementById("estadoTxt").textContent = `Clonando ${d.nombre}. No cierres esta pestaña.`;
+  let terminado = false;
+  try {
+    const r = await fetch("/clonar", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(d) });
+    const lector = r.body.getReader();
+    const dec = new TextDecoder();
+    let resto = "";
+    for (;;) {
+      const { value, done } = await lector.read();
+      if (done) break;
+      resto += dec.decode(value, { stream: true });
+      const partes = resto.split("\n"); resto = partes.pop();
+      for (const p of partes) if (p.trim()) terminado = evento(JSON.parse(p)) || terminado;
+    }
+  } catch (e) {
+    evento({ error: "Se cortó la conexión con el formulario: " + e.message });
+  }
+  boton.disabled = false; boton.textContent = terminado ? "Clonar otro" : "Volver a intentar";
+};
+
+function evento(ev) {
+  if (ev.paso) {
+    const li = document.getElementById("p-" + ev.paso);
+    if (ev.estado) li.className = ev.estado;
+    if (ev.linea) { li.querySelector(".ult").textContent = ev.linea; log.textContent += `[${ev.paso}] ${ev.linea}\n`; log.scrollTop = log.scrollHeight; }
+  }
+  if (ev.error) {
+    document.getElementById("estadoTxt").textContent = "Se frenó. Corregí lo que dice y volvé a tocar el botón: sigue desde donde quedó.";
+    document.getElementById("final").innerHTML = `<div class="final malo"><h4>No se terminó</h4>${esc(ev.error)}</div>`;
+    document.getElementById("logBox").open = true;
+  }
+  if (ev.fin) {
+    const s = ev.resumen;
+    document.getElementById("estadoTxt").textContent = "Listo.";
+    const pend = [];
+    if (!s.servidor) pend.push(`Quien administra Supabase suma <b>${esc(s.schema)}</b> a PGRST_DB_SCHEMAS y <b>https://${esc(s.dominio)}/**</b> a ADDITIONAL_REDIRECT_URLS (docs/CLONAR.md, paso 4).`);
+    pend.push(`En Coolify: app nueva desde el repo del cliente (Dockerfile), con las variables del <b>.env.local</b> de la carpeta del clon; las NEXT_PUBLIC también como variables de build.`);
+    pend.push(`Dominio <b>${esc(s.dominio)}</b> en Cloudflare apuntando al servidor de Coolify.`);
+    if (!s.subido) pend.push("Subir el código al repo del cliente (git push -u origin main en la carpeta del clon).");
+    document.getElementById("final").innerHTML = `<div class="final"><h4>Clon listo</h4>
+      Carpeta: <code>${esc(s.destino)}</code><br>Schema: <code>${esc(s.schema)}</code> · Admin: <code>${esc(s.admin)}</code>
+      ${s.password ? `<div class="clave"><code id="clave">${esc(s.password)}</code><button type="button" onclick="navigator.clipboard.writeText(document.getElementById('clave').textContent);this.textContent='Copiada'">Copiar</button></div><small>Contraseña inicial: se muestra solo ahora. Pasásela al cliente por un canal seguro.</small>` : ""}
+      <h4 style="margin-top:12px">Falta</h4><ul>${pend.map((p) => `<li>${p}</li>`).join("")}</ul></div>`;
+    return true;
+  }
+  return false;
+}
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+</script>
+</body>
+</html>

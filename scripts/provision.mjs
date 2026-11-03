@@ -10,6 +10,12 @@
  * schema es el único parámetro. Corre con check_function_bodies=off (como pg_restore): una función
  * puede nombrar una columna que agrega una receta posterior. Las recetas van por su número (00, 10, 11, …, 100, 120),
  * no por orden alfabético: "100_" no puede correr antes que "10_".
+ *
+ * Cada schema anota las recetas que ya tiene (tabla _recetas): volver a correr provision aplica
+ * SOLO las nuevas. Hace falta porque una receta vieja vuelta a correr sobre un schema con datos
+ * puede chocar con una regla que agregó una receta posterior (ej. 48 con chk_gasto_cat_nivel).
+ *   --desde N   las anteriores a N se dan por aplicadas (schema armado antes de existir _recetas)
+ *   --todas     corre todas otra vez (solo para un schema vacío)
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
@@ -57,14 +63,51 @@ function correr(sql) {
   return spawnSync("psql", [usuario === "postgres" ? db : db.replace(/\/\/[^:@/]+/, `//${usuario}`), "-v", "ON_ERROR_STOP=1", "-v", `schema=${schema}`, "-q", "-f", "-"], { input: sql, encoding: "utf8", maxBuffer: 50 * 1024 * 1024, env: { ...process.env, PGOPTIONS: "-c check_function_bodies=off" } });
 }
 
-console.log(`Aprovisionando schema "${schema}" con ${files.length} receta(s)...`);
-for (const { f, ruta } of files) {
+/** psql con salida (-At) para leer una respuesta corta. */
+function consultar(sql) {
+  const r = ssh
+    ? spawnSync("ssh", [ssh, `docker exec -i supabase-db psql -U postgres -At -v ON_ERROR_STOP=1 -v schema=${schema} -q -f -`], { input: sql, encoding: "utf8" })
+    : spawnSync("psql", [db, "-At", "-v", "ON_ERROR_STOP=1", "-v", `schema=${schema}`, "-q", "-f", "-"], { input: sql, encoding: "utf8" });
+  if (r.status !== 0) { console.error(r.stderr || r.stdout || r.error?.message); process.exit(1); }
+  return r.stdout.trim();
+}
+
+let pendientes = files;
+const registrar = (f) => `\n;insert into :"schema"._recetas (archivo) values ('${f.replace(/'/g, "''")}') on conflict do nothing;\n`;
+if (args.storage === undefined) {
+  // Registro de recetas aplicadas. RLS sin políticas: nadie de la app lo lee.
+  const estado = consultar(`
+    create schema if not exists :"schema";
+    create table if not exists :"schema"._recetas (archivo text primary key, aplicada_at timestamptz not null default now());
+    alter table :"schema"._recetas enable row level security;
+    revoke all on :"schema"._recetas from public, anon, authenticated;
+    select (select count(*) from :"schema"._recetas) || '|' || (select count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = :'schema' and c.relkind = 'r' and c.relname <> '_recetas');
+  `);
+  const [anotadas, tablas] = estado.split("\n").pop().split("|").map(Number);
+  const todas = recetas("canonical");
+  if (desde > 0) {
+    // Lo anterior a --desde se da por aplicado.
+    const previas = todas.filter((x) => numero(x.f) < desde);
+    if (previas.length) consultar(previas.map((x) => registrar(x.f)).join(""));
+  } else if (anotadas === 0 && tablas > 0 && args.todas === undefined) {
+    console.error(`El schema "${schema}" ya tiene ${tablas} tablas pero no tiene registro de recetas (se armó antes de _recetas).`);
+    console.error("Pasá --desde <primera receta que falta> para aplicar solo las nuevas (las anteriores quedan anotadas).");
+    process.exit(1);
+  }
+  const hechas = new Set(consultar(`select archivo from :"schema"._recetas;`).split("\n").filter(Boolean));
+  if (args.todas === undefined) pendientes = files.filter((x) => !hechas.has(x.f));
+}
+
+console.log(`Aprovisionando schema "${schema}": ${pendientes.length} receta(s) por aplicar${pendientes.length < files.length ? ` (${files.length - pendientes.length} ya estaban)` : ""}...`);
+for (const { f, ruta } of pendientes) {
   process.stdout.write(`  ${f} ... `);
-  const r = correr(readFileSync(ruta, "utf8"));
+  const sql = readFileSync(ruta, "utf8");
+  // El registro va después de la receta: si la receta falla (ON_ERROR_STOP) no se anota.
+  const r = correr(args.storage === undefined ? sql + registrar(f) : sql);
   if (r.status !== 0) {
     console.log("ERROR");
     console.error(r.stderr || r.stdout || r.error?.message);
-    console.error(`\nSe cortó en ${f}. Corregí y volvé a correr con --desde ${numero(f)} (lo anterior ya quedó aplicado).`);
+    console.error(`\nSe cortó en ${f}. Corregí y volvé a correr: sigue desde esa receta (lo anterior ya quedó aplicado y anotado).`);
     process.exit(1);
   }
   console.log("ok");

@@ -10,6 +10,7 @@
     "lint": "next lint",
     "provision": "node scripts/provision.mjs",
     "setup": "node scripts/setup.mjs",
+    "clonar": "node scripts/clonar.mjs",
     "seed-admin": "node scripts/seed-admin.mjs",
     "db:verify-rls": "node scripts/verify-rls.mjs",
     "test:db": "node scripts/pruebas-db.mjs"

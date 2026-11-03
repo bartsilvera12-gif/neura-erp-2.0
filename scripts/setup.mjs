@@ -14,13 +14,12 @@ import { copyFileSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { MODULOS } from "./modulos.mjs"; // sin --modulos se activan todos
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, arr) => { if (a.startsWith("--")) acc.push([a.slice(2), arr[i + 1]]); return acc; }, []));
 const falla = (m) => { console.error(m); process.exit(1); };
 
-// Todos los módulos que existen (src/modules/registry.ts). Sin --modulos se activan todos.
-const MODULOS = ["caja", "inventario", "gastos-empresariales", "clientes", "crm", "presupuestos", "gestion-clientes", "comisiones", "planes", "agenda", "cobranzas", "conciliacion", "pagos", "conversaciones", "soporte", "reportes", "rrhh", "proyectos", "configuracion"];
 
 const cliente = (args.cliente ?? "").trim();
 const schema = (args.schema ?? "").trim().toLowerCase();
@@ -69,6 +68,8 @@ const url = args["supabase-url"] ?? leer("NEXT_PUBLIC_SUPABASE_URL");
 const anon = args["anon-key"] ?? leer("NEXT_PUBLIC_SUPABASE_ANON_KEY");
 const service = args["service-role-key"] ?? leer("SUPABASE_SERVICE_ROLE_KEY");
 if (!url || !anon || !service) falla("Faltan las claves de Supabase: copiá el .env.local de la flota a la raíz del repo o pasá --supabase-url, --anon-key y --service-role-key");
+// Volver a correr setup para el MISMO schema conserva la clave: con otra, lo ya cifrado no se lee más.
+const claveSifen = leer("APP_DB_SCHEMA") === schema && leer("SIFEN_SECRETS_KEY") ? leer("SIFEN_SECRETS_KEY") : randomBytes(48).toString("base64");
 
 writeFileSync(rutaEnv, `# Generado por scripts/setup.mjs para ${cliente}. NO se versiona.
 APP_DB_SCHEMA=${schema}
@@ -83,7 +84,7 @@ MENU_PUBLIC_URL=https://${dominio}
 
 # Cifra la contraseña del certificado, el CSC y las claves tributarias. Única de este cliente:
 # si se pierde, hay que volver a cargar esos datos.
-SIFEN_SECRETS_KEY=${randomBytes(48).toString("base64")}
+SIFEN_SECRETS_KEY=${claveSifen}
 `);
 
 console.log(`Listo para ${cliente}:
