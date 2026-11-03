@@ -8,7 +8,7 @@
  *
  * PRUEBAS_SSH (zentra-app) y PRUEBAS_SCHEMA (erp_demo) cambian dónde corre.
  */
-import { spawnSync } from "node:child_process";
+import { errorRemoto, psqlRemoto } from "./remoto.mjs";
 import { readdirSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,13 +31,9 @@ if (!/rollback;\s*$/i.test(sql.trim())) {
   process.exit(2);
 }
 
-const r = spawnSync(
-  "ssh",
-  [ssh, `docker exec -i -e PGCLIENTENCODING=UTF8 supabase-db psql -U postgres -v ON_ERROR_STOP=1 -v schema=${schema} -q -f -`],
-  { input: sql, encoding: "utf8", maxBuffer: 50 * 1024 * 1024 },
-);
-if (r.error) {
-  console.error(`No se pudo conectar por SSH a ${ssh}: ${r.error.message}`);
+const r = psqlRemoto(ssh, sql, { salida: "q", schema });
+if (r.error || (r.status !== 0 && !/PRUEBA\|/.test(`${r.stdout}${r.stderr}`))) {
+  console.error(`No se pudo correr en ${ssh}: ${errorRemoto(r, ssh)}`);
   process.exit(2);
 }
 

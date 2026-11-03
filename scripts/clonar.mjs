@@ -25,6 +25,7 @@ import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { MODULOS } from "./modulos.mjs";
+import { errorRemoto, psqlRemoto } from "./remoto.mjs";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PUERTO = Number(process.env.CLONAR_PUERTO || 4545);
@@ -57,8 +58,8 @@ function validar(d) {
 
 /** psql en el servidor (solo lecturas cortas). */
 function psql(ssh, sql) {
-  const r = spawnSync("ssh", [ssh, "docker exec -i supabase-db psql -U postgres -At -v ON_ERROR_STOP=1 -f -"], { input: sql, encoding: "utf8", timeout: 60_000 });
-  if (r.status !== 0) throw new Error((r.stderr || r.error?.message || "sin respuesta").trim());
+  const r = psqlRemoto(ssh, sql, { salida: "At" });
+  if (r.status !== 0) throw new Error(errorRemoto(r, ssh));
   return r.stdout.trim();
 }
 
@@ -82,7 +83,11 @@ function correr(enviar, paso, cmd, args, { cwd, env, ocultar } = {}) {
 
 async function servidor(enviar, d) {
   const actual = spawnSync("ssh", [d.ssh, `cat ${DIR_SUPABASE}/.env`], { encoding: "utf8", timeout: 60_000 });
-  if (actual.status !== 0 || !actual.stdout) throw new Error("No pude leer el .env de Supabase en el servidor.");
+  if (actual.status !== 0 || !actual.stdout) {
+    throw new Error(/erp-psql: pedido no permitido/.test(actual.stderr ?? "")
+      ? "Tu llave es la restringida (clonador): este paso lo hace quien administra el servidor. Destildá la opción y volvé a tocar Clonar."
+      : "No pude leer el .env de Supabase en el servidor.");
+  }
   let cambios = 0;
   const sumar = (linea, clave, valor) => {
     if (!linea.startsWith(`${clave}=`)) return linea;
@@ -139,6 +144,11 @@ async function clonar(d, enviar) {
     if (existsSync(destino) && !retoma) throw new Error(`La carpeta ${destino} ya existe y no es un clon de "${d.schema}". Elegí otra.`);
     const existe = psql(d.ssh, `select count(*) from pg_namespace where nspname = '${d.schema}';`);
     enviar({ paso: "revisar", linea: `SSH a ${d.ssh}: ok.` });
+    if (d.servidor) {
+      // Antes de tocar nada: la opción del servidor necesita la llave del administrador.
+      const t = spawnSync("ssh", [d.ssh, `test -w ${DIR_SUPABASE}/.env && echo ok`], { encoding: "utf8", timeout: 30_000 });
+      if (t.stdout.trim() !== "ok") throw new Error("\"Configurar el servidor\" necesita la llave del administrador del servidor; con la restringida (clonador) no se puede. Destildala: ese paso lo hace él.");
+    }
     if (existe !== "0" && !retoma) throw new Error(`El schema ${d.schema} ya existe en el servidor. Elegí otro nombre.`);
     if (retoma) enviar({ paso: "revisar", linea: `Se retoma el clon de ${destino}.` });
   });

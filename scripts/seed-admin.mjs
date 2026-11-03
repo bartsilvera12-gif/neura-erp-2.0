@@ -18,6 +18,7 @@
 import { existsSync, readFileSync } from "node:fs";
 import { randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { errorRemoto, psqlRemoto } from "./remoto.mjs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -83,10 +84,10 @@ select rubro_dar_pantallas(id, :'gastro'::boolean, :'gastro'::boolean) from (sel
 select 'empresa=' || (select nombre from empresas order by creado_at limit 1) || ' perfil=' || coalesce((select p.nombre from usuarios u join perfiles p on p.id = u.perfil_id where u.auth_user_id = :'auth'::uuid), 'NINGUNO')
   || ' rubro=' || (select case when mesas and cocina and recetas then 'Gastronomía' when not (mesas or cocina or recetas) then 'Comercio' else 'personalizado' end || case when funciones_ocultas then ' (oculto al cliente)' else '' end from empresa_funciones order by updated_at desc limit 1);
 `;
-const vars = ["-v", `schema=${schema}`, "-v", `empresa=${empresa}`, "-v", `nombre=${nombre}`, "-v", `email=${email}`, "-v", `auth=${authId}`, "-v", `gastro=${gastro}`, "-v", `ocultas=${ocultarRubro}`];
+const valores = { empresa, nombre, email, auth: authId, gastro, ocultas: ocultarRubro };
 const r = args.ssh
-  ? spawnSync("ssh", [args.ssh, `docker exec -i -e PGCLIENTENCODING=UTF8 supabase-db psql -U postgres -v ON_ERROR_STOP=1 -At ${vars.map((v) => `'${v.replace(/'/g, "'\\''")}'`).join(" ")} -f -`], { input: sql, encoding: "utf8" })
-  : spawnSync("psql", [args.db, "-v", "ON_ERROR_STOP=1", "-At", ...vars, "-f", "-"], { input: sql, encoding: "utf8" });
-if (r.status !== 0) falla(`No pude crear la empresa o el usuario:\n${r.stderr || r.stdout}`);
+  ? psqlRemoto(args.ssh, sql, { salida: "At", schema, vars: valores })
+  : spawnSync("psql", [args.db, "-v", "ON_ERROR_STOP=1", "-At", "-v", `schema=${schema}`, ...Object.entries(valores).flatMap(([k, v]) => ["-v", `${k}=${v}`]), "-f", "-"], { input: sql, encoding: "utf8" });
+if (r.status !== 0) falla(`No pude crear la empresa o el usuario:\n${args.ssh ? errorRemoto(r, args.ssh) : r.stderr || r.stdout}`);
 console.log((r.stdout.trim().split("\n").pop() ?? "").replace(/^/, "  "));
 console.log(`Listo. Admin: ${email}${password ? `\n  Contraseña inicial: ${password}  (pasásela al cliente por un canal seguro y que la cambie)` : ""}`);

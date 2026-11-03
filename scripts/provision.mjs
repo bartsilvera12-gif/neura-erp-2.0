@@ -4,7 +4,7 @@
  * canónicas (db/canonical/*.sql), LIMPIO e independiente. Idempotente.
  *
  *   node scripts/provision.mjs --schema erp_clientex --db "postgres://..."   (psql local)
- *   node scripts/provision.mjs --schema erp_clientex --ssh zentra-app        (psql del servidor, por SSH)
+ *   node scripts/provision.mjs --schema erp_clientex --ssh zentra-app        (psql del servidor, por SSH y erp-psql)
  *
  * No copia ningún schema vivo: cada cliente nace de los .sql canónicos. El nombre de
  * schema es el único parámetro. Corre con check_function_bodies=off (como pg_restore): una función
@@ -19,6 +19,7 @@
  */
 import { readdirSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
+import { errorRemoto, psqlRemoto } from "./remoto.mjs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -58,7 +59,7 @@ const usuarioDe = (sql) => (/CONECTADO COMO supabase_admin/i.test(sql) ? "supaba
 function correr(sql) {
   const usuario = usuarioDe(sql);
   if (ssh) {
-    return spawnSync("ssh", [ssh, `docker exec -i -e PGCLIENTENCODING=UTF8 -e PGOPTIONS=-ccheck_function_bodies=off supabase-db psql -U ${usuario} -v ON_ERROR_STOP=1 -v schema=${schema} -q -f -`], { input: sql, encoding: "utf8", maxBuffer: 50 * 1024 * 1024 });
+    return psqlRemoto(ssh, sql, { usuario, salida: "q", sinCuerpos: true, schema });
   }
   return spawnSync("psql", [usuario === "postgres" ? db : db.replace(/\/\/[^:@/]+/, `//${usuario}`), "-v", "ON_ERROR_STOP=1", "-v", `schema=${schema}`, "-q", "-f", "-"], { input: sql, encoding: "utf8", maxBuffer: 50 * 1024 * 1024, env: { ...process.env, PGOPTIONS: "-c check_function_bodies=off" } });
 }
@@ -66,9 +67,9 @@ function correr(sql) {
 /** psql con salida (-At) para leer una respuesta corta. */
 function consultar(sql) {
   const r = ssh
-    ? spawnSync("ssh", [ssh, `docker exec -i supabase-db psql -U postgres -At -v ON_ERROR_STOP=1 -v schema=${schema} -q -f -`], { input: sql, encoding: "utf8" })
+    ? psqlRemoto(ssh, sql, { salida: "qAt", schema })
     : spawnSync("psql", [db, "-At", "-v", "ON_ERROR_STOP=1", "-v", `schema=${schema}`, "-q", "-f", "-"], { input: sql, encoding: "utf8" });
-  if (r.status !== 0) { console.error(r.stderr || r.stdout || r.error?.message); process.exit(1); }
+  if (r.status !== 0) { console.error(ssh ? errorRemoto(r, ssh) : r.stderr || r.stdout || r.error?.message); process.exit(1); }
   return r.stdout.trim();
 }
 

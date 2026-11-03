@@ -9,6 +9,7 @@
  * las lee directo, solo las funciones (es lo buscado en las tablas de plata).
  */
 import { spawnSync } from "node:child_process";
+import { errorRemoto, psqlRemoto } from "./remoto.mjs";
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, arr) => { if (a.startsWith("--")) acc.push([a.slice(2), arr[i + 1]]); return acc; }, []));
 const schema = (args.schema ?? "").trim().toLowerCase();
@@ -28,9 +29,9 @@ select 'sin_politica|' || c.relname from pg_class c join pg_namespace n on n.oid
 select 'tablas|' || count(*) from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = :'schema' and c.relkind = 'r';
 `;
 const r = args.ssh
-  ? spawnSync("ssh", [args.ssh, `docker exec -i supabase-db psql -U postgres -v ON_ERROR_STOP=1 -At -v schema=${schema} -f -`], { input: sql, encoding: "utf8" })
+  ? psqlRemoto(args.ssh, sql, { salida: "At", schema })
   : spawnSync("psql", [args.db, "-v", "ON_ERROR_STOP=1", "-At", "-v", `schema=${schema}`, "-f", "-"], { input: sql, encoding: "utf8" });
-if (r.status !== 0) { console.error(r.stderr || r.stdout); process.exit(2); }
+if (r.status !== 0) { console.error(args.ssh ? errorRemoto(r, args.ssh) : r.stderr || r.stdout); process.exit(2); }
 
 // Públicas a propósito: entran con el token del QR de la mesa o del link del presupuesto.
 const PUBLICAS = new Set(["mesa_qr_activo", "mesa_menu_publico", "mesa_pedido_publico_crear", "mesa_pedidos_publico_estado", "mesa_publico_cuenta",
