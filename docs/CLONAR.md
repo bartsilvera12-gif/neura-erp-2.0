@@ -19,14 +19,12 @@ npm run clonar
 
 Abre `http://localhost:4545` (solo en tu computadora). Completás el cliente, el administrador, el
 rubro y los datos técnicos (el schema, el dominio y la carpeta se completan solos a partir del
-nombre) y tocás **Clonar**. Hace los pasos 1, 2, 3, 5 y 6 de abajo, en orden, mostrando el avance, y
-frena en el primer error. Si algo falla, corregís y volvés a tocar Clonar con los mismos datos: retoma
-la misma carpeta sin repetir lo hecho.
+nombre) y tocás **Clonar**. Hace los pasos 1 a 6 de abajo, en orden, mostrando el avance, y frena en
+el primer error. El paso 4 (habilitar en Supabase) va al final, solo si pasaron las pruebas. Si algo
+falla, corregís y volvés a tocar Clonar con los mismos datos: retoma la misma carpeta sin repetir lo
+hecho.
 
 Opcionales del formulario:
-- **Configurar el servidor de Supabase** (paso 4): suma el schema y el dominio con respaldo del `.env`
-  y reinicia `rest` y `auth` (unos segundos sin API para todos los clientes). Tildalo solo con
-  autorización de quien administra el servidor; si no, queda como pendiente en el resumen.
 - **Instalar y compilar**: `npm ci` y `npm run build` en el clon.
 - **Subir al repo del cliente**: push a `main` del repo que indiques (tiene que existir y estar vacío).
 
@@ -53,7 +51,7 @@ Abajo está lo mismo a mano, paso por paso.
 | Dato | Ejemplo | Regla |
 |---|---|---|
 | Nombre | Ferretería República | como se muestra en la app |
-| Schema | `erp_republica` | minúsculas, empieza con letra, único, nunca `erp_demo` |
+| Schema | `erp_republica` | empieza con `erp_`, minúsculas, único, nunca `erp_demo` |
 | Dominio | `republica.neura.com.py` | único por cliente |
 | Admin | `admin@republica.com.py`, Juan Pérez | el primer usuario |
 | Empresa | Ferretería República S.A. | razón social |
@@ -109,9 +107,22 @@ una receta posterior (pasa con la 48 una vez cargada la empresa). Un schema arma
 `_recetas` se niega a seguir: pasale `--desde <primera receta que le falta>` una vez y las anteriores
 quedan anotadas.
 
-## 4. Servidor (lo hace quien administra Supabase)
+## 4. Habilitar en Supabase
 
-Es la única parte que toca configuración compartida. En `/home/ubuntu/supabase/docker/.env`:
+Es la única parte que toca configuración compartida. La hace `erp-habilitar` en el servidor (lo
+instala `scripts/servidor/instalar-clonador.sh`), después de los pasos 5 y 6:
+
+```bash
+ssh zentra-app '/usr/local/bin/erp-habilitar erp_republica republica.neura.com.py'
+```
+
+Revisa que el schema sea un clon armado (con `_recetas` y empresa), hace respaldo del `.env`, suma el
+schema y el dominio, reinicia `rest` y `auth` (unos segundos sin API para todos los clientes) y lo anota
+en `/var/log/erp-clientes.log` (`sudo erp-clientes lista`). Volver a correrlo no cambia nada. Con la
+llave restringida solo acepta dominios `<nombre>.neura.com.py`; un dominio propio del cliente lo
+habilita el administrador con el mismo comando.
+
+A mano sería esto, en `/home/ubuntu/supabase/docker/.env`:
 
 1. Hacé un respaldo: `cp .env .env.bak-$(date +%Y%m%d)`.
 2. En `PGRST_DB_SCHEMAS` sumá el schema: `…,erp_demo,erp_republica`.
@@ -188,7 +199,8 @@ drop policy if exists chat_topicos_erp_republica on realtime.messages;
 drop schema if exists erp_republica cascade;
 ```
 
-Y quitarlo de `PGRST_DB_SCHEMAS` y `ADDITIONAL_REDIRECT_URLS` (paso 4).
+Y quitarlo de Supabase (con la llave del administrador):
+`ssh zentra-app 'erp-habilitar --quitar erp_republica republica.neura.com.py'`.
 
 ---
 

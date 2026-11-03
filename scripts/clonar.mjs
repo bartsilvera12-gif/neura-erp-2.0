@@ -9,9 +9,10 @@
  *   2. copia el código a una carpeta nueva (el 2.0 queda como remoto "base")
  *   3. setup.mjs        → cliente.config.ts (todos los módulos), logo y .env.local
  *   4. provision.mjs    → el schema desde db/canonical
- *   5. servidor         → schema y dominio en el .env de Supabase (solo si se tilda; hace respaldo)
- *   6. seed-admin.mjs   → empresa, usuario ADMIN y rubro (Comercio / Gastronomía)
- *   7. verify-rls.mjs y pruebas de plata y stock en el schema nuevo
+ *   5. seed-admin.mjs   → empresa, usuario ADMIN y rubro (Comercio / Gastronomía)
+ *   6. verify-rls.mjs y pruebas de plata y stock en el schema nuevo
+ *   7. erp-habilitar    → schema y dominio en Supabase (en el servidor, con respaldo y registro);
+ *                         solo después de que pasaron las pruebas
  *   8. npm ci + build (si se tilda) y commit en el repo del cliente (y push si se tilda)
  * Si algo falla, se corrige y se vuelve a tocar "Clonar" con los mismos datos: retoma la misma
  * carpeta (todo es idempotente y la clave de SIFEN se conserva).
@@ -29,7 +30,6 @@ import { errorRemoto, psqlRemoto } from "./remoto.mjs";
 
 const raiz = join(dirname(fileURLToPath(import.meta.url)), "..");
 const PUERTO = Number(process.env.CLONAR_PUERTO || 4545);
-const DIR_SUPABASE = "/home/ubuntu/supabase/docker";
 
 const leerEnv = (texto, k) => new RegExp(`^${k}=(.*)$`, "m").exec(texto)?.[1]?.trim();
 const git = (cwd, ...a) => spawnSync("git", a, { cwd, encoding: "utf8" });
@@ -40,7 +40,7 @@ function validar(d) {
   const e = [];
   if (!d.nombre?.trim()) e.push("Falta el nombre del negocio.");
   if (!d.razon?.trim()) e.push("Falta la razón social.");
-  if (!/^[a-z][a-z0-9_]{1,62}$/.test(d.schema ?? "")) e.push("Schema inválido: minúsculas, empieza con letra, solo letras, números y _.");
+  if (!/^erp_[a-z0-9_]{1,58}$/.test(d.schema ?? "")) e.push("Schema inválido: empieza con erp_, solo minúsculas, números y _.");
   if (["erp_demo", "public", "zentra", "auth", "storage", "realtime"].includes(d.schema)) e.push(`El schema "${d.schema}" no se puede usar.`);
   if (!/^[a-z0-9.-]+\.[a-z]{2,}$/.test(d.dominio ?? "")) e.push("Dominio inválido (ej. republica.neura.com.py).");
   if (!d.adminNombre?.trim()) e.push("Falta el nombre del administrador.");
@@ -81,30 +81,18 @@ function correr(enviar, paso, cmd, args, { cwd, env, ocultar } = {}) {
   });
 }
 
-async function servidor(enviar, d) {
-  const actual = spawnSync("ssh", [d.ssh, `cat ${DIR_SUPABASE}/.env`], { encoding: "utf8", timeout: 60_000 });
-  if (actual.status !== 0 || !actual.stdout) {
-    throw new Error(/erp-psql: pedido no permitido/.test(actual.stderr ?? "")
-      ? "Tu llave es la restringida (clonador): este paso lo hace quien administra el servidor. Destildá la opción y volvé a tocar Clonar."
-      : "No pude leer el .env de Supabase en el servidor.");
-  }
-  let cambios = 0;
-  const sumar = (linea, clave, valor) => {
-    if (!linea.startsWith(`${clave}=`)) return linea;
-    const lista = linea.slice(clave.length + 1).split(",").map((x) => x.trim()).filter(Boolean);
-    if (lista.includes(valor)) return linea;
-    cambios++;
-    return `${clave}=${[...lista, valor].join(",")}`;
-  };
-  const lineas = actual.stdout.split("\n");
-  const claves = ["PGRST_DB_SCHEMAS", "ADDITIONAL_REDIRECT_URLS"];
-  for (const k of claves) if (!lineas.some((l) => l.startsWith(`${k}=`))) throw new Error(`El .env de Supabase no tiene ${k}: hacelo a mano (ver docs/CLONAR.md).`);
-  const nuevo = lineas.map((l) => sumar(sumar(l, "PGRST_DB_SCHEMAS", d.schema), "ADDITIONAL_REDIRECT_URLS", `https://${d.dominio}/**`)).join("\n");
-  if (!cambios) { enviar({ paso: "servidor", linea: "El schema y el dominio ya estaban en el servidor." }); return; }
-  enviar({ paso: "servidor", linea: `Respaldo del .env y ${cambios} cambio(s): schema en PGRST_DB_SCHEMAS y dominio en ADDITIONAL_REDIRECT_URLS.` });
-  const w = spawnSync("ssh", [d.ssh, `cd ${DIR_SUPABASE} && cp .env .env.bak-$(date +%Y%m%d-%H%M%S) && cat > .env.nuevo && mv .env.nuevo .env && docker compose up -d --no-deps rest auth`], { input: nuevo, encoding: "utf8", timeout: 180_000 });
-  if (w.status !== 0) throw new Error(`No se pudo aplicar en el servidor: ${(w.stderr || "").trim().split("\n").pop()}`);
-  enviar({ paso: "servidor", linea: "Servicios rest y auth recreados. Esperando que respondan…" });
+/**
+ * Suma el clon a Supabase con erp-habilitar (scripts/servidor/instalar-clonador.sh): lo puede la
+ * llave restringida y la del administrador. Devuelve false si el dominio es propio del cliente y la
+ * llave no alcanza (queda pendiente para el administrador).
+ */
+function habilitar(enviar, d) {
+  const r = spawnSync("ssh", [d.ssh, `/usr/local/bin/erp-habilitar ${d.schema} ${d.dominio}`], { encoding: "utf8", timeout: 180_000 });
+  const salida = `${r.stdout || ""}${r.stderr || ""}`.trim();
+  if (r.status === 0) { enviar({ paso: "servidor", linea: salida.split("\n").pop() }); return true; }
+  if (/solo se habilitan dominios/.test(salida)) { enviar({ paso: "servidor", linea: `Dominio propio del cliente: lo habilita quien administra el servidor.` }); return false; }
+  if (/pedido no permitido|erp-habilitar: (command )?not found|No such file/.test(salida)) throw new Error(`En ${d.ssh} falta erp-habilitar: quien administra el servidor tiene que volver a correr scripts/servidor/instalar-clonador.sh.`);
+  throw new Error(errorRemoto(r, d.ssh));
 }
 
 /** Espera a que Auth y la API respondan (después de recrear los servicios) y prueba el schema. */
@@ -144,11 +132,6 @@ async function clonar(d, enviar) {
     if (existsSync(destino) && !retoma) throw new Error(`La carpeta ${destino} ya existe y no es un clon de "${d.schema}". Elegí otra.`);
     const existe = psql(d.ssh, `select count(*) from pg_namespace where nspname = '${d.schema}';`);
     enviar({ paso: "revisar", linea: `SSH a ${d.ssh}: ok.` });
-    if (d.servidor) {
-      // Antes de tocar nada: la opción del servidor necesita la llave del administrador.
-      const t = spawnSync("ssh", [d.ssh, `test -w ${DIR_SUPABASE}/.env && echo ok`], { encoding: "utf8", timeout: 30_000 });
-      if (t.stdout.trim() !== "ok") throw new Error("\"Configurar el servidor\" necesita la llave del administrador del servidor; con la restringida (clonador) no se puede. Destildala: ese paso lo hace él.");
-    }
     if (existe !== "0" && !retoma) throw new Error(`El schema ${d.schema} ya existe en el servidor. Elegí otro nombre.`);
     if (retoma) enviar({ paso: "revisar", linea: `Se retoma el clon de ${destino}.` });
   });
@@ -183,12 +166,6 @@ async function clonar(d, enviar) {
   const url = leerEnv(envClon, "NEXT_PUBLIC_SUPABASE_URL");
   const anon = leerEnv(envClon, "NEXT_PUBLIC_SUPABASE_ANON_KEY");
 
-  await paso("servidor", async () => {
-    if (!d.servidor) { enviar({ paso: "servidor", linea: "No tildado: lo hace quien administra Supabase (docs/CLONAR.md, paso 4)." }); return "salta"; }
-    await servidor(enviar, d);
-    if (!(await esperarApi(enviar, "servidor", url, anon, d.schema))) throw new Error("La API no respondió con el schema nuevo en 90 s: revisá los servicios rest y auth.");
-  });
-
   let password = null;
   await paso("admin", () => {
     const args = ["--schema", d.schema, "--ssh", d.ssh, "--empresa", d.razon.trim(), "--email", d.adminEmail.trim().toLowerCase(), "--nombre", d.adminNombre.trim()];
@@ -206,6 +183,13 @@ async function clonar(d, enviar) {
 
   await paso("seguridad", () => node("seguridad", "verify-rls.mjs", ["--schema", d.schema, "--ssh", d.ssh]));
   await paso("pruebas", () => node("pruebas", "pruebas-db.mjs", [], { env: { PRUEBAS_SCHEMA: d.schema, PRUEBAS_SSH: d.ssh } }));
+
+  let habilitado = false;
+  await paso("servidor", async () => {
+    habilitado = habilitar(enviar, d);
+    if (!habilitado) return "salta";
+    if (!(await esperarApi(enviar, "servidor", url, anon, d.schema))) throw new Error("La API no respondió con el schema nuevo en 90 s: avisale a quien administra el servidor (servicios rest y auth).");
+  });
 
   await paso("compilar", async () => {
     if (!d.compilar) { enviar({ paso: "compilar", linea: "No tildado." }); return "salta"; }
@@ -229,7 +213,7 @@ async function clonar(d, enviar) {
     fin: true,
     resumen: {
       destino, schema: d.schema, dominio: d.dominio, admin: d.adminEmail.trim().toLowerCase(),
-      rubro: d.rubro, password: d.adminPassword ? null : password, servidor: !!d.servidor, compilado: !!d.compilar, subido: !!d.push,
+      rubro: d.rubro, password: d.adminPassword ? null : password, servidor: habilitado, compilado: !!d.compilar, subido: !!d.push,
     },
   });
 }

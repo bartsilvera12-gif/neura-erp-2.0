@@ -109,11 +109,13 @@ nombre se completan solos el schema, el dominio y la carpeta: revisalos.
 
 | Opción | Qué hacer |
 |---|---|
-| Configurar el servidor de Supabase | **Dejala sin tildar.** Con tu llave no se puede (el formulario te frena antes de empezar): ese paso lo hace quien administra el servidor, y el resumen final te dice qué pedirle. |
 | Instalar y compilar | Dejala tildada: confirma que el clon arranca. Tarda unos minutos. |
 | Subir al repo del cliente | Solo si ya creaste el repo vacío en GitHub y pegaste su dirección. |
 
-**e. Tocá Clonar y no cierres la pestaña.** Cada paso se pone en verde.
+**e. Tocá Clonar y no cierres la pestaña.** Cada paso se pone en verde. Cuando pasan las pruebas, el
+formulario habilita el cliente en Supabase solo (la API y el login se cortan unos segundos para todos)
+y queda anotado con tu nombre. Si el dominio no es `<nombre>.neura.com.py` sino uno propio del
+cliente, ese paso lo hace el administrador: el resumen te dice qué pedirle.
 
 **f. Al final:**
 - **Contraseña del administrador:** si la dejaste vacía, se muestra una sola vez. Copiala y pasásela
@@ -135,8 +137,8 @@ retoma la misma carpeta sin repetir lo hecho ni duplicar nada.
 | "Falta … en el .env.local del 2.0" | No está el `.env.local` de la flota en la carpeta del 2.0 (paso 1c). |
 | "no acepta tu llave SSH" | El administrador todavía no la agregó, o `~/.ssh/config` apunta a otro archivo (paso 1e). |
 | "No llego a zentra-app" | Revisá el `HostName` en `~/.ssh/config` (paso 1e). |
-| "falta erp-psql" | El servidor no tiene instalada la puerta: avisale al administrador. |
-| "necesita la llave del administrador" | Destildá "Configurar el servidor" y volvé a tocar Clonar. |
+| "falta erp-psql" o "falta erp-habilitar" | El servidor no tiene la puerta al día: avisale al administrador. |
+| Falla "Habilitar en Supabase" | Pasale el mensaje al administrador. La base ya quedó armada: cuando lo resuelva, tocá Clonar otra vez. |
 | Falla una receta en "Armar la base" | Mandá el detalle ("Ver el detalle") a quien mantiene el 2.0. No la arregles en el clon. |
 
 ---
@@ -182,10 +184,20 @@ esa da acceso a toda la máquina.
 
 - **Si alguien deja el equipo:** `ssh zentra-app 'sudo erp-clonador-llave quitar juan.perez'`
   (`lista` muestra quiénes tienen llave).
+- **Quién clonó qué:** `ssh zentra-app 'sudo erp-clientes lista'` muestra cada cliente habilitado, con
+  fecha, quién (el nombre de su llave), schema y dominio. `erp-clientes activos` lista los schemas que
+  hoy sirve la API.
 - **Qué puede y qué no la llave restringida:**
   - **Puede** correr `psql` en la base, como `postgres` o como `supabase_admin` (la receta 36b lo
     necesita): todo lo de adentro de la base, de cualquier cliente.
+  - **Puede** habilitar un clon con `erp-habilitar`: solo un schema `erp_*` armado con las recetas y
+    con empresa, y solo con un dominio `<nombre>.neura.com.py`. Hace respaldo del `.env`, reinicia
+    `rest` y `auth` y lo anota en el registro.
   - **No puede** abrir consola, leer archivos (ni el `.env` de Supabase), usar docker, reiniciar
-    servicios ni hacer túneles.
-- **El paso del servidor de cada clon** (schema y dominio) es tuyo: [CLONAR.md](CLONAR.md), paso 4. Con
-  tu llave (`ubuntu`) el formulario también lo puede hacer, con respaldo, si tildás la opción.
+    servicios por su cuenta, quitar clientes ni hacer túneles.
+- **Un dominio propio del cliente** (ej. `sistema.ferreteria.com.py`) lo habilitás vos:
+  `ssh zentra-app 'erp-habilitar erp_ferreteria sistema.ferreteria.com.py'`.
+- **Borrar un clon:** `ssh zentra-app 'erp-habilitar --quitar <schema> <dominio>'` y después el
+  schema ([CLONAR.md](CLONAR.md), "Borrar un clon").
+- **Después de actualizar el 2.0**, volvé a correr el instalador: es lo que pone al día
+  `erp-habilitar` y la puerta.

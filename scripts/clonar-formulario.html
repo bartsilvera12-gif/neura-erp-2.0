@@ -140,7 +140,6 @@
       <label class="campo ancho">Carpeta del clon en esta computadora<input type="text" name="destino" class="mono" autocomplete="off"></label>
       <label class="campo ancho">Repo del cliente en GitHub <span class="ayuda">opcional · vacío, el repo queda solo en esta computadora</span><input type="url" name="repoCliente" class="mono" placeholder="https://github.com/org/neura-erp-republica.git" autocomplete="off"></label>
     </div>
-    <label class="opcion cuidado"><input type="checkbox" name="servidor"><span><b>Configurar el servidor de Supabase</b><small>Suma el schema y el dominio a la configuración compartida (con respaldo) y reinicia la API y el acceso unos segundos para todos los clientes. Sin esto lo hace a mano quien administra el servidor, y la app no lee datos hasta entonces.</small></span></label>
     <label class="opcion"><input type="checkbox" name="compilar" checked><span><b>Instalar y compilar</b><small>npm ci y build en la carpeta del clon, para confirmar que arranca. Tarda unos minutos.</small></span></label>
     <label class="opcion"><input type="checkbox" name="push"><span><b>Subir el código al repo del cliente</b><small>Hace push a la rama main del repo de arriba (tiene que existir y estar vacío).</small></span></label>
   </section>
@@ -162,7 +161,7 @@
 
 <script>
 const DATOS = /*DATOS*/null;
-const PASOS = [["revisar", "Revisar los datos"], ["copiar", "Copiar el código"], ["personalizar", "Personalizar (nombre, logo, claves)"], ["base", "Armar la base"], ["servidor", "Configurar el servidor"], ["admin", "Empresa y administrador"], ["seguridad", "Revisión de seguridad"], ["pruebas", "Pruebas de plata y stock"], ["compilar", "Instalar y compilar"], ["git", "Guardar en git"]];
+const PASOS = [["revisar", "Revisar los datos"], ["copiar", "Copiar el código"], ["personalizar", "Personalizar (nombre, logo, claves)"], ["base", "Armar la base"], ["admin", "Empresa y administrador"], ["seguridad", "Revisión de seguridad"], ["pruebas", "Pruebas de plata y stock"], ["servidor", "Habilitar en Supabase"],["compilar", "Instalar y compilar"], ["git", "Guardar en git"]];
 
 const f = document.getElementById("f");
 const $ = (n) => f.elements[n];
@@ -207,7 +206,7 @@ function datos() {
     adminPassword: $("adminPassword").value, schema: $("schema").value.trim().toLowerCase(), ssh: $("ssh").value.trim(),
     destino: $("destino").value.trim(), repoCliente: $("repoCliente").value.trim(),
     rubro: f.querySelector("input[name=rubro]:checked").value, ocultarRubro: $("ocultarRubro").checked,
-    servidor: $("servidor").checked, compilar: $("compilar").checked, push: $("push").checked, logo,
+    compilar: $("compilar").checked, push: $("push").checked, logo,
   };
 }
 
@@ -220,10 +219,10 @@ function revisar(d) {
   marca("adminNombre", !d.adminNombre);
   marca("adminEmail", !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.adminEmail));
   marca("adminPassword", !!d.adminPassword && d.adminPassword.length < 8);
-  marca("schema", !/^[a-z][a-z0-9_]{1,62}$/.test(d.schema) || d.schema === "erp_demo");
+  marca("schema", !/^erp_[a-z0-9_]{1,58}$/.test(d.schema) || d.schema === "erp_demo");
   marca("ssh", !d.ssh); marca("destino", !d.destino);
   marca("repoCliente", (!!d.repoCliente && !/^(https:\/\/|git@)\S+$/.test(d.repoCliente)) || (d.push && !d.repoCliente));
-  const textos = { nombre: "el nombre", razon: "la razón social", dominio: "el dominio", color: "el color", adminNombre: "el nombre del administrador", adminEmail: "un correo válido (con @)", adminPassword: "una contraseña de 8 o más (o vacía)", schema: "el schema (minúsculas, distinto de erp_demo)", ssh: "el servidor SSH", destino: "la carpeta", repoCliente: "el repo del cliente (para subir hace falta)" };
+  const textos = { nombre: "el nombre", razon: "la razón social", dominio: "el dominio", color: "el color", adminNombre: "el nombre del administrador", adminEmail: "un correo válido (con @)", adminPassword: "una contraseña de 8 o más (o vacía)", schema: "el schema (empieza con erp_, minúsculas, distinto de erp_demo)", ssh: "el servidor SSH", destino: "la carpeta", repoCliente: "el repo del cliente (para subir hace falta)" };
   return e.length ? "Revisá " + e.map((k) => textos[k]).join(", ") + "." : "";
 }
 
@@ -278,7 +277,7 @@ function evento(ev) {
     const s = ev.resumen;
     document.getElementById("estadoTxt").textContent = "Listo.";
     const pend = [];
-    if (!s.servidor) pend.push(`Quien administra Supabase suma <b>${esc(s.schema)}</b> a PGRST_DB_SCHEMAS y <b>https://${esc(s.dominio)}/**</b> a ADDITIONAL_REDIRECT_URLS (docs/CLONAR.md, paso 4).`);
+    if (!s.servidor) pend.push(`El dominio es propio del cliente: pedile a quien administra el servidor que corra <code>sudo erp-habilitar ${esc(s.schema)} ${esc(s.dominio)}</code>.`);
     pend.push(`En Coolify: app nueva desde el repo del cliente (Dockerfile), con las variables del <b>.env.local</b> de la carpeta del clon; las NEXT_PUBLIC también como variables de build.`);
     pend.push(`Dominio <b>${esc(s.dominio)}</b> en Cloudflare apuntando al servidor de Coolify.`);
     if (!s.subido) pend.push("Subir el código al repo del cliente (git push -u origin main en la carpeta del clon).");
