@@ -5,10 +5,10 @@
  * depósito), cambiar de caja si el usuario tiene varias abiertas, y las acciones del turno
  * (retiro / ingreso de efectivo, ver turno, cerrar). Sin caja abierta: abrir.
  */
-import { ArrowLeftRight, Eye, Lock, Unlock, Warehouse } from "lucide-react";
+import { ArrowLeftRight, Eye, Lock, Unlock } from "lucide-react";
 import { Select } from "@/components/Select";
 import { TEAL } from "@/modules/inventario/ui";
-import { desdeTurno, etiquetaCaja, turnoViejo, type CajaAbierta, type EstadoCajas } from "@/modules/caja/turno";
+import { etiquetaCaja, type CajaAbierta, type EstadoCajas } from "@/modules/caja/turno";
 
 export function CajaBarra({ estado, caja, onElegir, onAbrir, onMov, onVer, onCerrar }: {
   estado: EstadoCajas | null;
@@ -64,11 +64,6 @@ export function CajaBarra({ estado, caja, onElegir, onAbrir, onMov, onVer, onCer
           ) : (
             <p className="truncate text-sm font-semibold text-slate-900">{etiquetaCaja(caja)}</p>
           )}
-          <p className="mt-0.5 flex min-w-0 items-center gap-x-1.5 overflow-hidden whitespace-nowrap text-[11px] text-slate-500 sm:flex-wrap xl:mt-0 xl:flex-nowrap" title={`Turno N° ${caja.numero_caja} · ${caja.abierta_por_nombre ?? "—"} desde ${desdeTurno(caja.fecha_apertura)} · ${caja.deposito_nombre}`}>
-            <span>Turno N° {caja.numero_caja}</span><span className="text-slate-300">·</span>
-            <span className={`truncate ${turnoViejo(caja.fecha_apertura) ? "font-semibold text-amber-700" : ""}`}>{caja.abierta_por_nombre ?? "—"} desde {desdeTurno(caja.fecha_apertura)}</span><span className="hidden text-slate-300 sm:inline">·</span>
-            <span className="hidden items-center gap-1 sm:inline-flex"><Warehouse className="h-3 w-3" /> {caja.deposito_nombre}</span>
-          </p>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
