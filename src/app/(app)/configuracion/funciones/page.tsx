@@ -216,12 +216,16 @@ export default function RubroFuncionesPage() {
                   </span>
                 </span>
                 <span className="mt-2 block text-xs leading-relaxed text-slate-500">{r.resumen}</span>
-                <span className="mt-2.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Pantallas propias</span>
-                <span className="mt-1 flex flex-wrap gap-1">
-                  {pantallasDelRubro(r.key).map((p) => (
-                    <span key={p} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">{p}</span>
-                  ))}
-                </span>
+                {pantallasDelRubro(r.key).length ? (
+                  <>
+                    <span className="mt-2.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Pantallas propias</span>
+                    <span className="mt-1 flex flex-wrap gap-1">
+                      {pantallasDelRubro(r.key).map((p) => (
+                        <span key={p} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">{p}</span>
+                      ))}
+                    </span>
+                  </>
+                ) : null}
               </button>
             );
           })}
@@ -229,7 +233,7 @@ export default function RubroFuncionesPage() {
       </Tarjeta>
 
       {/* ── Funciones ─────────────────────────────────────────────────────── */}
-      <Tarjeta icono={<Sparkles className="h-4 w-4" />} titulo="Funciones" detalle="La Caja, el inventario y las compras funcionan igual con todo apagado. Al prender Mesas y QR o Cocina, los perfiles Cajero y Supervisor ya las reciben; Recetas y Producción quedan para el Administrador. Se ajusta en Usuarios › Perfiles y permisos.">
+      <Tarjeta icono={<Sparkles className="h-4 w-4" />} titulo="Funciones" detalle="La Caja, el inventario y las compras funcionan igual con todo apagado. Al prender Mesas y QR o Cocina, los perfiles Cajero y Supervisor ya las reciben; con Sorteos, también el Vendedor. Recetas y Producción quedan para el Administrador. Se ajusta en Usuarios › Perfiles y permisos.">
         <div className="space-y-2.5">
           <Interruptor
             activo={b.mesas}
