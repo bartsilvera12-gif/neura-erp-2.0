@@ -13,7 +13,9 @@
  *   6. verify-rls.mjs y pruebas de plata y stock en el schema nuevo
  *   7. erp-habilitar    → schema y dominio en Supabase (en el servidor, con respaldo y registro);
  *                         solo después de que pasaron las pruebas
- *   8. npm ci + build (si se tilda) y commit en el repo del cliente (y push si se tilda)
+ *   8. npm ci + build (si se tilda) y commit en el repo del cliente
+ *   9. erp-publicar     → repo privado en GitHub, DNS en Cloudflare y app en Coolify (Dockerfile),
+ *                         publicada y respondiendo (los tokens quedan en el servidor)
  * Si algo falla, se corrige y se vuelve a tocar "Clonar" con los mismos datos: retoma la misma
  * carpeta (todo es idempotente y la clave de SIFEN se conserva).
  *
@@ -21,7 +23,7 @@
  */
 import http from "node:http";
 import { spawn, spawnSync } from "node:child_process";
-import { copyFileSync, existsSync, readFileSync, writeFileSync, mkdtempSync } from "node:fs";
+import { copyFileSync, existsSync, readFileSync, rmSync, writeFileSync, mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -49,8 +51,6 @@ function validar(d) {
   if (!/^#[0-9a-f]{6}$/i.test(d.color ?? "")) e.push("Color inválido: #RRGGBB.");
   if (!["comercio", "gastronomia"].includes(d.rubro)) e.push("Elegí el rubro: Comercio o Gastronomía.");
   if (!d.destino?.trim()) e.push("Falta la carpeta del clon.");
-  if (d.repoCliente && !/^(https:\/\/|git@)\S+$/.test(d.repoCliente)) e.push("El repo del cliente tiene que ser una URL de git (https://… o git@…).");
-  if (d.push && !d.repoCliente) e.push("Para subir el código hace falta el repo del cliente.");
   if (!d.ssh?.trim()) e.push("Falta el servidor SSH.");
   if (d.logo && !/^data:image\/(webp|png|svg\+xml|jpeg);base64,/.test(d.logo.data ?? "")) e.push("El logo tiene que ser .webp, .png, .svg o .jpg.");
   return e;
@@ -64,20 +64,22 @@ function psql(ssh, sql) {
 }
 
 // ── Ejecución ───────────────────────────────────────────────────────────────────────────────
-function correr(enviar, paso, cmd, args, { cwd, env, ocultar } = {}) {
+function correr(enviar, paso, cmd, args, { cwd, env, ocultar, input } = {}) {
   return new Promise((ok, mal) => {
     const p = spawn(cmd, args, { cwd, env: { ...process.env, ...env }, shell: process.platform === "win32" && cmd === "npm" });
+    let ultima = "";
     const linea = (buf) => {
       for (let l of buf.toString().split(/\r?\n/)) {
         if (!l.trim()) continue;
         if (ocultar) l = ocultar(l);
-        if (l) enviar({ paso, linea: l });
+        if (l) { ultima = l; enviar({ paso, linea: l }); }
       }
     };
     p.stdout.on("data", linea);
     p.stderr.on("data", linea);
     p.on("error", mal);
-    p.on("close", (code) => (code === 0 ? ok() : mal(new Error(`${basename(String(args.find((a) => /\.mjs$/.test(a)) ?? cmd))} terminó con error (código ${code})`))));
+    p.on("close", (code) => (code === 0 ? ok() : mal(new Error(`${basename(String(args.find((a) => /\.mjs$/.test(a)) ?? cmd))} terminó con error (código ${code})${ultima ? `: ${ultima}` : ""}`))));
+    p.stdin.end(input ?? "");
   });
 }
 
@@ -143,10 +145,9 @@ async function clonar(d, enviar) {
     await correr(enviar, "copiar", "git", ["clone", "--no-hardlinks", "--quiet", raiz, destino]);
     git(destino, "remote", "remove", "origin");
     git(destino, "remote", "add", "base", repoBase || raiz);
-    if (d.repoCliente) git(destino, "remote", "add", "origin", d.repoCliente);
     copyFileSync(join(raiz, ".env.local"), join(destino, ".env.local"));
     writeFileSync(marca, JSON.stringify({ schema: d.schema, creado: new Date().toISOString() }));
-    enviar({ paso: "copiar", linea: `Código en ${destino} (remoto "base" = el 2.0${d.repoCliente ? `, "origin" = ${d.repoCliente}` : ""}).` });
+    enviar({ paso: "copiar", linea: `Código en ${destino} (remoto "base" = el 2.0).` });
   });
 
   await paso("personalizar", async () => {
@@ -206,14 +207,45 @@ async function clonar(d, enviar) {
       if (c.status !== 0) throw new Error(`git commit: ${(c.stderr || c.stdout).trim()}`);
       enviar({ paso: "git", linea: "Commit con la configuración del cliente." });
     } else enviar({ paso: "git", linea: "No había nada nuevo para guardar." });
-    if (d.push) await correr(enviar, "git", "git", ["push", "-u", "origin", "HEAD:main"], { cwd: destino });
+  });
+
+  // Repo privado, DNS y Coolify: lo hace el servidor con sus tokens (erp-publicar); acá solo se
+  // sube el código con una llave temporal que el servidor borra después.
+  let publicado = null, repoWeb = null;
+  await paso("publicar", async () => {
+    if (!d.publicar) { enviar({ paso: "publicar", linea: "No tildado." }); return "salta"; }
+    if (!habilitado) { enviar({ paso: "publicar", linea: "Falta que el administrador lo habilite (dominio propio)." }); return "salta"; }
+    const r = spawnSync("ssh", [d.ssh, `/usr/local/bin/erp-publicar repo ${d.schema}`], { encoding: "utf8", timeout: 120_000 });
+    if (r.status !== 0) {
+      const t = `${r.stderr || ""}${r.stdout || ""}`.trim();
+      throw new Error(/pedido no permitido|not found|No such file/.test(t) ? `En ${d.ssh} falta erp-publicar: quien administra el servidor tiene que volver a correr scripts/servidor/instalar-clonador.sh.` : t.split("\n").pop() || errorRemoto(r, d.ssh));
+    }
+    const remoto = /^REPO=(\S+)$/m.exec(r.stdout)?.[1];
+    repoWeb = /^WEB=(\S+)$/m.exec(r.stdout)?.[1];
+    const llave = /-----BEGIN [\s\S]+?-----END [^\n]+-----\n?/.exec(r.stdout)?.[0];
+    if (!remoto || !llave) throw new Error("El servidor no devolvió el repo del cliente.");
+    git(destino, "remote", "remove", "origin");
+    git(destino, "remote", "add", "origin", `${repoWeb}.git`);
+    const dirLlave = mkdtempSync(join(tmpdir(), "clonar-llave-"));
+    const archivo = join(dirLlave, "llave");
+    writeFileSync(archivo, llave, { mode: 0o600 });
+    try {
+      await correr(enviar, "publicar", "git", ["-c", `core.sshCommand=ssh -i "${archivo.replace(/\\/g, "/")}" -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new`, "push", "--quiet", remoto, "HEAD:main"], { cwd: destino });
+    } finally { rmSync(dirLlave, { recursive: true, force: true }); }
+    enviar({ paso: "publicar", linea: `Código subido a ${repoWeb}` });
+    await correr(enviar, "publicar", "ssh", [d.ssh, `/usr/local/bin/erp-publicar app ${d.schema} ${d.dominio}`], {
+      input: readFileSync(join(destino, ".env.local"), "utf8"),
+      ocultar: (l) => l.replace(/^· /, "").replace(/^erp-publicar: /, ""),
+    });
+    publicado = `https://${d.dominio}`;
   });
 
   enviar({
     fin: true,
     resumen: {
       destino, schema: d.schema, dominio: d.dominio, admin: d.adminEmail.trim().toLowerCase(),
-      rubro: d.rubro, password: d.adminPassword ? null : password, servidor: habilitado, compilado: !!d.compilar, subido: !!d.push,
+      rubro: d.rubro, password: d.adminPassword ? null : password, servidor: habilitado, compilado: !!d.compilar,
+      publicado, repo: repoWeb,
     },
   });
 }

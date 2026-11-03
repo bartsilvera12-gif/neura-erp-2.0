@@ -138,10 +138,9 @@
       <label class="campo">Schema de la base <span class="ayuda">único, nunca erp_demo</span><input type="text" name="schema" class="mono" placeholder="erp_republica" autocomplete="off"></label>
       <label class="campo">Servidor SSH<input type="text" name="ssh" class="mono" autocomplete="off"></label>
       <label class="campo ancho">Carpeta del clon en esta computadora<input type="text" name="destino" class="mono" autocomplete="off"></label>
-      <label class="campo ancho">Repo del cliente en GitHub <span class="ayuda">opcional · vacío, el repo queda solo en esta computadora</span><input type="url" name="repoCliente" class="mono" placeholder="https://github.com/org/neura-erp-republica.git" autocomplete="off"></label>
     </div>
-    <label class="opcion"><input type="checkbox" name="compilar" checked><span><b>Instalar y compilar</b><small>npm ci y build en la carpeta del clon, para confirmar que arranca. Tarda unos minutos.</small></span></label>
-    <label class="opcion"><input type="checkbox" name="push"><span><b>Subir el código al repo del cliente</b><small>Hace push a la rama main del repo de arriba (tiene que existir y estar vacío).</small></span></label>
+    <label class="opcion"><input type="checkbox" name="publicar" checked><span><b>Publicar el cliente</b><small>Crea el repo privado en GitHub, el dominio en Cloudflare y la app en Coolify (Dockerfile), y espera a que el link responda. Destildalo solo para un clon de práctica.</small></span></label>
+    <label class="opcion"><input type="checkbox" name="compilar"><span><b>Compilar también en esta computadora</b><small>npm ci y build en la carpeta del clon. No hace falta si publicás: Coolify ya compila.</small></span></label>
   </section>
 
   <div class="errores" id="errores"></div>
@@ -161,7 +160,7 @@
 
 <script>
 const DATOS = /*DATOS*/null;
-const PASOS = [["revisar", "Revisar los datos"], ["copiar", "Copiar el código"], ["personalizar", "Personalizar (nombre, logo, claves)"], ["base", "Armar la base"], ["admin", "Empresa y administrador"], ["seguridad", "Revisión de seguridad"], ["pruebas", "Pruebas de plata y stock"], ["servidor", "Habilitar en Supabase"],["compilar", "Instalar y compilar"], ["git", "Guardar en git"]];
+const PASOS = [["revisar", "Revisar los datos"], ["copiar", "Copiar el código"], ["personalizar", "Personalizar (nombre, logo, claves)"], ["base", "Armar la base"], ["admin", "Empresa y administrador"], ["seguridad", "Revisión de seguridad"], ["pruebas", "Pruebas de plata y stock"], ["servidor", "Habilitar en Supabase"],["compilar", "Compilar en esta computadora"], ["git", "Guardar en git"], ["publicar", "Publicar (GitHub, dominio y Coolify)"]];
 
 const f = document.getElementById("f");
 const $ = (n) => f.elements[n];
@@ -204,9 +203,9 @@ function datos() {
     nombre: $("nombre").value.trim(), razon: $("razon").value.trim(), dominio: $("dominio").value.trim().toLowerCase(),
     color: $("color").value.trim(), adminNombre: $("adminNombre").value.trim(), adminEmail: $("adminEmail").value.trim(),
     adminPassword: $("adminPassword").value, schema: $("schema").value.trim().toLowerCase(), ssh: $("ssh").value.trim(),
-    destino: $("destino").value.trim(), repoCliente: $("repoCliente").value.trim(),
+    destino: $("destino").value.trim(), publicar: $("publicar").checked,
     rubro: f.querySelector("input[name=rubro]:checked").value, ocultarRubro: $("ocultarRubro").checked,
-    compilar: $("compilar").checked, push: $("push").checked, logo,
+    compilar: $("compilar").checked, logo,
   };
 }
 
@@ -221,8 +220,7 @@ function revisar(d) {
   marca("adminPassword", !!d.adminPassword && d.adminPassword.length < 8);
   marca("schema", !/^erp_[a-z0-9_]{1,58}$/.test(d.schema) || d.schema === "erp_demo");
   marca("ssh", !d.ssh); marca("destino", !d.destino);
-  marca("repoCliente", (!!d.repoCliente && !/^(https:\/\/|git@)\S+$/.test(d.repoCliente)) || (d.push && !d.repoCliente));
-  const textos = { nombre: "el nombre", razon: "la razón social", dominio: "el dominio", color: "el color", adminNombre: "el nombre del administrador", adminEmail: "un correo válido (con @)", adminPassword: "una contraseña de 8 o más (o vacía)", schema: "el schema (empieza con erp_, minúsculas, distinto de erp_demo)", ssh: "el servidor SSH", destino: "la carpeta", repoCliente: "el repo del cliente (para subir hace falta)" };
+  const textos = { nombre: "el nombre", razon: "la razón social", dominio: "el dominio", color: "el color", adminNombre: "el nombre del administrador", adminEmail: "un correo válido (con @)", adminPassword: "una contraseña de 8 o más (o vacía)", schema: "el schema (empieza con erp_, minúsculas, distinto de erp_demo)", ssh: "el servidor SSH", destino: "la carpeta" };
   return e.length ? "Revisá " + e.map((k) => textos[k]).join(", ") + "." : "";
 }
 
@@ -278,13 +276,13 @@ function evento(ev) {
     document.getElementById("estadoTxt").textContent = "Listo.";
     const pend = [];
     if (!s.servidor) pend.push(`El dominio es propio del cliente: pedile a quien administra el servidor que corra <code>sudo erp-habilitar ${esc(s.schema)} ${esc(s.dominio)}</code>.`);
-    pend.push(`En Coolify: app nueva desde el repo del cliente (Dockerfile), con las variables del <b>.env.local</b> de la carpeta del clon; las NEXT_PUBLIC también como variables de build.`);
-    pend.push(`Dominio <b>${esc(s.dominio)}</b> en Cloudflare apuntando al servidor de Coolify.`);
-    if (!s.subido) pend.push("Subir el código al repo del cliente (git push -u origin main en la carpeta del clon).");
-    document.getElementById("final").innerHTML = `<div class="final"><h4>Clon listo</h4>
+    if (!s.publicado) pend.push(`Publicarlo: volvé a tocar Clonar con <b>Publicar el cliente</b> tildado (crea el repo, el dominio y la app en Coolify).`);
+    document.getElementById("final").innerHTML = `<div class="final"><h4>${s.publicado ? "Cliente publicado" : "Clon listo"}</h4>
+      ${s.publicado ? `<a href="${esc(s.publicado)}/login" target="_blank" rel="noopener"><b>${esc(s.publicado)}</b></a><br>` : ""}
       Carpeta: <code>${esc(s.destino)}</code><br>Schema: <code>${esc(s.schema)}</code> · Rubro: ${s.rubro === "gastronomia" ? "Gastronomía" : "Comercio"} · Admin: <code>${esc(s.admin)}</code>
+      ${s.repo ? `<br>Repo: <a href="${esc(s.repo)}" target="_blank" rel="noopener">${esc(s.repo.replace("https://github.com/", ""))}</a>` : ""}
       ${s.password ? `<div class="clave"><code id="clave">${esc(s.password)}</code><button type="button" onclick="navigator.clipboard.writeText(document.getElementById('clave').textContent);this.textContent='Copiada'">Copiar</button></div><small>Contraseña inicial: se muestra solo ahora. Pasásela al cliente por un canal seguro.</small>` : ""}
-      <h4 style="margin-top:12px">Falta</h4><ul>${pend.map((p) => `<li>${p}</li>`).join("")}</ul></div>`;
+      ${pend.length ? `<h4 style="margin-top:12px">Falta</h4><ul>${pend.map((p) => `<li>${p}</li>`).join("")}</ul>` : ""}</div>`;
     return true;
   }
   return false;
