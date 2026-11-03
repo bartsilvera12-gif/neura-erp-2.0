@@ -17,8 +17,8 @@ Versión corta para el equipo, con cómo preparar la computadora y la llave SSH:
 npm run clonar
 ```
 
-Abre `http://localhost:4545` (solo en tu computadora). Completás el cliente, el administrador, los
-módulos y los datos técnicos (el schema, el dominio y la carpeta se completan solos a partir del
+Abre `http://localhost:4545` (solo en tu computadora). Completás el cliente, el administrador, el
+rubro y los datos técnicos (el schema, el dominio y la carpeta se completan solos a partir del
 nombre) y tocás **Clonar**. Hace los pasos 1, 2, 3, 5 y 6 de abajo, en orden, mostrando el avance, y
 frena en el primer error. Si algo falla, corregís y volvés a tocar Clonar con los mismos datos: retoma
 la misma carpeta sin repetir lo hecho.
@@ -54,12 +54,17 @@ Abajo está lo mismo a mano, paso por paso.
 | Dominio | `republica.neura.com.py` | único por cliente |
 | Admin | `admin@republica.com.py`, Juan Pérez | el primer usuario |
 | Empresa | Ferretería República S.A. | razón social |
-| Módulos | `caja,inventario,clientes,reportes` | opcional; sin esto, todos |
+| Rubro | Comercio o Gastronomía | define qué funciones arrancan prendidas |
 | Color y logo | `#1F6F8B`, `logo.webp` | opcional; sin logo, el de Zentra |
 
-Módulos que existen: `caja`, `inventario`, `gastos-empresariales`, `clientes`, `crm`, `presupuestos`,
-`gestion-clientes`, `comisiones`, `planes`, `agenda`, `cobranzas`, `conciliacion`, `pagos`,
-`conversaciones`, `soporte`, `reportes`, `rrhh`, `proyectos`, `configuracion` (siempre va).
+Cada cliente tiene **todos los módulos**; lo que cambia es el rubro:
+- **Comercio** (ferretería, almacén, tienda): caja, ventas, stock, compras, clientes y pedidos de
+  mostrador. Nada de cocina.
+- **Gastronomía** (restaurante, bar): lo de Comercio más Mesas y QR, Cocina y Recetas, ya dadas a los
+  perfiles Cajero y Supervisor.
+
+El administrador lo puede cambiar después en Configuración › Rubro y funciones, salvo que se le oculte
+esa pantalla al clonar.
 
 ---
 
@@ -79,13 +84,12 @@ Copiá el `.env.local` de la flota a la raíz del repo.
 
 ```bash
 npm run setup -- --cliente "Ferretería República" --schema erp_republica \
-  --dominio republica.neura.com.py --color "#1F6F8B" --logo ./logo.webp \
-  --modulos caja,inventario,clientes,reportes
+  --dominio republica.neura.com.py --color "#1F6F8B" --logo ./logo.webp
 ```
 
 Escribe `src/cliente.config.ts` (nombre, dominio, color, módulos, logo) y `.env.local` (schema,
 `APP_URL` y `MENU_PUBLIC_URL` con https, y una `SIFEN_SECRETS_KEY` nueva solo de este cliente).
-Rechaza `erp_demo` y los módulos que no existen.
+Rechaza `erp_demo`. Sin `--modulos` activa todos (es lo que usamos: el rubro va en el paso 5).
 
 ## 3. Armar la base
 
@@ -121,7 +125,8 @@ contraseña no vuelven al dominio del cliente.
 
 ```bash
 npm run seed-admin -- --schema erp_republica --ssh zentra-app \
-  --empresa "Ferretería República S.A." --email admin@republica.com.py --nombre "Juan Pérez"
+  --empresa "Ferretería República S.A." --email admin@republica.com.py --nombre "Juan Pérez" \
+  --rubro comercio            # o gastronomia; --ocultar-rubro si para que el cliente no lo cambie
 ```
 
 Crea la cuenta de acceso y, en el schema, la empresa y el usuario ADMIN. La primera sucursal, el
@@ -185,7 +190,8 @@ Y quitarlo de `PGRST_DB_SCHEMAS` y `ADDITIONAL_REDIRECT_URLS` (paso 4).
 
 ## Lista final
 
-- [ ] `src/cliente.config.ts` tiene el nombre, dominio, módulos y logo del cliente.
+- [ ] `src/cliente.config.ts` tiene el nombre, dominio y logo del cliente.
+- [ ] Configuración › Rubro y funciones muestra el rubro elegido (o está oculta, si se pidió).
 - [ ] `.env.local` tiene `APP_DB_SCHEMA=<schema del cliente>` y su propia `SIFEN_SECRETS_KEY`.
 - [ ] `provision` terminó en "Listo".
 - [ ] El schema está en `PGRST_DB_SCHEMAS` y el dominio en `ADDITIONAL_REDIRECT_URLS`.

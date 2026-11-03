@@ -56,7 +56,7 @@ ssh zentra-app echo ok
 - nombre del negocio y razón social;
 - dominio;
 - nombre y correo del administrador;
-- módulos que va a usar;
+- rubro: Comercio (ferretería, almacén, tienda) o Gastronomía (restaurante, bar);
 - color y logo (opcionales).
 
 **b. Abrí el formulario** desde la carpeta del 2.0:
