@@ -84,7 +84,6 @@ export function ProductoForm({
   const permisoEditar = usePermiso("editar_productos");
   const verCostos = permisoCostos || permisoEditar;
   const soloLectura = producto?.activo === false;
-  const [ivaAbierto, setIvaAbierto] = useState(false);
   const [unidadLibre, setUnidadLibre] = useState(false);
   const [f, setF] = useState({
     nombre: producto?.nombre ?? inicial?.nombre ?? "",
@@ -399,7 +398,7 @@ export function ProductoForm({
 
           {/* ── Precios ──────────────────────────────────────────────────── */}
           <Bloque titulo="Precios" extra={<span className="text-[11px] text-slate-400">IVA incluido</span>}>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_140px]">
               <label className="block">
                 <span className={ET}>{esMP ? `Costo promedio (por ${f.unidad_medida === "Unidad" ? "unidad" : f.unidad_medida})` : "Costo promedio"}</span>
                 <MontoInput decimals={false} value={f.costo_promedio} onChange={(v) => set("costo_promedio", v)} className={NUM} placeholder="0" />
@@ -413,6 +412,10 @@ export function ProductoForm({
               ) : (
                 <p className="self-end pb-2.5 text-[11px] text-slate-500">Una materia prima no se vende: no lleva precio de venta. Su costo es el que usan las recetas.</p>
               )}
+              <div className="block">
+                <span className={ET}>IVA</span>
+                <Select block etiqueta="IVA" value={f.tipo_iva} onChange={(v) => set("tipo_iva", v as TipoIva)} options={IVAS} />
+              </div>
             </div>
             {margen != null && !esMP ? (
               <p className="mt-1.5 text-right text-xs text-slate-500">
@@ -421,26 +424,6 @@ export function ProductoForm({
               </p>
             ) : null}
 
-            {/* El IVA casi siempre es 10 %: se ve en una línea y se cambia solo si hace falta. */}
-            {!ivaAbierto ? (
-              <p className="mt-3 flex items-center gap-2 text-xs text-slate-500">
-                IVA: <strong className="font-semibold text-slate-700">{IVAS.find(([v]) => v === f.tipo_iva)?.[1] ?? f.tipo_iva}</strong>
-                <button type="button" onClick={() => setIvaAbierto(true)} className="min-h-9 font-medium text-[var(--brand)] hover:underline max-sm:min-h-11">Cambiar</button>
-              </p>
-            ) : (
-            <div className="mt-3">
-              <span className={ET}>IVA</span>
-              <div className="grid grid-cols-3 gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
-                {IVAS.map(([v, l]) => (
-                  <button key={v} type="button" onClick={() => set("tipo_iva", v)}
-                    className="rounded-lg py-2 text-sm font-semibold transition max-sm:min-h-10"
-                    style={f.tipo_iva === v ? { backgroundColor: "#fff", color: BRAND, boxShadow: "0 1px 2px rgba(15,23,42,.08)" } : { color: "#64748b" }}>
-                    {l}
-                  </button>
-                ))}
-              </div>
-            </div>
-            )}
 
             {!esMP ? (<>
             <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
