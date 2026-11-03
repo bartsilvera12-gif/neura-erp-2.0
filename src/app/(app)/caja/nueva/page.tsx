@@ -48,7 +48,6 @@ import { HojaInferior } from "@/components/HojaInferior";
 import { useEsEscritorio } from "@/lib/ui/responsive";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
 import { CajaBarra } from "@/modules/caja/CajaBarra";
-import { AvisoTurnoViejo } from "@/modules/caja/AvisoTurnoViejo";
 import { AperturaModal } from "@/modules/caja/AperturaModal";
 import { MovimientoModal } from "@/modules/caja/MovimientoModal";
 import { CierreModal } from "@/modules/caja/CierreModal";
@@ -1279,7 +1278,6 @@ function CajaPageContenido() {
       </div>
 
       {/* Turno abierto hace más de 24 h: se puede seguir vendiendo, pero el arqueo mezcla días. */}
-      {caja ? <AvisoTurnoViejo fechaApertura={caja.fecha_apertura} onCerrar={() => setModalCaja("cerrar")} compacto className="shrink-0" /> : null}
 
       {/* Venta registrada: aviso FLOTANTE (no empuja el contenido: al irse no se corre nada y el
           click no cae en otro lado). En celular / tablet va sobre el pie fijo; en escritorio,

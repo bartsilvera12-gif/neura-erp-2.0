@@ -32,7 +32,13 @@ const INPUT =
 const NUM = `${INPUT} text-right tabular-nums`;
 const ET = "mb-1 block text-xs font-medium text-slate-600";
 const IVAS: [TipoIva, string][] = [["10%", "10%"], ["5%", "5%"], ["EXENTA", "Exenta"]];
-const UNIDADES = ["Unidad", "Kilogramo", "Gramo", "Litro", "Metro", "Caja", "Paquete", "Docena"];
+/** Las unidades más usadas; "Otra" deja escribir una. */
+const UNIDADES = [
+  "Unidad", "Kilogramo", "Gramo", "Litro", "Mililitro", "Metro", "Centímetro", "Metro cuadrado",
+  "Caja", "Paquete", "Docena", "Par", "Juego", "Bolsa", "Botella", "Lata", "Frasco", "Sobre", "Rollo", "Bandeja", "Pieza",
+  "Hora", "Sesión", "Servicio",
+];
+const OTRA_UNIDAD = "__otra";
 const gs = (v: number) => `Gs. ${Math.round(v || 0).toLocaleString("es-PY")}`;
 /** Unidad de una materia prima a partir de la que tenía (Kilogramo → kg, …). */
 function unidadMP(u: string): string {
@@ -78,6 +84,7 @@ export function ProductoForm({
   const permisoEditar = usePermiso("editar_productos");
   const verCostos = permisoCostos || permisoEditar;
   const soloLectura = producto?.activo === false;
+  const [unidadLibre, setUnidadLibre] = useState(false);
   const [f, setF] = useState({
     nombre: producto?.nombre ?? inicial?.nombre ?? "",
     sku: producto?.sku ?? "",
@@ -537,11 +544,19 @@ export function ProductoForm({
                   <p className="mt-1 text-[11px] text-slate-400">El stock y el costo van en esta unidad; la receta convierte g↔kg y ml↔l.</p>
                 </div>
               ) : (
-                <label className="block">
+                <div className="block">
                   <span className={ET}>Unidad</span>
-                  <input list="unidades-medida" enterKeyHint="next" value={f.unidad_medida} onChange={(e) => set("unidad_medida", e.target.value)} className={INPUT} placeholder="Unidad" />
-                  <datalist id="unidades-medida">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
-                </label>
+                  {unidadLibre ? (
+                    <>
+                      <input autoFocus enterKeyHint="next" value={f.unidad_medida} onChange={(e) => set("unidad_medida", e.target.value)} className={INPUT} placeholder="Escribí la unidad" />
+                      <button type="button" onClick={() => { setUnidadLibre(false); set("unidad_medida", "Unidad"); }} className="mt-1 min-h-9 text-xs font-medium text-[var(--brand)] hover:underline max-sm:min-h-11">Elegir de la lista</button>
+                    </>
+                  ) : (
+                    <Select block etiqueta="Unidad" value={f.unidad_medida || "Unidad"} buscador
+                      options={[...UNIDADES, ...(f.unidad_medida && !UNIDADES.includes(f.unidad_medida) ? [f.unidad_medida] : [])].map((u): [string, string] => [u, u]).concat([[OTRA_UNIDAD, "Otra: escribirla"]])}
+                      onChange={(v) => { if (v === OTRA_UNIDAD) { setUnidadLibre(true); set("unidad_medida", ""); } else set("unidad_medida", v); }} />
+                  )}
+                </div>
               )}
             </div>
 
