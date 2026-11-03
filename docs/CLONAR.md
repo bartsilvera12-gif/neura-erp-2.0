@@ -4,9 +4,34 @@ Cada cliente tiene **su propio repo y su propio schema** en el Supabase comparti
 conoce a ningún cliente: lo único que cambia es `src/cliente.config.ts` y `.env.local`, y los dos
 los escribe `npm run setup`.
 
-Probado de punta a punta el 3-nov-2026 con un schema descartable (`erp_clon_prueba`): las 112 recetas
-arman la base desde cero, el resultado es idéntico a `erp_demo`, se pueden volver a correr sin
-errores, pasan las 178 pruebas de plata y stock y la revisión de seguridad da 0 problemas.
+Probado de punta a punta el 3-nov-2026 con un schema descartable (`erp_clon_prueba`): las recetas
+arman la base desde cero, el resultado es idéntico a `erp_demo`, pasan las 178 pruebas de plata y
+stock y la revisión de seguridad da 0 problemas.
+
+## La forma rápida: el formulario
+
+```bash
+npm run clonar
+```
+
+Abre `http://localhost:4545` (solo en tu computadora). Completás el cliente, el administrador, los
+módulos y los datos técnicos (el schema, el dominio y la carpeta se completan solos a partir del
+nombre) y tocás **Clonar**. Hace los pasos 1, 2, 3, 5 y 6 de abajo, en orden, mostrando el avance, y
+frena en el primer error. Si algo falla, corregís y volvés a tocar Clonar con los mismos datos: retoma
+la misma carpeta sin repetir lo hecho.
+
+Opcionales del formulario:
+- **Configurar el servidor de Supabase** (paso 4): suma el schema y el dominio con respaldo del `.env`
+  y reinicia `rest` y `auth` (unos segundos sin API para todos los clientes). Tildalo solo con
+  autorización de quien administra el servidor; si no, queda como pendiente en el resumen.
+- **Instalar y compilar**: `npm ci` y `npm run build` en el clon.
+- **Subir al repo del cliente**: push a `main` del repo que indiques (tiene que existir y estar vacío).
+
+Al final muestra la contraseña inicial del admin (una sola vez) y lo que falta: Coolify y Cloudflare.
+Antes de usarlo necesitás lo del punto 0 (SSH y el `.env.local` de la flota en la raíz del 2.0).
+Copia lo último commiteado del 2.0: si tenés cambios sin commit, no van.
+
+Abajo está lo mismo a mano, paso por paso.
 
 ---
 
@@ -65,9 +90,14 @@ Rechaza `erp_demo` y los módulos que no existen.
 npm run provision -- --schema erp_republica --ssh zentra-app
 ```
 
-Corre las recetas de `db/canonical` **por número** (00, 10, … 100, 120). Si una falla, se corta y
-dice desde dónde seguir (`--desde N`); lo anterior ya quedó aplicado. Se puede volver a correr sin
-romper ni borrar datos.
+Corre las recetas de `db/canonical` **por número** (00, 10, … 100, 120) y anota cada una en la tabla
+`_recetas` del schema. Volver a correrlo aplica **solo las que faltan**: si una falla, corregís y lo
+corrés de nuevo; y para traer recetas nuevas del 2.0 alcanza con correrlo otra vez.
+
+No se vuelven a correr recetas viejas sobre un schema con datos: alguna choca con reglas que agregó
+una receta posterior (pasa con la 48 una vez cargada la empresa). Un schema armado antes de existir
+`_recetas` se niega a seguir: pasale `--desde <primera receta que le falta>` una vez y las anteriores
+quedan anotadas.
 
 ## 4. Servidor (lo hace quien administra Supabase)
 
@@ -125,14 +155,14 @@ npm run dev     # entrá con el admin en http://localhost:3000
 
 - **Recetas:** nunca edites una receta que ya se aplicó en algún cliente. Un cambio de base es una
   receta nueva con el número siguiente, idempotente (`create or replace`, `if not exists`), y se
-  aplica con `npm run provision -- --schema <schema> --ssh zentra-app --desde <número>`.
+  aplica con `npm run provision -- --schema <schema> --ssh zentra-app` (corre solo las nuevas).
 - **Funciones nuevas:** `revoke execute … from public, anon` y `grant` a `authenticated` si la app
   la llama. Sin eso, `db:verify-rls` falla.
 - **Algo que sirve para todos los clientes:** hacelo en el 2.0, no en el clon.
 - **Traer arreglos del 2.0 al clon:**
   ```bash
   git fetch base && git merge base/main
-  npm run provision -- --schema erp_republica --ssh zentra-app --desde <primera receta nueva>
+  npm run provision -- --schema erp_republica --ssh zentra-app
   ```
   `src/cliente.config.ts` va a tener conflicto si el 2.0 lo cambió: quedate con el del cliente.
 

@@ -202,7 +202,8 @@ async function clonar(d, enviar) {
   await paso("compilar", async () => {
     if (!d.compilar) { enviar({ paso: "compilar", linea: "No tildado." }); return "salta"; }
     await correr(enviar, "compilar", "npm", ["ci", "--no-audit", "--no-fund", "--loglevel=error"], { cwd: destino });
-    await correr(enviar, "compilar", "npm", ["run", "build"], { cwd: destino, ocultar: (l) => (/^\s*[├└┌│ƒ○●]/.test(l) ? "" : l) });
+    await correr(enviar, "compilar", "npm", ["run", "build"], { cwd: destino, ocultar: (l) => (/^\s*([├└┌│ƒ○●]|Route \()/.test(l) ? "" : l) });
+    enviar({ paso: "compilar", linea: "Compiló sin errores." });
   });
 
   await paso("git", async () => {

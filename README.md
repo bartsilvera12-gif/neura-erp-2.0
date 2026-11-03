@@ -9,6 +9,8 @@ Arquitectura y reglas: **[docs/ARQUITECTURA.md](docs/ARQUITECTURA.md)**.
 
 Paso a paso probado (repo, base, servidor, admin, verificación y publicación): **[docs/CLONAR.md](docs/CLONAR.md)**.
 
+Lo más rápido: `npm run clonar` abre un formulario que hace todo con los datos del cliente. A mano:
+
 ```bash
 npm run setup -- --cliente "Cliente X" --schema erp_clientex --dominio clientex.neura.com.py
 npm run provision -- --schema erp_clientex --ssh zentra-app
