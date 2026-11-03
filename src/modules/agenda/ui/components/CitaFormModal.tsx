@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { BellRing, ChevronDown, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { Select } from "@/components/Select";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
-import { AGENDA_ESTADOS, type AgendaCitaEnriquecida } from "@/modules/agenda/dominio";
-import { HORARIO_DEFECTO, fechaLocalAIso, rangoEnHorarioLaboral, textoHorario, type Horario } from "@/modules/agenda/horario";
+import { AGENDA_ESTADOS, AVISOS_EVENTO, AVISO_EVENTO_DEFECTO, avisoDeCita, type AgendaCitaEnriquecida } from "@/modules/agenda/dominio";
+import { pedirPermisoAvisos } from "@/modules/notificaciones/avisoNavegador";
+import { fechaLocalAIso, type Horario } from "@/modules/agenda/horario";
 import { aPared, ahoraPared, estadoStyle, hhmm, pad, tipoLabel, ymd } from "../calendar-utils";
 import { ResponsablesSelect } from "./ResponsablesSelect";
 import { ClienteSelect, type ClienteOpcion } from "./ClienteSelect";
@@ -16,7 +17,12 @@ export type AgendaOptions = {
   responsables: { id: string; nombre: string | null; rol: string | null }[];
   tipos: string[];
   horario: Horario;
+  /** Usuario de la sesión: el evento es suyo salvo que elija otros responsables. */
+  yo?: string;
 };
+
+/** "Avisarme" como valor del Select ("no" = sin aviso). */
+const OPCIONES_AVISO: [string, string][] = AVISOS_EVENTO.map(([m, txt]) => [m == null ? "no" : String(m), txt]);
 
 type Mode = "crear" | "editar" | "reprogramar";
 type ClienteMode = "existente" | "nuevo";
@@ -97,6 +103,9 @@ export default function CitaFormModal({
   const [responsableIds, setResponsableIds] = useState<string[]>([]);
   const [tipo, setTipo] = useState("reunion");
   const [estado, setEstado] = useState("pendiente");
+  const [avisoMin, setAvisoMin] = useState(String(AVISO_EVENTO_DEFECTO));
+  /** Responsables, tipo, estado, persona y lugar: plegados para que cargar un evento sea rápido. */
+  const [detalles, setDetalles] = useState(false);
 
   const [fecha, setFecha] = useState("");
   const [horaInicio, setHoraInicio] = useState("");
@@ -131,11 +140,13 @@ export default function CitaFormModal({
         })();
       const fin = prefill?.fin ?? new Date(ini.getTime() + 30 * 60_000);
       setTitulo("");
-      // Sin preselección: elegir al primero de la lista metía a alguien que muy probablemente
-      // no participa de la reunión, y encima quedaba como principal.
-      setResponsableId("");
-      setResponsableIds([]);
-      setTipo("reunion");
+      // El evento es de quien lo carga (si sigue activo en la lista); otros se suman en "Más detalles".
+      const yo = options.responsables.some((r) => r.id === options.yo) ? options.yo! : "";
+      setResponsableId(yo);
+      setResponsableIds(yo ? [yo] : []);
+      setTipo("evento");
+      setAvisoMin(String(AVISO_EVENTO_DEFECTO));
+      setDetalles(false);
       setEstado("pendiente");
       setFecha(ymd(ini));
       setHoraInicio(hhmm(ini));
@@ -168,8 +179,12 @@ export default function CitaFormModal({
       setContactoEmpresa(typeof meta.contacto_empresa === "string" ? meta.contacto_empresa : "");
       setUbicacion(cita.ubicacion ?? "");
       setObservaciones(cita.observaciones ?? "");
+      // Sin aviso elegido (citas de antes): avisaba 30 min antes, es lo más parecido.
+      const av = avisoDeCita(meta);
+      setAvisoMin(av === null ? "no" : String(av ?? 30));
+      setDetalles(Boolean(cita.cliente_id || cita.contacto_nombre || cita.contacto_telefono || cita.ubicacion || (cita.responsables?.length ?? 0) > 1));
     }
-  }, [open, mode, cita, prefill]);
+  }, [open, mode, cita, prefill, options.responsables, options.yo]);
 
   // Disponibilidad (advertencia no bloqueante).
   useEffect(() => {
@@ -200,17 +215,10 @@ export default function CitaFormModal({
   }, [open, responsableId, fecha, horaInicio, horaFin, mode, cita]);
 
   const duracionActual = useMemo(() => diffMin(horaInicio, horaFin), [horaInicio, horaFin]);
-  const horario = options.horario ?? HORARIO_DEFECTO;
-  const fueraDeHorario = useMemo(() => {
-    const ini = combinar(fecha, horaInicio);
-    const fin = combinar(fecha, horaFin);
-    if (!ini || !fin || Date.parse(fin) <= Date.parse(ini)) return false;
-    return !rangoEnHorarioLaboral(Date.parse(ini), Date.parse(fin), horario);
-  }, [fecha, horaInicio, horaFin, horario]);
 
-  const tituloModal = mode === "crear" ? "Nueva cita" : mode === "reprogramar" ? "Reprogramar cita" : "Editar cita";
+  const tituloModal = mode === "crear" ? "Nuevo evento" : mode === "reprogramar" ? "Reprogramar evento" : "Editar evento";
   const subtitulo =
-    mode === "crear" ? "Programá una nueva cita o reunión" : mode === "reprogramar" ? "Mové la cita a un nuevo horario" : "Actualizá los datos de la cita";
+    mode === "crear" ? "Anotalo y te avisamos a la hora que elijas" : mode === "reprogramar" ? "Movelo a un nuevo horario" : "Actualizá los datos del evento";
 
   if (!open) return null;
 
@@ -229,7 +237,7 @@ export default function CitaFormModal({
     const inicioIso = combinar(fecha, horaInicio);
     const finIso = combinar(fecha, horaFin);
     if (mode !== "reprogramar" && !titulo.trim()) return setError("El título es obligatorio.");
-    if (!responsableId) return setError("Elegí al menos un responsable.");
+    if (!responsableId) { setDetalles(true); return setError("Elegí al menos un responsable."); }
     if (!inicioIso || !finIso) return setError("Indicá fecha, hora de inicio y fin.");
     if (Date.parse(finIso) <= Date.parse(inicioIso)) return setError("El fin debe ser posterior al inicio.");
 
@@ -241,6 +249,9 @@ export default function CitaFormModal({
       if (contactoEmpresa.trim()) metadata.contacto_empresa = contactoEmpresa.trim();
       else delete metadata.contacto_empresa;
     }
+    metadata.aviso_min = avisoMin === "no" ? null : Number(avisoMin);
+    // El permiso del navegador se pide con el click (si no, el navegador lo bloquea).
+    if (avisoMin !== "no") pedirPermisoAvisos();
 
     setSaving(true);
     try {
@@ -312,14 +323,103 @@ export default function CitaFormModal({
         </div>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
-          {/* BÁSICO */}
+          {/* EVENTO */}
           {!reprog && (
-            <section className="space-y-3">
-              <SectionHead>Básico</SectionHead>
+            <div>
+              <label className={labelCls}>¿Qué tenés? *</label>
+              <input className={inputCls} value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Pagar el alquiler, reunión con Juan" autoFocus={mode === "crear"} />
+            </div>
+          )}
+
+          {reprog && (
+            <div className="rounded-xl border border-violet-200 bg-violet-50 px-3.5 py-2.5 text-xs text-violet-700">
+              Vas a reprogramar “{cita?.titulo}”. El original quedará marcado como <b>reprogramado</b> y se creará uno nuevo.
+            </div>
+          )}
+
+          {/* FECHA Y HORA */}
+          <section className="space-y-3">
+            <SectionHead>Cuándo</SectionHead>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
               <div>
-                <label className={labelCls}>Título *</label>
-                <input className={inputCls} value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Ej: Reunión con cliente" />
+                <label className={labelCls}>Fecha *</label>
+                <SelectorFecha block etiqueta="Fecha del evento" value={fecha} onChange={setFecha} />
               </div>
+              <div>
+                <label className={labelCls}>Desde *</label>
+                <Select block value={horaInicio} onChange={onChangeInicio} options={[["", "Elegí la hora"] as [string, string], ...opcionesHora(horaInicio)].slice(horaInicio ? 1 : 0)} />
+              </div>
+              <div>
+                <label className={labelCls}>Hasta *</label>
+                <Select block value={horaFin} onChange={setHoraFin} options={[["", "Elegí la hora"] as [string, string], ...opcionesHora(horaFin, horaInicio || undefined)].slice(horaFin ? 1 : 0)} />
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-[11px] text-slate-400">Duración:</span>
+              {DURACIONES.map((d) => {
+                const active = duracionActual === d;
+                return (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => aplicarDuracion(d)}
+                    style={active ? { backgroundColor: TEAL, borderColor: TEAL } : undefined}
+                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors [@media(pointer:coarse)]:px-3 [@media(pointer:coarse)]:py-2 ${
+                      active ? "text-white shadow-sm" : "border-slate-300 text-slate-600 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]"
+                    }`}
+                  >
+                    {d < 60 ? `${d}m` : d === 60 ? "1h" : `${d / 60}h`}
+                  </button>
+                );
+              })}
+              {duracionActual != null && !DURACIONES.includes(duracionActual) && duracionActual > 0 && (
+                <span className="text-[11px] text-slate-500">({duracionActual}m)</span>
+              )}
+            </div>
+            {aviso && <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-700">⚠ {aviso}</div>}
+          </section>
+
+          {/* AVISO Y NOTAS */}
+          <section className="space-y-3">
+            <SectionHead>Aviso</SectionHead>
+            <div className="flex items-start gap-3 rounded-2xl border border-[#4FAEB2]/20 bg-[#4FAEB2]/5 p-3">
+              <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#3F8E91] shadow-sm ring-1 ring-[#4FAEB2]/20">
+                <BellRing className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <Select block etiqueta="Avisarme" value={avisoMin} onChange={setAvisoMin} options={OPCIONES_AVISO} />
+                <p className="mt-1.5 text-[11px] leading-snug text-slate-500">
+                  {avisoMin === "no"
+                    ? "No te vamos a avisar."
+                    : "Suena la campanita y te aparece un aviso del navegador, aunque estés en otra pestaña (con el ERP abierto)."}
+                </p>
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Notas</label>
+              <textarea className={inputCls} rows={2} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} placeholder="Lo que tengas que acordarte" />
+            </div>
+          </section>
+
+          {/* MÁS DETALLES */}
+          {!reprog && (
+            <button
+              type="button"
+              onClick={() => setDetalles((v) => !v)}
+              aria-expanded={detalles}
+              className="flex min-h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]"
+            >
+              <span>
+                Más detalles
+                <span className="ml-2 text-xs font-normal text-slate-400">responsables, cliente, lugar, tipo</span>
+              </span>
+              <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${detalles ? "rotate-180" : ""}`} />
+            </button>
+          )}
+
+          {!reprog && detalles && (
+            <section className="space-y-3">
+              <SectionHead>Detalles</SectionHead>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div className="col-span-1 sm:col-span-2">
                   <label className={labelCls}>Responsables *</label>
@@ -355,61 +455,8 @@ export default function CitaFormModal({
             </section>
           )}
 
-          {reprog && (
-            <div className="rounded-xl border border-violet-200 bg-violet-50 px-3.5 py-2.5 text-xs text-violet-700">
-              Vas a reprogramar “{cita?.titulo}”. La cita original quedará marcada como <b>reprogramada</b> y se creará una nueva.
-            </div>
-          )}
-
-          {/* FECHA Y HORA */}
-          <section className="space-y-3">
-            <SectionHead>Fecha y hora</SectionHead>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div>
-                <label className={labelCls}>Fecha *</label>
-                <SelectorFecha block etiqueta="Fecha de la cita" value={fecha} onChange={setFecha} />
-              </div>
-              <div>
-                <label className={labelCls}>Inicio *</label>
-                <Select block value={horaInicio} onChange={onChangeInicio} options={[["", "Elegí la hora"] as [string, string], ...opcionesHora(horaInicio)].slice(horaInicio ? 1 : 0)} />
-              </div>
-              <div>
-                <label className={labelCls}>Fin *</label>
-                <Select block value={horaFin} onChange={setHoraFin} options={[["", "Elegí la hora"] as [string, string], ...opcionesHora(horaFin, horaInicio || undefined)].slice(horaFin ? 1 : 0)} />
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] text-slate-400">Duración:</span>
-              {DURACIONES.map((d) => {
-                const active = duracionActual === d;
-                return (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => aplicarDuracion(d)}
-                    style={active ? { backgroundColor: TEAL, borderColor: TEAL } : undefined}
-                    className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors ${
-                      active ? "text-white shadow-sm" : "border-slate-300 text-slate-600 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]"
-                    }`}
-                  >
-                    {d < 60 ? `${d}m` : d === 60 ? "1h" : `${d / 60}h`}
-                  </button>
-                );
-              })}
-              {duracionActual != null && !DURACIONES.includes(duracionActual) && duracionActual > 0 && (
-                <span className="text-[11px] text-slate-500">({duracionActual}m)</span>
-              )}
-            </div>
-            {aviso && <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-2.5 text-xs text-amber-700">⚠ {aviso}</div>}
-            {fueraDeHorario && (
-              <div className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs text-slate-600">
-                Fuera del horario laboral ({textoHorario(horario)}). Se puede guardar igual.
-              </div>
-            )}
-          </section>
-
           {/* PERSONA */}
-          {!reprog && (
+          {!reprog && detalles && (
             <section className="space-y-3">
               <SectionHead>Persona</SectionHead>
               <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1 text-xs">
@@ -464,20 +511,12 @@ export default function CitaFormModal({
             </section>
           )}
 
-          {/* EXTRA */}
-          <section className="space-y-3">
-            <SectionHead>Extra</SectionHead>
-            {!reprog && (
-              <div>
-                <label className={labelCls}>Ubicación / enlace</label>
-                <input className={inputCls} value={ubicacion} onChange={(e) => setUbicacion(e.target.value)} placeholder="Dirección, sala o link" />
-              </div>
-            )}
+          {!reprog && detalles && (
             <div>
-              <label className={labelCls}>Observaciones internas</label>
-              <textarea className={inputCls} rows={2} value={observaciones} onChange={(e) => setObservaciones(e.target.value)} />
+              <label className={labelCls}>Lugar o enlace</label>
+              <input className={inputCls} value={ubicacion} onChange={(e) => setUbicacion(e.target.value)} placeholder="Dirección, sala o link" />
             </div>
-          </section>
+          )}
 
           {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-2.5 text-xs text-rose-700">{error}</div>}
         </div>

@@ -29,10 +29,10 @@ function fmtNumDia(iso: string): string {
 }
 
 const MSJ_TERMINAL: Record<string, string> = {
-  reprogramada: "Esta cita se reprogramó (hay una nueva en su lugar)",
-  completada: "Esta cita ya se completó",
-  cancelada: "Esta cita fue cancelada",
-  no_asistio: "El cliente no asistió a esta cita",
+  reprogramada: "Se reprogramó (hay uno nuevo en su lugar)",
+  completada: "Ya se completó",
+  cancelada: "Fue cancelado",
+  no_asistio: "El cliente no asistió",
 };
 
 /** "10:00" */
@@ -319,7 +319,7 @@ export default function CitaDetalleModal({
                 onClick={cancelar}
                 className="rounded-lg px-2.5 py-1.5 text-xs font-medium text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50"
               >
-                Cancelar cita
+                Cancelar evento
               </button>
               <div className="ml-auto flex flex-wrap items-center gap-2 max-sm:order-first max-sm:ml-0 max-sm:grid max-sm:w-full max-sm:grid-cols-2">
                 <BtnSec disabled={busy} onClick={() => onEditar(cita)}>

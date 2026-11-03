@@ -656,18 +656,18 @@ export const GUIAS: Guia[] = [
     ],
   },
   {
-    id: "agenda", grupo: "Clientes y ventas", ruta: "/clientes/agenda", titulo: "Agendar una cita", resumen: "Reuniones y visitas, con recordatorio.",
+    id: "agenda", grupo: "Clientes y ventas", ruta: "/clientes/agenda", titulo: "Anotar un evento", resumen: "Tus eventos, con aviso a la hora que elijas.",
     bloques: [
       { img: "agenda", alt: "Agenda de la semana", pasos: [
-        { t: "Tocá Nueva cita.", marca: "Nueva cita" },
+        { t: "Tocá Nuevo evento.", marca: "Nuevo evento" },
       ] },
-      { img: "agenda-nueva", alt: "Formulario de nueva cita", pasos: [
-        { t: "Poné un título claro.", marca: "Título *" },
-        { t: "Elegí quiénes participan.", d: "Todos reciben el recordatorio.", marca: "Responsables *" },
-        { t: "Elegí la fecha y la hora de inicio.", marca: "Fecha *" },
-        { t: "Tocá cuánto dura.", marca: "30m" },
-        { t: "Elegí el cliente, si corresponde, y guardá.", marca: "Cliente existente" },
+      { img: "agenda-nueva", alt: "Formulario de nuevo evento", pasos: [
+        { t: "Escribí qué tenés.", marca: "¿Qué tenés? *" },
+        { t: "Elegí la fecha y la hora.", marca: "Fecha *" },
+        { t: "Elegí cuándo te avisamos.", d: "Suena la campanita y aparece un aviso del navegador, aunque estés en otra pestaña. El ERP tiene que estar abierto.", marca: "Avisarme" },
+        { t: "Guardá.", marca: "Guardar" },
       ] },
+      { consejo: "La primera vez, el navegador pregunta si puede mostrar avisos: tocá Permitir. En Más detalles podés sumar a otras personas, un cliente o el lugar." },
     ],
   },
 

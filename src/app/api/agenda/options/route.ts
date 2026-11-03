@@ -1,6 +1,6 @@
 /**
  * Datos para el formulario y los filtros de Agenda (portado del actual):
- *   GET /api/agenda/options → { responsables: [{ id, nombre, rol }], tipos, horario }
+ *   GET /api/agenda/options → { responsables: [{ id, nombre, rol }], tipos, horario, yo }
  * Los clientes no van acá: el formulario los BUSCA (/api/clientes?q=).
  * `horario` (soporte_config) es para advertir citas fuera del horario laboral.
  */
@@ -18,5 +18,6 @@ export const GET = withTenant(async (ctx) => {
   const responsables = ((usuarios.data ?? []) as unknown as { id: string; nombre: string | null; rol: string | null; activo: boolean | null }[])
     .filter((u) => u.activo !== false)
     .map((u) => ({ id: u.id, nombre: u.nombre ?? null, rol: u.rol ?? null }));
-  return ok({ responsables, tipos: TIPOS_CITA, horario });
+  // `yo`: el responsable que el formulario pone solo (el evento es de quien lo carga).
+  return ok({ responsables, tipos: TIPOS_CITA, horario, yo: ctx.usuarioId });
 });

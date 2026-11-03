@@ -8,8 +8,9 @@
  *     20 s: si el canal no entrega nada (publicación/RLS), la campanita funciona igual
  *   · SONIDO sólo por avisos NUEVOS después de la primera carga (abrir la app no suena)
  *   · click: abre la URL del aviso y lo marca leído · "Marcar todas como leídas" por bandeja
- *   · recordatorios de reunión de la Agenda (60 y 30 min antes): llegan calculados en vivo
- *     (`derivada`), sin fila en la base: no se marcan leídos, se apagan solos
+ *   · recordatorios de la Agenda (el aviso elegido en cada evento): llegan calculados en vivo
+ *     (`derivada`), sin fila en la base: no se marcan leídos, se apagan solos. También salen
+ *     como aviso del navegador (avisoNavegador.ts) aunque la pestaña esté escondida
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -20,6 +21,7 @@ import { fechaRelativa } from "@/modules/tipificacion/dominio";
 import {
   escribirSonidoActivado, leerSonidoActivado, prepararSonidos, reproducirSonidoNotificacion,
 } from "@/modules/notificaciones/sonido";
+import { avisarEnNavegador } from "@/modules/notificaciones/avisoNavegador";
 
 type Notificacion = {
   id: string;
@@ -91,6 +93,9 @@ export function NotificacionesBell() {
       const previos = vistosRef.current;
       if (previos && noLeidasIds.some((id) => !previos.has(id))) reproducirSonidoNotificacion();
       vistosRef.current = new Set([...(previos ?? []), ...noLeidasIds]);
+      // Recordatorios de la agenda: también como aviso del navegador (una vez cada uno, aunque
+      // sea la primera carga: abrir el ERP 2 minutos antes igual avisa).
+      avisarEnNavegador(r.notificaciones.filter((n) => n.tipo === "agenda_recordatorio"));
     } catch {
       // Sin conexión el header sigue funcionando: se reintenta en el próximo poll.
     } finally {
@@ -112,13 +117,13 @@ export function NotificacionesBell() {
     void cargar();
   }, [cargar]);
 
-  // Polling de respaldo (también al volver a la pestaña). Solo con la pestaña a la vista; con el
-  // tiempo real conectado alcanza con cada POLL_EN_VIVO_MS (los recordatorios de la agenda tienen
-  // 5 min de tolerancia).
+  // Polling de respaldo (también al volver a la pestaña). Con el tiempo real conectado o con la
+  // pestaña escondida alcanza con cada POLL_EN_VIVO_MS: escondida se sigue leyendo para que los
+  // recordatorios de la agenda lleguen como aviso del navegador.
   useEffect(() => {
     const t = window.setInterval(() => {
-      if (document.visibilityState !== "visible") return;
-      if (enVivoRef.current && Date.now() - ultimaCargaRef.current < POLL_EN_VIVO_MS) return;
+      const espaciar = enVivoRef.current || document.visibilityState !== "visible";
+      if (espaciar && Date.now() - ultimaCargaRef.current < POLL_EN_VIVO_MS) return;
       void cargarRef.current();
     }, POLL_MS);
     const vis = () => document.visibilityState === "visible" && void cargarRef.current();

@@ -3,7 +3,7 @@
 /**
  * Agenda (portada tal cual de dashboard/agenda/AgendaClient.tsx del sistema actual):
  * encabezado con métricas, "Hoy" con su resumen, navegación del período, vistas Día /
- * Semana (por defecto) / Mes / Listado, rango horario visible, filtros y "Nueva cita".
+ * Semana (por defecto) / Mes / Listado, rango horario visible, filtros y "Nuevo evento".
  * `?cita=<id>` (los avisos de la campanita) abre esa cita.
  *
  * Celular: sin la vista Semana (7 columnas no entran): arranca en Día, con una tira de la
@@ -255,7 +255,7 @@ export default function AgendaClient() {
             onClick={() => openCrear()}
             className="flex h-11 items-center gap-1 rounded-xl bg-teal-500 px-4 text-sm font-semibold text-white shadow-sm hover:bg-teal-600 sm:hidden"
           >
-            <Plus className="h-4 w-4" /> Nueva cita
+            <Plus className="h-4 w-4" /> Nuevo evento
           </button>
         </div>
         <ScrollHorizontal claseFila="gap-1.5 items-center" className="max-sm:-mx-1 max-sm:px-1 sm:w-auto">
@@ -352,7 +352,7 @@ export default function AgendaClient() {
             onClick={() => openCrear()}
             className="flex items-center gap-1 rounded-lg bg-teal-500 px-3 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-teal-600 max-sm:hidden"
           >
-            <Plus className="h-4 w-4" /> Nueva cita
+            <Plus className="h-4 w-4" /> Nuevo evento
           </button>
         </div>
       </div>

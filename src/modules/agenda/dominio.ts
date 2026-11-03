@@ -34,7 +34,24 @@ export function isAgendaEstado(v: unknown): v is AgendaEstado {
 export const TIPO_CITA_CAPACITACION = "capacitacion";
 
 /** Tipos de cita sugeridos (los genéricos del actual; demo/consulta/servicio eran de Neura). */
-export const TIPOS_CITA = ["reunion", "llamada", "visita", "seguimiento", "capacitacion", "otro"];
+export const TIPOS_CITA = ["evento", "reunion", "llamada", "visita", "seguimiento", "capacitacion", "otro"];
+
+/**
+ * "Avisarme" de cada evento: minutos antes del inicio (se guarda en metadata.aviso_min; null =
+ * sin aviso). Una cita sin la clave conserva los avisos de siempre (60 y 30 min antes).
+ */
+export const AVISOS_EVENTO: [number | null, string][] = [
+  [0, "Al empezar"], [5, "5 minutos antes"], [10, "10 minutos antes"], [15, "15 minutos antes"],
+  [30, "30 minutos antes"], [60, "1 hora antes"], [1440, "1 día antes"], [null, "Sin aviso"],
+];
+export const AVISO_EVENTO_DEFECTO = 15;
+
+/** Aviso elegido en la cita: número, null (sin aviso) o undefined (los de siempre). */
+export function avisoDeCita(metadata: unknown): number | null | undefined {
+  if (!metadata || typeof metadata !== "object" || !("aviso_min" in metadata)) return undefined;
+  const v = (metadata as { aviso_min?: unknown }).aviso_min;
+  return typeof v === "number" && AVISOS_EVENTO.some(([m]) => m === v) ? v : null;
+}
 
 export type AgendaCitaRow = {
   id: string;

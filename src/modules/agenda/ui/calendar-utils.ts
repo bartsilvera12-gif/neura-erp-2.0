@@ -196,6 +196,7 @@ export function estadoStyle(estado: string) {
 
 /** Etiqueta del tipo de cita ("reunion" → "Reunión"). */
 const TIPO_LABEL: Record<string, string> = {
+  evento: "Evento",
   reunion: "Reunión",
   llamada: "Llamada",
   visita: "Visita",

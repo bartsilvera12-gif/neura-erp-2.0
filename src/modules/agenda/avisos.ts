@@ -10,10 +10,14 @@
  *
  * La contrapartida es que no se pueden marcar como leídos: se apagan solos cuando la
  * reunión empieza, se cancela o se reprograma.
+ *
+ * Cada evento puede traer su propio aviso ("Avisarme" del formulario, metadata.aviso_min,
+ * receta 121): un solo aviso desde esos minutos antes hasta que empieza. Sin la clave, los de
+ * siempre (60 y 30 min antes).
  */
 import type { TenantDb } from "@/lib/api/tenant-db";
-import { ESTADOS_NO_BLOQUEAN } from "@/modules/agenda/dominio";
-import { horaPY } from "@/modules/agenda/horario";
+import { ESTADOS_NO_BLOQUEAN, avisoDeCita } from "@/modules/agenda/dominio";
+import { horaPY, isoAFechaLocal } from "@/modules/agenda/horario";
 import { responsablesPorCita } from "@/modules/agenda/server";
 
 /** Ventanas de aviso, en minutos antes del inicio. De la más lejana a la más cercana. */
@@ -21,9 +25,13 @@ const VENTANAS_MIN = [60, 30] as const;
 
 /**
  * Margen de tolerancia: la campanita no se lee en el minuto exacto. Sin esto, un aviso de
- * "60 minutos" sólo existiría durante el minuto 60 y casi nadie lo vería.
+ * "60 minutos" sólo existiría durante el minuto 60 y casi nadie lo vería. También es lo que
+ * dura el aviso "Al empezar" después de la hora.
  */
 const TOLERANCIA_MIN = 5;
+
+/** El aviso más lejano que se puede elegir: 1 día antes. */
+const AVISO_MAX_MIN = 1440;
 
 export type AvisoAgenda = {
   id: string;
@@ -36,22 +44,21 @@ export type AvisoAgenda = {
   created_at: string;
   /** Calculado en vivo, sin fila en la base: no se puede marcar leído. */
   derivada: true;
-  /** Minutos que faltan (≈60 o ≈30). */
+  /** Minutos que faltan (0 = ya empezó). */
   minutos_restantes: number;
   cita_id: string;
 };
 
-type CitaRow = { id: string; titulo: string; inicio_at: string; estado: string; responsable_id: string | null; created_by: string | null; ubicacion: string | null };
+type CitaRow = {
+  id: string; titulo: string; inicio_at: string; estado: string; responsable_id: string | null;
+  created_by: string | null; ubicacion: string | null; metadata?: unknown;
+};
 
-/**
- * Avisos de las reuniones próximas de un usuario. Destinatarios: los responsables de la
- * cita MÁS quien la cargó (como el actual). Una sola vez por cita aunque cumpla los dos roles.
- */
-/** Rango de inicio de las citas que pueden tener aviso ahora (de ahora a 65 min). */
+/** Rango de inicio de las citas que pueden tener aviso ahora (de recién empezadas a 1 día). */
 export function rangoAvisosAgenda(ahora = Date.now()): { desde: string; hasta: string } {
   return {
-    desde: new Date(ahora).toISOString(),
-    hasta: new Date(ahora + (VENTANAS_MIN[0] + TOLERANCIA_MIN) * 60_000).toISOString(),
+    desde: new Date(ahora - TOLERANCIA_MIN * 60_000).toISOString(),
+    hasta: new Date(ahora + (AVISO_MAX_MIN + TOLERANCIA_MIN) * 60_000).toISOString(),
   };
 }
 
@@ -68,12 +75,16 @@ export function avisosDesdeCitas(citas: CitaConResponsables[], usuarioId: string
   return armarAvisos(vigentes, usuarioId, extras, ahora);
 }
 
+/**
+ * Avisos de las reuniones próximas de un usuario. Destinatarios: los responsables de la
+ * cita MÁS quien la cargó (como el actual). Una sola vez por cita aunque cumpla los dos roles.
+ */
 export async function avisosAgendaDe(db: TenantDb, usuarioId: string): Promise<AvisoAgenda[]> {
   const ahora = Date.now();
   const { desde, hasta } = rangoAvisosAgenda(ahora);
 
   const { data, error } = await db
-    .select("agenda_citas", "id, titulo, inicio_at, estado, responsable_id, created_by, ubicacion")
+    .select("agenda_citas", "id, titulo, inicio_at, estado, responsable_id, created_by, ubicacion, metadata")
     .gte("inicio_at", desde)
     .lte("inicio_at", hasta);
   // La campanita no puede caerse porque la agenda falle: sin avisos es degradado aceptable.
@@ -87,6 +98,29 @@ export async function avisosAgendaDe(db: TenantDb, usuarioId: string): Promise<A
   return armarAvisos(vigentes, usuarioId, extras, ahora);
 }
 
+/** Ventana de aviso que corresponde ahora, o null si no hay aviso. */
+function ventanaDe(c: CitaRow, faltanMin: number): number | null {
+  const elegido = avisoDeCita(c.metadata);
+  if (elegido === null) return null;
+  if (elegido !== undefined) {
+    // Desde los minutos elegidos hasta que empieza ("Al empezar": hasta 5 min después).
+    return faltanMin <= elegido && faltanMin > (elegido === 0 ? -TOLERANCIA_MIN : 0) ? elegido : null;
+  }
+  if (faltanMin < 0) return null;
+  // Los de siempre. La ventana más cercana que ya se alcanzó: a 25 minutos corresponde el
+  // aviso de 30, no el de 60, y nunca los dos a la vez.
+  return VENTANAS_MIN.find((v) => faltanMin <= v + TOLERANCIA_MIN && faltanMin > (v === 30 ? -1 : 30 + TOLERANCIA_MIN)) ?? null;
+}
+
+/** "Hoy 09:30", "Mañana 09:30" o "12/11 09:30", en hora de Paraguay. */
+function cuandoPY(iso: string, ahora: number): string {
+  const dia = isoAFechaLocal(iso).slice(0, 10);
+  const hoy = isoAFechaLocal(new Date(ahora).toISOString()).slice(0, 10);
+  const manana = isoAFechaLocal(new Date(ahora + 86_400_000).toISOString()).slice(0, 10);
+  const txt = dia === hoy ? "Hoy" : dia === manana ? "Mañana" : `${dia.slice(8, 10)}/${dia.slice(5, 7)}`;
+  return `${txt} ${horaPY(iso)}`;
+}
+
 function armarAvisos(vigentes: CitaRow[], usuarioId: string, extras: Map<string, string[]> | null, ahora: number): AvisoAgenda[] {
   const mias = vigentes.filter(
     (c) => c.responsable_id === usuarioId || c.created_by === usuarioId || (extras?.get(c.id) ?? []).includes(usuarioId),
@@ -95,24 +129,19 @@ function armarAvisos(vigentes: CitaRow[], usuarioId: string, extras: Map<string,
   const avisos: AvisoAgenda[] = [];
   for (const c of mias) {
     const faltanMin = (Date.parse(c.inicio_at) - ahora) / 60_000;
-    if (!Number.isFinite(faltanMin) || faltanMin < 0) continue;
-
-    // La ventana más cercana que ya se alcanzó: a 25 minutos corresponde el aviso de 30,
-    // no el de 60, y nunca los dos a la vez.
-    const ventana = VENTANAS_MIN.find(
-      (v) => faltanMin <= v + TOLERANCIA_MIN && faltanMin > (v === 30 ? -1 : 30 + TOLERANCIA_MIN),
-    );
+    if (!Number.isFinite(faltanMin)) continue;
+    const ventana = ventanaDe(c, faltanMin);
     if (ventana == null) continue;
 
-    const restantes = Math.max(1, Math.round(faltanMin));
+    const restantes = Math.max(0, Math.round(faltanMin));
     avisos.push({
       // Id estable por cita+ventana: el cliente lo usa como key y para no volver a sonar
       // por el mismo aviso en cada refresco.
       id: `agenda:${c.id}:${ventana}`,
       tipo: "agenda_recordatorio",
       bandeja: "general",
-      titulo: ventana === 30 ? `En ${restantes} min: ${c.titulo}` : `Hoy ${horaPY(c.inicio_at)}: ${c.titulo}`,
-      cuerpo: [`Empieza a las ${horaPY(c.inicio_at)}`, c.ubicacion?.trim() || null].filter(Boolean).join(" · "),
+      titulo: restantes === 0 ? `Ahora: ${c.titulo}` : restantes <= 60 ? `En ${restantes} min: ${c.titulo}` : `${cuandoPY(c.inicio_at, ahora)}: ${c.titulo}`,
+      cuerpo: [restantes === 0 ? `Empezó a las ${horaPY(c.inicio_at)}` : `Empieza a las ${horaPY(c.inicio_at)}`, c.ubicacion?.trim() || null].filter(Boolean).join(" · "),
       url: `/clientes/agenda?cita=${c.id}`,
       leida_at: null,
       created_at: new Date().toISOString(),
