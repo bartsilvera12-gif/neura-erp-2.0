@@ -1,103 +1,161 @@
-# Clonar el ERP para un cliente nuevo
+# Clonar el ERP 2.0 para un cliente nuevo
 
-Cada clon nace **vacío e independiente** (repo y schema propios, sin arrastrar nada de otro
-cliente). Todo usa el **Supabase compartido de la flota** por defecto — no hay que pasar
-datos de base.
+Cada cliente tiene **su propio repo y su propio schema** en el Supabase compartido. El código no
+conoce a ningún cliente: lo único que cambia es `src/cliente.config.ts` y `.env.local`, y los dos
+los escribe `npm run setup`.
 
----
-
-## 1. Prompt para Claude (copiá, editá los valores entre `<>`, enviá)
-
-```
-Cloná el ERP Zentra 2.0 para un cliente nuevo. Datos:
-
-- Nombre del cliente: <Ferretería República>
-- Schema:             <erp_republica>            (minúsculas, empieza con letra, sin espacios)
-- Dominio:            <republica.neura.com.py>
-- Admin:              email=<admin@republica.neura.com.py>  nombre=<Juan Pérez>
-- Empresa(s):         <Ferretería República S.A.>   (una sola, salvo que ponga varias)
-- Módulos:            <facturación, chat, cobranzas>  (solo los que necesita)
-- Contraseña admin:   <dejar vacío = generala vos>
-
-Hacé el flujo completo: setup → provisioná el schema → seed-admin → deploy → verificá que el
-admin entre y que la RLS aísle. Pasame al final: URL, usuario y contraseña del admin.
-```
-
-Eso es todo. Claude arma el repo, crea el schema, siembra el admin, deploya y te confirma.
+Probado de punta a punta el 3-nov-2026 con un schema descartable (`erp_clon_prueba`): las 112 recetas
+arman la base desde cero, el resultado es idéntico a `erp_demo`, se pueden volver a correr sin
+errores, pasan las 178 pruebas de plata y stock y la revisión de seguridad da 0 problemas.
 
 ---
 
-## 2. Qué significa cada dato
+## 0. Antes de empezar
 
-| Dato | Qué es | Ejemplo |
+- Node 22 y git.
+- Acceso por SSH al servidor de Supabase (`zentra-app` en `~/.ssh/config`). Con eso no hace falta
+  `psql` en tu máquina: los scripts lo usan del servidor.
+- El `.env.local` de la flota (URL de Supabase, anon key y service role key). Pedíselo a quien
+  administra el servidor. **Nunca se sube al repo.**
+- Los datos del cliente:
+
+| Dato | Ejemplo | Regla |
 |---|---|---|
-| Nombre del cliente | Cómo se llama (se muestra en la app) | Ferretería República |
-| **Schema** | Nombre único del schema en la base (define el aislamiento) | `erp_republica` |
-| Dominio | Dónde va a vivir el ERP | `republica.neura.com.py` |
-| Admin | El primer usuario (queda como ADMIN) | `admin@…` / Juan Pérez |
-| Empresa(s) | Normalmente una; varias solo si es multi-empresa | Ferretería República S.A. |
-| Módulos | Qué funciones activar (el resto no se instala) | facturación, chat |
-| Contraseña admin | Vacío = Claude genera una segura y te la pasa | — |
+| Nombre | Ferretería República | como se muestra en la app |
+| Schema | `erp_republica` | minúsculas, empieza con letra, único, nunca `erp_demo` |
+| Dominio | `republica.neura.com.py` | único por cliente |
+| Admin | `admin@republica.com.py`, Juan Pérez | el primer usuario |
+| Empresa | Ferretería República S.A. | razón social |
+| Módulos | `caja,inventario,clientes,reportes` | opcional; sin esto, todos |
+| Color y logo | `#1F6F8B`, `logo.webp` | opcional; sin logo, el de Zentra |
 
-> El **schema** y el **dominio** son únicos por cliente. Nada se hardcodea: todo va a
-> `.env.local` y `cliente.config.ts`.
-
----
-
-## 3. Qué hace Claude con esos datos
-
-1. **Repo:** crea `neura-erp-<cliente>` clonando el esqueleto (sin historial de otros).
-2. **`setup.mjs`:** escribe `.env.local` (schema, dominio, Supabase compartido) y
-   `cliente.config.ts` (nombre, branding, módulos activos). Repo personalizado en un solo lugar.
-3. **`provision.mjs`:** crea el schema en la base desde `db/canonical/*.sql` — limpio e
-   idempotente — y lo expone en la API.
-4. **`seed-admin.mjs`:** crea la(s) empresa(s) y el usuario admin (rol ADMIN).
-5. **Deploy + DNS:** publica en Coolify y apunta el dominio.
-6. **Verifica:** login del admin + que la RLS aísle.
+Módulos que existen: `caja`, `inventario`, `gastos-empresariales`, `clientes`, `crm`, `presupuestos`,
+`gestion-clientes`, `comisiones`, `planes`, `agenda`, `cobranzas`, `conciliacion`, `pagos`,
+`conversaciones`, `soporte`, `reportes`, `rrhh`, `proyectos`, `configuracion` (siempre va).
 
 ---
 
-## 4. Solo crear/actualizar el schema (sin clonar todo)
+## 1. El repo del cliente
 
-Si ya existe el repo y solo querés crear o re-aplicar el schema:
-
-```
-Provisioná el schema <erp_republica> en el Supabase compartido.
-```
-Equivale a `npm run provision -- --schema <erp_republica>`. Es idempotente: se puede correr de nuevo sin romper ni borrar datos.
-
----
-
-## 5. Checklist de "clon correcto"
-- [ ] El repo no menciona ningún otro cliente ni schema (grep limpio).
-- [ ] `APP_DB_SCHEMA` = el schema del cliente; nada hardcodeado.
-- [ ] El schema existe, con RLS en todas las tablas (`npm run db:verify-rls`).
-- [ ] El admin entra y ve solo lo de su empresa.
-- [ ] Solo los módulos pedidos están activos.
-
----
-
-## 6. Prompt para VERIFICAR que el clon es correcto (copiá y enviá a Claude)
-
-```
-Verificá que el clon de <Ferretería República> (schema <erp_republica>) esté 100% correcto.
-Chequeá y reportame un OK (o qué falta) por cada punto:
-
-1. Que NINGÚN archivo del código mencione otro cliente ni otro schema (grep en src/).
-2. Que APP_DB_SCHEMA sea <erp_republica> y que no haya schemas hardcodeados.
-3. Que el schema exista y que TODAS sus tablas tengan RLS activa (db:verify-rls).
-4. Aislamiento real: logueá al admin, pedí sus datos y confirmá que ve SOLO los de su
-   empresa (y que con otra empresa no ve nada).
-5. Que estén activos SOLO los módulos pedidos (<facturación, chat, cobranzas>).
-6. Que el login del admin funcione contra el dominio <republica.neura.com.py>.
-
-Dame el resultado en una tabla: punto | OK/FALLA | detalle.
+```bash
+git clone https://github.com/bartsilvera12-gif/neura-erp-2.0.git neura-erp-republica
+cd neura-erp-republica
+git remote rename origin base          # el 2.0: de acá llegan los arreglos
+git remote add origin https://github.com/<org>/neura-erp-republica.git
+npm ci
 ```
 
+Copiá el `.env.local` de la flota a la raíz del repo.
+
+## 2. Personalizarlo
+
+```bash
+npm run setup -- --cliente "Ferretería República" --schema erp_republica \
+  --dominio republica.neura.com.py --color "#1F6F8B" --logo ./logo.webp \
+  --modulos caja,inventario,clientes,reportes
+```
+
+Escribe `src/cliente.config.ts` (nombre, dominio, color, módulos, logo) y `.env.local` (schema,
+`APP_URL` y `MENU_PUBLIC_URL` con https, y una `SIFEN_SECRETS_KEY` nueva solo de este cliente).
+Rechaza `erp_demo` y los módulos que no existen.
+
+## 3. Armar la base
+
+```bash
+npm run provision -- --schema erp_republica --ssh zentra-app
+```
+
+Corre las recetas de `db/canonical` **por número** (00, 10, … 100, 120). Si una falla, se corta y
+dice desde dónde seguir (`--desde N`); lo anterior ya quedó aplicado. Se puede volver a correr sin
+romper ni borrar datos.
+
+## 4. Servidor (lo hace quien administra Supabase)
+
+Es la única parte que toca configuración compartida. En `/home/ubuntu/supabase/docker/.env`:
+
+1. Hacé un respaldo: `cp .env .env.bak-$(date +%Y%m%d)`.
+2. En `PGRST_DB_SCHEMAS` sumá el schema: `…,erp_demo,erp_republica`.
+3. En `ADDITIONAL_REDIRECT_URLS` sumá el dominio: `…,https://republica.neura.com.py/**`.
+4. Recreá solo esos dos servicios:
+   ```bash
+   docker compose up -d --no-deps rest auth
+   ```
+
+Sin el paso 2 la app da error al leer datos; sin el 3, los links de invitación y de cambio de
+contraseña no vuelven al dominio del cliente.
+
+## 5. Empresa y administrador
+
+```bash
+npm run seed-admin -- --schema erp_republica --ssh zentra-app \
+  --empresa "Ferretería República S.A." --email admin@republica.com.py --nombre "Juan Pérez"
+```
+
+Crea la cuenta de acceso y, en el schema, la empresa y el usuario ADMIN. La primera sucursal, el
+depósito, la caja, los perfiles y el catálogo de gastos los crea la base sola. Si no pasás
+`--password`, genera una y la muestra una sola vez: pasásela al cliente por un canal seguro.
+Si el email ya tiene cuenta en la flota, la usa sin cambiarle la contraseña. Correrlo dos veces no
+duplica nada.
+
+## 6. Verificar
+
+```bash
+npm run db:verify-rls -- --schema erp_republica --ssh zentra-app
+PRUEBAS_SCHEMA=erp_republica npm run test:db
+npm run build
+npm run dev     # entrá con el admin en http://localhost:3000
+```
+
+- `db:verify-rls`: todas las tablas con RLS y nada abierto a usuarios sin sesión, salvo las 12
+  funciones públicas a propósito (menú QR de las mesas y link del presupuesto). Tiene que decir
+  **0 problema(s)**.
+- `test:db`: tiene que decir **178 pasaron, 0 fallaron**. Corre en una transacción que se deshace:
+  no deja datos.
+
+## 7. Publicar (Coolify)
+
+- App nueva desde el repo del cliente, build pack **Dockerfile**, healthcheck `/`.
+- Variables: todas las de `.env.local`. Las `NEXT_PUBLIC_*` también como variables de build.
+- Dominio del cliente en la app y en Cloudflare (proxy https) apuntando al servidor de Coolify.
+- Después de publicar: entrá con el admin en `https://<dominio>`.
+
 ---
 
-## Apéndice — Supabase dedicado (caso raro)
+## Trabajar en el clon sin perder los arreglos del 2.0
 
-Si un cliente tiene su **propia VPS de Supabase** (no el compartido), en el prompt agregá:
-`Backend dedicado: URL=<…>  ANON_KEY=<…>  SERVICE_ROLE_KEY=<…>  conexión=<postgres://…>`
-(esos 4 datos salen del `~/supabase/SECRETS.txt` de esa VPS). Hoy no se usa: todo va al compartido.
+- **Recetas:** nunca edites una receta que ya se aplicó en algún cliente. Un cambio de base es una
+  receta nueva con el número siguiente, idempotente (`create or replace`, `if not exists`), y se
+  aplica con `npm run provision -- --schema <schema> --ssh zentra-app --desde <número>`.
+- **Funciones nuevas:** `revoke execute … from public, anon` y `grant` a `authenticated` si la app
+  la llama. Sin eso, `db:verify-rls` falla.
+- **Algo que sirve para todos los clientes:** hacelo en el 2.0, no en el clon.
+- **Traer arreglos del 2.0 al clon:**
+  ```bash
+  git fetch base && git merge base/main
+  npm run provision -- --schema erp_republica --ssh zentra-app --desde <primera receta nueva>
+  ```
+  `src/cliente.config.ts` va a tener conflicto si el 2.0 lo cambió: quedate con el del cliente.
+
+## Borrar un clon (por ejemplo, uno de prueba)
+
+Además del schema, hay que sacar las tres cosas que quedan afuera. Con `psql -U supabase_admin`:
+
+```sql
+select cron.unschedule(jobid) from cron.job where jobname = 'chat_sla_erp_republica';
+drop policy if exists chat_topicos_erp_republica on realtime.messages;
+drop schema if exists erp_republica cascade;
+```
+
+Y quitarlo de `PGRST_DB_SCHEMAS` y `ADDITIONAL_REDIRECT_URLS` (paso 4).
+
+---
+
+## Lista final
+
+- [ ] `src/cliente.config.ts` tiene el nombre, dominio, módulos y logo del cliente.
+- [ ] `.env.local` tiene `APP_DB_SCHEMA=<schema del cliente>` y su propia `SIFEN_SECRETS_KEY`.
+- [ ] `provision` terminó en "Listo".
+- [ ] El schema está en `PGRST_DB_SCHEMAS` y el dominio en `ADDITIONAL_REDIRECT_URLS`.
+- [ ] `db:verify-rls`: 0 problema(s). `test:db`: 178 pasaron.
+- [ ] El admin entra en `https://<dominio>` y ve su empresa.
+- [ ] El repo no menciona otro cliente: `git grep -n "erp_demo" -- src` no devuelve nada.

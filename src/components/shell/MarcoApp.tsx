@@ -26,6 +26,9 @@ import { MQ_ESCRITORIO, useEsEscritorio } from "@/lib/ui/responsive";
 import { ORDEN_FAMILIAS } from "@/modules/registry";
 import { iconoModulo } from "@/modules/icons";
 import type { Modulo } from "@/modules/types";
+import { clienteConfig } from "@/cliente.config";
+
+const LOGO = clienteConfig.logo ?? "/brand/zentra-logo-360.webp";
 
 const ACCENT = "#7dcfd2";
 
@@ -264,8 +267,8 @@ function Logo({ collapsed }: { collapsed: boolean }) {
     <Link href="/" className="flex items-center justify-center" aria-label="Inicio">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src="/brand/zentra-logo-360.webp"
-        alt="ZENTRA"
+        src={LOGO}
+        alt={clienteConfig.nombre}
         width={360}
         height={185}
         decoding="async"
@@ -536,7 +539,7 @@ function CajonMenu({ abierto, onCerrar, children }: { abierto: boolean; onCerrar
         <div className="flex h-16 shrink-0 items-center justify-between border-b pl-4 pr-2" style={{ borderColor: "var(--zentra-sidebar-border)", backgroundColor: "rgba(16,74,78,0.35)" }}>
           <Link href="/" aria-label="Inicio" className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/brand/zentra-logo-360.webp" alt="ZENTRA" width={360} height={185} decoding="async" className="h-10 w-auto object-contain" />
+            <img src={LOGO} alt={clienteConfig.nombre} width={360} height={185} decoding="async" className="h-10 w-auto object-contain" />
           </Link>
           <button ref={cerrarBtn} type="button" onClick={onCerrar} aria-label="Cerrar menú"
             className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-300 transition-colors hover:bg-white/10 hover:text-white">
@@ -584,7 +587,7 @@ function Cabecera({
         </button>
         <Link href="/" aria-label="Inicio" className="flex h-9 shrink-0 items-center rounded-lg px-2 lg:hidden" style={{ backgroundColor: "var(--zentra-sidebar)" }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/zentra-logo-360.webp" alt="ZENTRA" width={360} height={185} decoding="async" className="h-7 w-auto object-contain" />
+          <img src={LOGO} alt={clienteConfig.nombre} width={360} height={185} decoding="async" className="h-7 w-auto object-contain" />
         </Link>
         <div className="flex-1 lg:hidden" />
         <button type="button" onClick={onBuscar} aria-label="Buscar pantalla"

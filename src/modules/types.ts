@@ -82,4 +82,6 @@ export type ClienteConfig = {
   color: string;
   /** ids de los módulos activos para este cliente */
   modulos: string[];
+  /** logo del login y del menú, en /public (lo copia setup.mjs). Sin logo: el de Zentra. */
+  logo?: string;
 };

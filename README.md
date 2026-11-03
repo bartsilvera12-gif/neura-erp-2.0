@@ -7,16 +7,14 @@ Arquitectura y reglas: **[docs/ARQUITECTURA.md](docs/ARQUITECTURA.md)**.
 
 ## Clonar para un cliente nuevo
 
+Paso a paso probado (repo, base, servidor, admin, verificación y publicación): **[docs/CLONAR.md](docs/CLONAR.md)**.
+
 ```bash
-# 1. Repo independiente y personalizado (nombre, schema, dominio, módulos)
 npm run setup -- --cliente "Cliente X" --schema erp_clientex --dominio clientex.neura.com.py
-
-# 2. Base de datos limpia (crea el schema desde las migraciones canónicas)
-npm run provision -- --schema erp_clientex --db "$SUPABASE_DB_URL"
-
-# 3. Listo. El repo y la base quedan 100% independientes del origen.
+npm run provision -- --schema erp_clientex --ssh zentra-app
+npm run seed-admin -- --schema erp_clientex --ssh zentra-app --empresa "Cliente X S.A." --email admin@clientex.com --nombre "Nombre"
+npm run db:verify-rls -- --schema erp_clientex --ssh zentra-app
 ```
-
 ## Reglas de oro (no negociables)
 
 1. **Toda ruta de `/api` usa `withTenant`.** No hay otra forma. El portón hace auth, resuelve empresa/rol desde la base y entrega `ctx.db` ya atado a la empresa.

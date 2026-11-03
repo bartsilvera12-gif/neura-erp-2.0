@@ -6,6 +6,8 @@ import { Eye, EyeOff, Loader2, Lock, Mail } from "lucide-react";
 import { browserClient } from "@/lib/supabase/browser";
 import { clienteConfig } from "@/cliente.config";
 
+const LOGO = clienteConfig.logo ?? "/brand/zentra-logo-360.webp";
+
 const BRAND = clienteConfig.color;
 
 export default function LoginPage() {
@@ -45,7 +47,7 @@ export default function LoginPage() {
       >
         <div className="flex items-center gap-2.5">
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/brand/zentra-logo-360.webp" alt="ZENTRA" width={360} height={185} decoding="async" className="h-10 w-auto rounded-lg object-contain" />
+          <img src={LOGO} alt={clienteConfig.nombre} width={360} height={185} decoding="async" className="h-10 w-auto rounded-lg object-contain" />
           <span className="text-sm font-semibold tracking-wide">{clienteConfig.nombre}</span>
         </div>
 
@@ -74,7 +76,7 @@ export default function LoginPage() {
             {/* El logo es blanco: va sobre la placa oscura, igual que en la cabecera del celular. */}
             <div className="mb-5 inline-flex h-12 items-center rounded-xl px-3 lg:hidden" style={{ backgroundColor: "var(--zentra-sidebar)" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/brand/zentra-logo-360.webp" alt="ZENTRA" width={360} height={185} decoding="async" fetchPriority="high" className="h-9 w-auto object-contain" />
+              <img src={LOGO} alt={clienteConfig.nombre} width={360} height={185} decoding="async" fetchPriority="high" className="h-9 w-auto object-contain" />
             </div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">Iniciá sesión</h1>
             <p className="mt-1 text-sm text-slate-500">Ingresá a {clienteConfig.nombre}.</p>
