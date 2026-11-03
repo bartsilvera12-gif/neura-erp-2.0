@@ -109,19 +109,20 @@ nombre se completan solos el schema, el dominio y la carpeta: revisalos.
 
 | Opción | Qué hacer |
 |---|---|
-| Instalar y compilar | Dejala tildada: confirma que el clon arranca. Tarda unos minutos. |
-| Subir al repo del cliente | Solo si ya creaste el repo vacío en GitHub y pegaste su dirección. |
+| Publicar el cliente | Dejala tildada. Crea el repo privado `neura-erp-<cliente>` en GitHub, el dominio en Cloudflare y la app en Coolify (Dockerfile), y espera a que el link responda. Destildala solo para un clon de práctica. |
+| Compilar también en esta computadora | No hace falta: Coolify ya compila al publicar. |
 
 **e. Tocá Clonar y no cierres la pestaña.** Cada paso se pone en verde. Cuando pasan las pruebas, el
 formulario habilita el cliente en Supabase solo (la API y el login se cortan unos segundos para todos)
 y queda anotado con tu nombre. Si el dominio no es `<nombre>.neura.com.py` sino uno propio del
 cliente, ese paso lo hace el administrador: el resumen te dice qué pedirle.
 
-**f. Al final:**
+**f. Al final** el resumen muestra el link del cliente (`https://<dominio>`), ya funcionando, y:
 - **Contraseña del administrador:** si la dejaste vacía, se muestra una sola vez. Copiala y pasásela
   al cliente por un canal seguro.
-- **Lo que falta:** el resumen lo dice. Casi siempre es Coolify (app nueva desde el repo del cliente,
-  con las variables del `.env.local` de la carpeta del clon) y el dominio en Cloudflare.
+- **El repo del cliente:** de ahí publica Coolify. Cada push a `main` vuelve a publicar solo.
+
+No necesitás tokens de GitHub, Cloudflare ni Coolify: los tiene el servidor y vos nunca los ves.
 
 **g. Cerrá el formulario** con Ctrl+C en la terminal.
 
@@ -139,6 +140,8 @@ retoma la misma carpeta sin repetir lo hecho ni duplicar nada.
 | "No llego a zentra-app" | Revisá el `HostName` en `~/.ssh/config` (paso 1e). |
 | "falta erp-psql" o "falta erp-habilitar" | El servidor no tiene la puerta al día: avisale al administrador. |
 | Falla "Habilitar en Supabase" | Pasale el mensaje al administrador. La base ya quedó armada: cuando lo resuelva, tocá Clonar otra vez. |
+| Falla "Publicar" | Si dice "el despliegue terminó en failed", mirá los logs de la app en Coolify. Si no, pasale el mensaje al administrador. Tocar Clonar otra vez no duplica el repo, el dominio ni la app. |
+| "…ya existe en Cloudflare y apunta a otro lado" | Ese dominio lo usa otra cosa: elegí otro. |
 | Falla una receta en "Armar la base" | Mandá el detalle ("Ver el detalle") a quien mantiene el 2.0. No la arregles en el clon. |
 
 ---
@@ -195,8 +198,15 @@ esa da acceso a toda la máquina.
     `rest` y `auth` y lo anota en el registro.
   - **No puede** abrir consola, leer archivos (ni el `.env` de Supabase), usar docker, reiniciar
     servicios por su cuenta, quitar clientes ni hacer túneles.
+  - **Puede** publicar un clon habilitado con `erp-publicar`: crea el repo, el DNS y la app con los
+    tokens del servidor, que nunca salen de ahí.
+- **Los tokens de publicar** están en `/etc/erp-clonar/tokens.env` (solo root): GitHub (crear repos
+  en tu cuenta), Cloudflare (DNS de neura.com.py) y Coolify (crear y publicar apps), más los datos de
+  Coolify (proyecto, servidor, build server). Si vencen o los cambiás, editá ese archivo:
+  `ssh zentra-app 'sudo nano /etc/erp-clonar/tokens.env'`. El de Coolify vence el 3-nov-2027.
 - **Un dominio propio del cliente** (ej. `sistema.ferreteria.com.py`) lo habilitás vos:
-  `ssh zentra-app 'erp-habilitar erp_ferreteria sistema.ferreteria.com.py'`.
+  `ssh zentra-app 'erp-habilitar erp_ferreteria sistema.ferreteria.com.py'`. La publicación de un
+  dominio propio (DNS del cliente y dominio en Coolify) es a mano.
 - **Borrar un clon:** `ssh zentra-app 'erp-habilitar --quitar <schema> <dominio>'` y después el
   schema ([CLONAR.md](CLONAR.md), "Borrar un clon").
 - **Después de actualizar el 2.0**, volvé a correr el instalador: es lo que pone al día

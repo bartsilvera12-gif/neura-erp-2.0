@@ -101,11 +101,14 @@ function habilitar(enviar, d) {
 async function esperarApi(enviar, paso, url, anon, schema) {
   for (let i = 0; i < 30; i++) {
     try {
+      // La raíz /rest/v1/ la bloquea Kong (RBAC); se pregunta por una tabla. Sin sesión, la
+      // respuesta es 200 vacío o 401 por permisos: lo único que importa es que no sea PGRST106
+      // (406, "schema no expuesto").
       const [a, r] = await Promise.all([
         fetch(`${url}/auth/v1/health`, { headers: { apikey: anon } }),
-        fetch(`${url}/rest/v1/`, { headers: { apikey: anon, "Accept-Profile": schema } }),
+        fetch(`${url}/rest/v1/empresas?select=id&limit=1`, { headers: { apikey: anon, "Accept-Profile": schema } }),
       ]);
-      if (a.ok && r.ok) { enviar({ paso, linea: `La API ya sirve el schema ${schema}.` }); return true; }
+      if (a.ok && r.status !== 406 && r.status < 500) { enviar({ paso, linea: `La API ya sirve el schema ${schema}.` }); return true; }
       if (a.ok && r.status === 406) enviar({ paso, linea: "La API todavía no ve el schema…" });
     } catch { /* reiniciando */ }
     await new Promise((s) => setTimeout(s, 3000));

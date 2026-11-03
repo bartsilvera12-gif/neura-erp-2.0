@@ -26,9 +26,9 @@ hecho.
 
 Opcionales del formulario:
 - **Instalar y compilar**: `npm ci` y `npm run build` en el clon.
-- **Subir al repo del cliente**: push a `main` del repo que indiques (tiene que existir y estar vacío).
+- **Publicar el cliente** (tildada): el paso 7, solo.
 
-Al final muestra la contraseña inicial del admin (una sola vez) y lo que falta: Coolify y Cloudflare.
+Al final muestra el link del cliente funcionando y la contraseña inicial del admin (una sola vez).
 Antes de usarlo necesitás lo del punto 0 (SSH y el `.env.local` de la flota en la raíz del 2.0).
 Copia lo último commiteado del 2.0: si tenés cambios sin commit, no van.
 
@@ -164,7 +164,20 @@ npm run dev     # entrá con el admin en http://localhost:3000
 - `test:db`: tiene que decir **178 pasaron, 0 fallaron**. Corre en una transacción que se deshace:
   no deja datos.
 
-## 7. Publicar (Coolify)
+## 7. Publicar (GitHub, Cloudflare y Coolify)
+
+El formulario lo hace solo con `erp-publicar` en el servidor, que tiene los tokens
+(`/etc/erp-clonar/tokens.env`, solo root):
+
+1. `erp-publicar repo <schema>`: crea el repo privado `neura-erp-<cliente>` en la cuenta de GitHub y
+   devuelve una llave de escritura temporal; el formulario sube el código con ella.
+2. `erp-publicar app <schema> <dominio>` (con el `.env.local` del clon por la entrada): borra la llave
+   temporal, crea el registro A con proxy en Cloudflare, crea la app en Coolify (Dockerfile, build
+   server, puerto 3000, healthcheck `/`, despliegue automático con cada push), carga las variables,
+   publica y espera a que `https://<dominio>/login` responda.
+
+Volver a correrlo no duplica nada. Solo publica clones ya habilitados y dominios `*.neura.com.py`.
+Con un dominio propio del cliente, a mano:
 
 - App nueva desde el repo del cliente, build pack **Dockerfile**, healthcheck `/`.
 - Variables: todas las de `.env.local`. Las `NEXT_PUBLIC_*` también como variables de build.
