@@ -57,6 +57,26 @@ begin
     (select cuotas from ventas where id = (v->>'venta_id')::uuid) = 10
     and (select count(*) from cuentas_por_cobrar where venta_id = (v->>'venta_id')::uuid and cuota > 0) = 10, v::text);
 
+  -- Caja (receta 136): crear_venta_cuotas con plan y entrega pagada con tarjeta de débito.
+  v_efe := pg_temp.efectivo();
+  v := crear_venta_cuotas(pg_temp.fx('cliente'), 'CREDITO', null, 'GS', null,
+    jsonb_build_array(jsonb_build_object('producto_id', v_prod, 'cantidad', 2)), 'prueba-caja-plan-1', 0, null, pg_temp.fx('caja'), 'ticket',
+    1, 'mes', 300000, '[{"metodo_pago": "tarjeta_debito", "monto": 300000, "referencia": "PRUEBA-POS"}]'::jsonb, v_plan);
+  perform pg_temp.ok('Caja: el plan pone 10 cuotas y la entrega queda cobrada',
+    (select cuotas from ventas where id = (v->>'venta_id')::uuid) = 10
+    and exists (select 1 from cuentas_por_cobrar where venta_id = (v->>'venta_id')::uuid and cuota = 0 and estado = 'pagada' and monto = 300000)
+    and v->>'recibo_entrega' is not null, v::text);
+  perform pg_temp.igual('Caja: la entrega con tarjeta no suma al efectivo', pg_temp.efectivo() - v_efe, 0);
+  perform pg_temp.rechaza('Caja: el plan pide su entrega mínima',
+    format($q$select crear_venta_cuotas(%L, 'CREDITO', null, 'GS', null, '[{"producto_id": "%s", "cantidad": 1}]', null, 0, null, %L, 'ticket', 1, 'mes', 0, null, %L)$q$,
+      pg_temp.fx('cliente'), v_prod, pg_temp.fx('caja'), v_plan), 'al menos 10');
+  v := crear_venta_cuotas(pg_temp.fx('cliente'), 'CREDITO', null, 'GS', null,
+    jsonb_build_array(jsonb_build_object('producto_id', v_prod, 'cantidad', 1)), 'prueba-caja-plan-2', 0, 30, pg_temp.fx('caja'), 'ticket',
+    6, 'quincena', 200000, '[{"metodo_pago": "efectivo", "monto": 200000}]'::jsonb, null);
+  perform pg_temp.ok('Caja: sin plan, las cuotas a mano con entrega',
+    (select count(*) from cuentas_por_cobrar where venta_id = (v->>'venta_id')::uuid and cuota > 0) = 6
+    and (select sum(monto) from cuentas_por_cobrar where venta_id = (v->>'venta_id')::uuid and cuota > 0) = 1000000, v::text);
+
   -- Propiedad: vender la marca vendida; anular la venta la vuelve a disponible.
   v := guardar_funciones_empresa('{"inmobiliaria": true}');
   p1 := propiedad_guardar('{"titulo": "PRUEBA Terreno para vender", "gestion": "venta", "precio_venta": 90000000}');

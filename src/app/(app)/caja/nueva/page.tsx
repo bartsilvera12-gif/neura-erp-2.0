@@ -194,6 +194,12 @@ function CajaPageContenido() {
   // Receta 98: crédito en cuotas (1 = un solo vencimiento a plazoDias).
   const [cuotas, setCuotas] = useState("1");
   const [cuotasCada, setCuotasCada] = useState<CadaCuota>("mes");
+  // Receta 136: plan de cuotas y entrega inicial (se cobra en la misma venta).
+  const [planId, setPlanId] = useState("");
+  const [entrega, setEntrega] = useState(0);
+  const [medioEntrega, setMedioEntrega] = useState("efectivo");
+  const [refEntrega, setRefEntrega] = useState("");
+  const limpiarEntrega = () => { setPlanId(""); setEntrega(0); setMedioEntrega("efectivo"); setRefEntrega(""); };
   const [tipoDocumento, setTipoDocumento] = useState<"factura" | "ticket">("ticket");
   const [clienteId, setClienteId] = useState("");
   // Receta 67: "Cliente ocasional (X)" — consumidor final sin datos; sin cliente, solo contado, se puede facturar.
@@ -503,7 +509,7 @@ function CajaPageContenido() {
     setClienteOpen(false);
     setOcasional(true);
     // El crédito necesita un cliente real: el ocasional es solo al contado.
-    if (tipoVenta === "CREDITO") { setTipoVenta("CONTADO"); setPlazoDias(""); setCuotas("1"); setCuotasCada("mes"); }
+    if (tipoVenta === "CREDITO") { setTipoVenta("CONTADO"); setPlazoDias(""); setCuotas("1"); setCuotasCada("mes"); limpiarEntrega(); }
     if (facturar) setTipoDocumento("factura");
     if (cobroError) setCobroError(null);
   }
@@ -936,6 +942,16 @@ function CajaPageContenido() {
       if (!esEscritorio) setHojaOpciones(true);
       return;
     }
+    // Receta 136: la entrega es menor que el total (la base vuelve a validar el mínimo del plan).
+    if (tipoVenta === "CREDITO" && entrega > 0 && entrega >= total) {
+      setCobroError("La entrega tiene que ser menor que el total: si paga todo, es al contado.");
+      if (!esEscritorio) setHojaOpciones(true);
+      return;
+    }
+    if (tipoVenta === "CREDITO" && entrega > 0 && (cuentaMesa || pedido)) {
+      setCobroError("La entrega y el plan no se usan al cobrar una mesa o un pedido.");
+      return;
+    }
     // Configuración › Facturación › "Pedir datos del comprador al confirmar venta".
     if (cfgFact?.preguntar_datos_al_confirmar && !clienteId && !ocasional && !consumidorFinalRef.current) {
       setPedirComprador(true);
@@ -986,8 +1002,12 @@ function CajaPageContenido() {
           cuotas: tipoVenta === "CREDITO" ? cuotasNum : undefined,
           cuotas_cada: tipoVenta === "CREDITO" && cuotasNum > 1 ? cuotasCada : undefined,
           items,
-          // Formas de pago (solo contado). La base valida que sumen el total.
-          pagos: tipoVenta === "CREDITO" ? undefined : pagos,
+          // Formas de pago (contado). A crédito con entrega (receta 136): lo que paga de entrega.
+          pagos: tipoVenta === "CREDITO"
+            ? (entrega > 0 ? [{ metodo_pago: medioEntrega, monto: entrega, referencia: refEntrega.trim() || null }] : undefined)
+            : pagos,
+          plan_id: tipoVenta === "CREDITO" && planId ? planId : undefined,
+          entrega: tipoVenta === "CREDITO" && entrega > 0 ? entrega : undefined,
           presupuesto_id: presuActivo?.id,
           // Receta 69: la venta cierra la cuenta de la mesa (misma transacción en la base).
           mesa_cuenta_id: cuentaMesa?.id,
@@ -1041,6 +1061,7 @@ function CajaPageContenido() {
       setPlazoDias("");
       setCuotas("1");
       setCuotasCada("mes");
+      limpiarEntrega();
       enfocarBuscador();
     } catch (e) {
       const msg = (e as Error).message;
@@ -1176,7 +1197,8 @@ function CajaPageContenido() {
         ) : null}
         {tipoVenta === "CREDITO" && (
           <CamposCredito total={total} cuotas={cuotas} setCuotas={setCuotas} plazoDias={plazoDias} setPlazoDias={setPlazoDias}
-            cada={cuotasCada} setCada={setCuotasCada} monto={formatGs} />
+            cada={cuotasCada} setCada={setCuotasCada} monto={formatGs}
+            entrega={cuentaMesa || pedido ? undefined : { planId, setPlanId, monto: entrega, setMonto: setEntrega, medio: medioEntrega, setMedio: setMedioEntrega, referencia: refEntrega, setReferencia: setRefEntrega }} />
         )}
       </div>
 
@@ -1815,6 +1837,7 @@ function CajaPageContenido() {
       {/* Cobro: formas de pago (mixto, vuelto) o crédito */}
       {cobroOpen && (
         <CobroModal total={total} cantItems={cantTotal} tipoVenta={tipoVenta} plazoDias={plazoDiasNum} cuotas={cuotasOk ? cuotasNum : 1} cuotasCada={cuotasCada} cliente={clienteSel}
+          entrega={tipoVenta === "CREDITO" && entrega > 0 ? { monto: entrega, medio: medioEntrega } : undefined}
           documento={tipoDocumento === "factura"
             ? { tipo: "factura", nombre: ocasional ? nombreOcasional : clienteSel?.nombre ?? "", ruc: ocasional ? rucOcasional : rucFactura }
             : { tipo: "ticket" }}

@@ -53,7 +53,9 @@ function sugerencias(monto: number): number[] {
   return [...out].sort((a, b) => a - b).slice(0, 4);
 }
 
-export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1, cuotasCada = "mes", cliente, documento, imprimir = true, cobrando, error, onClose, onConfirmar }: {
+export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1, cuotasCada = "mes", entrega, cliente, documento, imprimir = true, cobrando, error, onClose, onConfirmar }: {
+  /** Receta 136: crédito con entrega inicial (se cobra ahora; las cuotas se arman sobre el resto). */
+  entrega?: { monto: number; medio: string };
   total: number;
   cantItems: number;
   tipoVenta: "CONTADO" | "CREDITO";
@@ -103,8 +105,9 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1,
   const limite = Number(cliente?.limite_credito ?? 0);
   const deuda = Number(cuenta?.deuda ?? 0);
   const disponible = limite > 0 ? limite - deuda : null;
-  const superaLimite = tipoVenta === "CREDITO" && disponible != null && cuenta != null && total > disponible;
-  const plan = useMemo(() => planCuotas(total, cuotas, plazoDias, cuotasCada), [total, cuotas, plazoDias, cuotasCada]);
+  const montoEntrega = tipoVenta === "CREDITO" ? entrega?.monto ?? 0 : 0;
+  const superaLimite = tipoVenta === "CREDITO" && disponible != null && cuenta != null && total - montoEntrega > disponible;
+  const plan = useMemo(() => planCuotas(total - montoEntrega, cuotas, plazoDias, cuotasCada), [total, montoEntrega, cuotas, plazoDias, cuotasCada]);
   const vence = fechaCorta(plan[0].vence);
 
   const problema =
@@ -254,6 +257,9 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1,
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
                 <div className="col-span-2 sm:col-span-1"><Dato label="Cliente" valor={cliente?.nombre ?? "—"} /></div>
+                {montoEntrega > 0 ? (
+                  <div className="col-span-2 sm:col-span-3"><Dato label={`Entrega (se cobra ahora · ${entrega?.medio.replace(/_/g, " ")})`} valor={formatGs(montoEntrega)} /></div>
+                ) : null}
                 {plan.length > 1 ? (
                   <>
                     <Dato label="Cuotas" valor={`${plan.length} × ${formatGs(plan[0].monto)}`} />

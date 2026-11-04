@@ -36,8 +36,13 @@ const ventaSchema = z.object({
   plazo_dias: z.coerce.number().int().positive().nullish(),
   // Receta 98: crédito en cuotas (cada una es una cuenta por cobrar con su vencimiento; la 1ª a
   // plazo_dias, las siguientes cada mes / quincena / semana).
-  cuotas: z.coerce.number().int().min(1, "Las cuotas van de 1 a 60").max(60, "Las cuotas van de 1 a 60").default(1),
+  // Receta 131: hasta 360 (el tope de cada empresa lo vuelve a exigir la base).
+  cuotas: z.coerce.number().int().min(1, "Las cuotas van de 1 a 360").max(360, "Las cuotas van de 1 a 360").default(1),
   cuotas_cada: z.enum(["mes", "quincena", "semana"]).default("mes"),
+  // Receta 136: crédito con plan de cuotas y/o entrega inicial. La entrega se cobra en la misma
+  // transacción con `pagos` (que en ese caso son los de la entrega).
+  plan_id: z.string().uuid().nullish(),
+  entrega: z.coerce.number().min(0).max(1e13).nullish(),
   // Venta que sale de un presupuesto (Presupuestos → "Convertir a venta"): al registrarse,
   // el presupuesto queda "convertido" y la venta guarda presupuesto_id.
   presupuesto_id: z.string().uuid().nullish(),
@@ -129,8 +134,28 @@ export const POST = withTenant(
     if (input.pedido_id && !input.pedido_version) return fail("Falta la versión del pedido: recargalo.", 400);
     const dePedido = input.pedido_id ? { p_pedido_id: input.pedido_id, p_version: input.pedido_version } : null;
     const conDatos = deMesa ?? dePedido;
+    const conEntregaOPlan = input.tipo_venta === "CREDITO" && (!!input.plan_id || (input.entrega ?? 0) > 0);
+    if (conEntregaOPlan && conDatos) return fail("El plan y la entrega no se usan al cobrar una mesa o un pedido: hacé la venta a crédito sin ellos.", 400);
 
-    const { data, error } = await ctx.db.rpc<{
+    type RespVenta = { venta_id: string; numero_control: string; total: number; reusada: boolean; vuelto?: number; caja_id?: string };
+    const { data, error } = conEntregaOPlan ? await ctx.db.rpc<RespVenta & { entrega?: number; recibo_entrega?: string | null }>("crear_venta_cuotas", {
+      p_cliente_id: input.cliente_id ?? null,
+      p_tipo_venta: "CREDITO",
+      p_metodo_pago: input.metodo_pago ?? null,
+      p_moneda: input.moneda,
+      p_observaciones: input.observaciones ?? null,
+      p_items: input.items,
+      p_idempotency_key: input.idempotency_key ?? null,
+      p_descuento_pct: input.descuento_pct ?? 0,
+      p_plazo_dias: input.plazo_dias ?? null,
+      p_caja_id: input.caja_id ?? null,
+      p_tipo_documento: input.tipo_documento,
+      p_cuotas: input.cuotas,
+      p_cuotas_cada: input.cuotas_cada,
+      p_entrega: input.entrega ?? 0,
+      p_pagos_entrega: (input.entrega ?? 0) > 0 ? (input.pagos ?? null) : null,
+      p_plan_id: input.plan_id ?? null,
+    }) : await ctx.db.rpc<{
       venta_id: string;
       numero_control: string;
       total: number;
