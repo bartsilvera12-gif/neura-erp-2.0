@@ -1,10 +1,12 @@
 /** Elige el conector del canal. Solo servidor. */
 import { conectorSimulador } from "./simulador";
-import { conectorBaileys, conectorMeta, conectorYcloud } from "./stubs";
+import { conectorMeta, conectorYcloud } from "./reales";
+import { conectorBaileys } from "./stubs";
 import { ConectorNoConfigurado, type ConectorChat } from "./tipos";
 
 export * from "./tipos";
-export { normalizar, type Normalizado, type EntranteNormalizado, type EstadoNormalizado } from "./normalizadores";
+export { normalizar, identificadoresDe, type Normalizado, type EntranteNormalizado, type EstadoNormalizado, type MediaEntrante } from "./normalizadores";
+export { bajarMediaEntrante, probarCredenciales } from "./reales";
 
 export function conectorPara(proveedor: string): ConectorChat {
   switch (proveedor) {

@@ -1,6 +1,6 @@
 /**
  * Webhook de chat por proveedor (público): /api/webhooks/chat/meta | ycloud | baileys | simulador
- *   POST → valida firma, guarda el payload crudo en chat_eventos, responde 200 y procesa
+ *   POST → valida firma (secreto del canal o del entorno), guarda el payload crudo en chat_eventos, responde 200 y procesa
  *          en segundo plano con after(). Nunca procesa antes de responder.
  *   GET  → verificación de suscripción de Meta (hub.challenge).
  */
@@ -19,7 +19,7 @@ function proveedorDe(req: NextRequest): string {
 
 export async function GET(req: NextRequest) {
   if (proveedorDe(req) !== "meta") return new NextResponse(null, { status: 404 });
-  const challenge = verificarSuscripcionMeta(new URL(req.url).searchParams);
+  const challenge = await verificarSuscripcionMeta(new URL(req.url).searchParams);
   return challenge ? new NextResponse(challenge, { status: 200 }) : new NextResponse(null, { status: 403 });
 }
 
@@ -29,15 +29,16 @@ export async function POST(req: NextRequest) {
 
   const cuerpo = await req.text();
   if (cuerpo.length > 1024 * 1024) return NextResponse.json({ ok: false }, { status: 413 });
-  const firma = firmaValida(proveedor, req.headers, cuerpo);
-  if (!firma.ok) return NextResponse.json({ ok: false }, { status: firma.status });
-
   let payload: unknown;
   try {
     payload = JSON.parse(cuerpo);
   } catch {
     return NextResponse.json({ ok: false, error: "JSON inválido" }, { status: 400 });
   }
+  // La firma se valida sobre el cuerpo crudo; el payload solo sirve para saber de qué canal es.
+  const firma = await firmaValida(proveedor, req.headers, cuerpo, payload);
+  if (!firma.ok) return NextResponse.json({ ok: false }, { status: firma.status });
+
   const eventoId = await encolarEvento(proveedor, payload);
   const base = urlBase(req);
   if (eventoId) after(() => procesarEvento(eventoId, proveedor, payload, base));

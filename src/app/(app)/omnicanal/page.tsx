@@ -19,6 +19,7 @@ const TARJETAS: TarjetaPanel[] = [
     acceso: "/api/conversaciones/monitoreo/acceso",
   },
   { href: "/conversaciones/historial", titulo: "Historial omnicanal", imagen: "/omnicanal/historial-archivo-dueno.webp", color: "28 40% 23%", posicion: "50% 40%" },
+  { href: "/conversaciones/canales", titulo: "Canales de WhatsApp", imagen: "/soporte/configuracion-engranajes.webp", color: "150 40% 20%", posicion: "50% 50%" },
 ];
 
 export default function PanelOmnicanalPage() {

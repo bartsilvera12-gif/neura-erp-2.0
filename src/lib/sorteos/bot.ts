@@ -25,6 +25,7 @@ type Datos = {
   ciudad?: string;
   cantidad?: number;
   vendedor?: string;
+  anuncio?: { id: string; titulo: string | null };
   opciones?: number[];
   sorteos?: string[];
 };
@@ -80,6 +81,8 @@ export type EntranteBot = {
   contenido: string | null;
   media_path?: string | null;
   media_mime?: string | null;
+  /** Anuncio de Meta (Click-to-WhatsApp) que trajo al cliente: queda en la compra. */
+  anuncio?: { id: string; titulo: string | null } | null;
 };
 
 export type OpcionesBot = {
@@ -142,7 +145,7 @@ function reiniciar(s: Sesion) {
   s.paso = "inicio";
   s.sorteo_id = null;
   s.orden_id = null;
-  s.datos = { nombre: s.datos.nombre, documento: s.datos.documento, ciudad: s.datos.ciudad, vendedor: s.datos.vendedor };
+  s.datos = { nombre: s.datos.nombre, documento: s.datos.documento, ciudad: s.datos.ciudad, vendedor: s.datos.vendedor, anuncio: s.datos.anuncio };
 }
 
 async function sorteosALaVenta(empresaId: string): Promise<SorteoBot[]> {
@@ -357,6 +360,8 @@ async function atender(e: EntranteBot, op: OpcionesBot): Promise<{ respondio: bo
   // Código de vendedor en el primer mensaje ("ref ABC123", del link de WhatsApp del vendedor).
   const ref = texto.match(/\b(?:ref|codigo|código|vendedor)[:\s#-]*([A-Za-z0-9]{3,20})\b/i);
   if (ref && (await vendedorPorCodigo(conv.empresa_id, ref[1]))) s.datos.vendedor = ref[1].toUpperCase();
+  // El anuncio que trajo al cliente (llega en el primer mensaje): queda para la compra.
+  if (e.anuncio?.id) s.datos.anuncio = { id: e.anuncio.id.slice(0, 120), titulo: e.anuncio.titulo?.slice(0, 200) ?? null };
 
   // ── Comandos que valen en cualquier paso ──
   if (/^(asesor|humano|persona|operador|atencion|hablar con (alguien|una persona))\b/.test(t)) {
@@ -544,6 +549,8 @@ async function atender(e: EntranteBot, op: OpcionesBot): Promise<{ respondio: bo
           comprador: { nombre: s.datos.nombre, documento: s.datos.documento, telefono: tel, ciudad: s.datos.ciudad },
           conversacion_id: conv.id,
           vendedor_id: vendedorId,
+          anuncio_id: s.datos.anuncio?.id ?? null,
+          anuncio_titulo: s.datos.anuncio?.titulo ?? null,
           idempotency_key: `wa:${e.mensaje_id}`,
         },
       });
@@ -690,8 +697,49 @@ async function comprobante(e: EntranteBot, s: Sesion, conv: Conv, o: OrdenJson, 
 }
 
 /**
+ * Plantilla de WhatsApp para mandar el ticket cuando pasaron más de 24 h desde el último mensaje del
+ * cliente (fuera de la ventana solo se puede escribir con plantillas aprobadas). Se tiene que dar de
+ * alta con este nombre y estas 5 variables en la cuenta de WhatsApp Business del cliente.
+ */
+export const PLANTILLA_TICKET = {
+  id: "sorteo_ticket",
+  idioma: "es",
+  texto: "¡Hola {{1}}! Tu compra N° {{2}} de {{3}} está confirmada. Tus números: {{4}}. Tu ticket: {{5}}",
+};
+
+async function enviarPlantillaTicket(conv: Conv, o: OrdenJson, base: string) {
+  if (!conv.canal) return;
+  const nums = o.numeros ?? [];
+  const variables = [
+    primerNombre(o.comprador_nombre) || "cliente", String(o.numero), o.sorteo,
+    nums.slice(0, 30).join(", ") + (nums.length > 30 ? ` y ${nums.length - 30} más` : ""), base ? `${base}/t/${o.token}` : "-",
+  ];
+  const contenido = variables.reduce((t, v, i) => t.replace(`{{${i + 1}}}`, v), PLANTILLA_TICKET.texto);
+  const { data, error } = await db()
+    .from("chat_mensajes")
+    .insert({ empresa_id: conv.empresa_id, conversacion_id: conv.id, from_me: true, tipo: "plantilla", contenido, estado_entrega: "pendiente" })
+    .select("id")
+    .single();
+  if (error || !data) return;
+  let estado = "enviado";
+  let externo: string | null = null;
+  let fallo: string | null = null;
+  try {
+    externo = (await conectorPara(conv.canal.proveedor).enviarPlantilla(
+      { canal: conv.canal, telefono: conv.contacto?.telefono ?? null, externoContacto: conv.contacto?.externo_id ?? null },
+      { id: PLANTILLA_TICKET.id, idioma: PLANTILLA_TICKET.idioma, variables, texto: contenido },
+    )).externo_id;
+  } catch (e) {
+    estado = "fallido";
+    fallo = (e as Error).message || "No se pudo enviar la plantilla";
+  }
+  await db().from("chat_mensajes").update({ estado_entrega: estado, externo_id: externo, error: fallo }).eq("id", (data as { id: string }).id);
+}
+
+/**
  * Alguien de la empresa confirmó, rechazó o anuló una compra hecha por WhatsApp: se le avisa al cliente
- * en su chat (si la ventana de 24 h sigue abierta; si no, haría falta una plantilla).
+ * en su chat. Si pasaron más de 24 h, el ticket sale con la plantilla `sorteo_ticket`; un rechazo fuera
+ * de la ventana no se avisa (lo ve en el link de su compra).
  */
 export async function avisarCompraWhatsApp(empresaId: string, ordenId: string, base: string): Promise<void> {
   try {
@@ -700,9 +748,12 @@ export async function avisarCompraWhatsApp(empresaId: string, ordenId: string, b
     if (!f?.conversacion_id) return;
     const conv = await leerConv(f.conversacion_id);
     if (!conv || conv.empresa_id !== empresaId || !conv.canal?.activo) return;
-    if (conv.ventana_expira_at && Date.parse(conv.ventana_expira_at) < Date.now()) return;
     const o = await ordenJson(ordenId);
     if (!o) return;
+    if (conv.ventana_expira_at && Date.parse(conv.ventana_expira_at) < Date.now()) {
+      if (o.estado === "confirmada") await enviarPlantillaTicket(conv, o, base);
+      return;
+    }
     const { data: ses } = await db().from("sorteo_bot_sesiones").select("*").eq("conversacion_id", conv.id).maybeSingle();
     const s = ses as Sesion | null;
     const salida: string[] = [];

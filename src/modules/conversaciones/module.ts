@@ -29,5 +29,6 @@ export const moduloOmnicanal: Modulo = {
     { label: "Finalizadas", href: "/conversaciones/finalizadas", palabras: ["chats cerrados", "seguimientos", "proxima accion"] },
     { label: "Monitoreo", href: "/conversaciones/monitoreo", roles: ["ADMIN"], accesoPropio: true, palabras: ["colas", "supervisor", "agentes", "asesores"] },
     { label: "Historial omnicanal", href: "/conversaciones/historial", palabras: ["historial de chats", "auditoria"] },
+    { label: "Canales de WhatsApp", href: "/conversaciones/canales", roles: ["ADMIN"], palabras: ["ycloud", "meta", "conectar whatsapp", "numero", "webhook", "api key"] },
   ],
 };
