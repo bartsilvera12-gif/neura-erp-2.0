@@ -18,7 +18,7 @@ import { VenderPropiedad } from "@/modules/inmobiliaria/VenderPropiedad";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT } from "@/modules/inventario/ui";
 import {
   DOCUMENTACION, ESTADOS, GESTIONES, nombreDe,
-  type Documentacion, type EstadoPropiedad, type Gestion, type Propiedad, type TipoIvaPropiedad, type TipoPropiedad,
+  type Documentacion, type EstadoPropiedad, type Gestion, type Interesado, type Propiedad, type TipoIvaPropiedad, type TipoPropiedad,
 } from "@/modules/inmobiliaria/tipos";
 
 type Form = {
@@ -100,6 +100,13 @@ export function FormPropiedad({ id, tipos, puedeEditar, onCerrar, onGuardada }: 
   const [guardando, setGuardando] = useState(false);
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Receta 134: clientes con una búsqueda que esta propiedad cumple (a quién avisarle).
+  const [interesados, setInteresados] = useState<Interesado[]>([]);
+  useEffect(() => {
+    if (!id) return;
+    apiFetch<Interesado[]>(`/api/inmobiliaria/propiedades/${id}/interesados`).then(setInteresados).catch(() => setInteresados([]));
+  }, [id, ficha?.estado]);
 
   useEffect(() => {
     if (!id) return;
@@ -203,6 +210,17 @@ export function FormPropiedad({ id, tipos, puedeEditar, onCerrar, onGuardada }: 
       ) : (
         <fieldset disabled={soloVer} className="space-y-6">
           {error ? <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
+
+          {interesados.length ? (
+            <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
+              <p className="font-semibold">{interesados.length} cliente{interesados.length === 1 ? " busca" : "s buscan"} algo así</p>
+              <ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-xs">
+                {interesados.slice(0, 8).map((x) => (
+                  <li key={`${x.cliente_id}-${x.gestion}`}>{x.cliente} · {x.gestion === "venta" ? "comprar" : "alquilar"}{x.telefono ? ` · ${x.telefono}` : ""}{x.notas ? ` · ${x.notas}` : ""}</li>
+                ))}
+              </ul>
+            </div>
+          ) : null}
 
           <Bloque titulo="La propiedad">
             <Campo label="Título" ancho>

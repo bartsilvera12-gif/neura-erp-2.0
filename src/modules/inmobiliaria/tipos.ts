@@ -86,4 +86,20 @@ export type PendienteDueno = {
   cuotas: { id: string; contrato: string; propiedad: string; mes: string; cobrado: number; comision: number; neto: number }[];
 };
 
+/** Receta 134: lo que busca un cliente y su ficha inmobiliaria. */
+export type Busqueda = {
+  id: string; gestion: "venta" | "alquiler"; tipo_id: string | null; tipo: string | null; ciudad: string | null;
+  precio_max: number | null; superficie_min: number | null; notas: string | null; activa: boolean; created_at: string;
+  coincidencias: { id: string; codigo: string; titulo: string; ciudad: string | null; precio_venta: number; precio_alquiler: number | null; gestion: Gestion; imagen_url: string | null }[];
+};
+
+export type FichaInmobiliaria = {
+  como_dueno: { id: string; codigo: string; titulo: string; estado: EstadoPropiedad; gestion: Gestion; precio_venta: number; precio_alquiler: number | null; comision_venta_pct: number | null; comision_alquiler_pct: number | null }[];
+  compradas: { id: string; codigo: string; titulo: string; venta: string; fecha: string; total: number; cuotas: number; entrega: number; saldo: number }[];
+  contratos: ContratoFila[];
+  busquedas: Busqueda[];
+};
+
+export type Interesado = { cliente_id: string; cliente: string; telefono: string | null; email: string | null; gestion: "venta" | "alquiler"; precio_max: number | null; notas: string | null };
+
 export type Liquidacion = { id: string; numero: string; fecha: string; propietario: string; cobrado: number; comision: number; neto: number; medio: string; referencia: string | null; cuotas: number };

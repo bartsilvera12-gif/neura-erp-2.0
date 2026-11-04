@@ -19,7 +19,8 @@ import { ClipboardPen, FileSignature, Plus, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { apiFetchSWR, guardadoAlInstante } from "@/lib/api/cache-cliente";
 import { urlFicha } from "@/modules/clientes/ficha/url";
-import { useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { useFuncion, useUsuario } from "@/lib/sesion/ContextoUsuario";
+import { TabClienteInmobiliaria } from "@/modules/inmobiliaria/TabClienteInmobiliaria";
 import { RegistrarCobro } from "@/modules/clientes/RegistrarCobro";
 import { RegistrarTransferencia } from "@/modules/cobranzas/RegistrarTransferencia";
 import { FacturaContadoModal } from "@/modules/clientes/ficha/FacturaContadoModal";
@@ -41,7 +42,7 @@ import { AccionesPagina } from "@/components/EncabezadoPagina";
 import { ModalTipificacion, useAvisoTipificacion } from "@/modules/tipificacion/ModalTipificacion";
 import { precargarTipificacion } from "@/modules/tipificacion/datos";
 
-type Tab = "informacion" | "estado_cuenta" | "suscripciones" | "presupuestos" | "proyectos" | "historial";
+type Tab = "informacion" | "estado_cuenta" | "suscripciones" | "presupuestos" | "proyectos" | "inmobiliaria" | "historial";
 const CON_PROYECTOS = moduloEstaActivo("proyectos");
 const CON_PRESUPUESTOS = moduloEstaActivo("presupuestos");
 const ROLES_PRESUPUESTOS = ["ADMIN", "SUPERVISOR", "VENDEDOR", "CAJERO"];
@@ -57,6 +58,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
   const [inicial] = useState(() => guardadoAlInstante<Detalle & { suscripciones?: SuscripcionCliente[] }>(urlFicha(id)));
   const me = useUsuario();
   const esAdmin = me?.rol === "ADMIN";
+  const conInmobiliaria = useFuncion("inmobiliaria");
   const [data, setData] = useState<Detalle | null>(inicial ?? null);
   const [loading, setLoading] = useState(!inicial);
   const [error, setError] = useState<string | null>(null);
@@ -163,6 +165,8 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
     { id: "suscripciones", label: "Suscripciones" },
     ...(puedePresupuestar ? [{ id: "presupuestos" as Tab, label: "Presupuestos" }] : []),
     ...(CON_PROYECTOS ? [{ id: "proyectos" as Tab, label: "Proyectos" }] : []),
+    // Receta 134: qué busca, sus propiedades, compras y alquileres (con Inmobiliaria prendida).
+    ...(conInmobiliaria ? [{ id: "inmobiliaria" as Tab, label: "Inmobiliaria" }] : []),
     { id: "historial", label: "Historial" },
   ];
   // `movil`: lo que queda a la vista en el celular (el resto está en la pestaña Información).
@@ -349,6 +353,7 @@ export function FichaCliente({ id, onCerrar, onCambio }: { id: string; onCerrar?
             ) : null}
             {tab === "presupuestos" && puedePresupuestar ? <PresupuestosDeCliente clienteId={c.id} clienteNombre={c.razon_social || c.nombre} /> : null}
             {tab === "proyectos" && CON_PROYECTOS ? <ProyectosDeCliente clienteId={c.id} /> : null}
+            {tab === "inmobiliaria" && conInmobiliaria ? <TabClienteInmobiliaria clienteId={c.id} /> : null}
             {tab === "historial" ? <TabHistorial clienteId={c.id} recarga={recargaHist} /> : null}
           </div>
         </div>
