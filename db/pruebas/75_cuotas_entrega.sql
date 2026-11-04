@@ -77,6 +77,26 @@ begin
     (select count(*) from cuentas_por_cobrar where venta_id = (v->>'venta_id')::uuid and cuota > 0) = 6
     and (select sum(monto) from cuentas_por_cobrar where venta_id = (v->>'venta_id')::uuid and cuota > 0) = 1000000, v::text);
 
+  -- Recargo por financiación (receta 137): 20 % sobre lo financiado, renglón en la misma venta.
+  v := planes_cuota_guardar('{"max_cuotas": 120, "planes": [{"nombre": "PRUEBA 12 con recargo", "cuotas": 12, "entrega_pct": 10, "recargo_pct": 20}]}');
+  perform pg_temp.igual('Recargo: el plan guarda su recargo', (v->'planes'->0->>'recargo_pct')::numeric, 20);
+  v_plan := (v->'planes'->0->>'id')::uuid;
+  perform pg_temp.rechaza('Recargo: no pasa del 300 %',
+    $q$select planes_cuota_guardar('{"max_cuotas": 120, "planes": [{"nombre": "PRUEBA loco", "cuotas": 3, "recargo_pct": 400}]}')$q$, 'va de 0 a 300');
+  v := crear_venta_cuotas(pg_temp.fx('cliente'), 'CREDITO', null, 'GS', null,
+    jsonb_build_array(jsonb_build_object('producto_id', v_prod, 'cantidad', 1)), 'prueba-caja-recargo-1', 0, null, pg_temp.fx('caja'), 'ticket',
+    1, 'mes', 120000, '[{"metodo_pago": "efectivo", "monto": 120000}]'::jsonb, v_plan);
+  v_venta := (v->>'venta_id')::uuid;
+  perform pg_temp.igual('Recargo: el total suma el 20 % de lo financiado', (select total from ventas where id = v_venta), 1416000);
+  perform pg_temp.ok('Recargo: va como renglón con IVA 10 %',
+    exists (select 1 from ventas_items where venta_id = v_venta and producto_nombre like 'Recargo por financiación%' and total_linea = 216000 and monto_iva = 19636), v::text);
+  perform pg_temp.igual('Recargo: las 12 cuotas absorben el recargo', (select sum(monto) from cuentas_por_cobrar where venta_id = v_venta and cuota > 0), 1296000);
+  perform pg_temp.igual('Recargo: la entrega no cambia', (select monto from cuentas_por_cobrar where venta_id = v_venta and cuota = 0), 120000);
+  v := vender_en_cuotas(jsonb_build_object('cliente_id', pg_temp.fx('cliente'), 'caja_id', pg_temp.fx('caja'), 'plan_id', v_plan,
+    'items', jsonb_build_array(jsonb_build_object('producto_id', v_prod, 'cantidad', 1)),
+    'entrega', 200000, 'pagos', '[{"metodo_pago": "efectivo", "monto": 200000}]'::jsonb));
+  perform pg_temp.igual('Recargo: también al vender en cuotas', (v->>'total')::numeric, 1400000);
+
   -- Propiedad: vender la marca vendida; anular la venta la vuelve a disponible.
   v := guardar_funciones_empresa('{"inmobiliaria": true}');
   p1 := propiedad_guardar('{"titulo": "PRUEBA Terreno para vender", "gestion": "venta", "precio_venta": 90000000}');

@@ -1,6 +1,6 @@
 /**
  * Planes de cuotas y tope de cuotas de la empresa (receta 131).
- *   GET /api/cuotas/planes → { max_cuotas, planes: [{ id, nombre, cuotas, cada, primera_dias, entrega_pct, activo }] }
+ *   GET /api/cuotas/planes → { max_cuotas, planes: [{ id, nombre, cuotas, cada, primera_dias, entrega_pct, recargo_pct, activo }] }
  *   PUT /api/cuotas/planes { max_cuotas, planes[] } (Configuración del sistema). Un plan que no viene se borra.
  */
 import { z } from "zod";
@@ -17,6 +17,8 @@ const plan = z.object({
   cada: z.enum(["mes", "quincena", "semana"]),
   primera_dias: z.number().int().min(1).max(3650),
   entrega_pct: z.number().min(0).max(99),
+  // Receta 137: recargo % sobre lo financiado (total − entrega).
+  recargo_pct: z.number().min(0).max(300).default(0),
   activo: z.boolean(),
 }).strict();
 

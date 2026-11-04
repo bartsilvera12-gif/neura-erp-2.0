@@ -55,7 +55,7 @@ function sugerencias(monto: number): number[] {
 
 export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1, cuotasCada = "mes", entrega, cliente, documento, imprimir = true, cobrando, error, onClose, onConfirmar }: {
   /** Receta 136: crédito con entrega inicial (se cobra ahora; las cuotas se arman sobre el resto). */
-  entrega?: { monto: number; medio: string };
+  entrega?: { monto: number; medio: string; recargo?: number };
   total: number;
   cantItems: number;
   tipoVenta: "CONTADO" | "CREDITO";
@@ -106,8 +106,10 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1,
   const deuda = Number(cuenta?.deuda ?? 0);
   const disponible = limite > 0 ? limite - deuda : null;
   const montoEntrega = tipoVenta === "CREDITO" ? entrega?.monto ?? 0 : 0;
-  const superaLimite = tipoVenta === "CREDITO" && disponible != null && cuenta != null && total - montoEntrega > disponible;
-  const plan = useMemo(() => planCuotas(total - montoEntrega, cuotas, plazoDias, cuotasCada), [total, montoEntrega, cuotas, plazoDias, cuotasCada]);
+  // Receta 137: el recargo del plan se suma a lo financiado (lo absorben las cuotas).
+  const recargo = tipoVenta === "CREDITO" ? entrega?.recargo ?? 0 : 0;
+  const superaLimite = tipoVenta === "CREDITO" && disponible != null && cuenta != null && total - montoEntrega + recargo > disponible;
+  const plan = useMemo(() => planCuotas(total - montoEntrega + recargo, cuotas, plazoDias, cuotasCada), [total, montoEntrega, recargo, cuotas, plazoDias, cuotasCada]);
   const vence = fechaCorta(plan[0].vence);
 
   const problema =
@@ -249,7 +251,10 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1,
             </div>
             <p className="mt-0.5 truncate text-xs text-slate-500">{Number(cantItems).toLocaleString("es-PY", { maximumFractionDigits: 3 })} unidad{cantItems === 1 ? "" : "es"}{cliente ? ` · ${cliente.nombre}` : ""}</p>
           </div>
-          <p className="shrink-0 text-[28px] font-extrabold leading-none tabular-nums tracking-tight text-slate-900 sm:text-3xl">{formatGs(total)}</p>
+          <p className="shrink-0 text-right text-[28px] font-extrabold leading-none tabular-nums tracking-tight text-slate-900 sm:text-3xl">
+            {formatGs(total + recargo)}
+            {recargo > 0 ? <span className="mt-1 block text-[11px] font-medium tracking-normal text-slate-500">con recargo · sin recargo {formatGs(total)}</span> : null}
+          </p>
         </div>
 
         <div className="min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 py-4 sm:space-y-5 sm:px-6">
@@ -259,6 +264,9 @@ export function CobroModal({ total, cantItems, tipoVenta, plazoDias, cuotas = 1,
                 <div className="col-span-2 sm:col-span-1"><Dato label="Cliente" valor={cliente?.nombre ?? "—"} /></div>
                 {montoEntrega > 0 ? (
                   <div className="col-span-2 sm:col-span-3"><Dato label={`Entrega (se cobra ahora · ${entrega?.medio.replace(/_/g, " ")})`} valor={formatGs(montoEntrega)} /></div>
+                ) : null}
+                {recargo > 0 ? (
+                  <div className="col-span-2 sm:col-span-3"><Dato label="Recargo por financiación (se suma a la venta)" valor={formatGs(recargo)} /></div>
                 ) : null}
                 {plan.length > 1 ? (
                   <>

@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Select } from "@/components/Select";
-import { OPCIONES_CADA, fechaCorta, planCuotas, type CadaCuota } from "@/modules/caja/cuotas";
+import { OPCIONES_CADA, fechaCorta, planCuotas, recargoPlan, type CadaCuota } from "@/modules/caja/cuotas";
 import { usePlanesCuota } from "@/modules/caja/usePlanesCuota";
 
 const ADJ_CADA: Record<CadaCuota, string> = { mes: "cada mes", quincena: "cada 15 días", semana: "cada 7 días" };
@@ -41,7 +41,9 @@ export function CamposCredito({ total, cuotas, setCuotas, plazoDias, setPlazoDia
   const entregaMin = planElegido ? Math.round(total * Number(planElegido.entrega_pct) / 100) : 0;
   const montoEntrega = entrega?.monto ?? 0;
   const nOk = n >= 1 && n <= max;
-  const plan = nOk && dias >= 1 ? planCuotas(Math.max(total - montoEntrega, 0), n, dias, cada) : null;
+  // Receta 137: el recargo del plan va sobre lo financiado y lo absorben las cuotas.
+  const recargo = recargoPlan(Math.max(total - montoEntrega, 0), planElegido);
+  const plan = nOk && dias >= 1 ? planCuotas(Math.max(total - montoEntrega, 0) + recargo, n, dias, cada) : null;
   // Con un plan elegido, si el total cambia y la entrega queda corta, sube al mínimo del plan.
   useEffect(() => {
     if (entrega && entregaMin > 0 && entrega.monto < entregaMin) entrega.setMonto(entregaMin);
@@ -112,6 +114,7 @@ export function CamposCredito({ total, cuotas, setCuotas, plazoDias, setPlazoDia
               {" "}· del {fechaCorta(plan[0].vence)} al {fechaCorta(ultima!.vence)}
             </>
           )}
+        {recargo > 0 && plan ? <> · incluye recargo de {monto ? monto(recargo) : recargo} ({Number(planElegido!.recargo_pct)} %)</> : null}
       </p>
       {entrega ? (
         <div className="space-y-1.5 border-t border-slate-100 pt-2">
@@ -137,7 +140,7 @@ export function CamposCredito({ total, cuotas, setCuotas, plazoDias, setPlazoDia
             <p className="text-[11px] text-slate-500">
               {montoEntrega >= total ? "La entrega tiene que ser menor que el total."
                 : montoEntrega < entregaMin ? "El plan pide una entrega mayor."
-                : `Se cobra ahora y las cuotas se arman sobre ${monto ? monto(total - montoEntrega) : total - montoEntrega}.`}
+                : `Se cobra ahora y las cuotas se arman sobre ${monto ? monto(total - montoEntrega) : total - montoEntrega}${recargo > 0 ? " más el recargo" : ""}.`}
             </p>
           ) : null}
         </div>

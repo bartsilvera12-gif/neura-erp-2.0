@@ -14,11 +14,12 @@ import { Aviso, Interruptor, Tarjeta } from "@/modules/facturacion/ui";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT } from "@/modules/inventario/ui";
 import { OPCIONES_CADA, type CadaCuota, type PlanesCuota } from "@/modules/caja/cuotas";
 
-type Fila = { id: string | null; nombre: string; cuotas: string; cada: CadaCuota; primera_dias: string; entrega_pct: string; activo: boolean; clave: string };
+type Fila = { id: string | null; nombre: string; cuotas: string; cada: CadaCuota; primera_dias: string; entrega_pct: string; recargo_pct: string; activo: boolean; clave: string };
 
 const aFila = (p: PlanesCuota["planes"][number]): Fila => ({
   id: p.id, nombre: p.nombre, cuotas: String(p.cuotas), cada: p.cada, primera_dias: String(p.primera_dias),
-  entrega_pct: p.entrega_pct ? String(Number(p.entrega_pct)) : "", activo: p.activo, clave: p.id,
+  entrega_pct: p.entrega_pct ? String(Number(p.entrega_pct)) : "",
+  recargo_pct: Number(p.recargo_pct) ? String(Number(p.recargo_pct)).replace(".", ",") : "", activo: p.activo, clave: p.id,
 });
 
 export default function PlanesCuotasPage() {
@@ -51,7 +52,7 @@ export default function PlanesCuotasPage() {
         body: JSON.stringify({
           max_cuotas: parseInt(max) || 0,
           planes: filas.map((f) => ({ id: f.id, nombre: f.nombre.trim(), cuotas: parseInt(f.cuotas) || 0, cada: f.cada,
-            primera_dias: parseInt(f.primera_dias) || 30, entrega_pct: num(f.entrega_pct), activo: f.activo })),
+            primera_dias: parseInt(f.primera_dias) || 30, entrega_pct: num(f.entrega_pct), recargo_pct: num(f.recargo_pct), activo: f.activo })),
         }),
       });
       cargar(d);
@@ -85,7 +86,7 @@ export default function PlanesCuotasPage() {
         </label>
       </Tarjeta>
 
-      <Tarjeta icono={<CalendarRange className="h-4 w-4" />} titulo="Planes" detalle="Al vender se elige un plan y quedan puestas las cuotas, cada cuánto y la entrega mínima. También se puede vender sin plan, con las cuotas a mano.">
+      <Tarjeta icono={<CalendarRange className="h-4 w-4" />} titulo="Planes" detalle="Al vender se elige un plan y quedan puestas las cuotas, cada cuánto y la entrega mínima. El recargo se suma sobre lo financiado (total menos entrega) como un renglón de la venta, con el IVA de los intereses. También se puede vender sin plan, con las cuotas a mano.">
         {!filas ? (
           <div className="h-24 animate-pulse rounded-xl bg-slate-100" />
         ) : (
@@ -93,8 +94,8 @@ export default function PlanesCuotasPage() {
             {filas.length === 0 ? <p className="text-sm text-slate-500">Todavía no hay planes.</p> : null}
             {filas.map((f, i) => (
               <div key={f.clave} className={`rounded-xl border p-3 ${f.activo ? "border-slate-200" : "border-dashed border-slate-200 opacity-70"}`}>
-                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-[1.6fr_0.6fr_1fr_0.8fr_0.8fr_auto] sm:items-end">
-                  <label className="col-span-2 block min-w-0 sm:col-span-1">
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-[1.5fr_0.55fr_1fr_0.7fr_0.8fr_0.7fr_auto] xl:items-end">
+                  <label className="col-span-2 block min-w-0 sm:col-span-3 xl:col-span-1">
                     <span className={ET}>Nombre</span>
                     <input className={INPUT} value={f.nombre} maxLength={80} placeholder="Ej: 120 cuotas con 10 % de entrega" onChange={(e) => cambiar(i, { nombre: e.target.value })} />
                   </label>
@@ -114,14 +115,19 @@ export default function PlanesCuotasPage() {
                     <span className={ET}>Entrega mín. (%)</span>
                     <input inputMode="decimal" className={`${INPUT} text-right tabular-nums`} value={f.entrega_pct} placeholder="0" onChange={(e) => cambiar(i, { entrega_pct: e.target.value.replace(/[^\d.,]/g, "").slice(0, 5) })} />
                   </label>
-                  <div className="col-span-2 flex items-center justify-end gap-1 sm:col-span-1">
+                  {/* Receta 137: se suma sobre lo financiado (total − entrega) como renglón de la venta. */}
+                  <label className="block min-w-0">
+                    <span className={ET}>Recargo (%)</span>
+                    <input inputMode="decimal" className={`${INPUT} text-right tabular-nums`} value={f.recargo_pct} placeholder="0" onChange={(e) => cambiar(i, { recargo_pct: e.target.value.replace(/[^\d.,]/g, "").slice(0, 6) })} />
+                  </label>
+                  <div className="flex items-end justify-end gap-1">
                     <button type="button" onClick={() => cambiar(i, { activo: !f.activo })} className="min-h-11 rounded-xl px-2.5 text-xs font-medium text-slate-500 hover:bg-slate-100">{f.activo ? "Desactivar" : "Activar"}</button>
                     <button type="button" aria-label="Quitar el plan" onClick={() => { setFilas((x) => x!.filter((_, j) => j !== i)); setOk(null); }} className="grid h-11 w-11 place-items-center rounded-xl text-slate-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 className="h-4 w-4" /></button>
                   </div>
                 </div>
               </div>
             ))}
-            <button type="button" onClick={() => setFilas((x) => [...(x ?? []), { id: null, nombre: "", cuotas: "12", cada: "mes", primera_dias: "30", entrega_pct: "", activo: true, clave: `n${Date.now()}` }])}
+            <button type="button" onClick={() => setFilas((x) => [...(x ?? []), { id: null, nombre: "", cuotas: "12", cada: "mes", primera_dias: "30", entrega_pct: "", recargo_pct: "", activo: true, clave: `n${Date.now()}` }])}
               className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:w-full`}>
               <Plus className="h-4 w-4" /> Agregar plan
             </button>
@@ -140,7 +146,7 @@ export default function PlanesCuotasPage() {
                 <input inputMode="decimal" className={`${INPUT} text-right tabular-nums`} value={mora.tasa} onChange={(e) => { setMora({ ...mora, tasa: e.target.value.replace(/[^\d.,]/g, "").slice(0, 5) }); setOk(null); }} /></label>
               <label className="block min-w-0"><span className={ET}>Días de gracia</span>
                 <input inputMode="numeric" className={`${INPUT} text-right tabular-nums`} value={mora.gracia} onChange={(e) => { setMora({ ...mora, gracia: e.target.value.replace(/\D/g, "").slice(0, 2) }); setOk(null); }} /></label>
-              <div className="min-w-0"><span className={ET}>IVA del interés</span>
+              <div className="min-w-0"><span className={ET}>IVA del interés y del recargo</span>
                 <Select block value={mora.iva} onChange={(v) => { setMora({ ...mora, iva: v }); setOk(null); }} options={[["10%", "10 %"], ["5%", "5 %"], ["EXENTA", "Exenta"]]} etiqueta="IVA del interés" /></div>
             </div>
           </div>

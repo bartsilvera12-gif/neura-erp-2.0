@@ -11,7 +11,7 @@ import { Drawer } from "@/components/Drawer";
 import { Select } from "@/components/Select";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { BuscadorCliente } from "@/modules/clientes/gestion/BuscadorCliente";
-import { OPCIONES_CADA, fechaCorta, planCuotas, type CadaCuota } from "@/modules/caja/cuotas";
+import { OPCIONES_CADA, fechaCorta, planCuotas, recargoPlan, type CadaCuota } from "@/modules/caja/cuotas";
 import { usePlanesCuota } from "@/modules/caja/usePlanesCuota";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT } from "@/modules/inventario/ui";
 import type { Propiedad } from "@/modules/inmobiliaria/tipos";
@@ -45,7 +45,9 @@ export function VenderPropiedad({ propiedad, onCerrar, onVendida }: { propiedad:
   const cadaReal = plan ? plan.cada : cada;
   const dias = plan ? plan.primera_dias : parseInt(plazo) || 0;
   const entregaMin = plan ? Math.round(total * Number(plan.entrega_pct) / 100) : 0;
-  const financiado = Math.max(total - entrega, 0);
+  // Receta 137: el recargo del plan va sobre lo financiado y lo absorben las cuotas.
+  const recargo = contado ? 0 : recargoPlan(Math.max(total - entrega, 0), plan);
+  const financiado = Math.max(total - entrega, 0) + recargo;
   const cronograma = useMemo(() => (!contado && n >= 1 && dias >= 1 ? planCuotas(financiado, n, dias, cadaReal) : []), [contado, n, dias, cadaReal, financiado]);
 
   const falta = !cliente ? "Elegí el comprador."
@@ -166,7 +168,7 @@ export function VenderPropiedad({ propiedad, onCerrar, onVendida }: { propiedad:
                   <input inputMode="numeric" className={`${INPUT} text-right tabular-nums`} value={plazo} onChange={(e) => setPlazo(e.target.value.replace(/\D/g, "").slice(0, 4))} /></label>
               </div>
             ) : (
-              <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">{plan.cuotas} cuotas {OPCIONES_CADA.find(([k]) => k === plan.cada)?.[1].toLowerCase()}, la 1ª a {plan.primera_dias} días{Number(plan.entrega_pct) ? ` · entrega mínima ${Number(plan.entrega_pct)} % (${gs(entregaMin)})` : ""}.</p>
+              <p className="rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-600">{plan.cuotas} cuotas {OPCIONES_CADA.find(([k]) => k === plan.cada)?.[1].toLowerCase()}, la 1ª a {plan.primera_dias} días{Number(plan.entrega_pct) ? ` · entrega mínima ${Number(plan.entrega_pct)} % (${gs(entregaMin)})` : ""}{recargo > 0 ? ` · recargo ${Number(plan.recargo_pct)} % (${gs(recargo)})` : ""}.</p>
             )}
             <label className="block">
               <span className={ET}>Entrega inicial</span>

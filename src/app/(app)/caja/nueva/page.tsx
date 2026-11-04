@@ -22,7 +22,8 @@ import { Suspense, useCallback, useDeferredValue, useEffect, useMemo, useRef, us
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, CheckCircle2, ChevronRight, ClipboardList, FileSignature, Info, Loader2, Lock, Package, Printer, Receipt, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
 import { Select } from "@/components/Select";
-import { MAX_CUOTAS, textoCredito, type CadaCuota } from "@/modules/caja/cuotas";
+import { MAX_CUOTAS, recargoPlan, textoCredito, type CadaCuota } from "@/modules/caja/cuotas";
+import { usePlanesCuota } from "@/modules/caja/usePlanesCuota";
 import { CamposCredito } from "@/modules/caja/CamposCredito";
 import { usePorCobrar } from "@/modules/mesas/usePorCobrar";
 import { haceCuanto, origenPedido, pitido, type CuentaPorCobrar, type FacturacionPropuesta, type LineaPorCobrar } from "@/modules/mesas/tipos";
@@ -196,6 +197,7 @@ function CajaPageContenido() {
   const [cuotasCada, setCuotasCada] = useState<CadaCuota>("mes");
   // Receta 136: plan de cuotas y entrega inicial (se cobra en la misma venta).
   const [planId, setPlanId] = useState("");
+  const planesCuota = usePlanesCuota();  // receta 137: el recargo del plan, para el modal de cobro
   const [entrega, setEntrega] = useState(0);
   const [medioEntrega, setMedioEntrega] = useState("efectivo");
   const [refEntrega, setRefEntrega] = useState("");
@@ -1837,7 +1839,8 @@ function CajaPageContenido() {
       {/* Cobro: formas de pago (mixto, vuelto) o crédito */}
       {cobroOpen && (
         <CobroModal total={total} cantItems={cantTotal} tipoVenta={tipoVenta} plazoDias={plazoDiasNum} cuotas={cuotasOk ? cuotasNum : 1} cuotasCada={cuotasCada} cliente={clienteSel}
-          entrega={tipoVenta === "CREDITO" && entrega > 0 ? { monto: entrega, medio: medioEntrega } : undefined}
+          entrega={tipoVenta === "CREDITO" && (entrega > 0 || planId) ? { monto: entrega, medio: medioEntrega,
+            recargo: recargoPlan(Math.max(total - entrega, 0), planesCuota.planes.find((p) => p.id === planId)) } : undefined}
           documento={tipoDocumento === "factura"
             ? { tipo: "factura", nombre: ocasional ? nombreOcasional : clienteSel?.nombre ?? "", ruc: ocasional ? rucOcasional : rucFactura }
             : { tipo: "ticket" }}

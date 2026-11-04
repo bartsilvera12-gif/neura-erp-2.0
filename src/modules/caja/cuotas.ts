@@ -14,8 +14,12 @@ const ADJ: Record<CadaCuota, [string, string]> = { mes: ["mensual", "mensuales"]
 /** Tope absoluto (receta 131). El de cada empresa (120 por defecto) viene de /api/cuotas/planes: ver usePlanesCuota. */
 export const MAX_CUOTAS = 360;
 
-/** Plan de cuotas de la empresa (receta 131). */
-export type PlanCuota = { id: string; nombre: string; cuotas: number; cada: CadaCuota; primera_dias: number; entrega_pct: number; activo: boolean };
+/** Plan de cuotas de la empresa (receta 131; recargo_pct, receta 137). */
+export type PlanCuota = { id: string; nombre: string; cuotas: number; cada: CadaCuota; primera_dias: number; entrega_pct: number; recargo_pct?: number; activo: boolean };
+
+/** Receta 137: el recargo del plan sobre lo financiado (igual que la base: redondeado a guaraníes). */
+export const recargoPlan = (financiado: number, plan: Pick<PlanCuota, "recargo_pct"> | null | undefined) =>
+  plan && Number(plan.recargo_pct) > 0 && financiado > 0 ? Math.round(financiado * Number(plan.recargo_pct) / 100) : 0;
 export type PlanesCuota = { max_cuotas: number; planes: PlanCuota[] };
 
 /** Suma meses como Postgres (31/01 + 1 mes = 28/02). */
