@@ -6,11 +6,11 @@
  * cada cuánto, a cuántos días la primera y la entrega mínima (% del total). Solo el Administrador.
  */
 import { useEffect, useState } from "react";
-import { CalendarRange, Loader2, Plus, Trash2 } from "lucide-react";
+import { CalendarRange, Loader2, Percent, Plus, Trash2 } from "lucide-react";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { Select } from "@/components/Select";
 import { apiFetch } from "@/lib/api/client-fetch";
-import { Aviso, Tarjeta } from "@/modules/facturacion/ui";
+import { Aviso, Interruptor, Tarjeta } from "@/modules/facturacion/ui";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT } from "@/modules/inventario/ui";
 import { OPCIONES_CADA, type CadaCuota, type PlanesCuota } from "@/modules/caja/cuotas";
 
@@ -28,8 +28,15 @@ export default function PlanesCuotasPage() {
   const [ok, setOk] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
 
+  // Receta 135: interés por mora (para todos los rubros; arranca apagado).
+  const [mora, setMora] = useState<{ activa: boolean; tasa: string; gracia: string; iva: string } | null>(null);
   const cargar = (d: PlanesCuota) => { setMax(String(d.max_cuotas)); setFilas(d.planes.map(aFila)); };
-  useEffect(() => { apiFetch<PlanesCuota>("/api/cuotas/planes").then(cargar).catch((e: Error) => setError(e.message)); }, []);
+  useEffect(() => {
+    apiFetch<PlanesCuota>("/api/cuotas/planes").then(cargar).catch((e: Error) => setError(e.message));
+    apiFetch<{ activa: boolean; tasa: number; gracia: number; iva: string }>("/api/configuracion/mora")
+      .then((m) => setMora({ activa: m.activa, tasa: String(Number(m.tasa)).replace(".", ","), gracia: String(m.gracia), iva: m.iva }))
+      .catch(() => {});
+  }, []);
 
   const cambiar = (i: number, p: Partial<Fila>) => { setFilas((f) => f!.map((x, j) => (j === i ? { ...x, ...p } : x))); setOk(null); setError(null); };
   const num = (v: string) => Number(v.replace(",", ".")) || 0;
@@ -48,7 +55,10 @@ export default function PlanesCuotasPage() {
         }),
       });
       cargar(d);
-      setOk("Planes guardados.");
+      if (mora) {
+        await apiFetch("/api/configuracion/mora", { method: "PUT", body: JSON.stringify({ activa: mora.activa, tasa: num(mora.tasa), gracia: parseInt(mora.gracia) || 0, iva: mora.iva }) });
+      }
+      setOk("Guardado.");
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -61,8 +71,8 @@ export default function PlanesCuotasPage() {
       <EncabezadoPagina
         volver={{ href: "/configuracion", label: "Configuración" }}
         kicker="Configuración"
-        titulo="Planes de cuotas"
-        subtitulo="Hasta cuántas cuotas se puede vender a crédito y los planes que se eligen al vender (por ejemplo, un lote en 120 cuotas con 10 % de entrega)."
+        titulo="Planes de cuotas y mora"
+        subtitulo="Hasta cuántas cuotas se puede vender a crédito, los planes que se eligen al vender (por ejemplo, un lote en 120 cuotas con 10 % de entrega) y el interés por atraso."
       />
 
       {error ? <Aviso tono="error">{error}</Aviso> : null}
@@ -118,6 +128,24 @@ export default function PlanesCuotasPage() {
           </div>
         )}
       </Tarjeta>
+
+      {mora ? (
+        <Tarjeta icono={<Percent className="h-4 w-4" />} titulo="Interés por mora"
+          detalle="Para cualquier rubro. Al cobrar, a cada cuota vencida hace más que los días de gracia se le suma el interés por los días de atraso (saldo × tasa mensual × días / 30). Se cobra primero y queda aparte del capital; quien tenga el permiso lo puede perdonar con un motivo.">
+          <div className="space-y-3">
+            <Interruptor activo={mora.activa} onChange={(v) => { setMora({ ...mora, activa: v }); setOk(null); }}
+              etiqueta="Cobrar interés por mora" descripcion={mora.activa ? "Se calcula y se suma en la pantalla de cobro." : "Apagado: los cobros quedan como siempre."} />
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <label className="block min-w-0"><span className={ET}>Tasa mensual (%)</span>
+                <input inputMode="decimal" className={`${INPUT} text-right tabular-nums`} value={mora.tasa} onChange={(e) => { setMora({ ...mora, tasa: e.target.value.replace(/[^\d.,]/g, "").slice(0, 5) }); setOk(null); }} /></label>
+              <label className="block min-w-0"><span className={ET}>Días de gracia</span>
+                <input inputMode="numeric" className={`${INPUT} text-right tabular-nums`} value={mora.gracia} onChange={(e) => { setMora({ ...mora, gracia: e.target.value.replace(/\D/g, "").slice(0, 2) }); setOk(null); }} /></label>
+              <div className="min-w-0"><span className={ET}>IVA del interés</span>
+                <Select block value={mora.iva} onChange={(v) => { setMora({ ...mora, iva: v }); setOk(null); }} options={[["10%", "10 %"], ["5%", "5 %"], ["EXENTA", "Exenta"]]} etiqueta="IVA del interés" /></div>
+            </div>
+          </div>
+        </Tarjeta>
+      ) : null}
 
       <div className="max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-30 max-sm:border-t max-sm:border-slate-200 max-sm:bg-white/95 max-sm:px-4 max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur sm:flex sm:justify-end">
         <button type="button" onClick={() => void guardar()} disabled={guardando || !filas} className={`${BOTON_PRIMARIO} bg-[var(--brand)] max-sm:min-h-11 max-sm:w-full`}>

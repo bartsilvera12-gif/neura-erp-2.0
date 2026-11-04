@@ -26,6 +26,9 @@ const gs = (v: number) => `Gs. ${Math.round(Number(v) || 0).toLocaleString("es-P
 const dia = (d: string) => `${d.slice(8, 10)}/${d.slice(5, 7)}`;
 
 type Pago = { key: number; metodo: MetodoCobro; monto: number; referencia: string };
+/** Receta 135: lo que devuelve /api/cobros/mora. */
+type Mora = { activa: boolean; tasa: number; gracia: number; iva: string; puede_perdonar: boolean; total: number;
+  cuotas: { cxc_id: string; numero: string; vencimiento: string; saldo: number; dias: number; interes: number }[] };
 
 export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxcInicial }: {
   clienteId: string; clienteNombre: string; onClose: () => void; onHecho: () => void;
@@ -42,18 +45,27 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
   const [cajaId, setCajaId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [hecho, setHecho] = useState<{ id: string; numero: string; total: number; aFavor: number } | null>(null);
+  const [hecho, setHecho] = useState<{ id: string; numero: string; total: number; aFavor: number; interes?: number; perdonado?: number } | null>(null);
+  // Receta 135: interés por mora (si la empresa lo prendió). Se cobra primero; con permiso se perdona.
+  const [mora, setMora] = useState<Mora | null>(null);
+  const [perdonar, setPerdonar] = useState(false);
+  const [motivoPerdon, setMotivoPerdon] = useState("");
 
   useEffect(() => {
-    apiFetch<EstadoCuenta>(`/api/clientes/${clienteId}/estado-cuenta`).then((r) => {
+    Promise.all([
+      apiFetch<EstadoCuenta>(`/api/clientes/${clienteId}/estado-cuenta`),
+      apiFetch<Mora>(`/api/cobros/mora?cliente_id=${clienteId}`).catch(() => null),
+    ]).then(([r, m]) => {
       setEc(r);
+      setMora(m && m.activa && Number(m.total) > 0 ? m : null);
+      const interes = m && m.activa ? Number(m.total) || 0 : 0;
       const inicial = cxcInicial ? r.cuentas.find((c) => c.id === cxcInicial && Number(c.saldo) > 0) : undefined;
       if (inicial) {
         setModo("elegir");
         setElegidas(new Set([inicial.id]));
-        setTotal(Number(inicial.saldo) || 0);
+        setTotal((Number(inicial.saldo) || 0) + interes);
       } else {
-        setTotal(Number(r.deuda) || 0);
+        setTotal((Number(r.deuda) || 0) + interes);
       }
     }).catch((e) => setError((e as Error).message));
   }, [clienteId, cxcInicial]);
@@ -72,9 +84,12 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
   const sumaPagos = pagos.reduce((a, p) => a + (p.monto || 0), 0);
   const diferencia = total - sumaPagos;
 
-  // Cómo queda cada venta (en vivo): las elegidas o lo más viejo primero.
+  // Interés por mora que se cobra en este recibo (primero, antes que las cuotas).
+  const interes = mora && !perdonar ? Number(mora.total) || 0 : 0;
+
+  // Cómo queda cada venta (en vivo): las elegidas o lo más viejo primero (después del interés).
   const aplicacion = useMemo(() => {
-    let resto = total;
+    let resto = Math.max(total - interes, 0);
     const orden = modo === "elegir" ? abiertas.filter((c) => elegidas.has(c.id)) : abiertas;
     const m = new Map<string, number>();
     for (const c of orden) {
@@ -84,14 +99,16 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
       resto -= a;
     }
     return { m, sobrante: resto };
-  }, [total, modo, abiertas, elegidas]);
+  }, [total, interes, modo, abiertas, elegidas]);
 
-  const deuda = Number(ec?.deuda ?? 0);
-  const vencido = Number(ec?.vencido ?? 0);
+  const deudaCuotas = Number(ec?.deuda ?? 0);
+  const deuda = deudaCuotas + interes;
+  const vencido = Number(ec?.vencido ?? 0) + interes;
   const saldoFavor = Number(ec?.saldo_favor ?? 0);
   const aFavor = Math.max(total - deuda, 0);
   const faltan = [
     !(total > 0) && "el monto",
+    perdonar && motivoPerdon.trim().length < 3 && "escribir por qué se perdona el interés",
     diferencia !== 0 && (diferencia > 0 ? `asignar ${gs(diferencia)} a un medio de pago` : `bajar ${gs(-diferencia)} de los medios de pago`),
     modo === "elegir" && aplicacion.sobrante > 0 && "elegir ventas que cubran el monto",
   ].filter(Boolean) as string[];
@@ -101,7 +118,7 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
     setBusy(true);
     setError(null);
     try {
-      const r = await apiFetch<{ id: string; numero_recibo: string; total: number; a_favor?: number }>("/api/cobros", {
+      const r = await apiFetch<{ id: string; numero_recibo: string; total: number; a_favor?: number; interes?: number; interes_perdonado?: number }>("/api/cobros", {
         method: "POST",
         body: JSON.stringify({
           cliente_id: clienteId,
@@ -109,9 +126,10 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
           pagos: pagos.filter((p) => p.monto > 0).map((p) => ({ metodo: p.metodo, monto: p.monto, referencia: p.referencia.trim() || null })),
           aplicaciones: modo === "elegir" ? [...aplicacion.m.entries()].map(([cxc_id, monto]) => ({ cxc_id, monto })) : null,
           observacion: observacion.trim() || null,
+          mora: mora ? { perdonar, motivo: perdonar ? motivoPerdon.trim() : null } : null,
         }),
       });
-      setHecho({ id: r.id, numero: r.numero_recibo, total: r.total, aFavor: Number(r.a_favor ?? 0) });
+      setHecho({ id: r.id, numero: r.numero_recibo, total: r.total, aFavor: Number(r.a_favor ?? 0), interes: Number(r.interes ?? 0), perdonado: Number(r.interes_perdonado ?? 0) });
       onHecho();
     } catch (e) {
       setError((e as Error).message);
@@ -142,6 +160,8 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
           <p className="mt-4 text-lg font-semibold text-slate-900">Recibo {hecho.numero}</p>
           <p className="mt-1 text-sm text-slate-500">Por {gs(hecho.total)}. Ya se descontó de la deuda.</p>
           {hecho.aFavor > 0 ? <p className="mt-2 inline-block rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">{gs(hecho.aFavor)} quedaron a favor del cliente</p> : null}
+          {hecho.interes ? <p className="mt-2 text-xs text-slate-500">Incluye {gs(hecho.interes)} de interés por mora (cargo aparte).</p> : null}
+          {hecho.perdonado ? <p className="mt-2 text-xs text-slate-500">Se perdonaron {gs(hecho.perdonado)} de interés por mora.</p> : null}
           <div className="mt-6 flex justify-center gap-2 max-sm:flex-col max-sm:[&>button]:min-h-11 max-sm:[&>button]:justify-center">
             <button onClick={() => descargarArchivo(`/api/cobros/${hecho.id}/pdf`, `recibo-${hecho.numero}.pdf`).catch(() => {})}
               className="inline-flex items-center gap-1.5 rounded-xl px-4 py-2.5 text-sm font-semibold text-white" style={{ backgroundColor: BRAND }}>
@@ -197,6 +217,30 @@ export function RegistrarCobro({ clienteId, clienteNombre, onClose, onHecho, cxc
               <p className={`text-base font-bold tabular-nums [overflow-wrap:anywhere] sm:text-lg ${vencido > 0 ? "text-rose-600" : "text-slate-900"}`}>{gs(vencido)}</p>
             </div>
           </div>
+
+          {mora ? (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <p className="font-semibold">{perdonar ? "Interés por mora perdonado" : `Interés por mora: ${gs(mora.total)}`}</p>
+              <p className="mt-0.5 text-xs">
+                {mora.cuotas.length} cuota{mora.cuotas.length === 1 ? "" : "s"} vencida{mora.cuotas.length === 1 ? "" : "s"} · {String(Number(mora.tasa)).replace(".", ",")} % mensual
+                {Number(mora.gracia) ? ` · ${mora.gracia} días de gracia` : ""}. {perdonar ? "No se cobra." : "Se cobra primero y queda aparte de las cuotas."}
+              </p>
+              <ul className="mt-1.5 space-y-0.5 text-xs">
+                {mora.cuotas.slice(0, 5).map((q) => <li key={q.cxc_id}>{q.numero} · {q.dias} días · {gs(q.interes)}</li>)}
+                {mora.cuotas.length > 5 ? <li>y {mora.cuotas.length - 5} más</li> : null}
+              </ul>
+              {mora.puede_perdonar ? (
+                <div className="mt-2 space-y-2">
+                  <label className="flex min-h-9 items-center gap-2 text-xs font-medium max-sm:min-h-11">
+                    <input type="checkbox" checked={perdonar} className="h-4 w-4 accent-[var(--brand)]"
+                      onChange={(e) => { const v = e.target.checked; setPerdonar(v); setTotal((t) => Math.max(t + (v ? -1 : 1) * (Number(mora.total) || 0), 0)); }} />
+                    Perdonar el interés
+                  </label>
+                  {perdonar ? <input value={motivoPerdon} onChange={(e) => setMotivoPerdon(e.target.value)} maxLength={300} placeholder="Por qué se perdona (queda registrado)" className={`${INPUT} bg-white`} /> : null}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
 
           <div>
             <span className={ET}>¿Cuánto te paga?</span>

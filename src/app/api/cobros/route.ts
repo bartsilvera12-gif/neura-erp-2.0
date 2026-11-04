@@ -24,11 +24,14 @@ const cuerpo = z.object({
     .max(10),
   aplicaciones: z.array(z.object({ cxc_id: z.string().uuid(), monto: z.coerce.number().positive() })).max(200).nullish(),
   observacion: z.string().trim().max(1000).nullish(),
+  // Receta 135: interés por mora. Con la mora prendida se cobra primero (aparte); `perdonar` pide permiso y motivo.
+  mora: z.object({ perdonar: z.boolean(), motivo: z.string().trim().max(300).nullish() }).nullish(),
 });
 
 export const POST = withTenant(
   async (ctx, _req, input) => {
-    const { data, error } = await ctx.db.rpc("registrar_cobro", { p: input });
+    // Sin interés pendiente (o con la mora apagada) registrar_cobro_con_mora es exactamente registrar_cobro.
+    const { data, error } = await ctx.db.rpc("registrar_cobro_con_mora", { p: input });
     if (error) return fail(error.message.replace(/^.*?ERROR:\s*/, ""), 400);
     return created(data);
   },

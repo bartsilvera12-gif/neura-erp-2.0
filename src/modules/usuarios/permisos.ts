@@ -21,7 +21,7 @@ export const nivelLabel = (n?: string) => NIVELES.find((x) => x.id === n)?.label
 export type Permiso =
   | "ver_costos" | "anular_ventas" | "anular_ventas_cerradas" | "notas_credito" | "descuentos_precio" | "vender_credito"
   | "abrir_cerrar_caja" | "movimientos_caja" | "ver_cajas_otras_sucursales" | "pedidos_mesas" | "cocina" | "pedidos_mostrador"
-  | "registrar_cobros" | "registrar_transferencias" | "aprobar_transferencias" | "anular_cobros"
+  | "registrar_cobros" | "registrar_transferencias" | "aprobar_transferencias" | "anular_cobros" | "perdonar_mora"
   | "registrar_compras" | "anular_compras" | "registrar_gastos" | "anular_gastos" | "pagar_proveedores"
   | "editar_productos" | "ajustes_inventario" | "registrar_perdidas" | "aprobar_perdidas" | "crear_traslados" | "recibir_traslados" | "fabricar"
   | "ver_cierres_caja" | "ver_reportes_financieros" | "exportar"
@@ -65,6 +65,8 @@ export const GRUPOS_PERMISOS: { id: string; label: string; permisos: DefPermiso[
       { id: "registrar_transferencias", label: "Cargar transferencias para conciliar", descripcion: "Carga transferencias de clientes para que se aprueben en Conciliación.", niveles: ["ADMIN", "SUPERVISOR", "CAJERO"] },
       { id: "aprobar_transferencias", label: "Aprobar y rechazar transferencias", descripcion: "Aprueba, rechaza o anula transferencias en Conciliación. Al aprobar se descuenta la deuda del cliente.", sensible: true },
       { id: "anular_cobros", label: "Anular cobros", descripcion: "Anula un recibo de cobro: la deuda del cliente vuelve a estar pendiente.", sensible: true },
+      // Receta 135: interés por mora (Configuración › Planes de cuotas y mora).
+      { id: "perdonar_mora", label: "Perdonar el interés por mora", descripcion: "Al cobrar, deja de cobrar el interés por atraso de las cuotas vencidas (con un motivo, que queda registrado).", sensible: true },
     ],
   },
   {
