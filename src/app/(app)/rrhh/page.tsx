@@ -15,8 +15,6 @@ import { BOTON, INPUT } from "@/modules/rrhh/ui";
 
 type Filtro = "todos" | "activos" | "faltan" | "inactivos";
 
-const iniciales = (nombre: string) => nombre.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("");
-
 /** Columna de la fila, solo en pantallas anchas. */
 function Columna({ titulo, valor, clase = "w-32 2xl:w-40", desde = "xl:block" }: { titulo: string; valor: string; clase?: string; desde?: string }) {
   return (
@@ -28,13 +26,12 @@ function Columna({ titulo, valor, clase = "w-32 2xl:w-40", desde = "xl:block" }:
 }
 
 function Fila({ p, hoy }: { p: PersonaFila; hoy: string }) {
-  const detalle = [`N.º ${p.codigo}`, p.perfil, p.sucursal, p.area].filter(Boolean).join(" · ");
+  const detalle = [p.perfil, p.sucursal, p.area].filter(Boolean).join(" · ");
   const conDatos = p.activo && p.tiene_legajo;
   return (
     <li>
       <Link href={`/rrhh/${p.id}`} className="flex min-h-[72px] items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-slate-50 sm:gap-4 sm:px-5">
-        <span aria-hidden className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${p.activo ? "bg-[var(--brand-50)] text-[var(--brand)]" : "bg-slate-100 text-slate-400"}`}>{iniciales(p.nombre)}</span>
-        <Columna titulo="Código" valor={`N.º ${p.codigo}`} clase="w-16" />
+        <span title="Código" className={`w-12 shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums ${p.activo ? "text-slate-500" : "text-slate-400"}`}>N.º {p.codigo}</span>
         <span className="min-w-0 flex-1">
           <span className={`block truncate text-[15px] font-semibold ${p.activo ? "text-slate-900" : "text-slate-500"}`}>{p.nombre}</span>
           {detalle ? <span className="mt-0.5 block truncate text-[13px] text-slate-500 xl:hidden">{detalle}</span> : null}
