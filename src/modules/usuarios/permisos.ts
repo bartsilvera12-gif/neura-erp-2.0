@@ -25,7 +25,8 @@ export type Permiso =
   | "registrar_compras" | "anular_compras" | "registrar_gastos" | "anular_gastos" | "pagar_proveedores"
   | "editar_productos" | "ajustes_inventario" | "registrar_perdidas" | "aprobar_perdidas" | "crear_traslados" | "recibir_traslados" | "fabricar"
   | "ver_cierres_caja" | "ver_reportes_financieros" | "exportar"
-  | "administrar_usuarios" | "configuracion" | "administrar_rrhh";
+  | "administrar_usuarios" | "configuracion" | "administrar_rrhh"
+  | "sorteos_vender" | "sorteos_revisar" | "sorteos_administrar";
 
 export type DefPermiso = {
   id: Permiso;
@@ -106,6 +107,15 @@ export const GRUPOS_PERMISOS: { id: string; label: string; permisos: DefPermiso[
       { id: "administrar_usuarios", label: "Administrar usuarios y perfiles", descripcion: "Crea usuarios, les cambia el perfil, los desactiva y arma los perfiles con sus permisos.", niveles: ["ADMIN"], sensible: true },
       { id: "configuracion", label: "Configuración del sistema", descripcion: "Cambia la configuración: cajas, sucursales y depósitos, bancos, categorías, etapas, colas y demás ajustes.", niveles: ["ADMIN"], sensible: true },
       { id: "administrar_rrhh", label: "Administrar RR HH y salarios", descripcion: "Ve y edita los datos del personal, salarios, ausencias, vacaciones y liquidaciones.", niveles: ["ADMIN"], sensible: true },
+    ],
+  },
+  {
+    id: "sorteos",
+    label: "Sorteos",
+    permisos: [
+      { id: "sorteos_vender", label: "Vender boletas de sorteos", descripcion: "Ve los sorteos y sus compras y registra ventas manuales con el precio o el combo del sorteo." },
+      { id: "sorteos_revisar", label: "Revisar pagos de sorteos", descripcion: "Confirma o rechaza los pagos por transferencia y recibe las rendiciones de los vendedores.", sensible: true },
+      { id: "sorteos_administrar", label: "Administrar sorteos, premios y vendedores", descripcion: "Crea y cierra sorteos, carga premios y ganadores, anula compras y maneja los vendedores.", niveles: ["ADMIN"], sensible: true },
     ],
   },
 ];

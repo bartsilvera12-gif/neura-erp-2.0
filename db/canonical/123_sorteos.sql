@@ -1,8 +1,7 @@
 -- =============================================================================
--- RUBRO SORTEOS (pedido del dueño, 3-nov-2026). Modelado sobre cómo vende Grupo BIRM (sin traer ningún
--- dato): combos con descuento, venta por WhatsApp con comprobante, venta manual, vendedores con link y
--- punto de venta, cupones impresos para la urna, y además lo que allá no existe: premios, ganadores,
--- sorteo digital verificable y página pública de compra.
+-- RUBRO SORTEOS (pedido del dueño, 3-nov-2026). Cómo vende un negocio de rifas: combos con descuento,
+-- venta por WhatsApp con comprobante, venta manual, vendedores con link y punto de venta, cupones
+-- impresos para la urna, premios, ganadores, sorteo digital verificable y página pública de compra.
 --
 --   · Rubro y funciones: función nueva `sorteos` (empresa_funciones.sorteos). Rubro "Sorteos" = sorteos
 --     prendida y lo gastronómico apagado. Prenderla da las pantallas y permisos a Supervisor, Cajero y

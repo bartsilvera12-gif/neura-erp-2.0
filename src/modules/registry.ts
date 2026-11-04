@@ -20,6 +20,7 @@ import { moduloProyectos } from "@/modules/proyectos/module";
 import { moduloPresupuestos } from "@/modules/presupuestos/module";
 import { moduloConfiguracion } from "@/modules/configuracion/module";
 import { moduloRrhh } from "@/modules/rrhh/module";
+import { moduloSorteos } from "@/modules/sorteos/module";
 import type { PerfilSesion } from "@/modules/usuarios/permisos";
 import { pantallaConFuncionVisible, type FuncionPantalla, type Funciones } from "@/modules/configuracion/funciones";
 
@@ -39,6 +40,7 @@ const TODOS: Modulo[] = [
   moduloAgenda,
   moduloProyectos,
   moduloCaja,
+  moduloSorteos,
   moduloCobranzas,
   moduloConciliacion,
   moduloPagos,
@@ -75,7 +77,7 @@ export function moduloEstaActivo(id: string): boolean {
 // entero si no tiene. Se identifica por su href (es lo que guarda perfil_pantallas).
 
 /** Orden de las familias del menú (y del editor de perfiles). */
-export const ORDEN_FAMILIAS = ["Comercial", "Caja", "Finanzas", "Gastos", "Operaciones", "Reportes", "Omnicanal", "Soporte", "Configuración", "Administración", "General"];
+export const ORDEN_FAMILIAS = ["Comercial", "Caja", "Sorteos", "Finanzas", "Gastos", "Operaciones", "Reportes", "Omnicanal", "Soporte", "Configuración", "Administración", "General"];
 
 export type Pantalla = {
   href: string;
