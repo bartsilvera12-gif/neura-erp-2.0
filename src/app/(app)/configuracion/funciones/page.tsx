@@ -9,7 +9,7 @@
  * Solo el Administrador guarda (la base lo vuelve a exigir). Apagar no borra nada.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ChefHat, ClipboardList, Loader2, QrCode, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
+import { AlertTriangle, Building2, ChefHat, ClipboardList, Loader2, QrCode, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -20,7 +20,7 @@ import { rubroDe, URL_FUNCIONES, type FuncionesEmpresa, type FuncionPantalla, ty
 import { pantallasCatalogo } from "@/modules/registry";
 import { clienteConfig } from "@/cliente.config";
 
-type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean; sorteos: boolean };
+type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean; sorteos: boolean; inmobiliaria: boolean };
 
 const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: string; resumen: string; Icono: typeof Store }[] = [
   {
@@ -44,13 +44,25 @@ const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: 
     resumen: "Venta de boletas por combos, por WhatsApp, web y vendedores; cupones para la urna, premios y sorteo verificable.",
     Icono: Ticket,
   },
+  {
+    key: "inmobiliaria",
+    titulo: "Inmobiliaria",
+    ejemplos: "Venta y alquiler de casas, lotes, locales",
+    resumen: "Propiedades con su ficha (ciudad, m², catastro, lote, documentación), propias o de un dueño, para vender o alquilar.",
+    Icono: Building2,
+  },
 ];
 
 const PRESET: Record<Exclude<Rubro, "personalizado">, Borrador> = {
-  comercio: { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false },
-  gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false, sorteos: false },
-  sorteos: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: true },
+  comercio: { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false },
+  gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false, sorteos: false, inmobiliaria: false },
+  sorteos: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: true, inmobiliaria: false },
+  inmobiliaria: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: true },
 };
+
+const deEmpresa = (d: FuncionesEmpresa): Borrador => ({
+  mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false, sorteos: !!d.sorteos, inmobiliaria: !!d.inmobiliaria,
+});
 
 const plural = (n: number, s: string, p: string) => `${n} ${n === 1 ? s : p}`;
 
@@ -85,7 +97,7 @@ export default function RubroFuncionesPage() {
     try {
       const d = await apiFetch<FuncionesEmpresa>(URL_FUNCIONES);
       setCfg(d);
-      setB({ mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false, sorteos: !!d.sorteos });
+      setB(deEmpresa(d));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -95,7 +107,7 @@ export default function RubroFuncionesPage() {
   useEffect(() => { void cargar(); }, [cargar]);
 
   const rubro = rubroDe(b);
-  const cambios = !!cfg && (cfg.mesas !== b.mesas || cfg.cocina !== b.cocina || cfg.recetas !== b.recetas || (cfg.pedidos !== false) !== b.pedidos || !!cfg.sorteos !== b.sorteos);
+  const cambios = !!cfg && (Object.keys(b) as (keyof Borrador)[]).some((k) => deEmpresa(cfg)[k] !== b[k]);
   const soloLectura = !cfg?.puede_editar;
   const abiertas = (cfg?.cuentas_abiertas ?? 0) + (cfg?.pedidos_sin_cerrar ?? 0);
   const bloqueaMesas = !!cfg && cfg.mesas && !b.mesas && abiertas > 0;
@@ -124,7 +136,7 @@ export default function RubroFuncionesPage() {
         body: JSON.stringify({ ...b, ...(confirmar ? { confirmar_recetas: true } : {}) }),
       });
       setCfg(d);
-      setB({ mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false, sorteos: !!d.sorteos });
+      setB(deEmpresa(d));
       setConfirmarRecetas(null);
       setOkGuardar("Funciones guardadas. El menú ya se actualizó.");
       recargarUsuario();
@@ -193,7 +205,7 @@ export default function RubroFuncionesPage() {
             ))}
           </span>
         </div>
-        <div role="radiogroup" aria-label="Rubro" className="grid grid-cols-1 gap-2.5 md:grid-cols-3">
+        <div role="radiogroup" aria-label="Rubro" className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
           {RUBROS.map((r) => {
             const sel = rubro === r.key;
             return (
@@ -275,6 +287,13 @@ export default function RubroFuncionesPage() {
             etiqueta={<span className="inline-flex items-center gap-1.5"><Ticket className="h-4 w-4 text-slate-400" aria-hidden /> Sorteos</span>}
             descripcion="Sorteos con combos, venta manual, por la web y por vendedores con link y PIN, cupones para la urna, premios y sorteo digital verificable. Al prenderla, Supervisor, Cajero y Vendedor ya pueden vender."
           />
+          <Interruptor
+            activo={b.inmobiliaria}
+            disabled={soloLectura || guardando}
+            onChange={(v) => tocar({ inmobiliaria: v })}
+            etiqueta={<span className="inline-flex items-center gap-1.5"><Building2 className="h-4 w-4 text-slate-400" aria-hidden /> Inmobiliaria</span>}
+            descripcion="Propiedades para vender o alquilar con su ficha: ciudad y barrio, m² de terreno y construidos, cuenta catastral, finca, manzana y lote, documentación, y si son propias o de un dueño con su comisión. Al prenderla, Supervisor, Cajero y Vendedor ya ven las propiedades."
+          />
         </div>
       </Tarjeta>
 
@@ -285,7 +304,7 @@ export default function RubroFuncionesPage() {
         <div className="max-sm:fixed max-sm:inset-x-0 max-sm:bottom-0 max-sm:z-30 max-sm:border-t max-sm:border-slate-200 max-sm:bg-white/95 max-sm:px-4 max-sm:pt-3 max-sm:pb-[max(0.75rem,env(safe-area-inset-bottom))] max-sm:backdrop-blur sm:flex sm:justify-end">
           <div className="flex gap-2 max-sm:[&>*]:min-h-11 max-sm:[&>*]:flex-1">
             {cambios ? (
-              <button type="button" disabled={guardando} onClick={() => { setB({ mesas: cfg.mesas, cocina: cfg.cocina, recetas: cfg.recetas, pedidos: cfg.pedidos !== false, sorteos: !!cfg.sorteos }); setErrGuardar(null); }} className={BOTON_SECUNDARIO}>
+              <button type="button" disabled={guardando} onClick={() => { setB(deEmpresa(cfg)); setErrGuardar(null); }} className={BOTON_SECUNDARIO}>
                 Descartar
               </button>
             ) : null}

@@ -281,7 +281,7 @@ function Manual() {
   const [q, setQ] = useState("");
 
   const rubro = me?.funciones ? rubroDe(me.funciones) : "comercio";
-  const rubroImagen: RubroImagen = rubro === "personalizado" || rubro === "sorteos" ? (me?.funciones?.mesas ? "gastronomia" : "comercio") : rubro;
+  const rubroImagen: RubroImagen = rubro === "personalizado" || rubro === "sorteos" || rubro === "inmobiliaria" ? (me?.funciones?.mesas ? "gastronomia" : "comercio") : rubro;
   const guias = useMemo(() => {
     if (!me) return [];
     const catalogo = pantallasCatalogo();

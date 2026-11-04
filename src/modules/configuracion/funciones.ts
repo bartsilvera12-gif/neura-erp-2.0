@@ -9,10 +9,10 @@
  *   · APIs: withTenant corta con 403 las rutas de `funcionDeRutaApi`.
  */
 
-export type FuncionId = "mesas" | "cocina" | "recetas" | "pedidos" | "sorteos";
+export type FuncionId = "mesas" | "cocina" | "recetas" | "pedidos" | "sorteos" | "inmobiliaria";
 /** `funcion` de una sub-pantalla: una función, o "rubro" (la pantalla Rubro y funciones: se oculta si Neura la ocultó). */
 export type FuncionPantalla = FuncionId | "rubro";
-export type Rubro = "comercio" | "gastronomia" | "sorteos" | "personalizado";
+export type Rubro = "comercio" | "gastronomia" | "sorteos" | "inmobiliaria" | "personalizado";
 
 export type Funciones = {
   mesas: boolean;
@@ -22,6 +22,8 @@ export type Funciones = {
   pedidos: boolean;
   /** Receta 123: Sorteos (rifas): venta por combos, vendedores, premios y sorteo verificable. */
   sorteos: boolean;
+  /** Receta 130: Inmobiliaria: propiedades (venta y alquiler), dueños y documentación. */
+  inmobiliaria: boolean;
   /** Neura ocultó la sección Rubro y funciones (solo por SQL). */
   ocultas: boolean;
 };
@@ -35,13 +37,15 @@ export type FuncionesEmpresa = Funciones & {
   productos_recetas: number | null;
 };
 
-export const SIN_FUNCIONES: Funciones = { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, ocultas: false };
+export const SIN_FUNCIONES: Funciones = { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, ocultas: false };
 
 export const URL_FUNCIONES = "/api/configuracion/funciones";
 export const MSJ_FUNCION_INACTIVA = "Esta función no está activa en tu empresa";
 
-export function rubroDe(f: Pick<Funciones, "mesas" | "cocina" | "recetas"> & { sorteos?: boolean }): Rubro {
-  if (f.sorteos && !f.mesas && !f.cocina && !f.recetas) return "sorteos";
+export function rubroDe(f: Pick<Funciones, "mesas" | "cocina" | "recetas"> & { sorteos?: boolean; inmobiliaria?: boolean }): Rubro {
+  const sinGastro = !f.mesas && !f.cocina && !f.recetas;
+  if (f.inmobiliaria && !f.sorteos && sinGastro) return "inmobiliaria";
+  if (f.sorteos && !f.inmobiliaria && sinGastro) return "sorteos";
   if (f.mesas && f.cocina && f.recetas) return "gastronomia";
   return "personalizado";
 }
@@ -66,6 +70,7 @@ export const NOMBRE_FUNCION: Record<FuncionId, string> = {
   recetas: "Recetas e ingredientes",
   pedidos: "Pedidos de mostrador",
   sorteos: "Sorteos",
+  inmobiliaria: "Inmobiliaria",
 };
 
 /** Función que exige una ruta de /api (null = ninguna). La pública /api/publico/mesas se chequea aparte. */
@@ -77,5 +82,6 @@ export function funcionDeRutaApi(pathname: string): FuncionId | null {
   if (en("/api/inventario/produccion")) return "recetas";
   if (en("/api/pedidos-mostrador")) return "pedidos";
   if (en("/api/sorteos")) return "sorteos";
+  if (en("/api/inmobiliaria")) return "inmobiliaria";
   return null;
 }
