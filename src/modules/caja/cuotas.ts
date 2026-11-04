@@ -11,7 +11,12 @@ export type CadaCuota = "mes" | "quincena" | "semana";
 export const OPCIONES_CADA: [CadaCuota, string][] = [["mes", "Mensual"], ["quincena", "Quincenal"], ["semana", "Semanal"]];
 const ADJ: Record<CadaCuota, [string, string]> = { mes: ["mensual", "mensuales"], quincena: ["quincenal", "quincenales"], semana: ["semanal", "semanales"] };
 
-export const MAX_CUOTAS = 60;
+/** Tope absoluto (receta 131). El de cada empresa (120 por defecto) viene de /api/cuotas/planes: ver usePlanesCuota. */
+export const MAX_CUOTAS = 360;
+
+/** Plan de cuotas de la empresa (receta 131). */
+export type PlanCuota = { id: string; nombre: string; cuotas: number; cada: CadaCuota; primera_dias: number; entrega_pct: number; activo: boolean };
+export type PlanesCuota = { max_cuotas: number; planes: PlanCuota[] };
 
 /** Suma meses como Postgres (31/01 + 1 mes = 28/02). */
 function sumarMeses(d: Date, meses: number): Date {

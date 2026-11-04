@@ -15,6 +15,7 @@ const TARJETAS: TarjetaPanel[] = [
   { href: "/configuracion/mesas", titulo: "Mesas y QR", imagen: "/finanzas/nueva-venta-escaner-celular.webp", color: "196 45% 24%", posicion: "50% 45%" },
   { href: "/configuracion/funciones", titulo: "Rubro y funciones", imagen: "/soporte/configuracion-engranajes.webp", color: "262 35% 26%", posicion: "50% 50%" },
   { href: "/configuracion/comisiones", titulo: "Comisiones", imagen: "/configuracion/facturacion-calculadora.webp", color: "168 38% 22%", posicion: "40% 55%" },
+  { href: "/configuracion/cuotas", titulo: "Planes de cuotas", imagen: "/configuracion/facturacion-calculadora.webp", color: "200 40% 24%", posicion: "60% 45%" },
   { href: "/configuracion/usuarios", titulo: "Usuarios", imagen: "/configuracion/usuarios-equipo.webp", color: "28 62% 24%", posicion: "45% 45%" },
 ];
 

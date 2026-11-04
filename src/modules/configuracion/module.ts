@@ -26,6 +26,8 @@ export const moduloConfiguracion: Modulo = {
     // Receta 75: rubro (Comercio / Gastronomía) y funciones. Neura puede ocultarla (solo por SQL).
     { label: "Rubro y funciones", href: "/configuracion/funciones", permiso: "configuracion", funcion: "rubro" },
     { label: "Comisiones", href: "/configuracion/comisiones", permiso: "configuracion", palabras: ["escalas", "politica de comisiones"] },
+    // Receta 131: tope de cuotas y planes de cuotas (crédito en cuotas con entrega).
+    { label: "Planes de cuotas", href: "/configuracion/cuotas", permiso: "configuracion", palabras: ["financiacion", "credito", "entrega inicial", "maximo de cuotas"] },
     { label: "Usuarios", href: "/configuracion/usuarios", permiso: "administrar_usuarios", palabras: ["perfiles", "permisos", "empleados", "cajeros"] },
   ],
   atajos: [{ label: "Facturación electrónica (SIFEN)", href: "/configuracion/facturacion-electronica" }],

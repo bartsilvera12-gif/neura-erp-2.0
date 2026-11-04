@@ -1,7 +1,8 @@
 "use client";
 
 import { Select } from "@/components/Select";
-import { MAX_CUOTAS, OPCIONES_CADA, fechaCorta, planCuotas, type CadaCuota } from "@/modules/caja/cuotas";
+import { OPCIONES_CADA, fechaCorta, planCuotas, type CadaCuota } from "@/modules/caja/cuotas";
+import { usePlanesCuota } from "@/modules/caja/usePlanesCuota";
 
 const ADJ_CADA: Record<CadaCuota, string> = { mes: "cada mes", quincena: "cada 15 días", semana: "cada 7 días" };
 
@@ -21,7 +22,9 @@ export function CamposCredito({ total, cuotas, setCuotas, plazoDias, setPlazoDia
 }) {
   const n = parseInt(cuotas) || 0;
   const dias = parseInt(plazoDias) || 0;
-  const nOk = n >= 1 && n <= MAX_CUOTAS;
+  // Receta 131: el tope es el de la empresa (120 por defecto, Configuración › Planes de cuotas).
+  const max = usePlanesCuota().max_cuotas;
+  const nOk = n >= 1 && n <= max;
   const plan = nOk && dias >= 1 ? planCuotas(total, n, dias, cada) : null;
   const campo = (mal: boolean) =>
     `h-9 w-full rounded-lg border px-2.5 text-sm tabular-nums outline-none transition focus:border-[var(--brand)] focus:ring-2 focus:ring-[var(--brand-100)] [@media(pointer:coarse)]:h-11 ${mal ? "border-rose-300 bg-rose-50" : "border-slate-200 bg-white"}`;
@@ -33,8 +36,8 @@ export function CamposCredito({ total, cuotas, setCuotas, plazoDias, setPlazoDia
       <div className={`grid gap-2 ${n > 1 ? "grid-cols-[4rem_1fr_1.25fr]" : "grid-cols-[4rem_1fr]"}`}>
         <label className="min-w-0">
           <span className={etq}>Cuotas</span>
-          <input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" min={1} max={MAX_CUOTAS} value={cuotas}
-            onChange={(e) => setCuotas(e.target.value.replace(/\D/g, "").slice(0, 2))} className={campo(!nOk)} />
+          <input type="number" inputMode="numeric" pattern="[0-9]*" enterKeyHint="next" min={1} max={max} value={cuotas}
+            onChange={(e) => setCuotas(e.target.value.replace(/\D/g, "").slice(0, 3))} className={campo(!nOk)} />
         </label>
         <label className="min-w-0">
           <span className={etq}>{n > 1 ? "1ª vence en" : "Vence en"}</span>
@@ -53,7 +56,7 @@ export function CamposCredito({ total, cuotas, setCuotas, plazoDias, setPlazoDia
         ) : null}
       </div>
       <p className="text-[11px] leading-snug text-slate-500">
-        {!nOk ? `Las cuotas van de 1 a ${MAX_CUOTAS}.`
+        {!nOk ? `Las cuotas van de 1 a ${max}.`
           : !plan ? "Cargá en cuántos días vence."
           : propuesta ? (
             plan.length === 1 ? <>Un solo pago, a <strong className="font-semibold text-slate-700">{dias} {dias === 1 ? "día" : "días"}</strong> de la venta.</> : (

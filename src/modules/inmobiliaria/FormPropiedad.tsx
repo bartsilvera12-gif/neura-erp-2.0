@@ -7,13 +7,14 @@
  * (propia o de un cliente con su comisión), foto y notas. Con la ficha abierta se cambia el estado.
  */
 import { useEffect, useState, type ReactNode } from "react";
-import { ImagePlus, Loader2, X } from "lucide-react";
+import { HandCoins, ImagePlus, Loader2, X } from "lucide-react";
 import { Drawer } from "@/components/Drawer";
 import { Select } from "@/components/Select";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { CamposCiudadBarrio } from "@/modules/geo/CamposCiudadBarrio";
 import { BuscadorCliente } from "@/modules/clientes/gestion/BuscadorCliente";
 import { subirImagenProducto } from "@/modules/caja/upload-imagen";
+import { VenderPropiedad } from "@/modules/inmobiliaria/VenderPropiedad";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT } from "@/modules/inventario/ui";
 import {
   DOCUMENTACION, ESTADOS, GESTIONES, nombreDe,
@@ -111,6 +112,8 @@ export function FormPropiedad({ id, tipos, puedeEditar, onCerrar, onGuardada }: 
   }, [id]);
 
   const set = <K extends keyof Form>(k: K, v: Form[K]) => { setF((x) => ({ ...x, [k]: v })); setError(null); };
+  const [vendiendo, setVendiendo] = useState(false);
+  const sePuedeVender = !!ficha && ficha.gestion !== "alquiler" && (ficha.estado === "disponible" || ficha.estado === "reservada");
   const venta = f.gestion !== "alquiler";
   const alquiler = f.gestion !== "venta";
   const soloVer = !puedeEditar;
@@ -175,8 +178,15 @@ export function FormPropiedad({ id, tipos, puedeEditar, onCerrar, onGuardada }: 
       ) : (
         <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
           {ficha ? (
-            <div className="sm:w-56">
-              <Select value={ficha.estado} onChange={(v) => void cambiarEstado(v as EstadoPropiedad)} options={ESTADOS} etiqueta="Estado de la propiedad" disabled={guardando} block />
+            <div className="flex gap-2">
+              <div className="min-w-0 flex-1 sm:w-48 sm:flex-none">
+                <Select value={ficha.estado} onChange={(v) => void cambiarEstado(v as EstadoPropiedad)} options={ESTADOS} etiqueta="Estado de la propiedad" disabled={guardando} block />
+              </div>
+              {sePuedeVender ? (
+                <button type="button" onClick={() => setVendiendo(true)} disabled={guardando} className={`${BOTON_SECUNDARIO} max-sm:min-h-11`}>
+                  <HandCoins className="h-4 w-4" /> Vender
+                </button>
+              ) : null}
             </div>
           ) : <span />}
           <div className="flex gap-2 max-sm:[&>*]:min-h-11 max-sm:[&>*]:flex-1">
@@ -287,6 +297,10 @@ export function FormPropiedad({ id, tipos, puedeEditar, onCerrar, onGuardada }: 
           </Bloque>
         </fieldset>
       )}
+      {vendiendo && ficha ? (
+        <VenderPropiedad propiedad={ficha} onCerrar={() => setVendiendo(false)}
+          onVendida={() => { void apiFetch<Propiedad>(`/api/inmobiliaria/propiedades/${ficha.id}`).then((p) => { setFicha(p); onGuardada(p, false); }); }} />
+      ) : null}
     </Drawer>
   );
 }
