@@ -20,7 +20,7 @@ export type Guia = {
   bloques: Bloque[];
 };
 
-export const GRUPOS = ["Primeros pasos", "Caja y ventas", "Pedidos y mesas", "Cocina y recetas", "Inventario", "Compras y gastos", "Clientes y ventas", "Cobros", "Reportes", "Atención al cliente", "RR HH", "Configuración"];
+export const GRUPOS = ["Primeros pasos", "Caja y ventas", "Pedidos y mesas", "Cocina y recetas", "Inventario", "Compras y gastos", "Clientes y ventas", "Cobros", "Sorteos", "Reportes", "Atención al cliente", "RR HH", "Configuración"];
 
 /** Cómo se llega a la pantalla de cada guía: la sección del menú y la tarjeta de su panel. */
 export const LLEGAR: Record<string, [string, string?]> = {
@@ -43,14 +43,17 @@ export const LLEGAR: Record<string, [string, string?]> = {
   rubro: ["Configuración", "Rubro y funciones"], "config-comisiones": ["Configuración", "Comisiones"],
   "rrhh-datos": ["RR HH", "Personal"], "rrhh-salario": ["RR HH", "Personal"], "rrhh-ausencia": ["RR HH", "Personal"], "rrhh-vacaciones": ["RR HH", "Personal"],
   "rrhh-historial": ["RR HH", "Personal"], "rrhh-liquidacion": ["RR HH", "Liquidaciones"],
+  "sorteo-crear": ["Sorteos", "Sorteos"], "sorteo-vender": ["Sorteos", "Vender"], "sorteo-revisar": ["Sorteos", "Por revisar"],
+  "sorteo-vendedor": ["Sorteos", "Vendedores"], "sorteo-whatsapp": ["Sorteos", "WhatsApp"], "sorteo-sortear": ["Sorteos", "Sorteos"],
 };
 /** La captura del panel que abre cada sección del menú. */
 export const PANELES: Record<string, string> = {
   Caja: "panel-caja", Inventario: "panel-inventario", "Gastos empresariales": "panel-gastos", Comercial: "panel-comercial",
   Finanzas: "panel-finanzas", Omnicanal: "panel-omnicanal", Configuración: "panel-config", "RR HH": "rrhh-panel",
+  Sorteos: "panel-sorteos",
 };
 /** La captura donde se ve la sección en el menú, si no es la de Inicio. */
-export const MENUS: Record<string, string> = { "RR HH": "rrhh-panel" };
+export const MENUS: Record<string, string> = { "RR HH": "rrhh-panel", Sorteos: "sorteos-menu" };
 
 export const GUIAS: Guia[] = [
   // ── Primeros pasos ───────────────────────────────────────────────────────────
@@ -828,6 +831,99 @@ export const GUIAS: Guia[] = [
         { t: "Con Agregar escala sumás otro tramo.", marca: "Agregar escala" },
         { t: "Tocá Guardar política.", d: "Sin esto, nadie ve comisiones.", marca: "Guardar política" },
       ] },
+    ],
+  },
+  // ── Sorteos (rubro Sorteos, recetas 123 a 125) ──────────────────────────────
+  {
+    id: "sorteo-crear", grupo: "Sorteos", ruta: "/sorteos/nuevo", titulo: "Crear un sorteo", resumen: "Precio, números, combos y la cuenta donde te pagan.",
+    bloques: [
+      { img: "sorteos-lista", alt: "Lista de sorteos", pasos: [{ t: "Tocá Nuevo sorteo.", marca: "Nuevo sorteo" }] },
+      { img: "sorteo-nuevo-datos", alt: "Datos del sorteo nuevo", pasos: [
+        { t: "Escribí el nombre del sorteo.", d: "Es lo que ve el comprador en la página y en su ticket.", marca: "Nombre" },
+        { t: "Poné el precio de cada boleta.", marca: "Precio por boleta (Gs.)" },
+        { t: "Elegí hasta qué número va.", d: "Por ejemplo, del 1 al 10.000.", marca: "Hasta el número" },
+      ] },
+      { img: "sorteo-nuevo-cobro", alt: "Combos y cuentas para cobrar", pasos: [
+        { t: "Si querés, agregá combos con descuento.", d: "Por ejemplo, 3 boletas a Gs. 25.000. Se cobran solos en todos los canales.", marca: "Agregar combo" },
+        { t: "Cargá la cuenta donde te transfieren.", d: "Sin una cuenta no se puede activar.", marca: "Banco o billetera" },
+        { t: "Tocá Crear sorteo.", d: "Queda en borrador: todavía no se vende.", marca: "Crear sorteo" },
+      ] },
+      { img: "sorteo-activar", alt: "Sorteo en borrador", pasos: [
+        { t: "Revisá todo y tocá Activar.", d: "Recién ahí se generan los números y se empieza a vender.", marca: "Activar" },
+      ] },
+      { ojo: "Una vez activado, el rango de números ya no se puede cambiar." },
+    ],
+  },
+  {
+    id: "sorteo-vender", grupo: "Sorteos", ruta: "/sorteos/vender", titulo: "Vender boletas en el local", resumen: "La venta queda confirmada al guardarla.",
+    bloques: [
+      { img: "sorteo-vender", alt: "Venta de boletas", pasos: [
+        { t: "Elegí cuántas boletas lleva.", d: "Los combos ya tienen el descuento.", marca: "Gs. 25.000" },
+        { t: "Escribí el nombre y la cédula o el teléfono del comprador.", d: "Queda guardado en Clientes.", marca: "Nombre y apellido" },
+        { t: "Elegí cómo pagó.", marca: "Efectivo" },
+        { t: "Tocá Registrar venta.", d: "Los números se asignan solos y se ven en la compra.", marca: "Registrar venta" },
+      ] },
+    ],
+  },
+  {
+    id: "sorteo-revisar", grupo: "Sorteos", ruta: "/sorteos/revision", titulo: "Confirmar un pago", resumen: "Las transferencias que esperan que alguien las mire.",
+    bloques: [
+      { img: "sorteo-revision", alt: "Pagos por revisar", pasos: [{ t: "Tocá la compra que querés revisar.", d: "La más vieja aparece primero.", marca: "Carlos Duarte" }] },
+      { img: "sorteo-revision-detalle", alt: "Compra con su comprobante", pasos: [
+        { t: "Mirá el comprobante y lo que leyó el sistema.", d: "Si algo no coincide, te dice qué.", marca: "Lectura automática del comprobante" },
+      ] },
+      { img: "sorteo-revision-acciones", alt: "Confirmar o rechazar el pago", pasos: [
+        { t: "Si la plata llegó, tocá Confirmar pago.", d: "Si compró por WhatsApp, le llega el ticket a su chat.", marca: "Confirmar pago" },
+        { t: "Si no llegó, tocá Rechazar pago y escribí el motivo.", d: "Los números quedan libres para vender.", marca: "Rechazar" },
+      ] },
+    ],
+  },
+  {
+    id: "sorteo-vendedor", grupo: "Sorteos", ruta: "/sorteos/vendedores", titulo: "Sumar un vendedor", resumen: "Vende desde su celular con un link y su PIN.",
+    bloques: [
+      { img: "sorteo-vendedores", alt: "Lista de vendedores", pasos: [{ t: "Tocá Nuevo vendedor.", marca: "Nuevo vendedor" }] },
+      { img: "sorteo-vendedor-nuevo", alt: "Alta de un vendedor", pasos: [
+        { t: "Escribí su nombre y su teléfono.", marca: "Nombre" },
+        { t: "Poné cuánto cobra de comisión.", marca: "Comisión (%)" },
+        { t: "Si querés, poné un tope de boletas por sorteo.", marca: "Cupo por sorteo (opcional)" },
+        { t: "Tocá Guardar.", d: "Te muestra su PIN una sola vez: anotalo y pasáselo.", marca: "Guardar" },
+      ] },
+      { img: "sorteo-vendedores", alt: "Lista de vendedores", pasos: [
+        { t: "Tocá Link nuevo y pasale ese link por WhatsApp.", d: "Con el link y su PIN vende desde el celular. Si lo pierde, generás otro y el anterior deja de andar.", marca: "Link nuevo" },
+        { t: "Cuando te entrega el efectivo, tocá Rendición.", d: "Se descuenta su comisión y queda registrado.", marca: "Rendición" },
+      ] },
+      { consejo: "El link de referido de cada vendedor sirve para compartir en redes: quien compra desde ahí queda a su nombre." },
+    ],
+  },
+  {
+    id: "sorteo-whatsapp", grupo: "Sorteos", ruta: "/sorteos/whatsapp", titulo: "Vender por WhatsApp", resumen: "Un bot toma el pedido, reserva los números y recibe el comprobante.",
+    bloques: [
+      { img: "sorteo-whatsapp", alt: "Venta por WhatsApp", pasos: [
+        { t: "Prendé el bot.", marca: "Atender los chats de WhatsApp con el bot" },
+        { t: "Elegí en qué WhatsApp atiende y tocá Guardar.", marca: "Guardar" },
+        { t: "Probalo vos: tocá Hola como si fueras un cliente.", d: "El chat de prueba también aparece en Omnicanal.", marca: "Hola" },
+      ] },
+      { texto: "El cliente puede escribir en cualquier momento MENU para empezar de nuevo, MIS NUMEROS para ver sus compras, CANCELAR o ASESOR para hablar con una persona." },
+      { consejo: "Si alguien de tu equipo contesta en un chat, el bot se calla en ese chat por 12 horas." },
+    ],
+  },
+  {
+    id: "sorteo-sortear", grupo: "Sorteos", ruta: "/sorteos", titulo: "Hacer el sorteo", resumen: "Premios, cupones para la urna y el ganador.",
+    bloques: [
+      { img: "sorteos-lista", alt: "Lista de sorteos", pasos: [{ t: "Tocá el sorteo.", marca: "Sorteo web" }] },
+      { img: "sorteo-ficha", alt: "Ficha del sorteo", pasos: [
+        { t: "En Premios y ganadores, cargá los premios.", marca: "Premios y ganadores" },
+        { t: "Cuando termina la venta, tocá Cerrar la venta.", d: "Desde ahí nadie más puede comprar.", marca: "Cerrar la venta" },
+        { t: "Si sorteás con urna, abrí Cupones para la urna.", marca: "Cupones para la urna" },
+      ] },
+      { img: "sorteo-cupones", alt: "Cupones para la urna", pasos: [
+        { t: "Elegí el papel.", marca: "Ticketera 80 mm" },
+        { t: "Tocá Imprimir cupones.", d: "Sale uno por cada número vendido, con el nombre del comprador.", marca: "Imprimir cupones" },
+      ] },
+      { img: "sorteo-premios", alt: "Premios con sus ganadores", pasos: [
+        { t: "En cada premio, tocá Sortear o cargá el número que salió de la urna.", d: "El ganador queda a la vista con su nombre y su teléfono.", marca: "0084" },
+      ] },
+      { consejo: "El sorteo digital se puede verificar: cualquiera lo recalcula desde la página pública del sorteo." },
     ],
   },
   // ── RR HH ────────────────────────────────────────────────────────────────────

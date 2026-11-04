@@ -9,7 +9,7 @@
  *   2. copia el código a una carpeta nueva (el 2.0 queda como remoto "base")
  *   3. setup.mjs        → cliente.config.ts (todos los módulos), logo y .env.local
  *   4. provision.mjs    → el schema desde db/canonical
- *   5. seed-admin.mjs   → empresa, usuario ADMIN y rubro (Comercio / Gastronomía)
+ *   5. seed-admin.mjs   → empresa, usuario ADMIN y rubro (Comercio / Gastronomía / Sorteos / Inmobiliaria)
  *   6. verify-rls.mjs y pruebas de plata y stock en el schema nuevo
  *   7. erp-habilitar    → schema y dominio en Supabase (en el servidor, con respaldo y registro);
  *                         solo después de que pasaron las pruebas
@@ -49,7 +49,7 @@ function validar(d) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.adminEmail ?? "")) e.push("El correo del administrador no es válido.");
   if (d.adminPassword && d.adminPassword.length < 8) e.push("La contraseña tiene que tener al menos 8 caracteres (o dejala vacía y se genera).");
   if (!/^#[0-9a-f]{6}$/i.test(d.color ?? "")) e.push("Color inválido: #RRGGBB.");
-  if (!["comercio", "gastronomia"].includes(d.rubro)) e.push("Elegí el rubro: Comercio o Gastronomía.");
+  if (!["comercio", "gastronomia", "sorteos", "inmobiliaria"].includes(d.rubro)) e.push("Elegí el rubro: Comercio, Gastronomía, Sorteos o Inmobiliaria.");
   if (!d.destino?.trim()) e.push("Falta la carpeta del clon.");
   if (!d.ssh?.trim()) e.push("Falta el servidor SSH.");
   if (d.logo && !/^data:image\/(webp|png|svg\+xml|jpeg);base64,/.test(d.logo.data ?? "")) e.push("El logo tiene que ser .webp, .png, .svg o .jpg.");

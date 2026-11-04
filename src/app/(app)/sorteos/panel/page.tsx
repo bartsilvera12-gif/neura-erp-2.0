@@ -10,6 +10,7 @@ const TARJETAS: TarjetaPanel[] = [
   { href: "/sorteos/ventas", titulo: "Compras", imagen: "/finanzas/caja-teclas-registradora.webp", color: "215 45% 24%", posicion: "50% 50%" },
   { href: "/sorteos/revision", titulo: "Por revisar", imagen: "/finanzas/conciliacion-planilla-laptop.webp", color: "35 60% 24%", posicion: "50% 50%" },
   { href: "/sorteos/vendedores", titulo: "Vendedores", imagen: "/configuracion/usuarios-equipo.webp", color: "265 35% 26%", posicion: "50% 40%" },
+  { href: "/sorteos/whatsapp", titulo: "WhatsApp", imagen: "/omnicanal/conversaciones-chat-dueno.webp", color: "150 45% 20%", posicion: "50% 45%" },
 ];
 
 export default function PanelSorteosPage() {
@@ -17,7 +18,7 @@ export default function PanelSorteosPage() {
     <PanelModulo
       kicker="Sorteos"
       titulo="Sorteos"
-      subtitulo="Sorteos y combos, ventas, pagos por revisar, vendedores, cupones para la urna y ganadores."
+      subtitulo="Sorteos y combos, ventas, pagos por revisar, vendedores, venta por WhatsApp, cupones para la urna y ganadores."
       tarjetas={TARJETAS}
       vacio="No tenés pantallas de Sorteos habilitadas."
     />

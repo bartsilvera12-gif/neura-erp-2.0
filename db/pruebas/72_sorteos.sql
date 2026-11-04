@@ -16,6 +16,8 @@ declare
   v_n integer;
   v_premio uuid;
   v_premio2 uuid;
+  v_libres jsonb;
+  v_a integer; v_b integer; v_c integer;
 begin
   -- Rubro: el Administrador prende Sorteos y la pantalla lo devuelve.
   v := guardar_funciones_empresa('{"sorteos": true}');
@@ -52,12 +54,15 @@ begin
   perform pg_temp.igual('Sorteos: el mismo comprador (misma cédula con puntos o sin) es un solo cliente',
     (select count(*) from clientes where empresa_id = pg_temp.fx('empresa') and origen = 'SORTEO' and nombre = 'PRUEBA Juan Pérez'), 1);
 
-  o3 := sorteo_vender(jsonb_build_object('sorteo_id', v_s, 'numeros', '[7, 8]'::jsonb, 'comprador', '{"nombre": "PRUEBA Ana", "telefono": "0982000111"}'::jsonb,
+  -- Tres números que siguen libres (las ventas de arriba toman números al azar).
+  v_libres := sorteo_publico_libres(v_slug, 1, 3);
+  v_a := (v_libres->>0)::integer; v_b := (v_libres->>1)::integer; v_c := (v_libres->>2)::integer;
+  o3 := sorteo_vender(jsonb_build_object('sorteo_id', v_s, 'numeros', jsonb_build_array(v_a, v_b), 'comprador', '{"nombre": "PRUEBA Ana", "telefono": "0982000111"}'::jsonb,
     'idempotency_key', 'prueba-idem-1'));
-  perform pg_temp.ok('Sorteos: se venden los números elegidos', o3->'numeros' = '["007", "008"]'::jsonb, o3::text);
+  perform pg_temp.ok('Sorteos: se venden los números elegidos', o3->'numeros' = jsonb_build_array(v_libres->>0, v_libres->>1), o3::text);
   perform pg_temp.rechaza('Sorteos: un número ya vendido no se vende otra vez',
-    format($q$select sorteo_vender('{"sorteo_id": "%s", "numeros": [8, 9], "comprador": {"nombre": "PRUEBA Otro", "telefono": "0983000000"}}')$q$, v_s), 'ya no está disponible');
-  v := sorteo_vender(jsonb_build_object('sorteo_id', v_s, 'numeros', '[7, 8]'::jsonb, 'comprador', '{"nombre": "PRUEBA Ana", "telefono": "0982000111"}'::jsonb,
+    format($q$select sorteo_vender('{"sorteo_id": "%s", "numeros": [%s, %s], "comprador": {"nombre": "PRUEBA Otro", "telefono": "0983000000"}}')$q$, v_s, v_b, v_c), 'ya no está disponible');
+  v := sorteo_vender(jsonb_build_object('sorteo_id', v_s, 'numeros', jsonb_build_array(v_a, v_b), 'comprador', '{"nombre": "PRUEBA Ana", "telefono": "0982000111"}'::jsonb,
     'idempotency_key', 'prueba-idem-1'));
   perform pg_temp.ok('Sorteos: el mismo pedido repetido devuelve la misma compra', v->>'id' = o3->>'id' and (v->>'repetida')::boolean);
   perform pg_temp.rechaza('Sorteos: más que el máximo por compra no', format($q$select sorteo_vender('{"sorteo_id": "%s", "cantidad": 51, "comprador": {"nombre": "PRUEBA X", "telefono": "0983000001"}}')$q$, v_s), 'máximo por compra');

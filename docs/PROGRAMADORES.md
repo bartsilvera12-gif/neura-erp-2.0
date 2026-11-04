@@ -89,7 +89,8 @@ lo esperado.
 - nombre del negocio y razón social;
 - dominio;
 - nombre y correo del administrador;
-- rubro: Comercio (ferretería, almacén, tienda) o Gastronomía (restaurante, bar);
+- rubro: Comercio (ferretería, almacén, tienda), Gastronomía (restaurante, bar), Sorteos (rifas) o
+  Inmobiliaria (venta y alquiler de propiedades);
 - color y logo (opcionales).
 
 **b. Abrí el formulario** desde la carpeta del 2.0:

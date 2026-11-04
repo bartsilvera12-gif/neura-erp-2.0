@@ -1208,6 +1208,197 @@
     "x": 87.1,
     "y": 18.7
    }
+  },
+  "sorteos-menu": {
+   "Sorteos": {
+    "x": 17,
+    "y": 39.3,
+    "lado": "der"
+   }
+  },
+  "panel-sorteos": {
+   "Sorteos": {
+    "x": 21.3,
+    "y": 12
+   },
+   "Vender": {
+    "x": 47.6,
+    "y": 38.5
+   },
+   "Compras": {
+    "x": 74,
+    "y": 38.5
+   },
+   "Por revisar": {
+    "x": 21.3,
+    "y": 59.2
+   },
+   "Vendedores": {
+    "x": 47.6,
+    "y": 59.2
+   },
+   "WhatsApp": {
+    "x": 74,
+    "y": 59.2
+   }
+  },
+  "sorteos-lista": {
+   "Nuevo sorteo": {
+    "x": 86.5,
+    "y": 21.5
+   }
+  },
+  "sorteo-nuevo-datos": {
+   "Nombre": {
+    "x": 21.6,
+    "y": 32.2
+   },
+   "Precio por boleta (Gs.)": {
+    "x": 61.2,
+    "y": 32.2
+   },
+   "Hasta el número": {
+    "x": 79.1,
+    "y": 40.4
+   }
+  },
+  "sorteo-nuevo-cobro": {
+   "Agregar combo": {
+    "x": 21.6,
+    "y": 41
+   },
+   "Banco o billetera": {
+    "x": 62,
+    "y": 31.6
+   },
+   "Crear sorteo": {
+    "x": 88.7,
+    "y": 62.4
+   }
+  },
+  "sorteo-activar": {
+   "Activar": {
+    "x": 89.9,
+    "y": 23.4
+   }
+  },
+  "sorteo-ficha": {
+   "Premios y ganadores": {
+    "x": 30,
+    "y": 59.1
+   },
+   "Cerrar la venta": {
+    "x": 86.2,
+    "y": 23.4
+   },
+   "Cupones para la urna": {
+    "x": 41.7,
+    "y": 59.1
+   }
+  },
+  "sorteo-premios": {
+   "0084": {
+    "x": 22.3,
+    "y": 69
+   }
+  },
+  "sorteo-cupones": {
+   "Imprimir cupones": {
+    "x": 21.6,
+    "y": 85.9
+   },
+   "Ticketera 80 mm": {
+    "x": 22.8,
+    "y": 69.1
+   }
+  },
+  "sorteo-vender": {
+   "Gs. 25.000": {
+    "x": 34.2,
+    "y": 41.2
+   },
+   "Nombre y apellido": {
+    "x": 21.6,
+    "y": 62.5
+   },
+   "Efectivo": {
+    "x": 72.9,
+    "y": 29.8
+   },
+   "Registrar venta": {
+    "x": 72.6,
+    "y": 59.9
+   }
+  },
+  "sorteo-revision": {
+   "Carlos Duarte": {
+    "x": 21.6,
+    "y": 45.1
+   }
+  },
+  "sorteo-revision-detalle": {
+   "Lectura automática del comprobante": {
+    "x": 26,
+    "y": 34.9
+   }
+  },
+  "sorteo-vendedores": {
+   "Nuevo vendedor": {
+    "x": 84.8,
+    "y": 21.6
+   },
+   "Link nuevo": {
+    "x": 29.1,
+    "y": 64.2
+   },
+   "Rendición": {
+    "x": 39.3,
+    "y": 64.2
+   }
+  },
+  "sorteo-vendedor-nuevo": {
+   "Nombre": {
+    "x": 31.3,
+    "y": 27.5
+   },
+   "Comisión (%)": {
+    "x": 31.3,
+    "y": 50.7
+   },
+   "Cupo por sorteo (opcional)": {
+    "x": 50.2,
+    "y": 50.7
+   },
+   "Guardar": {
+    "x": 61.2,
+    "y": 77.7
+   }
+  },
+  "sorteo-whatsapp": {
+   "Atender los chats de WhatsApp con el bot": {
+    "x": 22.8,
+    "y": 31.6
+   },
+   "Guardar": {
+    "x": 53.7,
+    "y": 55.7
+   },
+   "Hola": {
+    "x": 65.1,
+    "y": 95.6
+   }
+  },
+  "sorteo-revision-acciones": {
+   "Confirmar pago": {
+    "x": 67.2,
+    "y": 66.6,
+    "lado": "abajo"
+   },
+   "Rechazar": {
+    "x": 56,
+    "y": 66.6,
+    "lado": "abajo"
+   }
   }
  },
  "gastronomia": {
@@ -3037,6 +3228,197 @@
     "x": 7.9,
     "y": 75.2,
     "lado": "der"
+   }
+  },
+  "sorteos-menu": {
+   "Sorteos": {
+    "x": 17,
+    "y": 39.3,
+    "lado": "der"
+   }
+  },
+  "panel-sorteos": {
+   "Sorteos": {
+    "x": 21.3,
+    "y": 12
+   },
+   "Vender": {
+    "x": 47.6,
+    "y": 38.5
+   },
+   "Compras": {
+    "x": 74,
+    "y": 38.5
+   },
+   "Por revisar": {
+    "x": 21.3,
+    "y": 59.2
+   },
+   "Vendedores": {
+    "x": 47.6,
+    "y": 59.2
+   },
+   "WhatsApp": {
+    "x": 74,
+    "y": 59.2
+   }
+  },
+  "sorteos-lista": {
+   "Nuevo sorteo": {
+    "x": 86.5,
+    "y": 21.5
+   }
+  },
+  "sorteo-nuevo-datos": {
+   "Nombre": {
+    "x": 21.6,
+    "y": 32.2
+   },
+   "Precio por boleta (Gs.)": {
+    "x": 61.2,
+    "y": 32.2
+   },
+   "Hasta el número": {
+    "x": 79.1,
+    "y": 40.4
+   }
+  },
+  "sorteo-nuevo-cobro": {
+   "Agregar combo": {
+    "x": 21.6,
+    "y": 41
+   },
+   "Banco o billetera": {
+    "x": 62,
+    "y": 31.6
+   },
+   "Crear sorteo": {
+    "x": 88.7,
+    "y": 62.4
+   }
+  },
+  "sorteo-activar": {
+   "Activar": {
+    "x": 89.9,
+    "y": 23.4
+   }
+  },
+  "sorteo-ficha": {
+   "Premios y ganadores": {
+    "x": 30,
+    "y": 59.1
+   },
+   "Cerrar la venta": {
+    "x": 86.2,
+    "y": 23.4
+   },
+   "Cupones para la urna": {
+    "x": 41.7,
+    "y": 59.1
+   }
+  },
+  "sorteo-premios": {
+   "0084": {
+    "x": 22.3,
+    "y": 69
+   }
+  },
+  "sorteo-cupones": {
+   "Imprimir cupones": {
+    "x": 21.6,
+    "y": 85.9
+   },
+   "Ticketera 80 mm": {
+    "x": 22.8,
+    "y": 69.1
+   }
+  },
+  "sorteo-vender": {
+   "Gs. 25.000": {
+    "x": 34.2,
+    "y": 41.2
+   },
+   "Nombre y apellido": {
+    "x": 21.6,
+    "y": 62.5
+   },
+   "Efectivo": {
+    "x": 72.9,
+    "y": 29.8
+   },
+   "Registrar venta": {
+    "x": 72.6,
+    "y": 59.9
+   }
+  },
+  "sorteo-revision": {
+   "Carlos Duarte": {
+    "x": 21.6,
+    "y": 45.1
+   }
+  },
+  "sorteo-revision-detalle": {
+   "Lectura automática del comprobante": {
+    "x": 26,
+    "y": 34.9
+   }
+  },
+  "sorteo-vendedores": {
+   "Nuevo vendedor": {
+    "x": 84.8,
+    "y": 21.6
+   },
+   "Link nuevo": {
+    "x": 29.1,
+    "y": 64.2
+   },
+   "Rendición": {
+    "x": 39.3,
+    "y": 64.2
+   }
+  },
+  "sorteo-vendedor-nuevo": {
+   "Nombre": {
+    "x": 31.3,
+    "y": 27.5
+   },
+   "Comisión (%)": {
+    "x": 31.3,
+    "y": 50.7
+   },
+   "Cupo por sorteo (opcional)": {
+    "x": 50.2,
+    "y": 50.7
+   },
+   "Guardar": {
+    "x": 61.2,
+    "y": 77.7
+   }
+  },
+  "sorteo-whatsapp": {
+   "Atender los chats de WhatsApp con el bot": {
+    "x": 22.8,
+    "y": 31.6
+   },
+   "Guardar": {
+    "x": 53.7,
+    "y": 55.7
+   },
+   "Hola": {
+    "x": 65.1,
+    "y": 95.6
+   }
+  },
+  "sorteo-revision-acciones": {
+   "Confirmar pago": {
+    "x": 67.2,
+    "y": 66.6,
+    "lado": "abajo"
+   },
+   "Rechazar": {
+    "x": 56,
+    "y": 66.6,
+    "lado": "abajo"
    }
   }
  }

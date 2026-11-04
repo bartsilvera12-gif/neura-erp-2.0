@@ -57,7 +57,7 @@ Abajo está lo mismo a mano, paso por paso.
 | Dominio | `republica.neura.com.py` | único por cliente |
 | Admin | `admin@republica.com.py`, Juan Pérez | el primer usuario |
 | Empresa | Ferretería República S.A. | razón social |
-| Rubro | Comercio o Gastronomía | define qué funciones arrancan prendidas |
+| Rubro | Comercio, Gastronomía, Sorteos o Inmobiliaria | define qué funciones arrancan prendidas |
 | Color y logo | `#1F6F8B`, `logo.webp` | opcional; sin logo, el de Zentra |
 
 Cada cliente tiene **todos los módulos**; lo que cambia es el rubro:
@@ -65,6 +65,9 @@ Cada cliente tiene **todos los módulos**; lo que cambia es el rubro:
   mostrador. Nada de cocina.
 - **Gastronomía** (restaurante, bar): lo de Comercio más Mesas y QR, Cocina y Recetas, ya dadas a los
   perfiles Cajero y Supervisor.
+- **Sorteos** (rifas): sorteos con venta por web, WhatsApp y vendedores con link y PIN, revisión de
+  comprobantes, cupones para la urna y sorteo del ganador. Sin cocina ni pedidos de mostrador.
+- **Inmobiliaria**: venta y alquiler de casas, lotes y locales. Sin cocina ni pedidos de mostrador.
 
 El administrador lo puede cambiar después en Configuración › Rubro y funciones, salvo que se le oculte
 esa pantalla al clonar.
@@ -142,7 +145,7 @@ invitación y de cambio de contraseña no vuelven al dominio del cliente.
 ```bash
 npm run seed-admin -- --schema erp_republica --ssh neura-erp \
   --empresa "Ferretería República S.A." --email admin@republica.com.py --nombre "Juan Pérez" \
-  --rubro comercio            # o gastronomia; --ocultar-rubro si para que el cliente no lo cambie
+  --rubro comercio            # o gastronomia, sorteos, inmobiliaria; --ocultar-rubro si para que el cliente no lo cambie
 ```
 
 Crea la cuenta de acceso y, en el schema, la empresa y el usuario ADMIN. La primera sucursal, el

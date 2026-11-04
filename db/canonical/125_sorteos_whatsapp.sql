@@ -129,7 +129,8 @@ begin
   if not v_legible then v_motivos := v_motivos || 'No se pudo leer como comprobante'::text; end if;
   if v_legible and not v_monto_ok then
     v_motivos := v_motivos || case when v_monto is null then 'No se leyó el monto'
-                                   else format('Monto leído Gs %s, corresponde Gs %s', to_char(v_monto, 'FM999G999G999G999'), to_char(o.monto, 'FM999G999G999G999')) end;
+                                   else format('Monto leído Gs. %s, corresponde Gs. %s', replace(to_char(v_monto, 'FM999,999,999,999'), ',', '.'),
+                                               replace(to_char(o.monto, 'FM999,999,999,999'), ',', '.')) end;
   end if;
   if v_legible and not v_fecha_ok then v_motivos := v_motivos || coalesce('La fecha ' || to_char(v_fecha, 'DD/MM/YYYY') || ' no corresponde', 'No se leyó la fecha'); end if;
   if v_legible and not v_destino then v_motivos := v_motivos || 'La cuenta de destino no coincide con las del sorteo'::text; end if;
