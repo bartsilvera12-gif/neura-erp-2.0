@@ -81,7 +81,7 @@ export default function FichaSorteoPage() {
         volver={{ href: "/sorteos", label: "Sorteos" }}
         acciones={
           <div className="flex flex-wrap gap-2 max-sm:w-full max-sm:[&>*]:flex-1">
-            {admin && !["sorteado", "anulado"].includes(s.estado) ? <Link href={`/sorteos/${s.id}/editar`} className={`${BOTON} no-underline`}><Pencil className="h-4 w-4" /> Editar</Link> : null}
+            {admin && ["borrador", "activo", "pausado"].includes(s.estado) ? <Link href={`/sorteos/${s.id}/editar`} className={`${BOTON} no-underline`}><Pencil className="h-4 w-4" /> Editar</Link> : null}
             {botones.map((b) => (
               <button key={b.key} type="button" className={b.key === "activar" || b.key === "reanudar" ? BOTON_PRIMARIO : BOTON} onClick={() => { setErrAccion(null); setAccion(ACCIONES[b.key]); }}>
                 {b.icono} {ACCIONES[b.key].boton}

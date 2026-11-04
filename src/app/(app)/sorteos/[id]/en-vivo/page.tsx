@@ -8,6 +8,7 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Dices, Loader2, Maximize2, ShieldCheck, Trophy, X } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import type { Premio, Sorteo } from "@/modules/sorteos/tipos";
@@ -25,6 +26,9 @@ export default function SorteoEnVivoPage() {
   const [girando, setGirando] = useState(false);
   const [visor, setVisor] = useState<string>("");
   const [revelado, setRevelado] = useState<Premio | null>(null);
+  // Se monta en <body>: tapa el menú y la barra del ERP (es para transmitir).
+  const [montado, setMontado] = useState(false);
+  useEffect(() => setMontado(true), []);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const cargar = useCallback(async () => {
@@ -74,8 +78,9 @@ export default function SorteoEnVivoPage() {
 
   const pantallaCompleta = () => { void document.documentElement.requestFullscreen?.().catch(() => {}); };
 
-  return (
-    <div className="fixed inset-0 z-[60] flex flex-col overflow-y-auto bg-gradient-to-b from-slate-950 via-slate-900 to-[color-mix(in_srgb,var(--brand)_45%,#0f172a)] text-white">
+  if (!montado) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[1000] flex flex-col overflow-y-auto bg-gradient-to-b from-slate-950 via-slate-900 to-[color-mix(in_srgb,var(--brand)_45%,#0f172a)] text-white">
       <header className="flex items-center justify-between gap-3 px-4 py-3 sm:px-8 sm:py-5">
         <div className="min-w-0">
           <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-white/60">Sorteo en vivo</p>
@@ -106,7 +111,7 @@ export default function SorteoEnVivoPage() {
         <div className="w-full max-w-3xl rounded-[2rem] border border-white/15 bg-white/5 px-4 py-8 shadow-2xl backdrop-blur sm:px-10 sm:py-12">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-white/50">{revelado ? `Ganador del ${revelado.posicion}° premio` : girando ? "Sorteando…" : "Número ganador"}</p>
           <p className={`mt-3 font-black tabular-nums tracking-[0.15em] ${revelado ? "text-amber-300" : "text-white"} text-[clamp(3rem,16vw,9rem)] leading-none`} aria-live="polite">
-            {visor || "— — —"}
+            {visor || <span className="text-white/25">· · ·</span>}
           </p>
           {revelado ? (
             <div className="mt-5 space-y-1">
@@ -133,6 +138,7 @@ export default function SorteoEnVivoPage() {
           </p>
         ) : null}
       </main>
-    </div>
+    </div>,
+    document.body,
   );
 }

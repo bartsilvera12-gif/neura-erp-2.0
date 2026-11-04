@@ -98,7 +98,7 @@ export default function ComprasSorteoPage() {
                   <span className="block truncate font-medium text-slate-900">{o.comprador_nombre}</span>
                   <span className="block truncate text-xs text-slate-500">{[o.comprador_documento ? `CI ${o.comprador_documento}` : null, o.comprador_ciudad].filter(Boolean).join(" · ")}</span>
                 </span>
-              ), movil: "titulo" },
+              ), celdaMovil: (o) => o.comprador_nombre, movil: "titulo" },
               { key: "sorteo", titulo: "Sorteo", celda: (o) => o.sorteo, movil: "subtitulo", claseTh: "hidden xl:table-cell", claseTd: "hidden xl:table-cell max-w-48 truncate" },
               { key: "boletas", titulo: "Boletas", celda: (o) => `${o.cantidad.toLocaleString("es-PY")} bol.`, movil: "dato", claseTd: "tabular-nums" },
               { key: "canal", titulo: "Canal", celda: (o) => `${NOMBRE_CANAL[o.canal]}${o.vendedor ? ` · ${o.vendedor}` : ""}`, movil: "dato", claseTh: "hidden lg:table-cell", claseTd: "hidden lg:table-cell" },

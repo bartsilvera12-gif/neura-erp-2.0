@@ -60,7 +60,8 @@ export const fechaHoraPY = (iso: string | null | undefined) =>
 export const telefonoLindo = (t: string | null | undefined) => {
   if (!t) return "";
   const d = t.replace(/\D/g, "");
-  return d.startsWith("595") && d.length >= 11 ? `0${d.slice(3, 6)} ${d.slice(6, 9)} ${d.slice(9)}` : d;
+  const local = d.startsWith("595") && d.length >= 11 ? `0${d.slice(3)}` : d;
+  return /^09\d{8}$/.test(local) ? `${local.slice(0, 4)} ${local.slice(4, 7)} ${local.slice(7)}` : local;
 };
 
 /** Clave para que un doble clic o un reintento no registre dos veces la misma venta. */
