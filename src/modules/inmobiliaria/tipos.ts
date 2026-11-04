@@ -60,3 +60,30 @@ export type Propiedad = PropiedadFila & {
 };
 
 export type TipoPropiedad = { id: string; nombre: string; activo: boolean; usos: number };
+
+/** Receta 133: contratos de alquiler. */
+export type EstadoContrato = "vigente" | "finalizado" | "rescindido";
+
+export type ContratoFila = {
+  id: string; numero: string; estado: EstadoContrato; propiedad: string; propiedad_codigo: string; propiedad_id: string;
+  inquilino: string; inquilino_id: string; propietario: string | null; monto_actual: number; dia_vencimiento: number;
+  fecha_inicio: string; meses: number | null; emitido_mes: boolean; deuda: number;
+};
+
+export type CuotaAlquiler = {
+  id: string; periodo: string; mes: string; monto: number; numero: string; venta_id: string; vencimiento: string | null;
+  cobrado: number; saldo: number; estado: "pendiente" | "parcial" | "pagada" | "anulada"; comision_pct: number; liquidada: boolean;
+};
+
+export type Contrato = ContratoFila & {
+  direccion: string; inquilino_documento: string | null; inquilino_telefono: string | null; propietario_id: string | null;
+  comision_pct: number; monto: number; tipo_iva: TipoIvaPropiedad; fecha_termina: string | null; garantia: number;
+  ajuste_pct: number; ajuste_cada_meses: number; fecha_fin: string | null; notas: string | null; cuotas: CuotaAlquiler[];
+};
+
+export type PendienteDueno = {
+  propietario_id: string; propietario: string; propietario_documento: string | null; cobrado: number; comision: number; neto: number;
+  cuotas: { id: string; contrato: string; propiedad: string; mes: string; cobrado: number; comision: number; neto: number }[];
+};
+
+export type Liquidacion = { id: string; numero: string; fecha: string; propietario: string; cobrado: number; comision: number; neto: number; medio: string; referencia: string | null; cuotas: number };

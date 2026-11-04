@@ -30,3 +30,21 @@ export const esquemaPropiedad = z.object({
   comision_alquiler_pct: z.number().min(0).max(100).nullish(),
   notas: texto(2000),
 }).strict();
+
+const fecha = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida");
+
+/** Contrato de alquiler (receta 133). */
+export const esquemaContrato = z.object({
+  propiedad_id: z.string().uuid("Elegí la propiedad"),
+  inquilino_id: z.string().uuid("Elegí el inquilino"),
+  monto: z.number().positive("Poné el alquiler mensual").max(1e12),
+  tipo_iva: z.enum(["EXENTA", "5%", "10%"]),
+  dia_vencimiento: z.number().int().min(1).max(28),
+  fecha_inicio: fecha,
+  meses: z.number().int().min(1).max(240).nullish(),
+  garantia: z.number().min(0).max(1e12).nullish(),
+  ajuste_pct: z.number().min(0).max(100).nullish(),
+  ajuste_cada_meses: z.number().int().min(1).max(60).nullish(),
+  comision_pct: z.number().min(0).max(100).nullish(),
+  notas: texto(2000),
+}).strict();

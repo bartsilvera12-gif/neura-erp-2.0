@@ -11,5 +11,7 @@ export const moduloInmobiliaria: Modulo = {
   familia: "Inmobiliaria",
   children: [
     { label: "Propiedades", href: "/inmobiliaria", funcion: "inmobiliaria", palabras: ["inmuebles", "casas", "lotes", "venta", "alquiler", "cuenta catastral"] },
+    // Receta 133: contratos de alquiler, cuota de cada mes y liquidación a dueños.
+    { label: "Alquileres", href: "/inmobiliaria/alquileres", funcion: "inmobiliaria", palabras: ["contratos", "inquilinos", "liquidaciones", "dueños", "propietarios"] },
   ],
 };
