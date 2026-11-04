@@ -5,8 +5,11 @@
  * contacto y la conversación si no existen, y los triggers avisan por Realtime como un
  * mensaje real.
  */
+import { after } from "next/server";
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
+import { botSorteos } from "@/lib/sorteos/bot";
+import { urlBase } from "@/lib/usuarios/cuentas";
 import { created, fail } from "@/lib/api/responses";
 import { canalSimulador, registrarEntrante } from "@/lib/conversaciones/servidor";
 
@@ -25,7 +28,7 @@ const cuerpo = z.object({
 });
 
 export const POST = withTenant(
-  async (ctx, _req, input) => {
+  async (ctx, req, input) => {
     const canal = await canalSimulador(ctx.empresaId);
     if (!canal) return fail("No hay un canal simulador activo para la empresa.", 409);
     try {
@@ -37,6 +40,9 @@ export const POST = withTenant(
         tipo: "texto",
         contenido: input.texto,
       });
+      // Rubro Sorteos: si el bot de venta está prendido, contesta como en WhatsApp.
+      const base = urlBase(req);
+      after(() => botSorteos({ conversacion_id: r.conversacion_id, mensaje_id: r.mensaje_id, tipo: "texto", contenido: input.texto }, { base }));
       return created(r);
     } catch (e) {
       console.error("[conversaciones] simular", (e as Error).message);

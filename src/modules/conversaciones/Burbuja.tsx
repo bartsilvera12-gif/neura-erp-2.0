@@ -218,7 +218,10 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
 
         {/* Hora · autor · tildes */}
         <p className={`mt-1 flex items-center justify-end gap-0.5 text-[10px] ${tenue}`}>
-          {mio && !nota && m.autor_nombre ? <span className="mr-1 max-w-[10rem] truncate opacity-90">{m.autor_nombre}</span> : null}
+          {mio && !nota && (m.autor_nombre || !m.autor_usuario_id) ? (
+            // Sin autor: lo escribió un bot (p. ej. el de venta de Sorteos, receta 125).
+            <span className="mr-1 max-w-[10rem] truncate opacity-90">{m.autor_nombre ?? "Bot"}</span>
+          ) : null}
           <span className="tabular-nums">{horaPy(m.created_at)}</span>
           {mio && !nota ? <Ticks estado={m.estado_entrega} claro /> : null}
         </p>

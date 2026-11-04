@@ -4,8 +4,11 @@
  *   POST /api/sorteos/ordenes/<oid> { accion: confirmar | rechazar | anular, motivo? }
  *        confirmar / rechazar: sorteos_revisar · anular: sorteos_administrar (la base lo vuelve a exigir)
  */
+import { after } from "next/server";
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
+import { avisarCompraWhatsApp } from "@/lib/sorteos/bot";
+import { urlBase } from "@/lib/usuarios/cuentas";
 import { fail, ok } from "@/lib/api/responses";
 import { systemClient } from "@/lib/supabase/clients";
 import { tenantSchema } from "@/lib/tenant/schema";
@@ -37,5 +40,10 @@ export const POST = withTenant(async (ctx, req, body) => {
     ? await ctx.db.rpc("sorteo_orden_confirmar", { p_id: id })
     : await ctx.db.rpc(body.accion === "rechazar" ? "sorteo_orden_rechazar" : "sorteo_orden_anular", { p_id: id, p_motivo: body.motivo ?? "" });
   if (error) return falloSorteo(error, "No se pudo actualizar la compra");
+  // Compra hecha por WhatsApp: el cliente recibe el ticket (o el motivo) en su chat.
+  if ((data as { canal?: string } | null)?.canal === "whatsapp") {
+    const base = urlBase(req);
+    after(() => avisarCompraWhatsApp(ctx.empresaId, id, base));
+  }
   return ok(data);
 }, { permiso: "sorteos_vender", body: cuerpo });

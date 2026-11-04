@@ -9,6 +9,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { systemClient } from "@/lib/supabase/clients";
 import { canalPorId, canalPorIdentificador, guardarEventoChat, marcarEventoChat, registrarEntrante, type CanalChat } from "@/lib/conversaciones/servidor";
 import { normalizar } from "@/modules/conversaciones/conectores/normalizadores";
+import { botSorteos } from "@/lib/sorteos/bot";
 
 export const PROVEEDORES = ["meta", "ycloud", "baileys", "simulador"] as const;
 export type ProveedorWebhook = (typeof PROVEEDORES)[number];
@@ -65,7 +66,7 @@ export async function encolarEvento(proveedor: ProveedorWebhook, payload: unknow
 }
 
 /** Procesa un evento guardado (se llama desde after(), nunca bloquea la respuesta). */
-export async function procesarEvento(eventoId: number, proveedor: ProveedorWebhook, payload: unknown): Promise<void> {
+export async function procesarEvento(eventoId: number, proveedor: ProveedorWebhook, payload: unknown, base = ""): Promise<void> {
   try {
     const n = normalizar(proveedor, payload);
     if (!n.entrantes.length && !n.estados.length) {
@@ -83,7 +84,7 @@ export async function procesarEvento(eventoId: number, proveedor: ProveedorWebho
       }
       const canal = canales.get(clave);
       if (!canal || canal.proveedor !== proveedor || !canal.activo) throw new Error("Canal no encontrado para el evento");
-      await registrarEntrante({
+      const r = await registrarEntrante({
         canal_id: canal.id,
         telefono: e.telefono,
         nombre: e.nombre,
@@ -92,6 +93,10 @@ export async function procesarEvento(eventoId: number, proveedor: ProveedorWebho
         contenido: e.contenido,
         fecha: e.fecha,
       });
+      // Rubro Sorteos: el bot de venta contesta si está prendido (nunca rompe el procesamiento).
+      if (!r.duplicado) {
+        await botSorteos({ conversacion_id: r.conversacion_id, mensaje_id: r.mensaje_id, tipo: e.tipo ?? "texto", contenido: e.contenido ?? null }, { base });
+      }
     }
     // Estados de entrega por id externo (enviado → entregado → leído / fallido).
     for (const s of n.estados) {

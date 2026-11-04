@@ -24,6 +24,33 @@ function Dato({ label, children }: { label: string; children: React.ReactNode })
   );
 }
 
+/** Lo que leyó el sistema del comprobante (WhatsApp, receta 125) y por qué no se confirmó solo. */
+function LecturaComprobante({ c }: { c: Record<string, unknown> | null }) {
+  const chequeo = c?.chequeo as { motivos?: string[]; legible?: boolean } | undefined;
+  if (!c || !chequeo) return null;
+  const txt = (k: string) => (typeof c[k] === "string" && c[k] ? String(c[k]) : null);
+  const monto = typeof c.monto === "number" ? gs(c.monto) : null;
+  const leido = [
+    monto ? `Monto ${monto}` : null,
+    txt("fecha") ? `fecha ${txt("fecha")!.split("-").reverse().join("/")}` : null,
+    txt("referencia") ? `op. ${txt("referencia")}` : null,
+    txt("cuenta_destino") ? `cuenta ${txt("cuenta_destino")}` : null,
+    txt("titular_destino") ? `a ${txt("titular_destino")}` : null,
+  ].filter(Boolean);
+  const motivos = (chequeo.motivos ?? []).filter(Boolean);
+  return (
+    <div className={`rounded-xl p-3 text-sm ${motivos.length ? "bg-amber-50 text-amber-900" : "bg-emerald-50 text-emerald-900"}`}>
+      <p className="font-semibold">Lectura automática del comprobante</p>
+      <p className="mt-0.5">{chequeo.legible === false && !leido.length ? "No se pudo leer." : leido.join(" · ") || "Sin datos leídos."}</p>
+      {motivos.length ? (
+        <ul className="m-0 mt-1.5 list-disc space-y-0.5 pl-5">
+          {motivos.map((m) => <li key={m}>{m}</li>)}
+        </ul>
+      ) : <p className="mt-1">Todo coincidió.</p>}
+    </div>
+  );
+}
+
 export function OrdenDetalle({ id, onClose, onCambio }: { id: string; onClose: () => void; onCambio: (o: Orden) => void }) {
   const [o, setO] = useState<Detalle | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,6 +107,7 @@ export function OrdenDetalle({ id, onClose, onCambio }: { id: string; onClose: (
           </dl>
 
           {o.motivo ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-800"><b>Motivo:</b> {o.motivo}</p> : null}
+          <LecturaComprobante c={o.comprobante} />
 
           <div>
             <p className="mb-1.5 text-xs font-semibold text-slate-600">{o.numeros.length ? `Números (${o.numeros.length})` : "Sin números"}{o.estado === "en_revision" || o.estado === "pendiente_pago" ? " · reservados hasta confirmar" : ""}</p>

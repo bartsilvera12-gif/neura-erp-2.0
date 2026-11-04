@@ -7,6 +7,7 @@
 import { after, type NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { encolarEvento, esProveedor, firmaValida, procesarEvento, verificarSuscripcionMeta } from "@/lib/conversaciones/webhook";
+import { urlBase } from "@/lib/usuarios/cuentas";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -38,6 +39,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, error: "JSON inválido" }, { status: 400 });
   }
   const eventoId = await encolarEvento(proveedor, payload);
-  if (eventoId) after(() => procesarEvento(eventoId, proveedor, payload));
+  const base = urlBase(req);
+  if (eventoId) after(() => procesarEvento(eventoId, proveedor, payload, base));
   return NextResponse.json({ ok: true });
 }

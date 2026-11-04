@@ -17,5 +17,6 @@ export const moduloSorteos: Modulo = {
     { label: "Compras", href: "/sorteos/ventas", funcion: "sorteos", permiso: "sorteos_vender", palabras: ["ordenes", "compradores", "anular"] },
     { label: "Por revisar", href: "/sorteos/revision", funcion: "sorteos", permiso: "sorteos_revisar", palabras: ["comprobantes", "transferencias", "confirmar pagos"] },
     { label: "Vendedores", href: "/sorteos/vendedores", funcion: "sorteos", permiso: "sorteos_administrar", palabras: ["revendedores", "comisiones", "rendiciones", "referidos"] },
+    { label: "WhatsApp", href: "/sorteos/whatsapp", funcion: "sorteos", permiso: "sorteos_administrar", palabras: ["bot", "chat", "venta automatica", "comprobantes", "ocr"] },
   ],
 };
