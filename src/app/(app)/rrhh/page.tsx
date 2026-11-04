@@ -15,13 +15,25 @@ import { BOTON, INPUT } from "@/modules/rrhh/ui";
 
 type Filtro = "todos" | "activos" | "faltan" | "inactivos";
 
-/** Columna de la fila, solo en pantallas anchas. */
-function Columna({ titulo, valor, clase = "w-32 2xl:w-40", desde = "xl:block" }: { titulo: string; valor: string; clase?: string; desde?: string }) {
+const ANCHO_CODIGO = "w-12 shrink-0";
+const ANCHO_COL = "w-32 shrink-0 2xl:w-40";
+const ANCHO_ANTIG = "w-36 shrink-0";
+const ANCHO_SALARIO = "shrink-0 text-right sm:w-32";
+const FILA = "flex items-center gap-3 px-4 sm:gap-4 sm:px-5";
+
+/** Títulos de las columnas, arriba de la lista (desde tablet, donde hay columnas). */
+function Titulos() {
   return (
-    <span className={`hidden min-w-0 shrink-0 ${desde} ${clase}`}>
-      <span className="block truncate text-sm text-slate-700">{valor}</span>
-      <span className="block text-xs text-slate-500">{titulo}</span>
-    </span>
+    <li aria-hidden className={`${FILA} hidden bg-slate-50 py-2 text-xs font-medium text-slate-500 md:flex`}>
+      <span className={ANCHO_CODIGO}>Código</span>
+      <span className="min-w-0 flex-1">Nombre</span>
+      <span className={`hidden xl:block ${ANCHO_COL}`}>Perfil</span>
+      <span className={`hidden xl:block ${ANCHO_COL}`}>Sucursal</span>
+      <span className="hidden w-32 shrink-0 2xl:block">Área</span>
+      <span className={ANCHO_ANTIG}>Antigüedad</span>
+      <span className={ANCHO_SALARIO}>Salario</span>
+      <span className="w-4 shrink-0" />
+    </li>
   );
 }
 
@@ -30,23 +42,20 @@ function Fila({ p, hoy }: { p: PersonaFila; hoy: string }) {
   const conDatos = p.activo && p.tiene_legajo;
   return (
     <li>
-      <Link href={`/rrhh/${p.id}`} className="flex min-h-[72px] items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-slate-50 sm:gap-4 sm:px-5">
-        <span title="Código" className={`w-12 shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums ${p.activo ? "text-slate-500" : "text-slate-400"}`}>N.º {p.codigo}</span>
+      <Link href={`/rrhh/${p.id}`} className={`${FILA} min-h-[72px] py-3 no-underline transition-colors hover:bg-slate-50`}>
+        <span title="Código" className={`${ANCHO_CODIGO} text-sm font-semibold tabular-nums ${p.activo ? "text-slate-500" : "text-slate-400"}`}>{p.codigo}</span>
         <span className="min-w-0 flex-1">
           <span className={`block truncate text-[15px] font-semibold ${p.activo ? "text-slate-900" : "text-slate-500"}`}>{p.nombre}</span>
           {detalle ? <span className="mt-0.5 block truncate text-[13px] text-slate-500 xl:hidden">{detalle}</span> : null}
           <span className="mt-0.5 hidden truncate text-[13px] text-slate-500 xl:block">{p.ci ? `CI ${p.ci}` : p.email ?? "Sin CI cargada"}</span>
         </span>
-        <Columna titulo="Perfil" valor={p.perfil ?? "—"} />
-        <Columna titulo="Sucursal" valor={p.sucursal ?? "Sin sucursal fija"} />
-        <Columna titulo="Área" valor={p.area ?? "—"} clase="w-32" desde="2xl:block" />
-        {conDatos ? (
-          <span className="hidden w-36 shrink-0 md:block">
-            <span className="block truncate text-sm text-slate-700">{p.fecha_ingreso ? textoAntiguedad(antiguedad(p.fecha_ingreso, p.fecha_egreso && p.fecha_egreso < hoy ? p.fecha_egreso : hoy)) : "—"}</span>
-            <span className="block text-xs text-slate-500">Antigüedad</span>
-          </span>
-        ) : <span aria-hidden className="hidden w-36 shrink-0 md:block" />}
-        <span className="shrink-0 text-right sm:w-32">
+        <span className={`hidden min-w-0 truncate text-sm text-slate-700 xl:block ${ANCHO_COL}`}>{p.perfil ?? "—"}</span>
+        <span className={`hidden min-w-0 truncate text-sm text-slate-700 xl:block ${ANCHO_COL}`}>{p.sucursal ?? "Sin sucursal fija"}</span>
+        <span className="hidden w-32 min-w-0 shrink-0 truncate text-sm text-slate-700 2xl:block">{p.area ?? "—"}</span>
+        <span className={`hidden truncate text-sm text-slate-700 md:block ${ANCHO_ANTIG}`}>
+          {conDatos && p.fecha_ingreso ? textoAntiguedad(antiguedad(p.fecha_ingreso, p.fecha_egreso && p.fecha_egreso < hoy ? p.fecha_egreso : hoy)) : "—"}
+        </span>
+        <span className={ANCHO_SALARIO}>
           {!p.activo ? <span className="text-[13px] font-medium text-slate-400">Inactivo</span>
             : !p.tiene_legajo ? <span className="text-[13px] font-semibold text-[var(--brand)]">Cargar datos</span>
             : (
@@ -112,6 +121,7 @@ export default function PaginaPersonal() {
       {filas ? (
         visibles.length ? (
           <ul className="m-0 list-none divide-y divide-slate-100 overflow-hidden rounded-2xl border border-slate-200 bg-white p-0 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+            <Titulos />
             {visibles.map((p) => <Fila key={p.id} p={p} hoy={hoy} />)}
           </ul>
         ) : (
