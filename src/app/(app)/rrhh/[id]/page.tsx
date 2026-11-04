@@ -534,6 +534,7 @@ export default function PaginaFicha() {
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand)] max-sm:hidden">RR HH</p>
             <h1 className="mt-0.5 text-xl font-semibold leading-tight tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{ficha.usuario.nombre}</h1>
             <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500">
+              <span><span className="font-medium text-slate-400">Código:</span> N.º {ficha.usuario.codigo}</span>
               {ficha.usuario.ci ? <span><span className="font-medium text-slate-400">CI:</span> {ficha.usuario.ci}</span> : null}
               {ficha.usuario.telefono ? <span>{ficha.usuario.telefono}</span> : null}
               {!ficha.usuario.activo ? <span className="rounded-full bg-slate-100 px-2 py-0.5 font-semibold text-slate-600">Inactivo</span>

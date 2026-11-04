@@ -28,12 +28,13 @@ function Columna({ titulo, valor, clase = "w-32 2xl:w-40", desde = "xl:block" }:
 }
 
 function Fila({ p, hoy }: { p: PersonaFila; hoy: string }) {
-  const detalle = [p.perfil, p.sucursal, p.area].filter(Boolean).join(" · ");
+  const detalle = [`N.º ${p.codigo}`, p.perfil, p.sucursal, p.area].filter(Boolean).join(" · ");
   const conDatos = p.activo && p.tiene_legajo;
   return (
     <li>
       <Link href={`/rrhh/${p.id}`} className="flex min-h-[72px] items-center gap-3 px-4 py-3 no-underline transition-colors hover:bg-slate-50 sm:gap-4 sm:px-5">
         <span aria-hidden className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-semibold ${p.activo ? "bg-[var(--brand-50)] text-[var(--brand)]" : "bg-slate-100 text-slate-400"}`}>{iniciales(p.nombre)}</span>
+        <Columna titulo="Código" valor={`N.º ${p.codigo}`} clase="w-16" />
         <span className="min-w-0 flex-1">
           <span className={`block truncate text-[15px] font-semibold ${p.activo ? "text-slate-900" : "text-slate-500"}`}>{p.nombre}</span>
           {detalle ? <span className="mt-0.5 block truncate text-[13px] text-slate-500 xl:hidden">{detalle}</span> : null}
@@ -79,7 +80,7 @@ export default function PaginaPersonal() {
   const faltan = activos.filter((p) => !p.tiene_legajo);
   const inactivos = todas.filter((p) => !p.activo);
   const delFiltro = filtro === "faltan" ? faltan : filtro === "inactivos" ? inactivos : filtro === "activos" ? activos : todas;
-  const visibles = useMemo(() => filtrar(delFiltro, q, (p) => ({ principal: p.nombre, otros: [p.area, p.sucursal, p.perfil], documentos: [p.ci] })), [delFiltro, q]);
+  const visibles = useMemo(() => filtrar(delFiltro, q, (p) => ({ principal: p.nombre, otros: [p.area, p.sucursal, p.perfil], documentos: [p.ci, String(p.codigo)] })), [delFiltro, q]);
   const hoy = hoyPY();
 
   const opciones: [Filtro, string, number][] = [
@@ -105,7 +106,7 @@ export default function PaginaPersonal() {
         </div>
         <div className="relative sm:w-72">
           <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input className={`${INPUT} pl-9`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar" aria-label="Buscar por nombre, CI, área o sucursal" />
+          <input className={`${INPUT} pl-9`} value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar" aria-label="Buscar por nombre, código, CI, área o sucursal" />
         </div>
       </div>
 
