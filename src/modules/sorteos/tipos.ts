@@ -58,6 +58,8 @@ export type Sorteo = SorteoFila & {
   reserva_minutos: number;
   confirmacion_auto: boolean;
   mensaje_ticket: string | null;
+  /** Link del vivo por redes donde se hace el sorteo (receta 127). */
+  vivo_url: string | null;
   numeros_generados: boolean;
   semilla_hash: string | null;
   semilla_revelada: boolean;

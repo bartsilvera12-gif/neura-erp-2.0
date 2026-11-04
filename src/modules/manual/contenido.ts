@@ -908,22 +908,27 @@ export const GUIAS: Guia[] = [
     ],
   },
   {
-    id: "sorteo-sortear", grupo: "Sorteos", ruta: "/sorteos", titulo: "Hacer el sorteo", resumen: "Premios, cupones para la urna y el ganador.",
+    id: "sorteo-sortear", grupo: "Sorteos", ruta: "/sorteos", titulo: "Hacer el sorteo en el vivo", resumen: "Lista de participantes, el número que salió y la imagen del ganador.",
     bloques: [
+      { texto: "El sorteo lo hacés en un vivo por tus redes, con tu urna o tu herramienta. El sistema te prepara la lista, guarda el número que salió y te arma la imagen del ganador." },
       { img: "sorteos-lista", alt: "Lista de sorteos", pasos: [{ t: "Tocá el sorteo.", marca: "Sorteo web" }] },
       { img: "sorteo-ficha", alt: "Ficha del sorteo", pasos: [
         { t: "En Premios y ganadores, cargá los premios.", marca: "Premios y ganadores" },
-        { t: "Cuando termina la venta, tocá Cerrar la venta.", d: "Desde ahí nadie más puede comprar.", marca: "Cerrar la venta" },
-        { t: "Si sorteás con urna, abrí Cupones para la urna.", marca: "Cupones para la urna" },
+        { t: "El día del vivo, tocá Cerrar la venta.", d: "Desde ahí nadie más puede comprar.", marca: "Cerrar la venta" },
+        { t: "Abrí Participantes y urna.", marca: "Participantes y urna" },
       ] },
-      { img: "sorteo-cupones", alt: "Cupones para la urna", pasos: [
-        { t: "Elegí el papel.", marca: "Ticketera 80 mm" },
+      { img: "sorteo-cupones", alt: "Participantes y cupones para la urna", pasos: [
+        { t: "Para mostrar en el vivo, imprimí la lista de participantes.", d: "Lleva el número, el nombre corto y la ciudad: sin cédula ni teléfono.", marca: "Lista para mostrar en el vivo" },
+        { t: "Si sorteás con urna, elegí el papel.", marca: "Ticketera 80 mm" },
         { t: "Tocá Imprimir cupones.", d: "Sale uno por cada número vendido, con el nombre del comprador.", marca: "Imprimir cupones" },
       ] },
       { img: "sorteo-premios", alt: "Premios con sus ganadores", pasos: [
-        { t: "En cada premio, tocá Sortear o cargá el número que salió de la urna.", d: "El ganador queda a la vista con su nombre y su teléfono.", marca: "0084" },
+        { t: "Pegá el link del vivo.", d: "Sale en la página del sorteo: antes avisa dónde se sortea y después queda la grabación.", marca: "El vivo del sorteo" },
+        { t: "Cuando sale un número, tocá Cargar el número que salió y escribilo.", d: "El sistema busca quién lo compró y lo publica en la página del sorteo." },
+        { t: "Tocá Imagen para redes y publicala.", d: "Una imagen con el número y el nombre corto del ganador, con los colores de tu empresa.", marca: "Imagen para redes" },
+        { t: "Tocá Avisarle por WhatsApp para escribirle al ganador.", marca: "Avisarle por WhatsApp" },
       ] },
-      { consejo: "El sorteo digital se puede verificar: cualquiera lo recalcula desde la página pública del sorteo." },
+      { consejo: "Si preferís que sortee el sistema, en cada premio está «Que lo sortee el sistema», con su pantalla para transmitir." },
     ],
   },
   // ── RR HH ────────────────────────────────────────────────────────────────────

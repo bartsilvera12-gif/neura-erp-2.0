@@ -218,7 +218,7 @@ export default function SorteoEnVivoPage() {
                   <div className="flex flex-wrap justify-center gap-2 text-xs font-semibold sm:text-sm">
                     {revelado.orden_numero ? <span className="rounded-full bg-white/10 px-3 py-1 text-white/80">Compra N° {revelado.orden_numero}</span> : null}
                     <span className="rounded-full bg-white/10 px-3 py-1 text-white/80">
-                      {revelado.metodo === "urna" ? "Salió de la urna" : revelado.metodo === "externo" ? "Sorteo externo" : "Sorteo digital verificable"}
+                      {revelado.metodo === "urna" ? "Salió de la urna" : revelado.metodo === "externo" ? "Salió en el vivo" : "Sorteo digital verificable"}
                     </span>
                   </div>
                 </div>

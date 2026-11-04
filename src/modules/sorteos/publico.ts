@@ -41,6 +41,8 @@ export type SorteoPublico = {
   disponibles: number;
   vendidos: number;
   premios: PremioPublico[];
+  /** Link del vivo donde se sortea (receta 127). */
+  vivo_url: string | null;
   verificacion: { semilla_hash: string | null; lista_hash: string | null; lista_cantidad: number | null; semilla: string | null };
 };
 

@@ -8,7 +8,9 @@
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Banknote, Copy, Dices, Gift, Loader2, Pause, Pencil, Play, Plus, Printer, ShieldCheck, Lock, Tag, Trash2, Trophy, Tv, XCircle } from "lucide-react";
+import { AlertTriangle, Banknote, Copy, Dices, ExternalLink, FileSpreadsheet, Gift, ImageDown, Loader2, MessageCircle, Pause, Pencil, Play, Plus, Printer, Radio, ShieldCheck, Lock, Tag, Trash2, Trophy, Tv, Users, XCircle } from "lucide-react";
+import { clienteConfig } from "@/cliente.config";
+import { descargarImagenGanador, nombreCorto } from "@/modules/sorteos/imagenGanador";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { usePermiso } from "@/lib/sesion/ContextoUsuario";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
@@ -110,14 +112,14 @@ export default function FichaSorteoPage() {
         opciones={[
           { id: "resumen", label: "Combos y cobro" },
           { id: "premios", label: "Premios y ganadores", badge: s.premios.length || undefined },
-          { id: "cupones", label: "Cupones para la urna" },
+          { id: "cupones", label: "Participantes y urna" },
           { id: "verificacion", label: "Verificación" },
         ]}
       />
 
       {tab === "resumen" ? <Resumen s={s} /> : null}
       {tab === "premios" ? <Premios s={s} admin={admin} onCambio={setS} /> : null}
-      {tab === "cupones" ? <Cupones s={s} /> : null}
+      {tab === "cupones" ? <div className="grid gap-4 lg:grid-cols-2"><Cupones s={s} /><ListaParticipantes s={s} /></div> : null}
       {tab === "verificacion" ? <Verificacion s={s} /> : null}
 
       {admin && ["borrador"].includes(s.estado) ? (
@@ -245,37 +247,43 @@ function Premios({ s, admin, onCambio }: { s: Sorteo; admin: boolean; onCambio: 
   const cerrado = s.estado === "cerrado";
   return (
     <div className="space-y-4">
+      <LinkVivo s={s} admin={admin} onCambio={onCambio} />
       {!s.premios.length ? <p className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">Todavía no hay premios cargados.</p> : null}
       {s.premios.length && !["cerrado", "sorteado"].includes(s.estado) ? (
-        <p className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-600"><Lock className="mt-0.5 h-4 w-4 shrink-0" /> Los ganadores se cargan con la venta cerrada.</p>
+        <p className="flex items-start gap-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-600"><Lock className="mt-0.5 h-4 w-4 shrink-0" /> Los ganadores se cargan con la venta cerrada: el día del vivo, cerrá la venta y cargá el número que salió en cada premio.</p>
       ) : null}
       {cerrado && s.premios.some((p) => !p.numero_ganador) ? (
         <div className="flex flex-col gap-3 rounded-2xl border border-[var(--brand-100)] bg-[var(--brand-50,#eef7f7)] p-4 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-700"><b>¿Lo transmitís en vivo?</b> La pantalla de sorteo en vivo muestra los números girando y el ganador en grande.</p>
-          <Link href={`/sorteos/${s.id}/en-vivo`} className={`${BOTON_PRIMARIO} shrink-0 no-underline`}><Tv className="h-4 w-4" /> Sorteo en vivo</Link>
+          <p className="text-sm text-slate-700"><b>Cargá el número que salió en el vivo</b> en cada premio: el sistema busca al comprador y lo publica en la página del sorteo. Si preferís, el sistema también puede sortear con su pantalla en vivo.</p>
+          <Link href={`/sorteos/${s.id}/en-vivo`} className={`${BOTON} shrink-0 no-underline`}><Tv className="h-4 w-4" /> Pantalla de sorteo</Link>
         </div>
       ) : null}
       <ul className="m-0 grid list-none gap-3 p-0 lg:grid-cols-2">
         {s.premios.map((p) => (
           <li key={p.id} className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="flex items-start gap-3">
-              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold ${p.numero_ganador ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-500"}`}>{p.posicion}°</span>
+              <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold ${p.numero_ganador ? "bg-[var(--brand)] text-white" : "bg-slate-100 text-slate-500"}`}>{p.posicion}°</span>
               <div className="min-w-0 flex-1">
                 <p className="text-[15px] font-semibold text-slate-900">{p.nombre}</p>
                 {p.descripcion ? <p className="text-xs text-slate-500">{p.descripcion}</p> : null}
               </div>
             </div>
             {p.numero_ganador ? (
-              <div className="mt-3 rounded-xl bg-amber-50 p-3">
-                <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-amber-800"><Trophy className="h-3.5 w-3.5" /> Ganador · {p.metodo === "digital" ? "sorteo digital" : p.metodo === "urna" ? "urna" : "lotería externa"}</p>
-                <p className="mt-1 text-2xl font-black tabular-nums tracking-widest text-slate-900">{p.numero_ganador}</p>
-                <p className="text-sm text-slate-800">{p.ganador}{p.ganador_documento ? ` · CI ${p.ganador_documento}` : ""}</p>
-                <p className="text-xs text-slate-500">{[telefonoLindo(p.ganador_telefono), p.orden_numero ? `Compra ${p.orden_numero}` : null, p.nota].filter(Boolean).join(" · ")}</p>
+              <div className="mt-3 space-y-3 rounded-xl bg-[var(--brand-50,#eef7f7)] p-3">
+                <div>
+                  <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--brand)]"><Trophy className="h-3.5 w-3.5" /> Ganador · {NOMBRE_METODO_GANADOR[p.metodo ?? "externo"]}</p>
+                  <p className="mt-1 text-2xl font-black tabular-nums tracking-widest text-slate-900">{p.numero_ganador}</p>
+                  <p className="text-sm text-slate-800">{p.ganador}{p.ganador_documento ? ` · CI ${p.ganador_documento}` : ""}</p>
+                  <p className="text-xs text-slate-500">{[telefonoLindo(p.ganador_telefono), p.orden_numero ? `Compra ${p.orden_numero}` : null, p.nota].filter(Boolean).join(" · ")}</p>
+                </div>
+                <AccionesGanador s={s} p={p} />
               </div>
             ) : cerrado && admin ? (
-              <div className="mt-3 flex flex-wrap gap-2 max-sm:[&>*]:flex-1">
-                <button type="button" className={BOTON_PRIMARIO} disabled={busy} onClick={() => sortear(p)}><Dices className="h-4 w-4" /> Sortear (digital)</button>
-                <button type="button" className={BOTON} disabled={busy} onClick={() => setManual(p)}><Trophy className="h-4 w-4" /> Cargar de la urna</button>
+              <div className="mt-3 flex flex-wrap items-center gap-2 max-sm:[&>button:first-child]:w-full">
+                <button type="button" className={BOTON_PRIMARIO} disabled={busy} onClick={() => setManual(p)}><Trophy className="h-4 w-4" /> Cargar el número que salió</button>
+                <button type="button" className="inline-flex min-h-11 items-center gap-1.5 px-2 text-sm font-medium text-slate-600 hover:text-[var(--brand)]" disabled={busy} onClick={() => sortear(p)}>
+                  <Dices className="h-4 w-4" /> Que lo sortee el sistema
+                </button>
               </div>
             ) : null}
           </li>
@@ -288,9 +296,80 @@ function Premios({ s, admin, onCambio }: { s: Sorteo; admin: boolean; onCambio: 
   );
 }
 
+const NOMBRE_METODO_GANADOR: Record<string, string> = { externo: "salió en el vivo", urna: "salió de la urna", digital: "sorteado por el sistema" };
+
+/** Link del vivo por redes donde se sortea (receta 127): se muestra en la página pública del sorteo. */
+function LinkVivo({ s, admin, onCambio }: { s: Sorteo; admin: boolean; onCambio: (s: Sorteo) => void }) {
+  const [url, setUrl] = useState(s.vivo_url ?? "");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [ok, setOk] = useState(false);
+  async function guardar() {
+    setBusy(true);
+    setError(null);
+    setOk(false);
+    try {
+      onCambio(await apiFetch<Sorteo>(`/api/sorteos/${s.id}/vivo`, { method: "POST", body: JSON.stringify({ url: url.trim() || null }) }));
+      setOk(true);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (!admin && !s.vivo_url) return null;
+  return (
+    <Tarjeta icono={<Radio className="h-4 w-4" />} titulo="El vivo del sorteo" detalle="El link de la transmisión en Facebook, Instagram o TikTok. Sale en la página del sorteo: antes avisa dónde se sortea y después queda la grabación.">
+      {admin ? (
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <input className={INPUT} value={url} onChange={(e) => { setUrl(e.target.value); setOk(false); }} placeholder="https://www.facebook.com/…" inputMode="url" maxLength={500} />
+          <button type="button" className={`${BOTON_PRIMARIO} shrink-0`} disabled={busy || url.trim() === (s.vivo_url ?? "")} onClick={guardar}>
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar
+          </button>
+        </div>
+      ) : null}
+      {s.vivo_url ? <a href={s.vivo_url} target="_blank" rel="noopener noreferrer" className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-[var(--brand)]">Abrir el vivo <ExternalLink className="h-3.5 w-3.5" /></a> : null}
+      {ok ? <p className="mt-2 text-sm text-emerald-700">Guardado: ya se ve en la página del sorteo.</p> : null}
+      {error ? <p className="mt-2 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
+    </Tarjeta>
+  );
+}
+
+/** Lo que se hace con un ganador: la imagen para redes y avisarle por WhatsApp. */
+function AccionesGanador({ s, p }: { s: Sorteo; p: Premio }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const tel = (p.ganador_telefono ?? "").replace(/\D/g, "");
+  const wa = /^09\d{8}$/.test(tel) ? `595${tel.slice(1)}` : tel.length >= 8 ? tel : null;
+  const texto = `¡Hola ${nombreCorto(p.ganador).split(" ")[0]}! 🎉 Te escribimos de ${clienteConfig.nombre}: ganaste el ${p.posicion}° premio (${p.nombre}) del sorteo ${s.nombre} con el número ${p.numero_ganador}. ¡Felicitaciones! Escribinos para coordinar la entrega.`;
+  async function imagen() {
+    setBusy(true);
+    setError(null);
+    try {
+      await descargarImagenGanador({
+        empresa: clienteConfig.nombre, sorteo: s.nombre, posicion: p.posicion, premio: p.nombre, numero: p.numero_ganador ?? "", ganador: p.ganador,
+        imagenPremio: p.imagen_url, color: clienteConfig.color, fecha: s.fecha_sorteo ? fechaHoraPY(s.fecha_sorteo).split(",")[0] : null,
+      });
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2 max-sm:[&>*]:flex-1">
+        <button type="button" className={BOTON} disabled={busy} onClick={() => void imagen()}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImageDown className="h-4 w-4" />} Imagen para redes</button>
+        {wa ? <a className={`${BOTON} no-underline`} href={`https://wa.me/${wa}?text=${encodeURIComponent(texto)}`} target="_blank" rel="noopener noreferrer"><MessageCircle className="h-4 w-4" /> Avisarle por WhatsApp</a> : null}
+      </div>
+      {error ? <p className="mt-2 rounded-xl bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
+    </div>
+  );
+}
+
 function GanadorManual({ s, premio, onClose, onListo }: { s: Sorteo; premio: Premio; onClose: () => void; onListo: (s: Sorteo) => void }) {
   const [numero, setNumero] = useState("");
-  const [metodo, setMetodo] = useState<"urna" | "externo">("urna");
+  const [metodo, setMetodo] = useState<"urna" | "externo">("externo");
   const [nota, setNota] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -307,12 +386,11 @@ function GanadorManual({ s, premio, onClose, onListo }: { s: Sorteo; premio: Pre
   return (
     <Modal titulo={`Ganador del ${premio.posicion}° premio`} onClose={() => !busy && onClose()}>
       <div className="space-y-3">
-        <p className="text-sm text-slate-600">{premio.nombre}. El número tiene que estar vendido en este sorteo.</p>
-        <Campo label="Número ganador"><input className={`${INPUT} text-lg font-bold tabular-nums tracking-widest`} inputMode="numeric" autoFocus value={numero} onChange={(e) => setNumero(e.target.value.replace(/\D/g, "").slice(0, String(s.numero_hasta).length))} /></Campo>
-        <Campo label="De dónde salió">
-          <Select value={metodo} onChange={(v) => setMetodo(v as "urna" | "externo")} block etiqueta="De dónde salió" options={[["urna", "De la urna (cupones impresos)"], ["externo", "De una lotería externa"]]} />
-        </Campo>
-        <Campo label="Nota (opcional)" ayuda="Ej. quién lo sacó, escribano, nº de la lotería."><input className={INPUT} value={nota} onChange={(e) => setNota(e.target.value)} maxLength={300} /></Campo>
+        <p className="text-sm text-slate-600">{premio.nombre}. Escribí el número que salió en el vivo: el sistema busca quién lo compró. Tiene que estar vendido en este sorteo.</p>
+        <Campo label="Número que salió"><input className={`${INPUT} text-lg font-bold tabular-nums tracking-widest`} inputMode="numeric" autoFocus value={numero} onChange={(e) => setNumero(e.target.value.replace(/\D/g, "").slice(0, String(s.numero_hasta).length))} /></Campo>
+        <Select value={metodo} onChange={(v) => setMetodo(v as "urna" | "externo")} block etiqueta="Cómo salió"
+          options={[["externo", "En el vivo (ruleta, app, tómbola o lotería)"], ["urna", "De la urna, con los cupones impresos"]]} />
+        <Campo label="Nota (opcional)" ayuda="Ej. minuto del vivo, quién lo sacó, escribano."><input className={INPUT} value={nota} onChange={(e) => setNota(e.target.value)} maxLength={300} /></Campo>
         {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
         <div className="flex justify-end gap-2 max-sm:[&>*]:flex-1">
           <button type="button" className={BOTON} disabled={busy} onClick={onClose}>Volver</button>
@@ -399,6 +477,76 @@ function Cupones({ s }: { s: Sorteo }) {
           </div>
         </Modal>
       ) : null}
+    </Tarjeta>
+  );
+}
+
+const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
+
+/**
+ * Participantes para el vivo: la planilla completa (Excel) para el equipo y una lista para mostrar en
+ * la transmisión, solo con el número, el nombre corto y la ciudad (sin cédula ni teléfono).
+ */
+function ListaParticipantes({ s }: { s: Sorteo }) {
+  const [busy, setBusy] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  async function traer() {
+    const r = await apiFetch<{ sorteo: string; cupones: Cupon[] }>(`/api/sorteos/${s.id}/cupones`);
+    if (!r.cupones.length) throw new Error("Todavía no hay números vendidos.");
+    return r.cupones;
+  }
+  async function planilla() {
+    setBusy("planilla");
+    setError(null);
+    try {
+      const c = await traer();
+      const celda = (v: string | number | null) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const filas = [["Número", "Nombre", "Cédula", "Teléfono", "Ciudad", "Compra", "Fecha"], ...c.map((x) => [x.numero, x.nombre, x.documento, x.telefono, x.ciudad, x.orden, fechaHoraPY(x.fecha)])];
+      // Con BOM y punto y coma: Excel en castellano lo abre en columnas y con acentos.
+      const blob = new Blob(["﻿" + filas.map((f) => f.map(celda).join(";")).join("\r\n")], { type: "text/csv;charset=utf-8" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = `participantes-${s.slug}.csv`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+  async function paraMostrar() {
+    setBusy("mostrar");
+    setError(null);
+    try {
+      const c = await traer();
+      const items = c.map((x) => `<li><b>${esc(x.numero)}</b><span>${esc(nombreCorto(x.nombre))}${x.ciudad ? ` · ${esc(x.ciudad)}` : ""}</span></li>`).join("");
+      await imprimirHtml(`<!doctype html><html><head><meta charset="utf-8"><title>Participantes</title><style>
+        body{font-family:system-ui,sans-serif;margin:24px;color:#0f172a}
+        h1{font-size:22px;margin:0 0 4px}p{margin:0 0 16px;color:#475569;font-size:13px}
+        ul{list-style:none;padding:0;margin:0;columns:4;column-gap:18px}
+        li{break-inside:avoid;padding:5px 0;border-bottom:1px solid #e2e8f0;font-size:13px;display:flex;gap:8px}
+        b{font-variant-numeric:tabular-nums;min-width:3.5em;color:${clienteConfig.color}}
+        @media print{body{margin:10mm}}
+      </style></head><body><h1>${esc(s.nombre)}</h1><p>${c.length.toLocaleString("es-PY")} números participando · ${esc(clienteConfig.nombre)}</p><ul>${items}</ul></body></html>`);
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(null);
+    }
+  }
+  return (
+    <Tarjeta icono={<Users className="h-4 w-4" />} titulo="Participantes" detalle="Para el vivo: todos los números vendidos (compras confirmadas).">
+      <div className="flex flex-wrap gap-2 max-sm:[&>*]:flex-1">
+        <button type="button" className={BOTON} disabled={!!busy || s.stats.vendidos === 0} onClick={() => void paraMostrar()}>
+          {busy === "mostrar" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />} Lista para mostrar en el vivo
+        </button>
+        <button type="button" className={BOTON} disabled={!!busy || s.stats.vendidos === 0} onClick={() => void planilla()}>
+          {busy === "planilla" ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileSpreadsheet className="h-4 w-4" />} Planilla para Excel
+        </button>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">La lista para mostrar lleva solo el número, el nombre corto y la ciudad. La planilla tiene todos los datos: es para el equipo, no se publica.</p>
+      {error ? <p className="mt-2 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
     </Tarjeta>
   );
 }

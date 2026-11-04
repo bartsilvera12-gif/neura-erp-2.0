@@ -82,6 +82,16 @@ begin
   perform pg_temp.ok('Sorteos WhatsApp: si el sorteo no confirma solo, queda por revisar',
     v->>'resultado' = 'revision' and exists (select 1 from jsonb_array_elements_text(v->'motivos') m where m = 'El sorteo no confirma solo'), v::text);
 
+  -- Link del vivo (receta 127): se guarda, se ve en la página pública y se valida.
+  v := sorteo_vivo_guardar(v_s, 'https://www.facebook.com/rifas/videos/123');
+  perform pg_temp.ok('Sorteos vivo: se guarda el link del vivo', v->>'vivo_url' = 'https://www.facebook.com/rifas/videos/123', v::text);
+  v_lectura := jsonb_build_object('slug', v->>'slug');
+  execute 'set local role anon';
+  v := sorteo_publico(v_lectura->>'slug');
+  execute 'set local role authenticated';
+  perform pg_temp.ok('Sorteos vivo: la página pública muestra el link del vivo', v->>'vivo_url' = 'https://www.facebook.com/rifas/videos/123', v::text);
+  perform pg_temp.rechaza('Sorteos vivo: un link que no es web no se guarda', format($q$select sorteo_vivo_guardar(%L, 'mi vivo del sábado')$q$, v_s), 'link completo');
+
   -- Seguridad.
   perform pg_temp.rechaza('Sorteos WhatsApp: un usuario no carga comprobantes del bot',
     format($q$select sorteo_bot_comprobante(%L, %L, 'x', null)$q$, v_emp, o2->>'id'), 'permission denied');

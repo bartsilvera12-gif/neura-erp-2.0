@@ -1291,25 +1291,37 @@
     "x": 86.2,
     "y": 23.4
    },
-   "Cupones para la urna": {
+   "Participantes y urna": {
     "x": 41.7,
     "y": 59.1
    }
   },
   "sorteo-premios": {
-   "0084": {
+   "El vivo del sorteo": {
+    "x": 21.6,
+    "y": 59.9
+   },
+   "Imagen para redes": {
     "x": 22.3,
-    "y": 69
+    "y": 85.6
+   },
+   "Avisarle por WhatsApp": {
+    "x": 36.7,
+    "y": 85.6
    }
   },
   "sorteo-cupones": {
+   "Lista para mostrar en el vivo": {
+    "x": 61.2,
+    "y": 66.5
+   },
    "Imprimir cupones": {
     "x": 21.6,
-    "y": 85.9
+    "y": 91
    },
    "Ticketera 80 mm": {
     "x": 22.8,
-    "y": 69.1
+    "y": 70.9
    }
   },
   "sorteo-vender": {
@@ -3312,25 +3324,37 @@
     "x": 86.2,
     "y": 23.4
    },
-   "Cupones para la urna": {
+   "Participantes y urna": {
     "x": 41.7,
     "y": 59.1
    }
   },
   "sorteo-premios": {
-   "0084": {
+   "El vivo del sorteo": {
+    "x": 21.6,
+    "y": 59.9
+   },
+   "Imagen para redes": {
     "x": 22.3,
-    "y": 69
+    "y": 85.6
+   },
+   "Avisarle por WhatsApp": {
+    "x": 36.7,
+    "y": 85.6
    }
   },
   "sorteo-cupones": {
+   "Lista para mostrar en el vivo": {
+    "x": 61.2,
+    "y": 66.5
+   },
    "Imprimir cupones": {
     "x": 21.6,
-    "y": 85.9
+    "y": 91
    },
    "Ticketera 80 mm": {
     "x": 22.8,
-    "y": 69.1
+    "y": 70.9
    }
   },
   "sorteo-vender": {

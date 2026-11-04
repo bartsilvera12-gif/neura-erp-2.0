@@ -8,7 +8,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import { CalendarClock, Check, Loader2, Search, ShieldCheck, Ticket, Trophy } from "lucide-react";
+import { CalendarClock, Check, Loader2, PlayCircle, Search, ShieldCheck, Ticket, Trophy } from "lucide-react";
 import type { SorteoPublico } from "@/modules/sorteos/publico";
 
 const gs = (n: number) => `Gs. ${Math.round(n).toLocaleString("es-PY")}`;
@@ -106,6 +106,18 @@ export function PaginaSorteo({ s, vendedor, color }: { s: SorteoPublico; vendedo
               : s.estado === "cerrado" ? "La venta ya cerró. ¡Pronto se sortea!"
               : "¡El sorteo ya se realizó! Mirá los ganadores abajo."}
           </p>
+        ) : null}
+
+        {/* El sorteo se hace en un vivo por redes (receta 127): antes anuncia dónde, después queda la grabación. */}
+        {s.vivo_url ? (
+          <a href={s.vivo_url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-3 rounded-2xl border border-[color-mix(in_srgb,var(--brand)_30%,white)] bg-white p-4 no-underline shadow-sm">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[var(--brand)] text-white"><PlayCircle className="h-6 w-6" /></span>
+            <span className="min-w-0">
+              <b className="block text-slate-900">{s.estado === "sorteado" ? "Mirá el vivo del sorteo" : "El sorteo se hace en vivo"}</b>
+              <span className="block truncate text-sm text-slate-500">{s.estado === "sorteado" ? "La grabación de cómo salieron los ganadores." : "Entrá a este link el día del sorteo."}</span>
+            </span>
+          </a>
         ) : null}
 
         {s.premios.length ? (
