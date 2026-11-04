@@ -100,6 +100,15 @@ export type FichaInmobiliaria = {
   busquedas: Busqueda[];
 };
 
+/** Receta 140: aviso a un interesado (propiedad × búsqueda), con lo necesario para armar el WhatsApp. */
+export type EstadoAviso = "pendiente" | "enviado" | "descartado";
+export type AvisoInteresado = {
+  id: string; estado: EstadoAviso; canal: "whatsapp" | "otro" | null; created_at: string; resuelto_at: string | null;
+  propiedad_id: string; codigo: string; titulo: string; ciudad: string | null; barrio: string | null;
+  gestion: "venta" | "alquiler"; precio_venta: number | null; precio_alquiler: number | null; imagen_url: string | null;
+  cliente_id: string; cliente: string; telefono: string | null; email: string | null; notas: string | null; empresa: string | null;
+};
+
 export type Interesado = { cliente_id: string; cliente: string; telefono: string | null; email: string | null; gestion: "venta" | "alquiler"; precio_max: number | null; notas: string | null };
 
 export type Liquidacion = { id: string; numero: string; fecha: string; propietario: string; cobrado: number; comision: number; neto: number; medio: string; referencia: string | null; cuotas: number };

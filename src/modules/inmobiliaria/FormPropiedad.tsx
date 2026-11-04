@@ -15,10 +15,11 @@ import { CamposCiudadBarrio } from "@/modules/geo/CamposCiudadBarrio";
 import { BuscadorCliente } from "@/modules/clientes/gestion/BuscadorCliente";
 import { subirImagenProducto } from "@/modules/caja/upload-imagen";
 import { VenderPropiedad } from "@/modules/inmobiliaria/VenderPropiedad";
+import { AvisosInteresados } from "@/modules/inmobiliaria/AvisosInteresados";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT } from "@/modules/inventario/ui";
 import {
   DOCUMENTACION, ESTADOS, GESTIONES, nombreDe,
-  type Documentacion, type EstadoPropiedad, type Gestion, type Interesado, type Propiedad, type TipoIvaPropiedad, type TipoPropiedad,
+  type Documentacion, type EstadoPropiedad, type Gestion, type Propiedad, type TipoIvaPropiedad, type TipoPropiedad,
 } from "@/modules/inmobiliaria/tipos";
 
 type Form = {
@@ -101,12 +102,10 @@ export function FormPropiedad({ id, tipos, puedeEditar, onCerrar, onGuardada }: 
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Receta 134: clientes con una búsqueda que esta propiedad cumple (a quién avisarle).
-  const [interesados, setInteresados] = useState<Interesado[]>([]);
-  useEffect(() => {
-    if (!id) return;
-    apiFetch<Interesado[]>(`/api/inmobiliaria/propiedades/${id}/interesados`).then(setInteresados).catch(() => setInteresados([]));
-  }, [id, ficha?.estado]);
+  // Receta 140: avisos a los clientes con una búsqueda que esta propiedad cumple. Se releen cada vez
+  // que la ficha cambia (al guardar, al vender): los avisos nuevos se crean al confirmar el guardado.
+  const [verAvisos, setVerAvisos] = useState(0);
+  useEffect(() => { setVerAvisos((v) => v + 1); }, [ficha]);
 
   useEffect(() => {
     if (!id) return;
@@ -208,19 +207,12 @@ export function FormPropiedad({ id, tipos, puedeEditar, onCerrar, onGuardada }: 
       {cargando ? (
         <div className="space-y-3">{[0, 1, 2].map((i) => <div key={i} className="h-24 animate-pulse rounded-xl bg-slate-100" />)}</div>
       ) : (
+        <div className="space-y-6">
+        {/* Fuera del fieldset: quien solo puede ver la ficha también avisa a los interesados. */}
+        {id ? <AvisosInteresados propiedadId={id} recargar={verAvisos} /> : null}
         <fieldset disabled={soloVer} className="space-y-6">
           {error ? <p role="alert" className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
 
-          {interesados.length ? (
-            <div className="rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm text-sky-900">
-              <p className="font-semibold">{interesados.length} cliente{interesados.length === 1 ? " busca" : "s buscan"} algo así</p>
-              <ul className="m-0 mt-1 list-none space-y-0.5 p-0 text-xs">
-                {interesados.slice(0, 8).map((x) => (
-                  <li key={`${x.cliente_id}-${x.gestion}`}>{x.cliente} · {x.gestion === "venta" ? "comprar" : "alquilar"}{x.telefono ? ` · ${x.telefono}` : ""}{x.notas ? ` · ${x.notas}` : ""}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
 
           <Bloque titulo="La propiedad">
             <Campo label="Título" ancho>
@@ -314,6 +306,7 @@ export function FormPropiedad({ id, tipos, puedeEditar, onCerrar, onGuardada }: 
             </Campo>
           </Bloque>
         </fieldset>
+        </div>
       )}
       {vendiendo && ficha ? (
         <VenderPropiedad propiedad={ficha} onCerrar={() => setVendiendo(false)}

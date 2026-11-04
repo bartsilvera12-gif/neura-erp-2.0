@@ -5,7 +5,9 @@
  * filtros por estado (pestañas con cantidades), gestión, tipo y ciudad, y búsqueda (título, código,
  * dirección, catastro, finca, manzana, lote, dueño). Tocar una abre su ficha en el panel lateral.
  */
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { AvisosInteresados } from "@/modules/inmobiliaria/AvisosInteresados";
 import { Building2, FileWarning, ImageOff, MapPin, Plus, Ruler, Search, Tags, UserRound } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { usePermiso } from "@/lib/sesion/ContextoUsuario";
@@ -77,7 +79,20 @@ function Tarjeta({ p, onAbrir }: { p: PropiedadFila; onAbrir: () => void }) {
 }
 
 export default function PaginaPropiedades() {
+  return (
+    <Suspense fallback={<div className="py-20 text-center text-sm text-slate-400">Cargando…</div>}>
+      <Propiedades />
+    </Suspense>
+  );
+}
+
+function Propiedades() {
   const puedeEditar = usePermiso("editar_productos");
+  // Receta 140: la campanita trae /inmobiliaria?propiedad=<id> → abre esa ficha.
+  const params = useSearchParams();
+  const router = useRouter();
+  const propiedadUrl = params.get("propiedad");
+  const [verAvisos, setVerAvisos] = useState(0);
   const [lista, setLista] = useState<ListaPropiedades | null>(null);
   const [tipos, setTipos] = useState<TipoPropiedad[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -91,6 +106,12 @@ export default function PaginaPropiedades() {
   const [editarTipos, setEditarTipos] = useState(false);
 
   useEffect(() => { const h = setTimeout(() => setQListo(q.trim()), 300); return () => clearTimeout(h); }, [q]);
+  useEffect(() => { if (propiedadUrl) setAbierta(propiedadUrl); }, [propiedadUrl]);
+  const cerrarFicha = () => {
+    setAbierta(undefined);
+    setVerAvisos((v) => v + 1);
+    if (propiedadUrl) router.replace("/inmobiliaria", { scroll: false });
+  };
 
   const cargar = useCallback(async () => {
     const p = new URLSearchParams();
@@ -129,6 +150,8 @@ export default function PaginaPropiedades() {
           </div>
         ) : null}
       />
+
+      <AvisosInteresados onAbrir={(id) => setAbierta(id)} recargar={verAvisos} />
 
       <Pestanas opciones={pestanas} valor={estado} onChange={setEstado} />
 
@@ -174,8 +197,8 @@ export default function PaginaPropiedades() {
           id={abierta}
           tipos={tipos}
           puedeEditar={puedeEditar}
-          onCerrar={() => setAbierta(undefined)}
-          onGuardada={(p, cerrar) => { void cargar(); if (abierta === null) setAbierta(p.id); else if (cerrar) setAbierta(undefined); }}
+          onCerrar={cerrarFicha}
+          onGuardada={(p, cerrar) => { void cargar(); setVerAvisos((v) => v + 1); if (abierta === null) setAbierta(p.id); else if (cerrar) cerrarFicha(); }}
         />
       ) : null}
       {editarTipos ? <TiposPropiedad tipos={tipos} onCerrar={() => setEditarTipos(false)} onGuardados={(t) => { setTipos(t); setEditarTipos(false); void cargar(); }} /> : null}

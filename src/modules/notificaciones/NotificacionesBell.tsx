@@ -14,7 +14,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Banknote, Bell, CalendarClock, Check, Info, Ticket, Volume2, VolumeX } from "lucide-react";
+import { Banknote, Bell, Building2, CalendarClock, Check, Info, Ticket, Volume2, VolumeX } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { browserClient } from "@/lib/supabase/browser";
 import { fechaRelativa } from "@/modules/tipificacion/dominio";
@@ -51,6 +51,7 @@ const ESTILO: Record<string, { icon: typeof Bell; wrap: string; label: string }>
   soporte: { icon: Ticket, wrap: "bg-orange-50 text-orange-600", label: "Soporte" },
   agenda: { icon: CalendarClock, wrap: "bg-teal-50 text-teal-700", label: "Agenda" },
   cobranza: { icon: Banknote, wrap: "bg-emerald-50 text-emerald-700", label: "Cobranzas" },
+  inmobiliaria: { icon: Building2, wrap: "bg-indigo-50 text-indigo-700", label: "Inmobiliaria" },
   general: { icon: Info, wrap: "bg-sky-50 text-sky-600", label: "Aviso" },
 };
 const estiloDe = (n: Notificacion) =>
@@ -58,6 +59,8 @@ const estiloDe = (n: Notificacion) =>
     : n.tipo.startsWith("agenda") ? ESTILO.agenda
     // cobro_pendiente: transferencia por aprobar (click → /cobranzas/conciliacion?cobro=…)
     : n.tipo.startsWith("cobro") ? ESTILO.cobranza
+    // inmo_interesados (receta 140): clientes para avisar (click → /inmobiliaria?propiedad=…)
+    : n.tipo.startsWith("inmo") ? ESTILO.inmobiliaria
     : ESTILO.general;
 
 export function NotificacionesBell() {
