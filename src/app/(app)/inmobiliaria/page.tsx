@@ -141,6 +141,7 @@ function Propiedades() {
   return (
     <div className="space-y-4 pb-10">
       <EncabezadoPagina
+        volver={{ href: "/inmobiliaria/panel", label: "Inmobiliaria" }}
         titulo="Propiedades"
         subtitulo="Las casas, lotes, departamentos y locales que vendés o alquilás, propios o de un dueño. Tocá una para ver o editar su ficha."
         acciones={puedeEditar ? (

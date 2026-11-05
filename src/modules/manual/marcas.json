@@ -3572,47 +3572,39 @@
   "inmo-menu": {
    "Inmobiliaria": {
     "x": 3.8,
-    "y": 39.3
-   },
-   "Propiedades": {
-    "x": 4.7,
-    "y": 44.4
-   },
-   "Alquileres": {
-    "x": 4.7,
-    "y": 49.3
+    "y": 39.4
    }
   },
   "inmo-propiedades": {
    "Nueva propiedad": {
     "x": 27.5,
-    "y": 25.4
+    "y": 30.8
    },
    "Tipos": {
     "x": 20,
-    "y": 25.4
+    "y": 30.8
    },
    "Departamento de 2 dormitorios en Villa Morra": {
     "x": 47.7,
-    "y": 73
+    "y": 100.8
    }
   },
   "inmo-alquileres": {
    "Nuevo contrato": {
     "x": 85.4,
-    "y": 29.6
+    "y": 34.9
    },
-   "Emitir el mes (1)": {
-    "x": 72.7,
-    "y": 29.6
+   "Emitir el mes": {
+    "x": 74.1,
+    "y": 34.9
    },
    "Liquidar a dueños": {
     "x": 27.1,
-    "y": 22.8
+    "y": 28.1
    },
    "ALQ-0001 · INM-0002": {
     "x": 21.3,
-    "y": 37.2
+    "y": 42.5
    }
   },
   "inmo-propiedad-datos": {
@@ -3698,19 +3690,19 @@
    },
    "En cuotas": {
     "x": 56.6,
-    "y": 23.4
+    "y": 22.2
    },
    "Plan de cuotas": {
     "x": 56.6,
-    "y": 32.7
+    "y": 31.4
    },
    "Entrega inicial": {
     "x": 56.6,
-    "y": 42.1
+    "y": 40.8
    },
    "Medio de pago": {
     "x": 56.6,
-    "y": 60.6
+    "y": 59.3
    },
    "Vender": {
     "x": 91.5,
@@ -3758,19 +3750,19 @@
   "inmo-liquidar": {
    "Liquidar a dueños": {
     "x": 27.1,
-    "y": 22.9
+    "y": 28.1
    },
    "A pagarle": {
     "x": 87,
-    "y": 30.3
+    "y": 35.5
    },
    "Transferencia": {
     "x": 22.5,
-    "y": 45.2
+    "y": 50.4
    },
    "Liquidar Gs. 3.150.000": {
     "x": 81.9,
-    "y": 45.2
+    "y": 50.4
    }
   },
   "inmo-cliente-tab": {
@@ -3816,19 +3808,19 @@
   "inmo-avisos": {
    "1 cliente para avisar": {
     "x": 21.3,
-    "y": 33.3
+    "y": 38.5
    },
    "WhatsApp": {
     "x": 71.2,
-    "y": 43.4
+    "y": 48.6
    },
    "Ya le avisé": {
     "x": 79.6,
-    "y": 43.4
+    "y": 48.6
    },
    "Descartar": {
     "x": 87.9,
-    "y": 43.4
+    "y": 48.6
    }
   },
   "inmo-caja-credito": {
@@ -3848,8 +3840,8 @@
     "x": 46.7,
     "y": 32.8
    },
-   "Vence en": {
-    "x": 52.6,
+   "1ª vence en": {
+    "x": 52.9,
     "y": 32.8
    },
    "Entrega inicial": {
@@ -3860,9 +3852,9 @@
     "x": 59.2,
     "y": 54.6
    },
-   "Aceptar y cobrar": {
-    "x": 65.1,
-    "y": 100.5
+   "Vence en": {
+    "x": 52.9,
+    "y": 32.8
    }
   },
   "venta-credito": {
@@ -3882,8 +3874,8 @@
     "x": 46.7,
     "y": 32.8
    },
-   "Vence en": {
-    "x": 52.6,
+   "1ª vence en": {
+    "x": 52.9,
     "y": 32.8
    },
    "Entrega inicial": {
@@ -3894,9 +3886,9 @@
     "x": 59.2,
     "y": 54.6
    },
-   "Aceptar y cobrar": {
-    "x": 65.1,
-    "y": 100.5
+   "Vence en": {
+    "x": 52.9,
+    "y": 32.8
    }
   },
   "panel-config": {
@@ -3957,6 +3949,16 @@
    "Guardar": {
     "x": 91,
     "y": 92.1
+   }
+  },
+  "inmo-panel": {
+   "Propiedades": {
+    "x": 21.3,
+    "y": 41
+   },
+   "Alquileres": {
+    "x": 47.6,
+    "y": 41
    }
   }
  },

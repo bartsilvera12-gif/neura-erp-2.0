@@ -59,7 +59,7 @@ export const LLEGAR: Record<string, [string, string?]> = {
 export const PANELES: Record<string, string> = {
   Caja: "panel-caja", Inventario: "panel-inventario", "Gastos empresariales": "panel-gastos", Comercial: "panel-comercial",
   Finanzas: "panel-finanzas", Omnicanal: "panel-omnicanal", Configuración: "panel-config", "RR HH": "rrhh-panel",
-  Sorteos: "panel-sorteos", Inmobiliaria: "inmo-menu", Asistencia: "gim-panel",
+  Sorteos: "panel-sorteos", Inmobiliaria: "inmo-panel", Asistencia: "gim-panel",
 };
 /** La captura donde se ve la sección en el menú, si no es la de Inicio. */
 export const MENUS: Record<string, string> = { "RR HH": "rrhh-panel", Sorteos: "sorteos-menu", Inmobiliaria: "inmo-menu", Asistencia: "gim-menu" };
@@ -1040,7 +1040,7 @@ export const GUIAS: Guia[] = [
     id: "inmo-cobrar-alquiler", grupo: "Inmobiliaria", rubro: "inmobiliaria", ruta: "/inmobiliaria/alquileres", titulo: "Cobrar el alquiler y pagarle al dueño", resumen: "La cuota de cada mes y la liquidación al propietario.",
     bloques: [
       { img: "inmo-alquileres", alt: "Contratos con el mes sin emitir", pasos: [
-        { t: "Cada mes, tocá Emitir el mes.", d: "Crea la cuota de cada contrato vigente. Queda en Cuentas a cobrar.", marca: "Emitir el mes (1)" },
+        { t: "Cada mes, tocá Emitir el mes.", d: "Crea la cuota de cada contrato vigente y queda en Cuentas a cobrar. Si ya lo emitiste, el botón queda gris y cada contrato dice Mes emitido.", marca: "Emitir el mes" },
       ] },
       { texto: "Cuando el inquilino paga, registrá el cobro como cualquier deuda (guía «Registrar el pago de una deuda»)." },
       { img: "inmo-liquidar", alt: "Liquidar a los dueños", pasos: [

@@ -6,7 +6,9 @@ export const moduloInmobiliaria: Modulo = {
   id: "inmobiliaria",
   label: "Inmobiliaria",
   palabras: ["propiedades", "inmuebles", "casas", "terrenos", "lotes", "alquileres", "catastro", "finca", "departamentos"],
-  href: "/inmobiliaria",
+  // Un solo ítem en el menú que abre el panel con tarjetas (diseño del 2.0, como Sorteos).
+  href: "/inmobiliaria/panel",
+  panel: true,
   icon: "building",
   familia: "Inmobiliaria",
   children: [

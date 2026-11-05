@@ -182,7 +182,7 @@ export default function PaginaAlquileres() {
   const [tab, setTab] = useState("contratos");
   return (
     <div className="space-y-4 pb-10">
-      <EncabezadoPagina titulo="Alquileres" subtitulo="Los contratos con su cuota de cada mes, y lo que se le debe a cada dueño de lo cobrado (menos la comisión)." />
+      <EncabezadoPagina volver={{ href: "/inmobiliaria/panel", label: "Inmobiliaria" }} titulo="Alquileres" subtitulo="Los contratos con su cuota de cada mes, y lo que se le debe a cada dueño de lo cobrado (menos la comisión)." />
       <Pestanas opciones={[{ id: "contratos", label: "Contratos" }, { id: "duenos", label: "Liquidar a dueños" }]} valor={tab} onChange={setTab} />
       {tab === "contratos" ? <Contratos puedeEditar={puedeEditar} /> : <Liquidaciones puedeLiquidar={puedeLiquidar} />}
     </div>
