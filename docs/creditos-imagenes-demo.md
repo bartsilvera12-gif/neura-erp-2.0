@@ -195,3 +195,13 @@ Notas:
 - Ventas por mes: escritorio con un gráfico de evolución impreso y un calendario mensual; el recorte deja a la vista el gráfico.
 - Pérdidas de producto: caja de cartón golpeada en el envío ("rotura").
 - Stock mínimo: góndola de pastas vacía en un supermercado; el cartel "INFO" es un aviso de límite de compra.
+## Sorteos de prueba (rubro Sorteos)
+
+Fotos de los sorteos y premios de prueba de `erp_demo` (`sorteos.imagen_url` y `sorteo_premios.imagen_url`). Están en el bucket público `erp-sorteos-publico` de Supabase (`https://api.neura.com.py/storage/v1/object/public/erp-sorteos-publico/erp_demo/<empresa>/<archivo>`). Salen de Wikimedia Commons, con licencias que permiten uso comercial; se achicaron a 1200 px como máximo y se pasaron a JPG (cuenta como modificación: las CC BY-SA se siguen distribuyendo bajo la misma licencia).
+
+| Uso | Archivo | Autor | Licencia | Origen |
+|---|---|---|---|---|
+| Sorteo de una moto y premio «Moto 150 cc» | `moto-….jpg` | Mario Roberto Duran Ortiz (Mariordo) | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) | https://commons.wikimedia.org/wiki/File:Moto_Honda_Flex_Titan_CG_150_Mix_Fuel_Injection_06_2009_Itu.jpg |
+| Sorteos de la camioneta y en vivo, premio «Camioneta 0 km» | `hilux-….jpg` | Ethan Llamas | [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0) | https://commons.wikimedia.org/wiki/File:2020_Toyota_Hilux_E_(front_left_side_view).jpg |
+| Sorteo web | `bingo-….jpg` | elizaIO | [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0) | https://commons.wikimedia.org/wiki/File:Bingo_balls_in_bingo_drum.jpg |
+| Premio «Celular» | `celular-….jpg` | Ajayy99 | [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0) | https://commons.wikimedia.org/wiki/File:Samsung_Galaxy_S5_back.jpg |
