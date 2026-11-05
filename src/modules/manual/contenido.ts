@@ -15,12 +15,15 @@ export type Guia = {
   resumen: string;
   /** Pantalla que explica. Sin ruta: se muestra siempre. */
   ruta?: string;
-  /** Solo para este rubro (la guía del día a día). */
-  rubro?: "comercio" | "gastronomia";
+  /**
+   * Solo para este rubro. comercio/gastronomia: la guía del día a día. Un rubro de módulo
+   * (inmobiliaria, sorteos, gimnasio): se ve si la empresa tiene esa función prendida.
+   */
+  rubro?: "comercio" | "gastronomia" | "inmobiliaria" | "sorteos" | "gimnasio";
   bloques: Bloque[];
 };
 
-export const GRUPOS = ["Primeros pasos", "Caja y ventas", "Pedidos y mesas", "Cocina y recetas", "Inventario", "Compras y gastos", "Clientes y ventas", "Cobros", "Sorteos", "Reportes", "Atención al cliente", "RR HH", "Configuración"];
+export const GRUPOS = ["Primeros pasos", "Caja y ventas", "Pedidos y mesas", "Cocina y recetas", "Inventario", "Compras y gastos", "Clientes y ventas", "Cobros", "Sorteos", "Inmobiliaria", "Reportes", "Atención al cliente", "RR HH", "Configuración"];
 
 /** Cómo se llega a la pantalla de cada guía: la sección del menú y la tarjeta de su panel. */
 export const LLEGAR: Record<string, [string, string?]> = {
@@ -45,15 +48,18 @@ export const LLEGAR: Record<string, [string, string?]> = {
   "rrhh-historial": ["RR HH", "Personal"], "rrhh-liquidacion": ["RR HH", "Liquidaciones"],
   "sorteo-crear": ["Sorteos", "Sorteos"], "sorteo-vender": ["Sorteos", "Vender"], "sorteo-revisar": ["Sorteos", "Por revisar"],
   "sorteo-vendedor": ["Sorteos", "Vendedores"], "sorteo-whatsapp": ["Sorteos", "WhatsApp"], "sorteo-sortear": ["Sorteos", "Sorteos"],
+  "inmo-propiedad": ["Inmobiliaria", "Propiedades"], "inmo-vender": ["Inmobiliaria", "Propiedades"], "inmo-caja": ["Caja", "Nueva venta"],
+  "inmo-alquiler": ["Inmobiliaria", "Alquileres"], "inmo-cobrar-alquiler": ["Inmobiliaria", "Alquileres"], "inmo-busqueda": ["Comercial", "Clientes"],
+  "inmo-avisos": ["Inmobiliaria", "Propiedades"], "inmo-planes": ["Configuración", "Planes de cuotas y mora"],
 };
 /** La captura del panel que abre cada sección del menú. */
 export const PANELES: Record<string, string> = {
   Caja: "panel-caja", Inventario: "panel-inventario", "Gastos empresariales": "panel-gastos", Comercial: "panel-comercial",
   Finanzas: "panel-finanzas", Omnicanal: "panel-omnicanal", Configuración: "panel-config", "RR HH": "rrhh-panel",
-  Sorteos: "panel-sorteos",
+  Sorteos: "panel-sorteos", Inmobiliaria: "inmo-menu",
 };
 /** La captura donde se ve la sección en el menú, si no es la de Inicio. */
-export const MENUS: Record<string, string> = { "RR HH": "rrhh-panel", Sorteos: "sorteos-menu" };
+export const MENUS: Record<string, string> = { "RR HH": "rrhh-panel", Sorteos: "sorteos-menu", Inmobiliaria: "inmo-menu" };
 
 export const GUIAS: Guia[] = [
   // ── Primeros pasos ───────────────────────────────────────────────────────────
@@ -953,6 +959,147 @@ export const GUIAS: Guia[] = [
       { consejo: "Si preferís que sortee el sistema, en cada premio está «Que lo sortee el sistema», con su pantalla para transmitir." },
     ],
   },
+  // ── Inmobiliaria (solo con Inmobiliaria prendida; capturas en public/manual/inmobiliaria) ──
+  {
+    id: "inmo-propiedad", grupo: "Inmobiliaria", rubro: "inmobiliaria", ruta: "/inmobiliaria", titulo: "Cargar una propiedad", resumen: "Casa, lote, departamento o local: propia o de un dueño.",
+    bloques: [
+      { img: "inmo-propiedades", alt: "Lista de propiedades", pasos: [{ t: "Tocá Nueva propiedad.", marca: "Nueva propiedad" }] },
+      { img: "inmo-propiedad-datos", alt: "Datos de la propiedad", pasos: [
+        { t: "Escribí un título que la describa.", d: "Por ejemplo: Departamento de 2 dormitorios en Villa Morra.", marca: "Título" },
+        { t: "Elegí el tipo.", d: "Casa, departamento, lote, local… Los tipos se cambian con el botón Tipos.", marca: "Tipo" },
+        { t: "Elegí si la vendés, la alquilás o las dos cosas.", marca: "Gestión" },
+        { t: "Poné el precio.", d: "Para vender aparece Precio de venta; para alquilar, Alquiler por mes.", marca: "Alquiler por mes" },
+        { t: "Revisá el IVA.", d: "Los inmuebles pagan 5 %.", marca: "IVA" },
+      ] },
+      { img: "inmo-propiedad-ubicacion", alt: "Ubicación, superficie y catastro", pasos: [
+        { t: "Elegí la ciudad y el barrio.", marca: "Ciudad" },
+        { t: "Escribí la dirección.", marca: "Dirección" },
+        { t: "Cargá los metros: de terreno y construidos.", marca: "Construcción (m²)" },
+        { t: "Si los tenés, cargá la cuenta catastral, la finca, la manzana y el lote.", d: "Después la encontrás buscando por cualquiera de esos datos.", marca: "Cuenta catastral" },
+      ] },
+      { img: "inmo-propiedad-dueno", alt: "Documentación y dueño", pasos: [
+        { t: "Marcá cómo está la documentación.", d: "Si falta algo, anotá qué.", marca: "Estado de la documentación" },
+        { t: "Si no es de la inmobiliaria, tocá De un dueño y elegí al cliente dueño.", marca: "De un dueño" },
+        { t: "Poné la comisión de la inmobiliaria.", d: "Al dueño se le paga lo cobrado menos esta comisión.", marca: "Comisión del alquiler (%)" },
+        { t: "Tocá Guardar.", marca: "Guardar" },
+      ] },
+      { consejo: "Con la ficha abierta, abajo le cambiás el estado: disponible, reservada o retirada. Vendida y alquilada se ponen solas." },
+    ],
+  },
+  {
+    id: "inmo-vender", grupo: "Inmobiliaria", rubro: "inmobiliaria", ruta: "/inmobiliaria", titulo: "Vender una propiedad en cuotas", resumen: "Con un plan, entrega inicial y hasta 120 cuotas.",
+    bloques: [
+      { img: "inmo-ficha-venta", alt: "Ficha de la propiedad", texto: "Tocá la propiedad para abrir su ficha.", pasos: [{ t: "Tocá Vender.", marca: "Vender" }] },
+      { img: "inmo-vender", alt: "Vender la propiedad en cuotas", pasos: [
+        { t: "Elegí el comprador.", marca: "Comprador" },
+        { t: "Tocá En cuotas.", d: "Si paga todo junto, tocá Contado.", marca: "En cuotas" },
+        { t: "Elegí el plan.", d: "Pone solo las cuotas, cada cuánto y la entrega mínima. Sin plan, las cargás a mano.", marca: "Plan de cuotas" },
+        { t: "Revisá la entrega inicial.", d: "Abajo ves cuánto queda financiado y cuánto es cada cuota.", marca: "Entrega inicial" },
+        { t: "Elegí cómo paga la entrega.", marca: "Medio de pago" },
+        { t: "Tocá Vender.", d: "La entrega entra a tu caja abierta y las cuotas quedan en Cuentas a cobrar. La propiedad pasa a vendida.", marca: "Vender" },
+      ] },
+      { ojo: "Si anulás la venta, la propiedad vuelve a estar disponible." },
+    ],
+  },
+  {
+    id: "inmo-caja", grupo: "Inmobiliaria", rubro: "inmobiliaria", ruta: "/caja/nueva", titulo: "Vender en cuotas desde la caja", resumen: "Elegir un plan y cobrar la entrega en el momento.",
+    bloques: [
+      { img: "inmo-caja-credito", alt: "Venta a crédito con plan y entrega", pasos: [
+        { t: "Elegí el cliente.", d: "A crédito es obligatorio.", marca: "Cliente *" },
+        { t: "Tocá Crédito.", marca: "Crédito" },
+        { t: "Elegí el plan.", d: "Pone las cuotas, cada cuánto y en cuántos días vence la primera.", marca: "Plan de cuotas" },
+        { t: "Si querés, cambiá las cuotas a mano.", d: "Al tocarlas, el plan se quita.", marca: "Cuotas" },
+        { t: "Revisá la entrega inicial.", d: "Se completa con el mínimo del plan. Las cuotas se arman sobre lo que falta.", marca: "Entrega inicial" },
+        { t: "Elegí con qué paga la entrega.", marca: "Cómo paga la entrega" },
+        { t: "Cargá la propiedad y tocá Aceptar y cobrar.", d: "La entrega se cobra en ese momento y el resto queda en cuotas." },
+      ] },
+      { consejo: "Si el plan tiene recargo, la ventana de cobro te muestra el total con el recargo y cuánto queda cada cuota." },
+    ],
+  },
+  {
+    id: "inmo-alquiler", grupo: "Inmobiliaria", rubro: "inmobiliaria", ruta: "/inmobiliaria/alquileres", titulo: "Alquilar una propiedad", resumen: "El contrato con el inquilino, el aumento y la comisión.",
+    bloques: [
+      { img: "inmo-alquileres", alt: "Lista de contratos", pasos: [{ t: "Tocá Nuevo contrato.", marca: "Nuevo contrato" }] },
+      { img: "inmo-contrato", alt: "Contrato de alquiler", pasos: [
+        { t: "Elegí la propiedad.", marca: "Propiedad" },
+        { t: "Elegí el inquilino.", marca: "Inquilino" },
+        { t: "Revisá el alquiler por mes.", d: "Viene de la ficha de la propiedad.", marca: "Alquiler por mes" },
+        { t: "Elegí qué día del mes vence.", marca: "Vence el día" },
+        { t: "Poné cuántos meses dura.", d: "Si lo dejás vacío, no tiene fin.", marca: "Duración (meses)" },
+        { t: "Si sube, poné cuánto aumenta y cada cuántos meses.", d: "Por ejemplo, 5 % cada 12 meses. Se aplica solo.", marca: "Aumento (%)" },
+        { t: "Revisá la comisión de la inmobiliaria.", d: "Viene de la propiedad. Es lo que te quedás de cada cobro.", marca: "Comisión de la inmobiliaria (%)" },
+        { t: "Tocá Guardar.", d: "La propiedad pasa a alquilada.", marca: "Guardar" },
+      ] },
+      { consejo: "Para cerrar un contrato, abrilo y tocá Terminar. Si se corta antes, Rescindir." },
+    ],
+  },
+  {
+    id: "inmo-cobrar-alquiler", grupo: "Inmobiliaria", rubro: "inmobiliaria", ruta: "/inmobiliaria/alquileres", titulo: "Cobrar el alquiler y pagarle al dueño", resumen: "La cuota de cada mes y la liquidación al propietario.",
+    bloques: [
+      { img: "inmo-alquileres", alt: "Contratos con el mes sin emitir", pasos: [
+        { t: "Cada mes, tocá Emitir el mes.", d: "Crea la cuota de cada contrato vigente. Queda en Cuentas a cobrar.", marca: "Emitir el mes (1)" },
+      ] },
+      { texto: "Cuando el inquilino paga, registrá el cobro como cualquier deuda (guía «Registrar el pago de una deuda»)." },
+      { img: "inmo-liquidar", alt: "Liquidar a los dueños", pasos: [
+        { t: "Tocá Liquidar a dueños.", marca: "Liquidar a dueños" },
+        { t: "Mirá cuánto le toca a cada dueño.", d: "Lo cobrado menos la comisión de la inmobiliaria.", marca: "A pagarle" },
+        { t: "Elegí cómo le pagás.", d: "Si es transferencia, anotá la referencia.", marca: "Transferencia" },
+        { t: "Tocá Liquidar.", d: "La plata sale de tu caja y queda el comprobante de la liquidación.", marca: "Liquidar Gs. 3.150.000" },
+      ] },
+    ],
+  },
+  {
+    id: "inmo-busqueda", grupo: "Inmobiliaria", rubro: "inmobiliaria", ruta: "/clientes", titulo: "Anotar lo que busca un cliente", resumen: "Así te avisa cuando entra algo que le sirve.",
+    bloques: [
+      { texto: "Abrí la ficha del cliente desde la lista." },
+      { img: "inmo-cliente-tab", alt: "Ficha del cliente", pasos: [
+        { t: "Tocá Inmobiliaria.", marca: "Inmobiliaria" },
+        { t: "Tocá Agregar.", marca: "Agregar" },
+      ] },
+      { img: "inmo-busqueda", alt: "Lo que busca el cliente", pasos: [
+        { t: "Elegí si quiere comprar o alquilar.", marca: "Qué busca" },
+        { t: "Elegí el tipo de propiedad.", d: "Si le da igual, dejá Cualquiera.", marca: "Tipo de propiedad" },
+        { t: "Elegí la ciudad.", marca: "Ciudad" },
+        { t: "Poné hasta cuánto puede pagar.", marca: "Hasta (precio)" },
+        { t: "Si necesita un terreno mínimo, ponelo.", marca: "Terreno mínimo (m²)" },
+        { t: "Anotá lo que pidió.", d: "Por ejemplo: con patio y cochera.", marca: "Notas" },
+        { t: "Tocá Guardar.", d: "Abajo te muestra las propiedades disponibles que le sirven.", marca: "Guardar" },
+      ] },
+    ],
+  },
+  {
+    id: "inmo-avisos", grupo: "Inmobiliaria", rubro: "inmobiliaria", ruta: "/inmobiliaria", titulo: "Avisar a los interesados", resumen: "Entró una propiedad que alguien busca: mandale un WhatsApp.",
+    bloques: [
+      { texto: "Cuando cargás una propiedad, vuelve a estar disponible o le bajás el precio, y le sirve a alguien que la busca, te llega un aviso a la campanita." },
+      { img: "inmo-avisos", alt: "Clientes para avisar", pasos: [
+        { t: "Arriba de las propiedades ves a quién avisarle.", marca: "1 cliente para avisar" },
+        { t: "Tocá WhatsApp.", d: "Se abre WhatsApp con el mensaje listo. Lo revisás y lo enviás vos: el sistema no manda nada solo.", marca: "WhatsApp" },
+        { t: "Si ya se lo dijiste por otro lado, tocá Ya le avisé.", marca: "Ya le avisé" },
+        { t: "Si no le interesa, tocá Descartar.", marca: "Descartar" },
+      ] },
+      { img: "inmo-ficha-venta", alt: "Avisos en la ficha de la propiedad", pasos: [
+        { t: "También los ves en la ficha de la propiedad.", marca: "WhatsApp" },
+      ] },
+      { consejo: "Lo que ya le servía cuando cargaste la búsqueda no se avisa: lo ves en la ficha del cliente." },
+    ],
+  },
+  {
+    id: "inmo-planes", grupo: "Inmobiliaria", rubro: "inmobiliaria", ruta: "/configuracion/cuotas", titulo: "Planes de cuotas, recargo y mora", resumen: "Los planes que se eligen al vender y el interés por atraso.",
+    bloques: [
+      { img: "inmo-config-cuotas", alt: "Planes de cuotas y mora", pasos: [
+        { t: "Poné hasta cuántas cuotas se puede vender.", d: "Hasta 360.", marca: "Cuotas como máximo" },
+        { t: "Tocá Agregar plan.", marca: "Agregar plan" },
+        { t: "Ponele un nombre.", d: "Por ejemplo: 120 cuotas con 10 % de entrega.", marca: "Nombre" },
+        { t: "Poné en cuántas cuotas y cada cuánto.", marca: "Cuotas" },
+        { t: "Poné la entrega mínima.", d: "En porcentaje del precio.", marca: "Entrega mín. (%)" },
+        { t: "Si financiar cuesta, poné el recargo.", d: "Se suma sobre lo financiado como un renglón de la venta y lo pagan las cuotas.", marca: "Recargo (%)" },
+        { t: "Para cobrar interés por atraso, prendé la mora.", d: "Arranca apagada. Elegí la tasa por mes y los días de gracia.", marca: "Cobrar interés por mora" },
+        { t: "Tocá Guardar.", marca: "Guardar" },
+      ] },
+      { consejo: "El interés por mora se suma al cobrar. Quien tenga el permiso lo puede perdonar, con un motivo." },
+    ],
+  },
+
   // ── RR HH ────────────────────────────────────────────────────────────────────
   {
     id: "rrhh-datos", grupo: "RR HH", ruta: "/rrhh", titulo: "Cargar los datos de una persona", resumen: "Datos personales, trabajo, salario y horario.",

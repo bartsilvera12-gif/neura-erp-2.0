@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle, ArrowLeft, ArrowRight, BarChart3, Banknote, Check, ChefHat, ChevronRight, ClipboardList, Expand, Lightbulb, MessageCircle, Package,
-  Rocket, Search, Settings, ShoppingCart, Ticket, Truck, Users, X, ArrowUp, IdCard,
+  Rocket, Search, Settings, ShoppingCart, Ticket, Truck, Users, X, ArrowUp, IdCard, Building2,
 } from "lucide-react";
 import { CapaModal } from "@/components/CapaModal";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
@@ -22,10 +22,18 @@ import { pantallaDeRuta, pantallasCatalogo, perfilVePantalla } from "@/modules/r
 type RubroImagen = "comercio" | "gastronomia";
 /** lado "der": la flecha entra desde la derecha, donde a la izquierda no hay lugar (el menú). */
 type Punto = { x: number; y: number; lado?: "der" | "abajo"; z?: number };
-const MARCAS = marcasJson as unknown as Record<RubroImagen, Record<string, Record<string, Punto | null>>>;
-/** Las capturas son por rubro: la de otro rubro solo si la pantalla no existe en el tuyo. */
-const carpetaDe = (img: string, rubro: RubroImagen): RubroImagen => (MARCAS[rubro][img] ? rubro : rubro === "comercio" ? "gastronomia" : "comercio");
-const ContextoRubro = createContext<RubroImagen>("comercio");
+/** Carpetas de capturas: comercio y gastronomía, más una por rubro de módulo (inmobiliaria…). */
+const MARCAS = marcasJson as unknown as Record<string, Record<string, Record<string, Punto | null>>>;
+/**
+ * Las capturas son por rubro: se busca en orden (la carpeta del rubro de la empresa, si tiene, y
+ * después comercio o gastronomía) y la de otra carpeta solo si la pantalla no existe en ninguna de esas.
+ */
+const carpetaDe = (img: string, orden: string[]): string =>
+  orden.find((c) => MARCAS[c]?.[img]) ?? Object.keys(MARCAS).find((c) => MARCAS[c]?.[img]) ?? orden[0];
+/** Guías de un rubro de módulo: se ven si la empresa tiene esa función prendida (sola o junto a otras). */
+const RUBROS_MODULO = ["sorteos", "inmobiliaria", "gimnasio"] as const;
+/** Orden de carpetas de capturas para la empresa (ver carpetaDe). */
+const ContextoRubro = createContext<string[]>(["comercio"]);
 
 const TEMAS: { grupo: string; titulo: string; detalle: string; Icono: ComponentType<{ className?: string }> }[] = [
   { grupo: "Caja y ventas", titulo: "Vender y usar la caja", detalle: "Abrir, vender, devolver y cerrar", Icono: ShoppingCart },
@@ -36,6 +44,7 @@ const TEMAS: { grupo: string; titulo: string; detalle: string; Icono: ComponentT
   { grupo: "Clientes y ventas", titulo: "Mis clientes", detalle: "Clientes, presupuestos y comisiones", Icono: Users },
   { grupo: "Cobros", titulo: "Cobrar deudas", detalle: "Quién te debe y cómo registrar el pago", Icono: Banknote },
   { grupo: "Sorteos", titulo: "Sorteos", detalle: "Crear, vender, confirmar pagos y sortear", Icono: Ticket },
+  { grupo: "Inmobiliaria", titulo: "Propiedades", detalle: "Cargar, vender en cuotas, alquilar y avisar", Icono: Building2 },
   { grupo: "Reportes", titulo: "Ver mis números", detalle: "Reportes en Excel o PDF", Icono: BarChart3 },
   { grupo: "Atención al cliente", titulo: "Chats y soporte", detalle: "Responder a tus clientes", Icono: MessageCircle },
   { grupo: "RR HH", titulo: "Mi personal", detalle: "Datos, ausencias, vacaciones y liquidación", Icono: IdCard },
@@ -87,7 +96,7 @@ function Visor({ d, onAmpliar }: { d: Diapositiva; onAmpliar: () => void }) {
   if (!d.img) return null;
   const carpeta = carpetaDe(d.img, rubro);
   const src = `/manual/${carpeta}/${d.img}.webp`;
-  const p = d.marca ? MARCAS[carpeta][d.img]?.[d.marca] ?? null : null;
+  const p = d.marca ? MARCAS[carpeta]?.[d.img]?.[d.marca] ?? null : null;
   const cargar = (e: React.SyntheticEvent<HTMLImageElement>) => setProporcion(e.currentTarget.naturalHeight / e.currentTarget.naturalWidth);
 
   if (!p) {
@@ -140,12 +149,13 @@ function Recorrido({ guia, rubro }: { guia: Guia; rubro: RubroImagen }) {
   const fin = i >= lista.length;
   const d = lista[i];
   const tema = TEMAS.find((t) => t.grupo === guia.grupo);
+  const orden = useContext(ContextoRubro);
 
   useEffect(() => {
     document.querySelector("main")?.scrollTo({ top: 0 });
     const siguiente = lista[i + 1];
-    if (siguiente?.img) new Image().src = `/manual/${carpetaDe(siguiente.img, rubro)}/${siguiente.img}.webp`;
-  }, [i, lista, rubro]);
+    if (siguiente?.img) new Image().src = `/manual/${carpetaDe(siguiente.img, orden)}/${siguiente.img}.webp`;
+  }, [i, lista, orden]);
 
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
@@ -242,7 +252,7 @@ function Recorrido({ guia, rubro }: { guia: Guia; rubro: RubroImagen }) {
 function PantallaCompleta({ d }: { d: Diapositiva }) {
   const rubro = useContext(ContextoRubro);
   const carpeta = carpetaDe(d.img ?? "", rubro);
-  const p = d.marca ? MARCAS[carpeta][d.img ?? ""]?.[d.marca] ?? null : null;
+  const p = d.marca ? MARCAS[carpeta]?.[d.img ?? ""]?.[d.marca] ?? null : null;
   return (
     <span className="relative -mt-11 block">
       {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -283,11 +293,16 @@ function Manual() {
 
   const rubro = me?.funciones ? rubroDe(me.funciones) : "comercio";
   const rubroImagen: RubroImagen = rubro === "personalizado" || rubro === "sorteos" || rubro === "inmobiliaria" || rubro === "gimnasio" || rubro === "neura" ? (me?.funciones?.mesas ? "gastronomia" : "comercio") : rubro;
+  // Carpeta propia del rubro (p. ej. public/manual/inmobiliaria) primero, si existe.
+  const ordenCarpetas = useMemo(() => (MARCAS[rubro] && rubro !== rubroImagen ? [rubro, rubroImagen] : [rubroImagen]), [rubro, rubroImagen]);
   const guias = useMemo(() => {
     if (!me) return [];
     const catalogo = pantallasCatalogo();
     return GUIAS.filter((g) => {
-      if (g.rubro && g.rubro !== rubroImagen) return false;
+      if (g.rubro && g.rubro !== rubroImagen) {
+        const modulo = (RUBROS_MODULO as readonly string[]).includes(g.rubro);
+        if (!modulo || !(me.funciones as Record<string, boolean> | undefined)?.[g.rubro]) return false;
+      }
       if (!g.ruta || g.ruta === "/") return true;
       const p = pantallaDeRuta(g.ruta, catalogo);
       return p ? perfilVePantalla(p, me.rol, me.perfil, me.funciones) : false;
@@ -297,7 +312,7 @@ function Manual() {
   const guia = guias.find((g) => g.id === idGuia) ?? null;
   if (guia) {
     return (
-      <ContextoRubro.Provider value={rubroImagen}>
+      <ContextoRubro.Provider value={ordenCarpetas}>
         <Recorrido key={guia.id} guia={guia} rubro={rubroImagen} />
       </ContextoRubro.Provider>
     );

@@ -3567,5 +3567,397 @@
     "lado": "abajo"
    }
   }
+ },
+ "inmobiliaria": {
+  "inmo-menu": {
+   "Inmobiliaria": {
+    "x": 3.8,
+    "y": 39.3
+   },
+   "Propiedades": {
+    "x": 4.7,
+    "y": 44.4
+   },
+   "Alquileres": {
+    "x": 4.7,
+    "y": 49.3
+   }
+  },
+  "inmo-propiedades": {
+   "Nueva propiedad": {
+    "x": 27.5,
+    "y": 25.4
+   },
+   "Tipos": {
+    "x": 20,
+    "y": 25.4
+   },
+   "Departamento de 2 dormitorios en Villa Morra": {
+    "x": 47.7,
+    "y": 73
+   }
+  },
+  "inmo-alquileres": {
+   "Nuevo contrato": {
+    "x": 85.4,
+    "y": 29.6
+   },
+   "Emitir el mes (1)": {
+    "x": 72.7,
+    "y": 29.6
+   },
+   "Liquidar a dueños": {
+    "x": 27.1,
+    "y": 22.8
+   },
+   "ALQ-0001 · INM-0002": {
+    "x": 21.3,
+    "y": 37.2
+   }
+  },
+  "inmo-propiedad-datos": {
+   "Título": {
+    "x": 56.6,
+    "y": 16.4
+   },
+   "Tipo": {
+    "x": 56.6,
+    "y": 25.7
+   },
+   "Gestión": {
+    "x": 77.7,
+    "y": 25.7
+   },
+   "Alquiler por mes": {
+    "x": 56.6,
+    "y": 34.9
+   },
+   "IVA": {
+    "x": 77.7,
+    "y": 34.9
+   }
+  },
+  "inmo-propiedad-ubicacion": {
+   "Ciudad": {
+    "x": 56.6,
+    "y": 16.4
+   },
+   "Barrio": {
+    "x": 77.7,
+    "y": 16.4
+   },
+   "Dirección": {
+    "x": 56.6,
+    "y": 25.7
+   },
+   "Construcción (m²)": {
+    "x": 77.7,
+    "y": 40
+   },
+   "Cuenta catastral": {
+    "x": 56.6,
+    "y": 54.3
+   }
+  },
+  "inmo-propiedad-dueno": {
+   "Estado de la documentación": {
+    "x": 56.6,
+    "y": 20.6
+   },
+   "De un dueño": {
+    "x": 77.5,
+    "y": 32.5
+   },
+   "Comisión del alquiler (%)": {
+    "x": 56.6,
+    "y": 48.5
+   },
+   "Guardar": {
+    "x": 91,
+    "y": 95.4
+   }
+  },
+  "inmo-ficha-venta": {
+   "Vender": {
+    "x": 72.2,
+    "y": 95.4
+   },
+   "WhatsApp": {
+    "x": 71.5,
+    "y": 20.9
+   },
+   "Ya le avisé": {
+    "x": 79.9,
+    "y": 20.9
+   }
+  },
+  "inmo-vender": {
+   "Comprador": {
+    "x": 56.6,
+    "y": 11.4
+   },
+   "En cuotas": {
+    "x": 56.6,
+    "y": 23.4
+   },
+   "Plan de cuotas": {
+    "x": 56.6,
+    "y": 32.7
+   },
+   "Entrega inicial": {
+    "x": 56.6,
+    "y": 42.1
+   },
+   "Medio de pago": {
+    "x": 56.6,
+    "y": 60.6
+   },
+   "Vender": {
+    "x": 91.5,
+    "y": 96.1
+   }
+  },
+  "inmo-contrato": {
+   "Propiedad": {
+    "x": 56.6,
+    "y": 21
+   },
+   "Inquilino": {
+    "x": 56.6,
+    "y": 29.2
+   },
+   "Alquiler por mes": {
+    "x": 56.6,
+    "y": 37.4
+   },
+   "Vence el día": {
+    "x": 56.6,
+    "y": 45.7
+   },
+   "Duración (meses)": {
+    "x": 56.6,
+    "y": 53.9
+   },
+   "Aumento (%)": {
+    "x": 56.6,
+    "y": 62.1
+   },
+   "Cada (meses)": {
+    "x": 77.7,
+    "y": 62.1
+   },
+   "Comisión de la inmobiliaria (%)": {
+    "x": 56.6,
+    "y": 70.3
+   },
+   "Guardar": {
+    "x": 91,
+    "y": 96.1
+   }
+  },
+  "inmo-liquidar": {
+   "Liquidar a dueños": {
+    "x": 27.1,
+    "y": 22.9
+   },
+   "A pagarle": {
+    "x": 87,
+    "y": 30.3
+   },
+   "Transferencia": {
+    "x": 22.5,
+    "y": 45.2
+   },
+   "Liquidar Gs. 3.150.000": {
+    "x": 81.9,
+    "y": 45.2
+   }
+  },
+  "inmo-cliente-tab": {
+   "Inmobiliaria": {
+    "x": 62.7,
+    "y": 53.3
+   },
+   "Agregar": {
+    "x": 87.5,
+    "y": 61.9
+   }
+  },
+  "inmo-busqueda": {
+   "Qué busca": {
+    "x": 22,
+    "y": 48.5
+   },
+   "Tipo de propiedad": {
+    "x": 59.4,
+    "y": 55.5
+   },
+   "Ciudad": {
+    "x": 23,
+    "y": 59.6
+   },
+   "Hasta (precio)": {
+    "x": 59.4,
+    "y": 59.6
+   },
+   "Terreno mínimo (m²)": {
+    "x": 23,
+    "y": 67
+   },
+   "Notas": {
+    "x": 23,
+    "y": 74.4
+   },
+   "Guardar": {
+    "x": 88,
+    "y": 82.9
+   }
+  },
+  "inmo-avisos": {
+   "1 cliente para avisar": {
+    "x": 21.3,
+    "y": 33.3
+   },
+   "WhatsApp": {
+    "x": 71.2,
+    "y": 43.4
+   },
+   "Ya le avisé": {
+    "x": 79.6,
+    "y": 43.4
+   },
+   "Descartar": {
+    "x": 87.9,
+    "y": 43.4
+   }
+  },
+  "inmo-caja-credito": {
+   "Crédito": {
+    "x": 58.9,
+    "y": 22.3
+   },
+   "Cliente *": {
+    "x": 21.3,
+    "y": 19.1
+   },
+   "Plan de cuotas": {
+    "x": 46.7,
+    "y": 29.2
+   },
+   "Cuotas": {
+    "x": 46.7,
+    "y": 32.8
+   },
+   "Vence en": {
+    "x": 52.6,
+    "y": 32.8
+   },
+   "Entrega inicial": {
+    "x": 46.7,
+    "y": 52.4
+   },
+   "Cómo paga la entrega": {
+    "x": 59.2,
+    "y": 54.6
+   },
+   "Aceptar y cobrar": {
+    "x": 65.1,
+    "y": 100.5
+   }
+  },
+  "venta-credito": {
+   "Crédito": {
+    "x": 58.9,
+    "y": 22.3
+   },
+   "Cliente *": {
+    "x": 21.3,
+    "y": 19.1
+   },
+   "Plan de cuotas": {
+    "x": 46.7,
+    "y": 29.2
+   },
+   "Cuotas": {
+    "x": 46.7,
+    "y": 32.8
+   },
+   "Vence en": {
+    "x": 52.6,
+    "y": 32.8
+   },
+   "Entrega inicial": {
+    "x": 46.7,
+    "y": 52.4
+   },
+   "Cómo paga la entrega": {
+    "x": 59.2,
+    "y": 54.6
+   },
+   "Aceptar y cobrar": {
+    "x": 65.1,
+    "y": 100.5
+   }
+  },
+  "panel-config": {
+   "Datos de la empresa": {
+    "x": 21.3,
+    "y": 30.8
+   },
+   "Tickets y facturación": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Rubro y funciones": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Comisiones": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Usuarios": {
+    "x": 74,
+    "y": 47.4
+   },
+   "Planes de cuotas y mora": {
+    "x": 47.6,
+    "y": 47.4
+   }
+  },
+  "inmo-config-cuotas": {
+   "Cuotas como máximo": {
+    "x": 21.6,
+    "y": 30.8
+   },
+   "Nombre": {
+    "x": 22.7,
+    "y": 50.6
+   },
+   "Cuotas": {
+    "x": 39.9,
+    "y": 50.6
+   },
+   "Entrega mín. (%)": {
+    "x": 67,
+    "y": 50.6
+   },
+   "Recargo (%)": {
+    "x": 76.6,
+    "y": 50.6
+   },
+   "Agregar plan": {
+    "x": 21.6,
+    "y": 59.7
+   },
+   "Cobrar interés por mora": {
+    "x": 22.7,
+    "y": 76.3
+   },
+   "Guardar": {
+    "x": 91,
+    "y": 92.1
+   }
+  }
  }
 }
