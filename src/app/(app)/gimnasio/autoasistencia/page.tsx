@@ -67,23 +67,24 @@ function Fila({ a, onEnviado }: { a: Alumno; onEnviado: (id: string) => void }) 
           <span className="block truncate text-sm font-semibold text-slate-900">{a.nombre}</span>
           <span className={`block truncate text-xs ${e.tono}`}>{e.texto}{m?.clases_mes ? <span className="text-slate-400"> · {m.usadas} de {m.clases_mes}</span> : null}</span>
         </span>
-        {a.enviado ? (
-          <span className="flex shrink-0 items-center">
-            <button type="button" aria-label="Copiar link" title="Copiar link" disabled={!!ocupado} onClick={() => void correr("copiar")}
-              className="grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50">
-              {ocupado === "copiar" ? <Loader2 className="h-4 w-4 animate-spin" /> : copiado ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-            </button>
-            <button type="button" title="Mandar de nuevo" disabled={!!ocupado} onClick={() => void correr("wa")}
-              className="inline-flex min-h-10 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
+        <span className="flex shrink-0 items-center gap-1">
+          <button type="button" aria-label="Copiar link" disabled={!!ocupado} onClick={() => void correr("copiar")}
+            className="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">
+            {ocupado === "copiar" ? <Loader2 className="h-4 w-4 animate-spin" /> : copiado ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+            <span className="hidden sm:inline">{copiado ? "Copiado" : "Copiar link"}</span>
+          </button>
+          {a.enviado ? (
+            <button type="button" title="Mandar de nuevo por WhatsApp" disabled={!!ocupado} onClick={() => void correr("wa")}
+              className="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 disabled:opacity-50">
               {ocupado === "wa" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />} Enviado
             </button>
-          </span>
-        ) : (
-          <button type="button" disabled={!!ocupado} onClick={() => void correr("wa")}
-            className="inline-flex min-h-10 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50">
-            {ocupado === "wa" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />} Enviar link
-          </button>
-        )}
+          ) : (
+            <button type="button" disabled={!!ocupado} onClick={() => void correr("wa")}
+              className="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 hover:border-[var(--brand)] hover:text-[var(--brand)] disabled:opacity-50">
+              {ocupado === "wa" ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageCircle className="h-4 w-4" />} Enviar link
+            </button>
+          )}
+        </span>
       </div>
       {error ? <p role="alert" className="mt-1 break-all pl-[52px] text-xs text-rose-700">{error}</p> : null}
     </li>
