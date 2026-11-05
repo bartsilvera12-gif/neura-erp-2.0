@@ -14,9 +14,10 @@ function TarjetaSorteo({ s }: { s: SorteoFila }) {
   return (
     <li>
       <Link href={`/sorteos/${s.id}`} className="group flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white no-underline shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[var(--brand)] hover:shadow-md">
-        <div className="relative aspect-[16/7] bg-slate-100">
+        {/* Mismo alto para todas: la foto llena el recuadro y se recorta, nunca lo estira. */}
+        <div className="relative aspect-[16/7] shrink-0 overflow-hidden bg-slate-100">
           {s.imagen_url
-            ? <img src={s.imagen_url} alt="" className="h-full w-full object-cover" loading="lazy" />
+            ? <img src={s.imagen_url} alt="" className="absolute inset-0 h-full w-full object-cover" loading="lazy" />
             : <span className="grid h-full place-items-center text-slate-300"><ImageOff className="h-7 w-7" aria-hidden /></span>}
           <span className="absolute left-3 top-3"><EstadoSorteoChip estado={s.estado} /></span>
           {s.stats.por_revisar ? <span className="absolute right-3 top-3"><Etiqueta tono="alerta">{s.stats.por_revisar} por revisar</Etiqueta></span> : null}
