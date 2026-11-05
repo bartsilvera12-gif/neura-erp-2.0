@@ -7,6 +7,7 @@ import { clienteConfig } from "@/cliente.config";
 const TARJETAS: TarjetaPanel[] = [
   { href: "/gimnasio", titulo: "Recepción", imagen: "/comercial/clientes-fichero-contactos.webp", color: hslDeMarca(clienteConfig.color), posicion: "50% 45%" },
   { href: "/gimnasio/clases", titulo: "Clases", imagen: "/comercial/agenda-planificador-escribiendo.webp", color: "215 45% 24%", posicion: "50% 50%" },
+  { href: "/gimnasio/autoasistencia", titulo: "Que el alumno marque solo", imagen: "/finanzas/nueva-venta-escaner-celular.webp", color: "35 60% 24%", posicion: "50% 50%" },
   { href: "/gimnasio/comisiones", titulo: "Comisiones de profesores", imagen: "/finanzas/pagos-proveedores-celular-laptop.webp", color: "160 45% 22%", posicion: "50% 50%" },
 ];
 

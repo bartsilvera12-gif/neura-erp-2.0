@@ -10,7 +10,7 @@
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, DoorOpen, Loader2, MoreHorizontal, ReceiptText } from "lucide-react";
+import { AlertTriangle, CheckCircle2, DoorOpen, KeyRound, Loader2, MoreHorizontal, ReceiptText } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { usePermiso } from "@/lib/sesion/ContextoUsuario";
 import { PedirMotivo } from "@/modules/inventario/ui";
@@ -116,6 +116,33 @@ function Fila({ a, conAcciones, apilado, onHecho }: { a: Asistencia; conAcciones
   );
 }
 
+/** PIN para que el alumno marque solo con el link (receta 153). El PIN nuevo se ve una sola vez. */
+function PinAlumno({ clienteId, tiene, onCambio }: { clienteId: string; tiene: boolean; onCambio: () => void }) {
+  const [pin, setPin] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function crear() {
+    setOcupado(true); setError(null);
+    try { setPin((await apiFetch<{ pin: string }>(`/api/gimnasio/clientes/${clienteId}/pin`, { method: "POST", body: "{}" })).pin); onCambio(); }
+    catch (e) { setError((e as Error).message); } finally { setOcupado(false); }
+  }
+  return (
+    <div className="rounded-xl border border-slate-200 px-3 py-2.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
+          <KeyRound className="h-4 w-4 shrink-0 text-slate-400" />
+          {pin ? <>PIN nuevo: <span className="font-mono text-lg font-bold tracking-[0.3em] text-slate-900">{pin}</span></> : tiene ? "Tiene PIN para marcar solo" : "Sin PIN para marcar solo"}
+        </span>
+        <button type="button" disabled={ocupado} onClick={() => void crear()} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand-50,#eef7f7)] disabled:opacity-50">
+          {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{tiene || pin ? "Cambiar PIN" : "Crear PIN"}
+        </button>
+      </div>
+      {pin ? <p className="mt-1 text-xs text-slate-500">Dáselo al alumno ahora: no se vuelve a mostrar. Con su CI y este PIN marca su llegada desde el link o el QR.</p> : null}
+      {error ? <p role="alert" className="mt-1 text-xs text-rose-700">{error}</p> : null}
+    </div>
+  );
+}
+
 /** Card "Asistencia" de un alumno. `compacto` = en la Recepción (sin título grande). */
 export function PanelAlumno({ clienteId, compacto, recarga = 0, onCambio }: { clienteId: string; compacto?: boolean; recarga?: number; onCambio?: () => void }) {
   const [d, setD] = useState<FichaAlumno | null>(null);
@@ -181,6 +208,8 @@ export function PanelAlumno({ clienteId, compacto, recarga = 0, onCambio }: { cl
         ) : null}
       </div>
       {errEntrada ? <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{errEntrada}</p> : null}
+
+      <PinAlumno clienteId={d.cliente.id} tiene={!!d.tiene_pin} onCambio={cargar} />
 
       <div>
         <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Próximas clases</h4>

@@ -123,6 +123,40 @@ begin
   perform pg_temp.ok('Gimnasio: cancelar la clase en la Agenda cancela a sus alumnos',
     (select bool_and(x->>'estado' = 'cancelada') from jsonb_array_elements(gim_cliente(v_b)->'historial') x where (x->>'cita_id')::uuid = v_cita));
 
+  -- Receta 153: el alumno marca solo con el link, su CI y su PIN.
+  perform pg_temp.rechaza('Autoasistencia: sin CI no se crea el PIN', format('select gim_alumno_pin_crear(%L)', v_b), 'CI');
+  insert into clientes (empresa_id, nombre, documento) values (pg_temp.fx('empresa'), 'PRUEBA Alumna Sola', '7.654.321') returning id into v_b;
+  v := gim_autoasistencia_link();
+  v_venta := gim_alumno_pin_crear(v_b);
+  update clientes set documento = '1.112.223' where id = v_d;
+  v_prod := null;
+  declare
+    v_token text := v->>'token';
+    v_pin text := v_venta->>'pin';
+    v_pin_d text := (gim_alumno_pin_crear(v_d))->>'pin';
+    r jsonb;
+  begin
+    perform pg_temp.ok('Autoasistencia: el link es de 48 caracteres', v_token ~ '^[0-9a-f]{48}$', v::text);
+    execute 'set local role anon';
+    r := gim_publico_entrar(v_token, '7654321', case when v_pin = '0000' then '1111' else '0000' end);
+    perform pg_temp.ok('Autoasistencia: PIN mal no entra', not (r->>'ok')::boolean, r::text);
+    r := gim_publico_entrar(v_token, '7.654.321', v_pin);
+    perform pg_temp.ok('Autoasistencia: con CI (con o sin puntos) y PIN entra y ve las clases de hoy',
+      (r->>'ok')::boolean and jsonb_array_length(r->'alumno'->'clases') >= 1, r::text);
+    r := gim_publico_marcar(v_token, '7654321', v_pin, null);
+    perform pg_temp.ok('Autoasistencia: marcar la sala la culmina y cobra la clase suelta',
+      (r->>'ok')::boolean and not (r->'marcada'->>'cubierta')::boolean and (r->'marcada'->>'valor')::numeric = 30000, r::text);
+    r := gim_publico_marcar(v_token, '7654321', v_pin, null);
+    perform pg_temp.ok('Autoasistencia: no marca dos veces la sala', not (r->>'ok')::boolean and r->>'error' like 'Ya marcaste%', r::text);
+    r := gim_publico_marcar(v_token, '1112223', v_pin_d, null);
+    perform pg_temp.ok('Autoasistencia: con deuda vencida lo manda a recepción', not (r->>'ok')::boolean and r->>'error' like '%recepción%', r::text);
+    for i in 1..5 loop perform gim_publico_entrar(v_token, '1112223', 'x'); end loop;
+    perform pg_temp.rechaza('Autoasistencia: 5 PIN mal lo bloquean', format('select gim_publico_entrar(%L, %L, %L)', v_token, '1112223', v_pin_d), 'Demasiados');
+    perform pg_temp.rechaza('Autoasistencia: un link inventado no sirve', format('select gim_publico_entrar(%L, %L, %L)', repeat('a', 48), '7654321', v_pin), 'no es válido');
+    perform pg_temp.rechaza('Autoasistencia: sin sesión no se crea un PIN', format('select gim_alumno_pin_crear(%L)', v_b), 'permission denied');
+    execute 'set local role authenticated';
+  end;
+
   -- Sin sesión no se usa.
   perform pg_temp.rechaza('Gimnasio: sin sesión no se ve el día', $q$set local role anon; select gim_dia()$q$, 'permission denied');
   execute 'set local role authenticated';

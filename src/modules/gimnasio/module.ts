@@ -14,6 +14,7 @@ export const moduloGimnasio: Modulo = {
   children: [
     { label: "Recepción", href: "/gimnasio", funcion: "gimnasio", permiso: "gimnasio_recepcion", palabras: ["asistencia", "entrada", "llegada", "check in", "hoy"] },
     { label: "Clases", href: "/gimnasio/clases", funcion: "gimnasio", permiso: "gimnasio_recepcion", palabras: ["horarios", "cupo", "profesores", "turnos"] },
+    { label: "Que el alumno marque solo", href: "/gimnasio/autoasistencia", funcion: "gimnasio", permiso: "gimnasio_recepcion", palabras: ["qr", "link", "autoasistencia", "pin", "check in", "marcar solo"] },
     { label: "Comisiones de profesores", href: "/gimnasio/comisiones", funcion: "gimnasio", permiso: "gimnasio_administrar", palabras: ["profesores", "instructores", "pago por clase"] },
   ],
 };
