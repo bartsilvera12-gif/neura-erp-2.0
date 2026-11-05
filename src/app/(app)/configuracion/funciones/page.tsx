@@ -9,7 +9,8 @@
  * Solo el Administrador guarda (la base lo vuelve a exigir). Apagar no borra nada.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Blocks, Check, Building2, ChefHat, ClipboardList, Dumbbell, Loader2, QrCode, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
+import { AlertTriangle, Blocks, Check, ChevronDown, Building2, ChefHat, ClipboardList, Dumbbell, Loader2, QrCode, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
+import type { ReactNode } from "react";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -79,6 +80,35 @@ const deEmpresa = (d: FuncionesEmpresa): Borrador => ({
   mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false, sorteos: !!d.sorteos, inmobiliaria: !!d.inmobiliaria, gimnasio: !!d.gimnasio,
   modulos_apagados: d.modulos_apagados ?? [],
 });
+
+/**
+ * Sección que se despliega: cerrada muestra solo el título y cuántas cosas están prendidas,
+ * para que la pantalla no abrume. Tocar la cabecera la abre o la cierra.
+ */
+function Plegable({ icono, titulo, resumen, detalle, children }: { icono: ReactNode; titulo: string; resumen: string; detalle: string; children: ReactNode }) {
+  const [abierta, setAbierta] = useState(false);
+  return (
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <button type="button" onClick={() => setAbierta((x) => !x)} aria-expanded={abierta}
+        className="flex min-h-[64px] w-full items-center gap-3 rounded-2xl px-4 py-3 text-left transition-colors hover:bg-slate-50 sm:px-5">
+        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-[var(--brand-50,#eef7f7)] text-[var(--brand)]">{icono}</span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-sm font-semibold text-slate-900">{titulo}</span>
+          <span className="block text-xs text-slate-500">{resumen}</span>
+        </span>
+        <ChevronDown aria-hidden className={`h-5 w-5 shrink-0 text-slate-400 transition-transform duration-200 ${abierta ? "rotate-180" : ""}`} />
+      </button>
+      {abierta ? (
+        <div className="border-t border-slate-100 px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
+          <p className="mb-3 text-xs leading-relaxed text-slate-500">{detalle}</p>
+          {children}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+const prendidas = (n: number, total: number, o = "a") => (n === total ? `Tod${o}s prendid${o}s (${total})` : n === 0 ? `Tod${o}s apagad${o}s` : `${n} de ${total} prendid${o}s`);
 
 /** Para comparar el borrador con lo guardado (la lista de módulos, sin importar el orden). */
 const huella = (b: Borrador) => JSON.stringify({ ...b, modulos_apagados: [...b.modulos_apagados].sort() });
@@ -262,7 +292,9 @@ export default function RubroFuncionesPage() {
         </div>      </Tarjeta>
 
       {/* ── Funciones ─────────────────────────────────────────────────────── */}
-      <Tarjeta icono={<Sparkles className="h-4 w-4" />} titulo="Funciones" detalle="La Caja, el inventario y las compras funcionan igual con todo apagado. Al prender Mesas y QR o Cocina, los perfiles Cajero y Supervisor ya las reciben; con Sorteos, también el Vendedor. Recetas y Producción quedan para el Administrador. Se ajusta en Usuarios › Perfiles y permisos.">
+      <Plegable icono={<Sparkles className="h-4 w-4" />} titulo="Funciones"
+        resumen={prendidas([b.mesas, b.cocina, b.recetas, b.pedidos, b.sorteos, b.inmobiliaria, b.gimnasio].filter(Boolean).length, 7)}
+        detalle="La Caja, el inventario y las compras funcionan igual con todo apagado. Al prender Mesas y QR o Cocina, los perfiles Cajero y Supervisor ya las reciben; con Sorteos, también el Vendedor. Recetas y Producción quedan para el Administrador. Se ajusta en Usuarios › Perfiles y permisos.">
         <div className="space-y-2.5">
           <Interruptor
             activo={b.mesas}
@@ -319,10 +351,12 @@ export default function RubroFuncionesPage() {
             descripcion="Clases con horario y cupo, turnos individuales, recepción que marca la asistencia y frena a quien debe, membresías con clases por mes, clase suelta que se cobra en la caja y comisión de profesores. Al prenderla, Supervisor, Cajero y Vendedor ya atienden la recepción."
           />
         </div>
-      </Tarjeta>
+      </Plegable>
 
       {/* ── Módulos (receta 138) ─────────────────────────────────────────── */}
-      <Tarjeta icono={<Blocks className="h-4 w-4" />} titulo="Módulos" detalle="El rubro deja prendidos solo los módulos que usa. Podés prender o apagar cada uno: apagar lo saca del menú, no borra nada. Configuración está siempre.">
+      <Plegable icono={<Blocks className="h-4 w-4" />} titulo="Módulos"
+        resumen={prendidas(MODULOS_RUBRO.filter((m) => !b.modulos_apagados.includes(m.id)).length, MODULOS_RUBRO.length, "o")}
+        detalle="El rubro deja prendidos solo los módulos que usa. Podés prender o apagar cada uno: apagar lo saca del menú, no borra nada. Configuración está siempre.">
         <div className="space-y-2.5">
           {MODULOS_RUBRO.map((m) => (
             <Interruptor
@@ -335,7 +369,7 @@ export default function RubroFuncionesPage() {
             />
           ))}
         </div>
-      </Tarjeta>
+      </Plegable>
 
       {errGuardar ? <Aviso tono="error">{errGuardar}</Aviso> : null}
       {okGuardar ? <Aviso tono="ok">{okGuardar}</Aviso> : null}
