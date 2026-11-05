@@ -331,6 +331,12 @@ export default function CitaDetalleModal({
                 <BtnSec disabled={busy} onClick={() => setEstado("no_asistio")}>
                   No asistió
                 </BtnSec>
+                {/* Receta 151: en los turnos del gimnasio, "Llegó" deja al alumno en espera (controla la deuda). */}
+                {cita.tipo === "clase" && cita.estado !== "en_espera" ? (
+                  <BtnSec disabled={busy} onClick={() => setEstado("en_espera")}>
+                    Llegó
+                  </BtnSec>
+                ) : null}
                 {cita.estado === "pendiente" ? (
                   <BtnPri disabled={busy} onClick={() => setEstado("confirmada")}>
                     Confirmar

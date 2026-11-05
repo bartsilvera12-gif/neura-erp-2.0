@@ -98,6 +98,31 @@ begin
     exists (select 1 from jsonb_array_elements(v->'profesores') x
              where (x->>'profesor_id')::uuid = v_admin and (x->>'alumnos')::int >= 2 and (x->>'comision')::numeric = (x->>'alumnos')::numeric * 10000), v::text);
 
+  -- Receta 151: la Agenda manda la asistencia.
+  v := gim_turno_crear(jsonb_build_object('cliente_id', v_a, 'profesor_id', v_admin, 'inicio_at', (v_hoy + time '07:00') at time zone 'America/Asuncion', 'duracion_min', 30));
+  update agenda_citas set estado = 'completada' where id = (v->>'cita_id')::uuid;
+  perform pg_temp.ok('Gimnasio: completar el turno en la Agenda culmina la asistencia y cobra la clase',
+    (gim_cliente(v_a)->'historial'->0->>'estado') = 'culminada' and (gim_cliente(v_a)->>'deuda_total')::numeric = 60000, gim_cliente(v_a)::text);
+  v := gim_turno_crear(jsonb_build_object('cliente_id', v_d, 'profesor_id', v_admin, 'inicio_at', (v_hoy + time '08:00') at time zone 'America/Asuncion', 'duracion_min', 30));
+  perform pg_temp.rechaza('Gimnasio: Llegó en la Agenda también frena a quien debe',
+    format($q$update agenda_citas set estado = 'en_espera' where id = %L$q$, v->>'cita_id'), 'deuda vencida');
+  v := gim_turno_crear(jsonb_build_object('cliente_id', v_b, 'profesor_id', v_admin, 'inicio_at', (v_hoy + time '09:00') at time zone 'America/Asuncion', 'duracion_min', 30));
+  insert into agenda_citas (empresa_id, cliente_id, responsable_id, titulo, tipo, estado, inicio_at, fin_at, reprogramada_de_id)
+  select empresa_id, cliente_id, responsable_id, titulo, tipo, 'pendiente', inicio_at + interval '1 day', fin_at + interval '1 day', id
+    from agenda_citas where id = (v->>'cita_id')::uuid
+  returning id into v_cita;
+  update agenda_citas set estado = 'reprogramada' where id = (v->>'cita_id')::uuid;
+  v := gim_cliente(v_b);
+  perform pg_temp.ok('Gimnasio: reprogramar en la Agenda pasa al alumno al turno nuevo',
+    exists (select 1 from jsonb_array_elements(v->'proximas') x where (x->>'cita_id')::uuid = v_cita and x->>'estado' = 'pendiente')
+    and exists (select 1 from jsonb_array_elements(v->'historial') x where x->>'estado' = 'reagendada'), v::text);
+  v := gim_dia(v_hoy + 1);
+  select (x->>'cita_id')::uuid into v_cita from jsonb_array_elements(v->'clases') x where x->>'clase_id' = v_clase::text;
+  perform gim_anotar(v_cita, v_b);
+  update agenda_citas set estado = 'cancelada' where id = v_cita;
+  perform pg_temp.ok('Gimnasio: cancelar la clase en la Agenda cancela a sus alumnos',
+    (select bool_and(x->>'estado' = 'cancelada') from jsonb_array_elements(gim_cliente(v_b)->'historial') x where (x->>'cita_id')::uuid = v_cita));
+
   -- Sin sesión no se usa.
   perform pg_temp.rechaza('Gimnasio: sin sesión no se ve el día', $q$set local role anon; select gim_dia()$q$, 'permission denied');
   execute 'set local role authenticated';
