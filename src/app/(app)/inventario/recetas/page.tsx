@@ -4,7 +4,7 @@
  * /inventario/recetas — Recetas (receta 72): los productos Menú y las preparaciones (materias
  * primas con receta) con su costo calculado, precio, margen, porciones posibles en el depósito
  * del usuario y estado (completa / sin receta / falta ingrediente). Tocar una fila abre el editor
- * (CapaModal). "Nueva preparación" elige una materia prima para cargarle su receta.
+ * (CapaModal). "Nueva receta" elige un plato (Menú) o una materia prima para cargarle su receta.
  * /inventario/recetas?producto=<id> abre directo el editor de ese producto (desde la ficha).
  * Receta 97: las preparaciones por tanda (stock propio, se fabrican en Inventario › Producción)
  * muestran su stock y cuánto se puede fabricar. (El tipo Fabricado se fue en la 160: pasó a Menú.)
@@ -195,7 +195,7 @@ export default function RecetasPage() {
         acciones={vista === "recetas" && (puedeEditar || puedeFabricar) ? (
           <AccionesPagina acciones={[
             ...(puedeFabricar ? [{ etiqueta: "Fabricar", icono: <Factory />, onClick: () => router.push("/inventario/produccion?fabricar=1") }] : []),
-            ...(puedeEditar ? [{ etiqueta: "Nueva preparación", icono: <Plus />, onClick: () => setEligiendo(true) }] : []),
+            ...(puedeEditar ? [{ etiqueta: "Nueva receta", icono: <Plus />, onClick: () => setEligiendo(true) }] : []),
           ]} />
         ) : undefined}
       />
@@ -271,14 +271,14 @@ export default function RecetasPage() {
       ) : null}
 
       {eligiendo ? (
-        <ModalDocumento ancho="max-w-lg" titulo="Nueva preparación" subtitulo="Elegí la materia prima que se prepara en la cocina (ej. Salsa de la casa)" onClose={() => setEligiendo(false)}>
+        <ModalDocumento ancho="max-w-lg" titulo="Nueva receta" subtitulo="Elegí el plato o la preparación (ej. Salsa de la casa) al que le vas a cargar la receta" onClose={() => setEligiendo(false)}>
           <div className="space-y-3 pb-2">
-            <ElegirMateriaPrima
-              conReceta={new Set(todas.filter((f) => f.tipo === "preparacion").map((f) => f.id))}
+            <ElegirParaReceta
+              conReceta={new Set(todas.filter((f) => f.estado !== "sin_receta").map((f) => f.id))}
               onElegir={(id) => { setEligiendo(false); setAbierto(id); }} />
             <p className="text-[11px] leading-relaxed text-slate-500">
-              Si todavía no existe, creala en <strong>Productos</strong> como «Materia prima» con su unidad (kg, l, unidad) y stock en 0: si se descuenta al vender no lleva stock propio (si se fabrica por tanda, sí).
-              Para un plato nuevo, creá el producto con el tipo «Menú»: aparece acá para cargarle la receta.
+              Si todavía no existe, crealo en <strong>Productos</strong>: un plato con el tipo «Menú»; una preparación (ej. salsa) como «Materia prima»
+              con su unidad (kg, l, unidad) y stock en 0. Después aparece acá para cargarle la receta.
             </p>
           </div>
         </ModalDocumento>
@@ -300,10 +300,11 @@ function Kpi({ color, etiqueta, valor, onClick, activo }: { color: string; etiqu
 }
 
 /**
- * "Nueva preparación": TODAS las materias primas en una lista dentro del modal (no un desplegable
- * que se corta), con buscador, stock y costo. Las que ya tienen receta lo dicen.
+ * "Nueva receta": TODO lo que puede llevar receta (platos Menú y materias primas) en una lista dentro
+ * del modal (no un desplegable que se corta), con buscador. Cada uno dice si es plato o materia
+ * prima y si ya tiene receta (tocarlo abre la que tiene).
  */
-function ElegirMateriaPrima({ conReceta, onElegir }: { conReceta: Set<string>; onElegir: (id: string) => void }) {
+function ElegirParaReceta({ conReceta, onElegir }: { conReceta: Set<string>; onElegir: (id: string) => void }) {
   const [q, setQ] = useState("");
   const [filas, setFilas] = useState<ProductoInventario[] | null>(null);
   const [total, setTotal] = useState(0);
@@ -314,8 +315,17 @@ function ElegirMateriaPrima({ conReceta, onElegir }: { conReceta: Set<string>; o
     let vivo = true;
     setCargando(true);
     const t = setTimeout(() => {
-      apiFetch<{ rows: ProductoInventario[]; total: number }>(`/api/productos?paginado=1&por_pagina=200&tipo=materia_prima&q=${encodeURIComponent(q.trim())}`)
-        .then((d) => { if (vivo) { setFilas(d.rows); setTotal(d.total); setError(null); } })
+      const pedir = (tipo: string) =>
+        apiFetch<{ rows: ProductoInventario[]; total: number }>(`/api/productos?paginado=1&por_pagina=200&tipo=${tipo}&q=${encodeURIComponent(q.trim())}`);
+      Promise.all([pedir("menu"), pedir("materia_prima")])
+        .then(([m, mp]) => {
+          if (!vivo) return;
+          // Con búsqueda, cada grupo en el orden de relevancia; sin búsqueda, todo por nombre.
+          const juntas = [...m.rows, ...mp.rows];
+          setFilas(q.trim() ? juntas : juntas.sort((a, b) => a.nombre.localeCompare(b.nombre, "es")));
+          setTotal(m.total + mp.total);
+          setError(null);
+        })
         .catch((e) => { if (vivo) setError((e as Error).message); })
         .finally(() => { if (vivo) setCargando(false); });
     }, q.trim() ? 200 : 0);
@@ -327,7 +337,7 @@ function ElegirMateriaPrima({ conReceta, onElegir }: { conReceta: Set<string>; o
       <div className="relative">
         <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
         <input type="search" enterKeyHint="search" value={q} onChange={(e) => setQ(e.target.value)} autoFocus autoComplete="off"
-          placeholder="Buscar materia prima…" aria-label="Buscar materia prima"
+          placeholder="Buscar plato o materia prima…" aria-label="Buscar plato o materia prima"
           className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
         {cargando ? <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" /> : null}
       </div>
@@ -336,9 +346,10 @@ function ElegirMateriaPrima({ conReceta, onElegir }: { conReceta: Set<string>; o
         {filas === null ? (
           <li className="px-4 py-8 text-center text-sm text-slate-400">Cargando…</li>
         ) : filas.length === 0 ? (
-          <li className="px-4 py-8 text-center text-sm text-slate-500">{q.trim() ? `Ninguna materia prima coincide con «${q.trim()}».` : "Todavía no hay materias primas."}</li>
+          <li className="px-4 py-8 text-center text-sm text-slate-500">{q.trim() ? `Ningún plato ni materia prima coincide con «${q.trim()}».` : "Todavía no hay platos ni materias primas."}</li>
         ) : filas.map((p) => {
           const tiene = conReceta.has(p.id);
+          const plato = p.tipo_producto === "menu";
           return (
             <li key={p.id}>
               <button type="button" onClick={() => onElegir(p.id)}
@@ -348,11 +359,13 @@ function ElegirMateriaPrima({ conReceta, onElegir }: { conReceta: Set<string>; o
                   <span className="block font-medium leading-snug text-slate-800 [overflow-wrap:anywhere]">{p.nombre}</span>
                   <span className="flex flex-wrap items-center gap-x-2 text-[11px] text-slate-400">
                     <span className="font-mono">{p.sku}</span>
-                    {tiene ? <span className="rounded-full bg-lime-50 px-2 py-0.5 font-semibold text-lime-800 ring-1 ring-lime-200">Ya tiene receta</span> : null}
+                    <span className={`rounded-full px-2 py-0.5 font-semibold ring-1 ${plato ? "bg-orange-50 text-orange-700 ring-orange-200" : "bg-lime-50 text-lime-800 ring-lime-200"}`}>{plato ? "Plato" : "Materia prima"}</span>
+                    {tiene ? <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-semibold text-emerald-700 ring-1 ring-emerald-200">Ya tiene receta</span> : null}
                   </span>
                 </span>
                 <span className="shrink-0 text-right text-xs leading-relaxed text-slate-500">
-                  {p.controla_stock ? <>stock <b className="font-semibold tabular-nums text-slate-700">{cant(Number(p.stock_actual), 3)}</b> {unidadCorta(p.unidad_medida)}</> : <span className="text-slate-400">sin stock propio</span>}
+                  {plato ? <>precio <b className="font-semibold tabular-nums text-slate-700">{gs(Number(p.precio_venta))}</b></>
+                    : p.controla_stock ? <>stock <b className="font-semibold tabular-nums text-slate-700">{cant(Number(p.stock_actual), 3)}</b> {unidadCorta(p.unidad_medida)}</> : <span className="text-slate-400">sin stock propio</span>}
                   {p.costo_promedio != null ? <><br />costo <span className="tabular-nums">{gs(Number(p.costo_promedio))}</span></> : null}
                 </span>
               </button>
@@ -360,7 +373,7 @@ function ElegirMateriaPrima({ conReceta, onElegir }: { conReceta: Set<string>; o
           );
         })}
       </ul>
-      {filas && total > filas.length ? <p className="text-[11px] text-slate-500">Se muestran {filas.length} de {total}: escribí para encontrar la que buscás.</p> : null}
+      {filas && total > filas.length ? <p className="text-[11px] text-slate-500">Se muestran {filas.length} de {total}: escribí para encontrar lo que buscás.</p> : null}
     </div>
   );
 }

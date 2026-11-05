@@ -335,7 +335,7 @@ export const GUIAS: Guia[] = [
         { t: "Tocá un plato para cargarle sus ingredientes, cantidades y merma.", marca: "Empanada de carne" },
         { t: "Acá ves cuántas recetas están completas.", d: "También a cuáles les falta un ingrediente y cuáles no tienen receta.", marca: "COMPLETAS" },
         { t: "Mirá para cuántas porciones te alcanza.", d: "La tabla también muestra el costo y el margen.", marca: "ALCANZA PARA" },
-        { t: "Nueva preparación es para lo que usás en otros platos.", d: "Por ejemplo, una salsa.", marca: "Nueva preparación" },
+        { t: "Nueva receta lista tus platos y materias primas: tocá al que le vas a cargar la receta.", d: "Una materia prima con receta es una preparación que usás en otros platos, por ejemplo una salsa.", marca: "Nueva receta" },
       ] },
       { img: "receta-detalle", alt: "Receta de un plato con sus ingredientes", pasos: [
         { t: "En Ingredientes cargá lo que lleva el plato.", d: "Poné la cantidad que va al plato. Si hay desperdicio, agregá la merma.", marca: "Ingredientes" },
