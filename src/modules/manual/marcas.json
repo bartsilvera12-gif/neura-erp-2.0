@@ -3959,5 +3959,165 @@
     "y": 92.1
    }
   }
+ },
+ "gimnasio": {
+  "gim-menu": {
+   "Gimnasio": {
+    "x": 3.8,
+    "y": 75.2
+   },
+   "Recepción": {
+    "x": 4.7,
+    "y": 80.2
+   },
+   "Clases": {
+    "x": 4.7,
+    "y": 85.2
+   },
+   "Comisiones de profesores": {
+    "x": 4.7,
+    "y": 90.1
+   }
+  },
+  "gim-recepcion": {
+   "Anotar alumno": {
+    "x": 54.7,
+    "y": 70.4
+   },
+   "Llegó": {
+    "x": 77.4,
+    "y": 42.5
+   },
+   "Culminó": {
+    "x": 82.1,
+    "y": 42.5
+   },
+   "No vino": {
+    "x": 88,
+    "y": 42.5
+   }
+  },
+  "gim-alumno": {
+   "Alumno": {
+    "x": 20,
+    "y": 23.5
+   },
+   "Debe Gs. 180.000 vencido": {
+    "x": 36,
+    "y": 35.8
+   },
+   "Entrada libre": {
+    "x": 36.8,
+    "y": 65.9
+   },
+   "Cobrar": {
+    "x": 21.6,
+    "y": 65.9
+   }
+  },
+  "gim-turno": {
+   "Alumno *": {
+    "x": 31.6,
+    "y": 35.1
+   },
+   "Profesor *": {
+    "x": 31.6,
+    "y": 44.3
+   },
+   "Día *": {
+    "x": 31.6,
+    "y": 53.5
+   },
+   "Crear turno": {
+    "x": 59.3,
+    "y": 76.2
+   }
+  },
+  "gim-clases": {
+   "Nueva clase": {
+    "x": 87.3,
+    "y": 23.4
+   },
+   "Precios y reglas": {
+    "x": 74.4,
+    "y": 23.4
+   }
+  },
+  "gim-clase-form": {
+   "Nombre *": {
+    "x": 31.6,
+    "y": 25
+   },
+   "Profesor": {
+    "x": 31.6,
+    "y": 34.2
+   },
+   "Días *": {
+    "x": 31.6,
+    "y": 43.4
+   },
+   "Hora *": {
+    "x": 31.6,
+    "y": 52.4
+   },
+   "Cupo": {
+    "x": 31.6,
+    "y": 61.7
+   },
+   "Clase suelta (Gs.)": {
+    "x": 50.2,
+    "y": 61.7
+   },
+   "Guardar": {
+    "x": 61,
+    "y": 84.3
+   }
+  },
+  "gim-reglas": {
+   "Clase suelta (Gs.)": {
+    "x": 31.6,
+    "y": 36.5
+   },
+   "Frenar la entrada a quien debe": {
+    "x": 32.6,
+    "y": 57.1
+   },
+   "Guardar": {
+    "x": 61,
+    "y": 70.5
+   }
+  },
+  "gim-plan": {
+   "Nombre": {
+    "x": 31.3,
+    "y": 21.3
+   },
+   "Precio mensual": {
+    "x": 31.3,
+    "y": 53.6
+   },
+   "Clases por mes (gimnasio)": {
+    "x": 31.3,
+    "y": 63.3
+   },
+   "Guardar": {
+    "x": 61.2,
+    "y": 84.9
+   }
+  },
+  "gim-comisiones": {
+   "Regla": {
+    "x": 21.6,
+    "y": 35.3
+   },
+   "Guardar": {
+    "x": 89.4,
+    "y": 39.5
+   },
+   "Total del mes": {
+    "x": 21.6,
+    "y": 66.1
+   }
+  }
  }
 }

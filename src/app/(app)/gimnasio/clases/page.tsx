@@ -72,7 +72,7 @@ function FormClase({ clase, onCerrar, onHecho }: { clase: Clase | null; onCerrar
           <label className="block"><span className={ET}>Hora *</span><input type="time" value={h} onChange={(e) => setH(e.target.value)} className={INPUT} /></label>
           <label className="block"><span className={ET}>Duración (min) *</span><input type="number" min={5} max={600} step={5} value={dur} onChange={(e) => setDur(e.target.value)} className={INPUT} /></label>
           <label className="block"><span className={ET}>Cupo</span><input type="number" min={1} max={1000} value={cupo} onChange={(e) => setCupo(e.target.value)} placeholder="Sin límite" className={INPUT} /></label>
-          <label className="block"><span className={ET}>Clase suelta (Gs.)</span><input inputMode="numeric" value={precio} onChange={(e) => setPrecio(e.target.value.replace(/[^\d]/g, ""))} placeholder="El de reglas" className={INPUT} /></label>
+          <label className="block"><span className={ET}>Clase suelta (Gs.)</span><input inputMode="numeric" value={precio ? Number(precio).toLocaleString("es-PY") : ""} onChange={(e) => setPrecio(e.target.value.replace(/[^\d]/g, ""))} placeholder="El de reglas" className={INPUT} /></label>
         </div>
         <label className="block"><span className={ET}>Lugar</span><input value={lugar} onChange={(e) => setLugar(e.target.value)} maxLength={120} placeholder="Ej. Pileta, Sala 2, Tatami" className={INPUT} /></label>
         {clase ? <Interruptor activo={activa} onChange={setActiva} etiqueta="Clase activa" descripcion="Apagada no aparece más en la Recepción ni en la Agenda (lo ya hecho queda)." /> : null}
@@ -103,7 +103,7 @@ function FormReglas({ cfg, onCerrar, onHecho }: { cfg: ConfigGim; onCerrar: () =
       </>}>
       <div className="space-y-4">
         <div className="grid grid-cols-2 gap-3">
-          <label className="block"><span className={ET}>Clase suelta (Gs.)</span><input inputMode="numeric" value={precio} onChange={(e) => setPrecio(e.target.value.replace(/[^\d]/g, ""))} placeholder="0" className={INPUT} /></label>
+          <label className="block"><span className={ET}>Clase suelta (Gs.)</span><input inputMode="numeric" value={precio ? Number(precio).toLocaleString("es-PY") : ""} onChange={(e) => setPrecio(e.target.value.replace(/[^\d]/g, ""))} placeholder="0" className={INPUT} /></label>
           <div><span className={ET}>IVA</span><Select value={iva} onChange={setIva} options={[["10%", "10 %"], ["5%", "5 %"], ["exenta", "Exenta"]]} etiqueta="IVA" block /></div>
         </div>
         <p className="text-xs leading-relaxed text-slate-500">Se cobra cuando un alumno sin membresía (o que ya usó las clases del mes) culmina una clase: queda como deuda y se cobra en la caja con Cobrar. Cada clase puede tener su propio precio. En 0 no se cobra.</p>

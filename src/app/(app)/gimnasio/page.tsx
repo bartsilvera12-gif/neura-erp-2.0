@@ -19,7 +19,7 @@ import { Select } from "@/components/Select";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT, ModalDocumento } from "@/modules/inventario/ui";
 import { ClienteSelect, type ClienteOpcion } from "@/modules/agenda/ui/components/ClienteSelect";
 import { AccionesAsistencia, ChipEstado, PanelAlumno } from "@/modules/gimnasio/ui";
-import { hora, type ClaseDia, type Dia } from "@/modules/gimnasio/tipos";
+import { hora, primeraMayuscula, type ClaseDia, type Dia } from "@/modules/gimnasio/tipos";
 
 const sumarDias = (f: string, n: number) => {
   const d = new Date(`${f}T12:00:00`);
@@ -166,7 +166,7 @@ export default function RecepcionGimnasio() {
           </div>
         } />
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)] lg:items-start">
         <div className="space-y-3 lg:sticky lg:top-4">
           <div>
             <span className={ET}>Alumno</span>
@@ -184,7 +184,7 @@ export default function RecepcionGimnasio() {
           <div className="flex items-center justify-between gap-2">
             <button type="button" aria-label="Día anterior" onClick={() => setFecha((f) => sumarDias(f, -1))} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-[var(--brand)] sm:h-10 sm:w-10"><ChevronLeft className="h-4 w-4" /></button>
             <div className="min-w-0 text-center">
-              <span className="block truncate text-sm font-semibold capitalize text-slate-900">{esHoy ? "Hoy, " : ""}{fechaLarga(fecha)}</span>
+              <span className="block truncate text-sm font-semibold text-slate-900">{esHoy ? `Hoy, ${fechaLarga(fecha)}` : primeraMayuscula(fechaLarga(fecha))}</span>
               {!esHoy ? <button type="button" onClick={() => setFecha(hoyPY())} className="text-xs font-medium text-[var(--brand)]">Volver a hoy</button> : null}
             </div>
             <button type="button" aria-label="Día siguiente" onClick={() => setFecha((f) => sumarDias(f, 1))} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-[var(--brand)] sm:h-10 sm:w-10"><ChevronRight className="h-4 w-4" /></button>
@@ -195,7 +195,7 @@ export default function RecepcionGimnasio() {
           {dia ? (
             <>
               {dia.clases.length ? (
-                <ul className="m-0 grid list-none gap-3 p-0 xl:grid-cols-2">
+                <ul className="m-0 grid list-none gap-3 p-0">
                   {dia.clases.map((c) => <TarjetaClase key={c.cita_id} c={c} onHecho={hecho} onVerAlumno={verAlumno} />)}
                 </ul>
               ) : (

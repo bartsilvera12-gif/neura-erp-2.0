@@ -23,7 +23,7 @@ export type Guia = {
   bloques: Bloque[];
 };
 
-export const GRUPOS = ["Primeros pasos", "Caja y ventas", "Pedidos y mesas", "Cocina y recetas", "Inventario", "Compras y gastos", "Clientes y ventas", "Cobros", "Sorteos", "Inmobiliaria", "Reportes", "Atención al cliente", "RR HH", "Configuración"];
+export const GRUPOS = ["Primeros pasos", "Caja y ventas", "Pedidos y mesas", "Cocina y recetas", "Inventario", "Compras y gastos", "Clientes y ventas", "Cobros", "Sorteos", "Inmobiliaria", "Gimnasio", "Reportes", "Atención al cliente", "RR HH", "Configuración"];
 
 /** Cómo se llega a la pantalla de cada guía: la sección del menú y la tarjeta de su panel. */
 export const LLEGAR: Record<string, [string, string?]> = {
@@ -51,15 +51,18 @@ export const LLEGAR: Record<string, [string, string?]> = {
   "inmo-propiedad": ["Inmobiliaria", "Propiedades"], "inmo-vender": ["Inmobiliaria", "Propiedades"], "inmo-caja": ["Caja", "Nueva venta"],
   "inmo-alquiler": ["Inmobiliaria", "Alquileres"], "inmo-cobrar-alquiler": ["Inmobiliaria", "Alquileres"], "inmo-busqueda": ["Comercial", "Clientes"],
   "inmo-avisos": ["Inmobiliaria", "Propiedades"], "inmo-planes": ["Configuración", "Planes de cuotas y mora"],
+  "gim-clase": ["Gimnasio", "Clases"], "gim-reglas": ["Gimnasio", "Clases"], "gim-membresia": ["Comercial", "Planes"],
+  "gim-alumno": ["Gimnasio", "Recepción"], "gim-asistencia": ["Gimnasio", "Recepción"], "gim-turno": ["Gimnasio", "Recepción"],
+  "gim-comisiones": ["Gimnasio", "Comisiones de profesores"],
 };
 /** La captura del panel que abre cada sección del menú. */
 export const PANELES: Record<string, string> = {
   Caja: "panel-caja", Inventario: "panel-inventario", "Gastos empresariales": "panel-gastos", Comercial: "panel-comercial",
   Finanzas: "panel-finanzas", Omnicanal: "panel-omnicanal", Configuración: "panel-config", "RR HH": "rrhh-panel",
-  Sorteos: "panel-sorteos", Inmobiliaria: "inmo-menu",
+  Sorteos: "panel-sorteos", Inmobiliaria: "inmo-menu", Gimnasio: "gim-menu",
 };
 /** La captura donde se ve la sección en el menú, si no es la de Inicio. */
-export const MENUS: Record<string, string> = { "RR HH": "rrhh-panel", Sorteos: "sorteos-menu", Inmobiliaria: "inmo-menu" };
+export const MENUS: Record<string, string> = { "RR HH": "rrhh-panel", Sorteos: "sorteos-menu", Inmobiliaria: "inmo-menu", Gimnasio: "gim-menu" };
 
 export const GUIAS: Guia[] = [
   // ── Primeros pasos ───────────────────────────────────────────────────────────
@@ -1100,7 +1103,91 @@ export const GUIAS: Guia[] = [
     ],
   },
 
-  // ── RR HH ────────────────────────────────────────────────────────────────────
+  // ── Gimnasio (solo con Gimnasio prendido; capturas en public/manual/gimnasio) ──
+  {
+    id: "gim-clase", grupo: "Gimnasio", rubro: "gimnasio", ruta: "/gimnasio/clases", titulo: "Crear una clase", resumen: "Natación, karate, spinning: días, hora, profesor y cupo.",
+    bloques: [
+      { img: "gim-clases", alt: "Lista de clases", pasos: [{ t: "Tocá Nueva clase.", marca: "Nueva clase" }] },
+      { img: "gim-clase-form", alt: "Datos de la clase", pasos: [
+        { t: "Escribí el nombre de la clase.", d: "Por ejemplo: Natación nivel 1.", marca: "Nombre *" },
+        { t: "Elegí el profesor.", d: "Es quien cobra la comisión de esa clase.", marca: "Profesor" },
+        { t: "Marcá los días que se da.", marca: "Días *" },
+        { t: "Poné la hora y cuánto dura.", marca: "Hora *" },
+        { t: "Poné el cupo.", d: "Cuántos alumnos entran. Vacío es sin límite.", marca: "Cupo" },
+        { t: "Si esta clase tiene otro precio suelta, ponelo.", d: "Vacío usa el precio de Precios y reglas.", marca: "Clase suelta (Gs.)" },
+        { t: "Tocá Guardar.", marca: "Guardar" },
+      ] },
+      { consejo: "La clase se repite sola todas las semanas: aparece en la Recepción y en la Agenda de cada día." },
+    ],
+  },
+  {
+    id: "gim-reglas", grupo: "Gimnasio", rubro: "gimnasio", ruta: "/gimnasio/clases", titulo: "Precio de la clase suelta y deudas", resumen: "Cuánto cuesta una clase sin membresía y si entra quien debe.",
+    bloques: [
+      { img: "gim-clases", alt: "Lista de clases", pasos: [{ t: "Tocá Precios y reglas.", marca: "Precios y reglas" }] },
+      { img: "gim-reglas", alt: "Precios y reglas", pasos: [
+        { t: "Poné el precio de la clase suelta.", d: "Se cobra cuando el alumno no tiene membresía o ya usó sus clases del mes.", marca: "Clase suelta (Gs.)" },
+        { t: "Decidí si se frena a quien debe.", d: "Prendido, el alumno con una cuota vencida sin pagar no puede marcar la entrada.", marca: "Frenar la entrada a quien debe" },
+        { t: "Tocá Guardar.", marca: "Guardar" },
+      ] },
+    ],
+  },
+  {
+    id: "gim-membresia", grupo: "Gimnasio", rubro: "gimnasio", ruta: "/clientes/suscripciones", titulo: "Crear una membresía", resumen: "Mensual ilimitada o con un número de clases por mes.",
+    bloques: [
+      { img: "gim-plan", alt: "Plan de membresía", texto: "En Planes, abrí la pestaña Planes y tocá Nuevo plan.", pasos: [
+        { t: "Escribí el nombre.", d: "Por ejemplo: Natación 8 clases.", marca: "Nombre" },
+        { t: "Poné el precio del mes.", marca: "Precio mensual" },
+        { t: "Poné cuántas clases por mes incluye.", d: "Vacío es ilimitada. Cuando se terminan, las siguientes se cobran como clase suelta.", marca: "Clases por mes (gimnasio)" },
+        { t: "Tocá Guardar.", marca: "Guardar" },
+      ] },
+      { consejo: "Después, en la ficha del alumno, en Suscripciones, le asignás el plan. Cada mes se emite la cuota como en cualquier suscripción." },
+    ],
+  },
+  {
+    id: "gim-alumno", grupo: "Gimnasio", rubro: "gimnasio", ruta: "/gimnasio", titulo: "Recibir a un alumno", resumen: "Ver si está al día, marcar su entrada y cobrarle.",
+    bloques: [
+      { img: "gim-alumno", alt: "Recepción con el alumno elegido", pasos: [
+        { t: "Buscá al alumno.", d: "Por nombre, CI o teléfono.", marca: "Alumno" },
+        { t: "Mirá si está al día.", d: "En verde dice Al día. En rojo debe una cuota vencida y no puede entrar.", marca: "Debe Gs. 180.000 vencido" },
+        { t: "Si viene a la sala sin clase, tocá Entrada libre.", d: "Descuenta una clase de su membresía, o se cobra como clase suelta.", marca: "Entrada libre" },
+        { t: "Si debe, tocá Cobrar.", d: "Se cobra en tu caja abierta, como cualquier deuda.", marca: "Cobrar" },
+      ] },
+      { ojo: "Quien tenga el permiso puede dejar entrar a alguien que debe: le pide el motivo, y queda registrado con su nombre." },
+    ],
+  },
+  {
+    id: "gim-asistencia", grupo: "Gimnasio", rubro: "gimnasio", ruta: "/gimnasio", titulo: "Marcar la asistencia de una clase", resumen: "Anotar alumnos y marcar quién vino.",
+    bloques: [
+      { img: "gim-recepcion", alt: "Clases del día con sus alumnos", pasos: [
+        { t: "Para sumar a alguien, tocá Anotar alumno.", d: "Si la clase está llena, no deja.", marca: "Anotar alumno" },
+        { t: "Cuando llega, tocá Llegó.", d: "Queda en espera. Si debe, no lo deja.", marca: "Llegó" },
+        { t: "Al terminar la clase, tocá Culminó.", d: "Ahí descuenta la clase de su membresía o se cobra la clase suelta.", marca: "Culminó" },
+        { t: "Si no vino, tocá No vino.", marca: "No vino" },
+      ] },
+      { consejo: "Con las flechas de arriba pasás a otro día. Lo mismo se puede marcar desde la Agenda." },
+    ],
+  },
+  {
+    id: "gim-turno", grupo: "Gimnasio", rubro: "gimnasio", ruta: "/gimnasio", titulo: "Dar un turno individual", resumen: "Personal trainer o clase de prueba con un profesor.",
+    bloques: [
+      { img: "gim-turno", alt: "Turno individual", texto: "En la Recepción tocá Turno individual.", pasos: [
+        { t: "Elegí el alumno.", marca: "Alumno *" },
+        { t: "Elegí el profesor.", marca: "Profesor *" },
+        { t: "Poné el día, la hora y los minutos.", marca: "Día *" },
+        { t: "Tocá Crear turno.", d: "También aparece en la Agenda.", marca: "Crear turno" },
+      ] },
+    ],
+  },
+  {
+    id: "gim-comisiones", grupo: "Gimnasio", rubro: "gimnasio", ruta: "/gimnasio/comisiones", titulo: "Comisión de los profesores", resumen: "Elegir cómo se paga y ver cuánto le toca a cada uno.",
+    bloques: [
+      { img: "gim-comisiones", alt: "Comisiones de profesores", pasos: [
+        { t: "Elegí la regla.", d: "Un monto por alumno que asistió, por clase dada o un porcentaje del valor de la clase.", marca: "Regla" },
+        { t: "Poné el monto o el porcentaje y tocá Guardar.", marca: "Guardar" },
+        { t: "Con las flechas elegí el mes.", d: "Abajo ves a cada profesor con sus clases, alumnos y la comisión.", marca: "Total del mes" },
+      ] },
+    ],
+  },  // ── RR HH ────────────────────────────────────────────────────────────────────
   {
     id: "rrhh-datos", grupo: "RR HH", ruta: "/rrhh", titulo: "Cargar los datos de una persona", resumen: "Datos personales, trabajo, salario y horario.",
     bloques: [

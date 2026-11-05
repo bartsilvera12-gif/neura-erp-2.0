@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle, ArrowLeft, ArrowRight, BarChart3, Banknote, Check, ChefHat, ChevronRight, ClipboardList, Expand, Lightbulb, MessageCircle, Package,
-  Rocket, Search, Settings, ShoppingCart, Ticket, Truck, Users, X, ArrowUp, IdCard, Building2,
+  Rocket, Search, Settings, ShoppingCart, Ticket, Truck, Users, X, ArrowUp, IdCard, Building2, Dumbbell,
 } from "lucide-react";
 import { CapaModal } from "@/components/CapaModal";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
@@ -45,6 +45,7 @@ const TEMAS: { grupo: string; titulo: string; detalle: string; Icono: ComponentT
   { grupo: "Cobros", titulo: "Cobrar deudas", detalle: "Quién te debe y cómo registrar el pago", Icono: Banknote },
   { grupo: "Sorteos", titulo: "Sorteos", detalle: "Crear, vender, confirmar pagos y sortear", Icono: Ticket },
   { grupo: "Inmobiliaria", titulo: "Propiedades", detalle: "Cargar, vender en cuotas, alquilar y avisar", Icono: Building2 },
+  { grupo: "Gimnasio", titulo: "Gimnasio", detalle: "Clases, recepción, membresías y profesores", Icono: Dumbbell },
   { grupo: "Reportes", titulo: "Ver mis números", detalle: "Reportes en Excel o PDF", Icono: BarChart3 },
   { grupo: "Atención al cliente", titulo: "Chats y soporte", detalle: "Responder a tus clientes", Icono: MessageCircle },
   { grupo: "RR HH", titulo: "Mi personal", detalle: "Datos, ausencias, vacaciones y liquidación", Icono: IdCard },

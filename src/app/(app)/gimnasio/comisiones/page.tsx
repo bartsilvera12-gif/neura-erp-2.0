@@ -13,7 +13,7 @@ import { hoyPY } from "@/lib/fecha/paraguay";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { Select } from "@/components/Select";
 import { BOTON_PRIMARIO, ET, INPUT } from "@/modules/inventario/ui";
-import { gs, type ComisionProfesor, type ConfigGim } from "@/modules/gimnasio/tipos";
+import { gs, primeraMayuscula, type ComisionProfesor, type ConfigGim } from "@/modules/gimnasio/tipos";
 
 type Resultado = { modo: ConfigGim["comision_modo"]; monto: number; pct: number; profesores: ComisionProfesor[] };
 
@@ -75,7 +75,7 @@ export default function ComisionesProfesores() {
         <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_200px_auto] sm:items-end">
           <div><span className={ET}>Regla</span><Select value={modo} onChange={setModo} options={MODOS} etiqueta="Regla de comisión" block /></div>
           {modo === "por_alumno" || modo === "por_clase" ? (
-            <label className="block"><span className={ET}>Monto (Gs.)</span><input inputMode="numeric" value={monto} onChange={(e) => setMonto(e.target.value.replace(/[^\d]/g, ""))} placeholder="0" className={INPUT} /></label>
+            <label className="block"><span className={ET}>Monto (Gs.)</span><input inputMode="numeric" value={monto ? Number(monto).toLocaleString("es-PY") : ""} onChange={(e) => setMonto(e.target.value.replace(/[^\d]/g, ""))} placeholder="0" className={INPUT} /></label>
           ) : modo === "porcentaje" ? (
             <label className="block"><span className={ET}>Porcentaje</span><input inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value.replace(/[^\d.,]/g, ""))} placeholder="0" className={INPUT} /></label>
           ) : <span className="hidden sm:block" />}
@@ -87,7 +87,7 @@ export default function ComisionesProfesores() {
 
       <div className="flex items-center justify-between gap-2">
         <button type="button" aria-label="Mes anterior" onClick={() => setMes((m) => moverMes(m, -1))} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-[var(--brand)] sm:h-10 sm:w-10"><ChevronLeft className="h-4 w-4" /></button>
-        <span className="text-sm font-semibold capitalize text-slate-900">{nombreMes(mes)}</span>
+        <span className="text-sm font-semibold text-slate-900">{primeraMayuscula(nombreMes(mes))}</span>
         <button type="button" aria-label="Mes siguiente" onClick={() => setMes((m) => moverMes(m, 1))} className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 hover:text-[var(--brand)] sm:h-10 sm:w-10"><ChevronRight className="h-4 w-4" /></button>
       </div>
 

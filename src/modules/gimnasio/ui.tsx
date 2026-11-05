@@ -55,7 +55,7 @@ export function useCambiarEstado(onHecho: () => void) {
 const ACCION_RAPIDA: Partial<Record<EstadoAsistencia, string>> = { en_espera: "Llegó", culminada: "Culminó", no_asistio: "No vino" };
 const ACCION_MAS: Partial<Record<EstadoAsistencia, string>> = { confirmada: "Confirmar", reagendada: "Reagendar", cancelada: "Cancelar" };
 
-export function AccionesAsistencia({ a, onHecho }: { a: Asistencia; onHecho: () => void }) {
+export function AccionesAsistencia({ a, onHecho, izquierda }: { a: Asistencia; onHecho: () => void; izquierda?: boolean }) {
   const { ejecutar, ocupado, error, modalForzar } = useCambiarEstado(onHecho);
   const [mas, setMas] = useState(false);
   const siguientes = SIGUIENTES[a.estado];
@@ -64,10 +64,10 @@ export function AccionesAsistencia({ a, onHecho }: { a: Asistencia; onHecho: () 
     ejecutar(estado, (f) => apiFetch(`/api/gimnasio/asistencias/${a.id}`, { method: "POST", body: JSON.stringify({ estado, ...(f ?? {}) }) }));
   const rapidas = siguientes.filter((s) => ACCION_RAPIDA[s]);
   const otras = siguientes.filter((s) => ACCION_MAS[s]);
-  const boton = "inline-flex min-h-9 items-center justify-center gap-1 rounded-lg border px-2.5 text-xs font-semibold transition disabled:opacity-50 max-sm:min-h-11 max-sm:flex-1";
+  const boton = "inline-flex min-h-9 items-center whitespace-nowrap justify-center gap-1 rounded-lg border px-2.5 text-xs font-semibold transition disabled:opacity-50 max-sm:min-h-11 max-sm:flex-1";
   return (
-    <div className="flex flex-col items-stretch gap-1.5 sm:items-end">
-      <div className="flex flex-wrap gap-1.5 sm:justify-end">
+    <div className={`flex flex-col items-stretch gap-1.5 ${izquierda ? "" : "sm:items-end"}`}>
+      <div className={`flex flex-wrap gap-1.5 ${izquierda ? "" : "sm:justify-end"}`}>
         {rapidas.map((s) => (
           <button key={s} type="button" disabled={!!ocupado} onClick={() => void cambiar(s)}
             className={`${boton} ${s === "culminada" ? "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100" : s === "no_asistio" ? "border-slate-200 bg-white text-slate-600 hover:border-rose-200 hover:text-rose-700" : "border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100"}`}>
@@ -81,7 +81,7 @@ export function AccionesAsistencia({ a, onHecho }: { a: Asistencia; onHecho: () 
         ) : null}
       </div>
       {mas ? (
-        <div className="flex flex-wrap gap-1.5 sm:justify-end">
+        <div className={`flex flex-wrap gap-1.5 ${izquierda ? "" : "sm:justify-end"}`}>
           {otras.map((s) => (
             <button key={s} type="button" disabled={!!ocupado} onClick={() => { setMas(false); void cambiar(s); }}
               className={`${boton} border-slate-200 bg-white text-slate-600 hover:border-[var(--brand)] hover:text-[var(--brand)]`}>
@@ -96,10 +96,10 @@ export function AccionesAsistencia({ a, onHecho }: { a: Asistencia; onHecho: () 
   );
 }
 
-function Fila({ a, conAcciones, onHecho }: { a: Asistencia; conAcciones?: boolean; onHecho: () => void }) {
+function Fila({ a, conAcciones, apilado, onHecho }: { a: Asistencia; conAcciones?: boolean; apilado?: boolean; onHecho: () => void }) {
   const fecha = a.inicio_at ? new Date(a.inicio_at).toLocaleDateString("es-PY", { weekday: "short", day: "2-digit", month: "2-digit", timeZone: "America/Asuncion" }) : a.fecha.split("-").reverse().slice(0, 2).join("/");
   return (
-    <li className="flex flex-col gap-2 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+    <li className={`flex flex-col gap-2 py-2.5 ${apilado ? "" : "sm:flex-row sm:items-center sm:justify-between"}`}>
       <span className="min-w-0">
         <span className="flex items-center gap-2">
           <span className="truncate text-sm font-medium text-slate-800">{a.clase}</span>
@@ -111,7 +111,7 @@ function Fila({ a, conAcciones, onHecho }: { a: Asistencia; conAcciones?: boolea
           {a.forzada ? " · Entró con deuda" : ""}
         </span>
       </span>
-      {conAcciones ? <AccionesAsistencia a={a} onHecho={onHecho} /> : null}
+      {conAcciones ? <AccionesAsistencia a={a} onHecho={onHecho} izquierda={apilado} /> : null}
     </li>
   );
 }
@@ -150,8 +150,8 @@ export function PanelAlumno({ clienteId, compacto, recarga = 0, onCambio }: { cl
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        <div className="col-span-2 rounded-xl bg-slate-50 p-3 sm:col-span-1">
+      <div className={`grid grid-cols-2 gap-2 ${compacto ? "" : "sm:grid-cols-3"}`}>
+        <div className={`col-span-2 rounded-xl bg-slate-50 p-3 ${compacto ? "" : "sm:col-span-1"}`}>
           <span className="block text-[11px] font-medium text-slate-500">Membresía</span>
           <span className="block truncate text-sm font-semibold text-slate-800">{m ? m.plan : "Sin membresía"}</span>
           <span className="block text-xs text-slate-500">{m ? (m.clases_mes ? `${m.usadas} de ${m.clases_mes} clases este mes` : "Ilimitada") : "Paga clase suelta"}</span>
@@ -168,7 +168,8 @@ export function PanelAlumno({ clienteId, compacto, recarga = 0, onCambio }: { cl
         </div>
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
+      {/* Entrada libre a la derecha (es la principal); Cobrar a su izquierda. */}
+      <div className="flex flex-col gap-2 sm:flex-row-reverse">
         <button type="button" disabled={!!ocupado} onClick={() => void ejecutar("entrada", (f) => apiFetch("/api/gimnasio/entrada", { method: "POST", body: JSON.stringify({ cliente_id: d.cliente.id, ...(f ?? {}) }) }))}
           className="inline-flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl bg-[var(--brand)] px-4 text-sm font-semibold text-white shadow-sm transition hover:brightness-95 disabled:opacity-50 sm:min-h-10">
           {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : <DoorOpen className="h-4 w-4" />} Entrada libre
@@ -184,13 +185,13 @@ export function PanelAlumno({ clienteId, compacto, recarga = 0, onCambio }: { cl
       <div>
         <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Próximas clases</h4>
         {d.proximas.length ? (
-          <ul className="m-0 list-none divide-y divide-slate-100 p-0">{d.proximas.map((a) => <Fila key={a.id} a={a} conAcciones onHecho={hecho} />)}</ul>
+          <ul className="m-0 list-none divide-y divide-slate-100 p-0">{d.proximas.map((a) => <Fila key={a.id} a={a} conAcciones apilado={compacto} onHecho={hecho} />)}</ul>
         ) : <p className="py-2 text-sm text-slate-400">No está anotado en ninguna clase.</p>}
       </div>
       <div>
         <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Últimas asistencias</h4>
         {d.historial.length ? (
-          <ul className="m-0 max-h-72 list-none divide-y divide-slate-100 overflow-y-auto p-0">{d.historial.map((a) => <Fila key={a.id} a={a} onHecho={hecho} />)}</ul>
+          <ul className="m-0 max-h-72 list-none divide-y divide-slate-100 overflow-y-auto p-0">{d.historial.map((a) => <Fila key={a.id} a={a} apilado={compacto} onHecho={hecho} />)}</ul>
         ) : <p className="py-2 text-sm text-slate-400">Todavía no tiene asistencias.</p>}
       </div>
       {modalForzar}

@@ -104,5 +104,7 @@ export type ComisionProfesor = { profesor_id: string; profesor: string; clases: 
 
 export const DIAS: [number, string, string][] = [[1, "Lun", "Lunes"], [2, "Mar", "Martes"], [3, "Mié", "Miércoles"], [4, "Jue", "Jueves"], [5, "Vie", "Viernes"], [6, "Sáb", "Sábado"], [7, "Dom", "Domingo"]];
 
+/** "jueves, 5 de noviembre" → "Jueves, 5 de noviembre" (solo la primera letra). */
+export const primeraMayuscula = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 export const gs = (n: number | null | undefined) => `Gs. ${Math.round(Number(n) || 0).toLocaleString("es-PY")}`;
 export const hora = (iso: string | null) => (iso ? new Date(iso).toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "America/Asuncion" }) : "");
