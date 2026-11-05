@@ -50,6 +50,13 @@ const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: 
     resumen: "Propiedades con su ficha (ciudad, m², catastro, lote, documentación), propias o de un dueño, para vender o alquilar.",
     Icono: Building2,
   },
+  {
+    key: "neura",
+    titulo: "Neura",
+    ejemplos: "Uso interno de Neura",
+    resumen: "Todas las pantallas de todos los rubros, más Soporte.",
+    Icono: Sparkles,
+  },
 ];
 
 const PRESET: Record<Exclude<Rubro, "personalizado">, Borrador> = {
@@ -57,6 +64,7 @@ const PRESET: Record<Exclude<Rubro, "personalizado">, Borrador> = {
   gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false, sorteos: false, inmobiliaria: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.gastronomia },
   sorteos: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: true, inmobiliaria: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.sorteos },
   inmobiliaria: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.inmobiliaria },
+  neura: { mesas: true, cocina: true, recetas: true, pedidos: true, sorteos: true, inmobiliaria: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.neura },
 };
 
 const deEmpresa = (d: FuncionesEmpresa): Borrador => ({
@@ -197,7 +205,7 @@ export default function RubroFuncionesPage() {
         detalle="Aplica las funciones típicas del rubro. Después podés ajustar cada una."
         acciones={rubro === "personalizado" ? <span className="inline-flex items-center justify-center rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-900 ring-1 ring-violet-200">Personalizado</span> : null}
       >
-        <div role="radiogroup" aria-label="Rubro" className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
+        <div role="radiogroup" aria-label="Rubro" className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
           {RUBROS.map((r) => {
             const sel = rubro === r.key;
             return (
@@ -220,7 +228,7 @@ export default function RubroFuncionesPage() {
                   </span>
                 </span>
                 <span className="mt-2 block text-xs leading-relaxed text-slate-500">{r.resumen}</span>
-                {pantallasDelRubro(r.key).length ? (
+                {r.key !== "neura" && pantallasDelRubro(r.key).length ? (
                   <>
                     <span className="mt-2.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Pantallas propias</span>
                     <span className="mt-1 flex flex-wrap gap-1">
@@ -293,7 +301,7 @@ export default function RubroFuncionesPage() {
       </Tarjeta>
 
       {/* ── Módulos (receta 138) ─────────────────────────────────────────── */}
-      <Tarjeta icono={<Blocks className="h-4 w-4" />} titulo="Módulos" detalle="El rubro deja prendidos solo los módulos que usa. Podés prender o apagar cada uno: apagar lo saca del menú, no borra nada. Soporte y Configuración están siempre.">
+      <Tarjeta icono={<Blocks className="h-4 w-4" />} titulo="Módulos" detalle="El rubro deja prendidos solo los módulos que usa. Podés prender o apagar cada uno: apagar lo saca del menú, no borra nada. Configuración está siempre.">
         <div className="space-y-2.5">
           {MODULOS_RUBRO.map((m) => (
             <Interruptor

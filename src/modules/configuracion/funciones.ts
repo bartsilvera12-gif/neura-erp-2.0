@@ -12,7 +12,7 @@
 export type FuncionId = "mesas" | "cocina" | "recetas" | "pedidos" | "sorteos" | "inmobiliaria";
 /** `funcion` de una sub-pantalla: una función, o "rubro" (la pantalla Rubro y funciones: se oculta si Neura la ocultó). */
 export type FuncionPantalla = FuncionId | "rubro";
-export type Rubro = "comercio" | "gastronomia" | "sorteos" | "inmobiliaria" | "personalizado";
+export type Rubro = "comercio" | "gastronomia" | "sorteos" | "inmobiliaria" | "neura" | "personalizado";
 
 export type Funciones = {
   mesas: boolean;
@@ -30,8 +30,8 @@ export type Funciones = {
   modulos_apagados: ModuloRubroId[];
 };
 
-/** Receta 138: módulos que se prenden/apagan por empresa. Soporte y Configuración no se apagan. */
-export type ModuloRubroId = "comercial" | "caja" | "finanzas" | "gastos" | "inventario" | "reportes" | "omnicanal" | "rrhh" | "cuotas";
+/** Receta 138: módulos que se prenden/apagan por empresa. Configuración no se apaga. 139: Soporte solo en el rubro Neura. */
+export type ModuloRubroId = "comercial" | "caja" | "finanzas" | "gastos" | "inventario" | "reportes" | "omnicanal" | "rrhh" | "cuotas" | "soporte";
 
 export const MODULOS_RUBRO: { id: ModuloRubroId; label: string; descripcion: string; modulos: string[]; pantallas?: string[] }[] = [
   { id: "comercial", label: "Comercial", descripcion: "Clientes, CRM, presupuestos, comisiones de vendedores, planes y agenda.", modulos: ["clientes", "crm", "presupuestos", "gestion-clientes", "comisiones", "planes", "agenda"], pantallas: ["/configuracion/comisiones"] },
@@ -43,14 +43,16 @@ export const MODULOS_RUBRO: { id: ModuloRubroId; label: string; descripcion: str
   { id: "omnicanal", label: "Omnicanal", descripcion: "Conversaciones y canales de WhatsApp.", modulos: ["conversaciones"] },
   { id: "rrhh", label: "RR HH", descripcion: "Personal y liquidaciones de sueldo.", modulos: ["rrhh"] },
   { id: "cuotas", label: "Planes de cuotas y mora", descripcion: "Configuración › Planes de cuotas y mora.", modulos: [], pantallas: ["/configuracion/cuotas"] },
+  { id: "soporte", label: "Soporte", descripcion: "Mesa de ayuda de Neura: tickets y su tablero. Solo la trae el rubro Neura.", modulos: ["soporte"] },
 ];
 
 /** Preset de cada rubro: qué módulos quedan apagados. */
 export const MODULOS_APAGADOS_RUBRO: Record<Exclude<Rubro, "personalizado">, ModuloRubroId[]> = {
-  comercio: [],
-  gastronomia: [],
-  sorteos: ["comercial", "inventario", "cuotas"],
-  inmobiliaria: ["inventario"],
+  comercio: ["soporte"],
+  gastronomia: ["soporte"],
+  sorteos: ["comercial", "inventario", "cuotas", "soporte"],
+  inmobiliaria: ["inventario", "soporte"],
+  neura: [],
 };
 
 /** ¿El módulo del menú (id de module.ts) está apagado? */
@@ -76,13 +78,14 @@ export type FuncionesEmpresa = Funciones & {
   productos_recetas: number | null;
 };
 
-export const SIN_FUNCIONES: Funciones = { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, ocultas: false, modulos_apagados: [] };
+export const SIN_FUNCIONES: Funciones = { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, ocultas: false, modulos_apagados: ["soporte"] };
 
 export const URL_FUNCIONES = "/api/configuracion/funciones";
 export const MSJ_FUNCION_INACTIVA = "Esta función no está activa en tu empresa";
 
-export function rubroDe(f: Pick<Funciones, "mesas" | "cocina" | "recetas"> & { sorteos?: boolean; inmobiliaria?: boolean }): Rubro {
+export function rubroDe(f: Pick<Funciones, "mesas" | "cocina" | "recetas"> & { pedidos?: boolean; sorteos?: boolean; inmobiliaria?: boolean }): Rubro {
   const sinGastro = !f.mesas && !f.cocina && !f.recetas;
+  if (f.mesas && f.cocina && f.recetas && f.sorteos && f.inmobiliaria && (f.pedidos ?? true)) return "neura"; // receta 139
   if (f.inmobiliaria && !f.sorteos && sinGastro) return "inmobiliaria";
   if (f.sorteos && !f.inmobiliaria && sinGastro) return "sorteos";
   if (f.mesas && f.cocina && f.recetas) return "gastronomia";
