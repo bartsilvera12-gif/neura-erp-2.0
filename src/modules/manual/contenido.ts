@@ -53,7 +53,7 @@ export const LLEGAR: Record<string, [string, string?]> = {
   "inmo-avisos": ["Inmobiliaria", "Propiedades"], "inmo-planes": ["Configuración", "Planes de cuotas y mora"],
   "gim-clase": ["Asistencia", "Clases"], "gim-reglas": ["Asistencia", "Clases"], "gim-membresia": ["Comercial", "Planes"],
   "gim-alumno": ["Asistencia", "Recepción"], "gim-asistencia": ["Asistencia", "Recepción"], "gim-turno": ["Asistencia", "Recepción"],
-  "gim-comisiones": ["Asistencia", "Comisiones de profesores"],
+  "gim-comisiones": ["Asistencia", "Comisiones de profesores"], "gim-autoasistencia": ["Asistencia", "Que el alumno marque solo"],
 };
 /** La captura del panel que abre cada sección del menú. */
 export const PANELES: Record<string, string> = {
@@ -1179,6 +1179,22 @@ export const GUIAS: Guia[] = [
     ],
   },
   {
+    id: "gim-autoasistencia", grupo: "Asistencia", rubro: "gimnasio", ruta: "/gimnasio/autoasistencia", titulo: "Que el alumno marque solo", resumen: "Un QR en la entrada: el alumno marca su llegada con su CI y su PIN.",
+    bloques: [
+      { img: "gim-autoasistencia", alt: "Link y QR de asistencia", pasos: [
+        { t: "Tocá Imprimir QR y pegalo en la entrada.", d: "Sale una hoja con el QR grande y los pasos para el alumno.", marca: "Imprimir QR" },
+        { t: "O mandá el link por WhatsApp con Compartir.", marca: "Compartir" },
+      ] },
+      { img: "gim-pin", alt: "PIN del alumno", texto: "Cada alumno necesita su PIN. En Recepción buscalo.", pasos: [
+        { t: "Tocá Crear PIN y dáselo al alumno.", d: "Son 4 números y se ven una sola vez. Si se lo olvida, tocá Cambiar PIN.", marca: "Crear PIN" },
+      ] },
+      { img: "gim-link", alt: "Lo que ve el alumno", pasos: [
+        { t: "El alumno escanea el QR y pone su cédula.", marca: "Tu cédula" },
+        { t: "Pone su PIN y toca Entrar.", d: "Después toca Llegué en su clase, o Entrada libre. Ya cuenta como asistencia.", marca: "Entrar" },
+      ] },
+      { ojo: "Si tiene una cuota vencida no puede marcar: le pide pasar por recepción." },
+    ],
+  },  {
     id: "gim-comisiones", grupo: "Asistencia", rubro: "gimnasio", ruta: "/gimnasio/comisiones", titulo: "Comisión de los profesores", resumen: "Elegir cómo se paga y ver cuánto le toca a cada uno.",
     bloques: [
       { img: "gim-comisiones", alt: "Comisiones de profesores", pasos: [

@@ -132,7 +132,7 @@ export function MarcarAsistencia({ token, empresa, color }: { token: string; emp
             </label>
             <label className="block">
               <span className="mb-1.5 block text-sm font-medium text-slate-600">Tu PIN</span>
-              <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" type="password" autoComplete="off" placeholder="4 números" className={`${INPUT} tracking-[0.4em]`} />
+              <input value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4))} inputMode="numeric" type="password" autoComplete="off" placeholder="4 números" className={INPUT} />
             </label>
             <button type="submit" disabled={!!ocupado || ci.replace(/\D/g, "").length < 4 || pin.length !== 4}
               className="inline-flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl bg-[var(--brand)] text-lg font-semibold text-white disabled:opacity-40">

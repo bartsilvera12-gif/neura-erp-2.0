@@ -74,7 +74,7 @@ ol{display:inline-block;text-align:left;font-size:20px;line-height:1.7;color:#1e
             <p className="w-full break-all rounded-lg bg-slate-50 px-3 py-2 text-center text-xs text-slate-500">{link}</p>
           </section>
           <section className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap [&>button]:whitespace-nowrap sm:[&>button]:flex-1">
               <button type="button" onClick={() => void copiar()} className={`${BOTON_SECUNDARIO} min-h-11`}>{copiado ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />} {copiado ? "Copiado" : "Copiar link"}</button>
               <button type="button" onClick={() => void compartir()} className={`${BOTON_SECUNDARIO} min-h-11`}><Share2 className="h-4 w-4" /> Compartir</button>
               <button type="button" disabled={!svg} onClick={imprimir} className={`${BOTON_PRIMARIO} min-h-11 bg-[var(--brand)]`}><Printer className="h-4 w-4" /> Imprimir QR</button>

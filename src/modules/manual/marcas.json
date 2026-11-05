@@ -4118,9 +4118,39 @@
     "x": 47.6,
     "y": 38.5
    },
-   "Comisiones de profesores": {
+   "Que el alumno marque solo": {
     "x": 74,
     "y": 38.5
+   },
+   "Comisiones de profesores": {
+    "x": 21.3,
+    "y": 59.2
+   }
+  },
+  "gim-autoasistencia": {
+   "Imprimir QR": {
+    "x": 80.4,
+    "y": 35.6
+   },
+   "Compartir": {
+    "x": 64.1,
+    "y": 35.6
+   }
+  },
+  "gim-pin": {
+   "Crear PIN": {
+    "x": 44,
+    "y": 79
+   }
+  },
+  "gim-link": {
+   "Tu cédula": {
+    "x": 33.8,
+    "y": 14.9
+   },
+   "Entrar": {
+    "x": 33.8,
+    "y": 40.6
    }
   }
  }
