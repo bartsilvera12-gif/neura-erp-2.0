@@ -184,6 +184,18 @@ begin
     execute 'set local role anon';
     perform pg_temp.ok('Link del alumno: rehacer el link deja el nuevo andando', (gim_publico_mio(v_tok_d)->>'ok')::boolean);
     execute 'set local role authenticated';
+
+    -- Receta 156: la lista de alumnos de la recepción.
+    v := gim_alumnos_lista('alumna sola', 'todos');
+    perform pg_temp.ok('Lista de alumnos: busca sin tildes y muestra lo último que hizo',
+      jsonb_array_length(v->'alumnos') = 1 and v->'alumnos'->0->'ultima'->>'clase' is not null and not (v->'alumnos'->0->>'enviado')::boolean, v::text);
+    perform gim_alumno_link_enviado(v_b);
+    v := gim_alumnos_lista('PRUEBA Alumna', 'sin_link');
+    perform pg_temp.ok('Lista de alumnos: al mandarle el link sale de "Sin link"', not exists (select 1 from jsonb_array_elements(v->'alumnos') x where (x->>'id')::uuid = v_b), v::text);
+    v := gim_alumnos_lista('PRUEBA Alumno Moroso', 'deben');
+    perform pg_temp.ok('Lista de alumnos: filtra a los que deben', jsonb_array_length(v->'alumnos') = 1 and (v->'totales'->>'deben')::int = 1, v::text);
+    perform pg_temp.rechaza('Lista de alumnos: sin sesión no se ve', $q$set local role anon; select gim_alumnos_lista()$q$, 'permission denied');
+    execute 'set local role authenticated';
   end;
 
   -- Sin sesión no se usa.

@@ -124,59 +124,70 @@ export function whatsappAlumno(telefono: string | null | undefined, texto: strin
   return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
 }
 
+type LinkDatos = { token: string; nombre: string; telefono: string | null };
+const urlLink = (token: string) => `${window.location.origin}/a/${token}`;
+const textoLink = (d: LinkDatos) => `Hola ${d.nombre.split(" ")[0]}! Con este link reservás tus clases y marcás tu asistencia: ${urlLink(d.token)}`;
+const pedirLink = (clienteId: string, extra: object) =>
+  apiFetch<LinkDatos>(`/api/gimnasio/clientes/${clienteId}/link`, { method: "POST", body: JSON.stringify(extra) });
+
+/** Abre WhatsApp con el link del alumno (lo crea si no tiene) y anota que se le mandó (receta 156). */
+export async function enviarLinkWhatsApp(clienteId: string): Promise<void> {
+  const w = window.open("about:blank", "_blank");
+  try {
+    const d = await pedirLink(clienteId, { enviado: true });
+    const destino = whatsappAlumno(d.telefono, textoLink(d));
+    if (w) w.location.href = destino; else window.location.href = destino;
+  } catch (e) { w?.close(); throw e; }
+}
+
+/** Copia el link del alumno (lo crea si no tiene) y anota que se le mandó. */
+export async function copiarLinkAlumno(clienteId: string): Promise<void> {
+  const d = await pedirLink(clienteId, { enviado: true });
+  try { await navigator.clipboard.writeText(urlLink(d.token)); }
+  catch { throw new Error(`No se pudo copiar. El link es: ${urlLink(d.token)}`); }
+}
+
 /**
- * El link personal del alumno (receta 155): con él reserva, cancela y marca su asistencia solo, desde
- * donde esté. Se manda por WhatsApp o se copia. `conCambiar` = muestra "Cambiar link" (si lo perdió).
+ * El link personal del alumno en su card (recetas 155 y 156): Copiar, WhatsApp y Cambiar link (si lo perdió).
  */
-export function LinkAlumno({ clienteId, conCambiar }: { clienteId: string; conCambiar?: boolean }) {
-  const [d, setD] = useState<{ token: string; nombre: string; telefono: string | null } | null>(null);
+export function LinkAlumno({ clienteId }: { clienteId: string }) {
   const [copiado, setCopiado] = useState(false);
   const [rehacer, setRehacer] = useState(false);
-  const [ocupado, setOcupado] = useState(false);
+  const [ocupado, setOcupado] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const pedir = useCallback(async (nuevo: boolean) => {
-    setOcupado(true); setError(null);
-    try { setD(await apiFetch(`/api/gimnasio/clientes/${clienteId}/link`, { method: "POST", body: JSON.stringify({ rehacer: nuevo }) })); setRehacer(false); }
-    catch (e) { setError((e as Error).message); } finally { setOcupado(false); }
-  }, [clienteId]);
-  useEffect(() => { setD(null); void pedir(false); }, [pedir]);
-  const link = d && typeof window !== "undefined" ? `${window.location.origin}/a/${d.token}` : "";
-  const texto = d ? `Hola ${d.nombre.split(" ")[0]}! Con este link reservás tus clases y marcás tu asistencia: ${link}` : "";
-  async function copiar() {
-    try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { setError("No se pudo copiar: copialo a mano."); }
+  async function correr(cual: string, fn: () => Promise<void>) {
+    setOcupado(cual); setError(null);
+    try { await fn(); } catch (e) { setError((e as Error).message); } finally { setOcupado(null); }
   }
   return (
-    <div className="rounded-xl border border-slate-200 px-3 py-2.5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
-          <Link2 className="h-4 w-4 shrink-0 text-slate-400" /> Su link para reservar y marcar
-        </span>
-        <span className="flex items-center gap-1">
-          <button type="button" disabled={!d} onClick={() => void copiar()} className="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">
-            {copiado ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />} {copiado ? "Copiado" : "Copiar"}
+    <div className="rounded-xl border border-slate-200 px-3 py-2">
+      <div className="flex flex-wrap items-center justify-between gap-x-2">
+        <span className="flex min-w-0 items-center gap-2 text-sm text-slate-700"><Link2 className="h-4 w-4 shrink-0 text-slate-400" /> Su link</span>
+        <span className="flex items-center">
+          <button type="button" title="Cambiar link" aria-label="Cambiar link" onClick={() => setRehacer((x) => !x)} className="grid h-10 w-10 place-items-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700">
+            <RefreshCw className="h-4 w-4" />
           </button>
-          <a href={d ? whatsappAlumno(d.telefono, texto) : undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!d}
-            className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-semibold text-[var(--brand)] no-underline hover:bg-[var(--brand-50,#eef7f7)] ${d ? "" : "pointer-events-none opacity-50"}`}>
-            {ocupado && !d ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} WhatsApp
-          </a>
+          <button type="button" disabled={!!ocupado} onClick={() => void correr("copiar", async () => { await copiarLinkAlumno(clienteId); setCopiado(true); setTimeout(() => setCopiado(false), 2000); })}
+            className="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">
+            {ocupado === "copiar" ? <Loader2 className="h-4 w-4 animate-spin" /> : copiado ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />} {copiado ? "Copiado" : "Copiar"}
+          </button>
+          <button type="button" disabled={!!ocupado} onClick={() => void correr("wa", () => enviarLinkWhatsApp(clienteId))}
+            className="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand-50,#eef7f7)] disabled:opacity-50">
+            {ocupado === "wa" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} WhatsApp
+          </button>
         </span>
       </div>
-      {conCambiar && d ? (rehacer ? (
-        <div className="mt-2 space-y-2 rounded-lg bg-rose-50 p-2.5">
-          <p className="text-xs text-rose-900">El link que tiene deja de andar y le tenés que mandar el nuevo.</p>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setRehacer(false)} className="min-h-10 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-white">No, dejarlo</button>
-            <button type="button" disabled={ocupado} onClick={() => void pedir(true)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-rose-600 px-3 text-sm font-semibold text-white disabled:opacity-50">
-              {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Sí, cambiar el link
-            </button>
-          </div>
+      {rehacer ? (
+        <div className="mt-1 flex flex-wrap items-center gap-2 rounded-lg bg-rose-50 p-2">
+          <p className="min-w-0 flex-1 text-xs text-rose-900">¿Cambiar el link? El que tiene deja de andar.</p>
+          <button type="button" onClick={() => setRehacer(false)} className="min-h-9 rounded-lg px-2 text-xs font-medium text-slate-600 hover:bg-white">No</button>
+          <button type="button" disabled={!!ocupado} onClick={() => void correr("rehacer", async () => { await pedirLink(clienteId, { rehacer: true }); setRehacer(false); })}
+            className="inline-flex min-h-9 items-center gap-1 rounded-lg bg-rose-600 px-3 text-xs font-semibold text-white disabled:opacity-50">
+            {ocupado === "rehacer" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Sí, cambiar
+          </button>
         </div>
-      ) : (
-        <button type="button" onClick={() => setRehacer(true)} className="mt-1 inline-flex min-h-9 items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-rose-700">
-          <RefreshCw className="h-3.5 w-3.5" /> Cambiar link (si lo perdió o se lo pasó a otro)
-        </button>
-      )) : null}
-      {error ? <p role="alert" className="mt-1 text-xs text-rose-700">{error}</p> : null}
+      ) : null}
+      {error ? <p role="alert" className="mt-1 break-all text-xs text-rose-700">{error}</p> : null}
     </div>
   );
 }

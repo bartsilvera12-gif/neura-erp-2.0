@@ -1,13 +1,15 @@
 "use client";
 
 /**
- * Lo que ve el alumno con SU link (receta 155): sin CI ni PIN. Sus clases de hoy y de los próximos días:
- * reserva, cancela, o marca su asistencia desde donde esté (en una clase de hoy, desde 1 hora antes)
- * y "Entrada libre" una vez por día. Con una cuota vencida puede reservar pero no marcar.
+ * Lo que ve el alumno con SU link (recetas 155 y 156): sin CI ni PIN. Arriba cuántas clases le quedan,
+ * los días en una tira (Hoy, Vie 6, Sáb 7…) y abajo solo las clases del día elegido, una fila por clase
+ * con un solo botón: Marcar (el día de la clase, desde 1 hora antes, esté donde esté), Reservar o
+ * Cancelar; un tilde si ya asistió. "Vengo sin clase" marca la entrada libre de hoy.
+ * Con una cuota vencida puede reservar pero no marcar.
  * El link queda guardado en el celular para que el QR viejo de la entrada lo lleve acá.
  */
 import { useCallback, useEffect, useState } from "react";
-import { CalendarCheck, CheckCircle2, DoorOpen, Loader2, MapPin, User } from "lucide-react";
+import { CalendarCheck, CheckCircle2, DoorOpen, Loader2 } from "lucide-react";
 import { CLAVE_LINK } from "./clave";
 
 type Clase = {
@@ -22,13 +24,22 @@ const TZ = "America/Asuncion";
 const hora = (iso: string) => new Date(iso).toLocaleTimeString("es-PY", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: TZ });
 const gs = (n: number | null | undefined) => `Gs. ${Math.round(Number(n) || 0).toLocaleString("es-PY")}`;
 const fechaPY = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: TZ });
+
+/** "Hoy", "Mañana" o "jueves 12". */
 function nombreDia(fecha: string, hoy: string): string {
-  if (fecha === hoy) return "Hoy";
+  if (fecha === hoy) return "hoy";
   const man = new Date(`${hoy}T12:00:00`);
   man.setDate(man.getDate() + 1);
-  if (fecha === man.toISOString().slice(0, 10)) return "Mañana";
-  const t = new Date(`${fecha}T12:00:00`).toLocaleDateString("es-PY", { weekday: "long", day: "numeric", month: "long" });
-  return t.charAt(0).toUpperCase() + t.slice(1);
+  if (fecha === man.toISOString().slice(0, 10)) return "mañana";
+  return new Date(`${fecha}T12:00:00`).toLocaleDateString("es-PY", { weekday: "long", day: "numeric" });
+}
+
+/** El chip de la tira: "Hoy", "Vie 6". */
+function chip(fecha: string, hoy: string): string {
+  if (fecha === hoy) return "Hoy";
+  const d = new Date(`${fecha}T12:00:00`);
+  const t = d.toLocaleDateString("es-PY", { weekday: "short" }).replace(".", "");
+  return `${t.charAt(0).toUpperCase()}${t.slice(1)} ${d.getDate()}`;
 }
 
 async function llamar<T>(token: string, cuerpo: object): Promise<T> {
@@ -40,11 +51,10 @@ async function llamar<T>(token: string, cuerpo: object): Promise<T> {
 
 function mensaje(h: Hecho, hoy: string): { titulo: string; detalle: string } {
   if (h.accion === "reservar") {
-    const cuando = h.inicio_at ? `${nombreDia(fechaPY(new Date(h.inicio_at)), hoy)} a las ${hora(h.inicio_at)}. ` : "";
-    return { titulo: `Reservaste ${h.clase}`, detalle: `${cuando}Ese día marcás tu asistencia desde acá.` };
+    return { titulo: `Reservaste ${h.clase}`, detalle: h.inicio_at ? `Para ${nombreDia(fechaPY(new Date(h.inicio_at)), hoy)} a las ${hora(h.inicio_at)}.` : "" };
   }
-  if (h.accion === "cancelar") return { titulo: `Cancelaste ${h.clase}`, detalle: "Tu lugar quedó libre para otro." };
-  return { titulo: `¡Listo! Marcaste ${h.clase}`, detalle: h.cubierta ? "Se descontó de tu membresía." : h.valor ? `Clase suelta: ${gs(h.valor)}, pagala en recepción.` : "" };
+  if (h.accion === "cancelar") return { titulo: `Cancelaste ${h.clase}`, detalle: "Tu lugar quedó libre." };
+  return { titulo: `Marcaste ${h.clase}`, detalle: h.cubierta ? "Se descontó de tu membresía." : h.valor ? `Clase suelta: ${gs(h.valor)}, pagala en recepción.` : "" };
 }
 
 export function MiAsistencia({ token, empresa, color }: { token: string; empresa: string; color: string }) {
@@ -53,6 +63,7 @@ export function MiAsistencia({ token, empresa, color }: { token: string; empresa
   const [hecho, setHecho] = useState<Hecho | null>(null);
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [dia, setDia] = useState<string | null>(null);
 
   const cargar = useCallback(() => {
     llamar<{ alumno: Alumno }>(token, { accion: "ver" }).then((d) => { setAlumno(d.alumno); setError(null); }).catch((x: Error) => setError(x.message));
@@ -70,24 +81,28 @@ export function MiAsistencia({ token, empresa, color }: { token: string; empresa
     try {
       const d = await llamar<{ hecho: Hecho; alumno: Alumno }>(token, accion === "libre" ? { accion } : { accion, cita_id: citaId });
       setAlumno(d.alumno); setHecho(d.hecho);
-    } catch (x) { setError((x as Error).message); } finally {
-      setOcupado(null);
-      window.scrollTo({ top: 0, behavior: "smooth" });
-    }
+    } catch (x) { setError((x as Error).message); } finally { setOcupado(null); }
   }
 
   const hoy = fechaPY(new Date());
   const dias = new Map<string, Clase[]>([[hoy, []]]);
   for (const c of alumno?.clases ?? []) dias.set(c.fecha, [...(dias.get(c.fecha) ?? []), c]);
   const orden = [...dias.keys()].sort();
+  const elegido = dia && dias.has(dia) ? dia : hoy;
+  const clases = dias.get(elegido) ?? [];
+  const esHoy = elegido === hoy;
   const msj = hecho ? mensaje(hecho, hoy) : null;
   const m = alumno?.membresia;
+  const quedan = m?.clases_mes ? Math.max(0, m.clases_mes - m.usadas) : null;
+  const resumen = !m ? "Cada clase se paga en recepción" : quedan === null ? "Clases ilimitadas" : `Te ${quedan === 1 ? "queda 1 clase" : `quedan ${quedan} clases`} este mes`;
 
-  function Boton({ accion, citaId, children, principal }: { accion: Accion; citaId: string; children: React.ReactNode; principal?: boolean }) {
+  function Boton({ accion, citaId, children }: { accion: Accion; citaId: string; children: React.ReactNode }) {
+    const estiloBoton = accion === "marcar" ? "bg-[var(--brand)] px-4 text-white"
+      : accion === "reservar" ? "border border-slate-300 bg-white px-4 text-slate-800"
+      : "px-2 text-slate-500 hover:bg-slate-100";
     return (
       <button type="button" disabled={!!ocupado} onClick={() => void hacer(accion, citaId)}
-        className={`inline-flex min-h-12 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl px-4 text-base font-semibold disabled:opacity-50 ${
-          principal ? "bg-[var(--brand)] text-white" : "border border-[var(--brand)] bg-white text-[var(--brand)]"}`}>
+        className={`inline-flex min-h-11 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl text-sm font-semibold disabled:opacity-50 ${estiloBoton}`}>
         {ocupado === `${accion}|${citaId}` ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{children}
       </button>
     );
@@ -99,99 +114,80 @@ export function MiAsistencia({ token, empresa, color }: { token: string; empresa
         <header className="flex items-center gap-3">
           <span className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[var(--brand)] text-white"><CalendarCheck className="h-6 w-6" /></span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium text-slate-500">{empresa}</p>
+            <p className="truncate text-xs font-medium uppercase tracking-wide text-slate-400">{empresa}</p>
             <h1 className="truncate text-xl font-bold text-slate-900">{alumno ? `Hola, ${alumno.nombre.split(" ")[0]}` : "Mi asistencia"}</h1>
+            {alumno ? <p className="truncate text-sm text-slate-500">{resumen}</p> : null}
           </div>
         </header>
 
         {msj ? (
-          <div role="status" className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
-            <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" />
-            <span className="min-w-0">
-              <span className="block text-base font-semibold text-slate-900">{msj.titulo}</span>
-              {msj.detalle ? <span className="block text-sm text-slate-600">{msj.detalle}</span> : null}
+          <div role="status" className="flex gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3.5">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
+            <span className="min-w-0 text-sm">
+              <span className="block font-semibold text-slate-900">{msj.titulo}</span>
+              {msj.detalle ? <span className="block text-slate-600">{msj.detalle}</span> : null}
             </span>
           </div>
         ) : null}
-        {error ? <p role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-base text-rose-800">{error}</p> : null}
+        {error ? <p role="alert" className="rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-sm text-rose-800">{error}</p> : null}
+        {alumno?.bloqueado ? (
+          <p className="rounded-2xl border border-amber-200 bg-amber-50 p-3.5 text-sm text-amber-900">Tenés una cuota vencida: podés reservar, pero para marcar tu asistencia pasá por recepción.</p>
+        ) : null}
 
-        {!alumno && !error ? <div className="h-64 animate-pulse rounded-3xl bg-white" /> : null}
+        {!alumno && !error ? <div className="h-64 animate-pulse rounded-2xl bg-white" /> : null}
         {alumno ? (
           <>
-            <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-slate-100 text-slate-500"><User className="h-5 w-5" /></span>
-              <span className="min-w-0">
-                <span className="block truncate text-base font-semibold text-slate-900">{m ? m.plan : "Sin membresía"}</span>
-                <span className="block text-sm text-slate-500">{m ? (m.clases_mes ? `Usaste ${m.usadas} de ${m.clases_mes} clases este mes` : "Clases ilimitadas") : "Cada clase se paga suelta en recepción"}</span>
-              </span>
+            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1" style={{ scrollbarWidth: "none" }}>
+              {orden.map((f) => (
+                <button key={f} type="button" onClick={() => setDia(f)} aria-pressed={f === elegido}
+                  className={`inline-flex min-h-10 shrink-0 items-center rounded-full px-4 text-sm font-medium transition ${f === elegido ? "bg-slate-900 text-white" : "border border-slate-200 bg-white text-slate-600"}`}>
+                  {chip(f, hoy)}
+                </button>
+              ))}
             </div>
-            {alumno.bloqueado ? (
-              <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-base text-amber-900">Tenés una cuota vencida: podés reservar, pero para marcar tu asistencia pasá por recepción.</p>
-            ) : null}
 
-            {orden.map((f) => {
-              const clases = dias.get(f) ?? [];
-              const esHoy = f === hoy;
-              return (
-                <section key={f} className="space-y-2">
-                  <h2 className="pt-1 text-sm font-semibold uppercase tracking-wide text-slate-500">{nombreDia(f, hoy)}</h2>
+            <section className="rounded-2xl border border-slate-200 bg-white px-4">
+              {clases.length ? (
+                <ul className="m-0 list-none divide-y divide-slate-100 p-0">
                   {clases.map((c) => {
                     const ya = c.estado === "culminada";
                     const reservada = c.estado === "pendiente" || c.estado === "confirmada" || c.estado === "en_espera";
                     const lleno = !c.estado && c.lugares !== null && c.lugares <= 0;
                     const terminada = new Date(c.fin_at).getTime() < Date.now();
                     const abre = new Date(new Date(c.inicio_at).getTime() - 3_600_000);
-                    const acciones = !ya && (c.puede_marcar || c.puede_reservar || c.puede_cancelar);
+                    const estado = ya ? "Asististe"
+                      : reservada ? (esHoy && !c.puede_marcar && !alumno.bloqueado && Date.now() < abre.getTime() ? `Reservada · marcás desde las ${hora(abre.toISOString())}` : "Reservada")
+                      : lleno ? "Llena" : terminada ? "Terminó"
+                      : c.lugares !== null ? `${c.lugares} ${c.lugares === 1 ? "lugar" : "lugares"}` : "";
+                    const detalle = [estado, c.profesor, c.ubicacion].filter(Boolean).join(" · ");
                     return (
-                      <div key={c.cita_id} className={`rounded-2xl border bg-white p-4 ${reservada || ya ? "border-[var(--brand)]" : "border-slate-200"}`}>
-                        <div className="flex items-start justify-between gap-3">
-                          <span className="min-w-0">
-                            <span className="block text-sm font-semibold tabular-nums text-[var(--brand)]">{hora(c.inicio_at)} – {hora(c.fin_at)}</span>
-                            <span className="block truncate text-base font-semibold text-slate-900">{c.titulo}</span>
-                            <span className="flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
-                              {c.profesor ? <span>{c.profesor}</span> : null}
-                              {c.ubicacion ? <span className="inline-flex items-center gap-1"><MapPin className="h-3.5 w-3.5" />{c.ubicacion}</span> : null}
-                              {!ya && !reservada && c.lugares !== null && c.lugares > 0 ? <span>{c.lugares} {c.lugares === 1 ? "lugar" : "lugares"}</span> : null}
-                            </span>
-                          </span>
-                          {ya ? <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-800">Asististe</span>
-                            : reservada ? <span className="shrink-0 rounded-full bg-[var(--brand-100)] px-3 py-1 text-sm font-semibold text-[var(--brand)]">Reservada</span>
-                            : lleno ? <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-sm font-semibold text-slate-500">Llena</span>
-                            : terminada ? <span className="shrink-0 rounded-full bg-slate-100 px-3 py-1 text-sm font-medium text-slate-500">Terminó</span> : null}
-                        </div>
-                        {acciones ? (
-                          <div className="mt-3 flex flex-col gap-2">
-                            {c.puede_marcar ? <Boton accion="marcar" citaId={c.cita_id} principal>Marcar asistencia</Boton> : null}
-                            {c.puede_reservar && !c.puede_marcar ? <Boton accion="reservar" citaId={c.cita_id} principal>Reservar</Boton> : null}
-                            {c.puede_cancelar ? (
-                              <button type="button" disabled={!!ocupado} onClick={() => void hacer("cancelar", c.cita_id)}
-                                className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl px-3 text-sm font-medium text-slate-500 hover:bg-slate-100 disabled:opacity-50">
-                                {ocupado === `cancelar|${c.cita_id}` ? <Loader2 className="h-4 w-4 animate-spin" /> : null}Cancelar reserva
-                              </button>
-                            ) : null}
-                          </div>
-                        ) : null}
-                        {esHoy && reservada && !c.puede_marcar && !alumno.bloqueado && Date.now() < abre.getTime() ? (
-                          <p className="mt-2 text-sm text-slate-500">Marcás tu asistencia desde las {hora(abre.toISOString())}.</p>
-                        ) : null}
-                      </div>
+                      <li key={c.cita_id} className="flex items-center gap-3 py-3">
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-base font-semibold text-slate-900"><span className="tabular-nums">{hora(c.inicio_at)}</span> {c.titulo}</span>
+                          <span className={`block truncate text-sm ${ya ? "text-emerald-700" : reservada ? "text-[var(--brand)]" : "text-slate-500"}`}>{detalle}</span>
+                        </span>
+                        {ya ? <CheckCircle2 className="h-6 w-6 shrink-0 text-emerald-600" aria-label="Asististe" />
+                          : c.puede_marcar ? <Boton accion="marcar" citaId={c.cita_id}>Marcar</Boton>
+                          : c.puede_reservar ? <Boton accion="reservar" citaId={c.cita_id}>Reservar</Boton>
+                          : c.puede_cancelar ? <Boton accion="cancelar" citaId={c.cita_id}>Cancelar</Boton> : null}
+                      </li>
                     );
                   })}
-                  {esHoy ? (
-                    <button type="button" disabled={!!ocupado || alumno.entrada_libre_hoy || alumno.bloqueado} onClick={() => void hacer("libre")}
-                      className="flex min-h-16 w-full items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white p-4 text-left disabled:opacity-60">
-                      <DoorOpen className="h-6 w-6 shrink-0 text-[var(--brand)]" />
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-base font-semibold text-slate-900">Entrada libre</span>
-                        <span className="block text-sm text-slate-500">{alumno.entrada_libre_hoy ? "Ya la marcaste hoy" : "Vengo a entrenar sin clase"}</span>
-                      </span>
-                      {ocupado === "libre|" ? <Loader2 className="h-5 w-5 animate-spin text-slate-400" /> : null}
+                </ul>
+              ) : <p className="py-8 text-center text-sm text-slate-500">{esHoy ? "Hoy no hay clases." : "Ese día no hay clases."}</p>}
+              {esHoy ? (
+                <div className="border-t border-slate-100 py-2">
+                  {alumno.entrada_libre_hoy ? (
+                    <p className="flex min-h-10 items-center gap-2 text-sm text-emerald-700"><DoorOpen className="h-4 w-4" /> Marcaste entrada libre hoy</p>
+                  ) : (
+                    <button type="button" disabled={!!ocupado || alumno.bloqueado} onClick={() => void hacer("libre")}
+                      className="inline-flex min-h-10 items-center gap-2 text-sm font-semibold text-[var(--brand)] disabled:opacity-50">
+                      {ocupado === "libre|" ? <Loader2 className="h-4 w-4 animate-spin" /> : <DoorOpen className="h-4 w-4" />} Vengo sin clase (entrada libre)
                     </button>
-                  ) : null}
-                </section>
-              );
-            })}
-            {orden.length === 1 && !(dias.get(hoy) ?? []).length ? <p className="text-center text-sm text-slate-500">No hay clases esta semana.</p> : null}
+                  )}
+                </div>
+              ) : null}
+            </section>
           </>
         ) : null}
       </div>
