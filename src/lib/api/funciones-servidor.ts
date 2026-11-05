@@ -15,14 +15,17 @@ const cache: Map<string, Entrada> = (g.__erpFunciones ??= new Map<string, Entrad
 async function consultar(empresaId: string, schema: string): Promise<Funciones> {
   const { data, error } = await systemClient(schema)
     .from("empresa_funciones")
-    .select("mesas, cocina, recetas, pedidos, sorteos, inmobiliaria, funciones_ocultas")
+    .select("*") // con "*" un schema sin las columnas nuevas (77, 123, 130, 138) sigue andando
     .eq("empresa_id", empresaId)
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return SIN_FUNCIONES;
-  const f = data as { mesas: boolean; cocina: boolean; recetas: boolean; pedidos?: boolean | null; sorteos?: boolean | null; inmobiliaria?: boolean | null; funciones_ocultas: boolean };
+  const f = data as { mesas: boolean; cocina: boolean; recetas: boolean; pedidos?: boolean | null; sorteos?: boolean | null; inmobiliaria?: boolean | null; funciones_ocultas: boolean; modulos_apagados?: string[] | null };
   // Receta 77: sin la columna (schema viejo) o null → prendida.
-  return { mesas: !!f.mesas, cocina: !!f.cocina && !!f.mesas, recetas: !!f.recetas, pedidos: f.pedidos !== false, sorteos: !!f.sorteos, inmobiliaria: !!f.inmobiliaria, ocultas: !!f.funciones_ocultas };
+  return {
+    mesas: !!f.mesas, cocina: !!f.cocina && !!f.mesas, recetas: !!f.recetas, pedidos: f.pedidos !== false, sorteos: !!f.sorteos, inmobiliaria: !!f.inmobiliaria, ocultas: !!f.funciones_ocultas,
+    modulos_apagados: (f.modulos_apagados ?? []) as Funciones["modulos_apagados"],
+  };
 }
 
 export async function funcionesDeEmpresa(empresaId: string): Promise<Funciones> {

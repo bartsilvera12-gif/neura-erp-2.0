@@ -26,7 +26,46 @@ export type Funciones = {
   inmobiliaria: boolean;
   /** Neura ocultó la sección Rubro y funciones (solo por SQL). */
   ocultas: boolean;
+  /** Receta 138: módulos apagados por el rubro o a mano (vacío = todos). */
+  modulos_apagados: ModuloRubroId[];
 };
+
+/** Receta 138: módulos que se prenden/apagan por empresa. Soporte y Configuración no se apagan. */
+export type ModuloRubroId = "comercial" | "caja" | "finanzas" | "gastos" | "inventario" | "reportes" | "omnicanal" | "rrhh" | "cuotas";
+
+export const MODULOS_RUBRO: { id: ModuloRubroId; label: string; descripcion: string; modulos: string[]; pantallas?: string[] }[] = [
+  { id: "comercial", label: "Comercial", descripcion: "Clientes, CRM, presupuestos, comisiones de vendedores, planes y agenda.", modulos: ["clientes", "crm", "presupuestos", "gestion-clientes", "comisiones", "planes", "agenda"], pantallas: ["/configuracion/comisiones"] },
+  { id: "caja", label: "Caja", descripcion: "Ventas, apertura y cierre, órdenes de venta y notas de crédito.", modulos: ["caja"] },
+  { id: "finanzas", label: "Finanzas", descripcion: "Cobranzas, conciliación y pagos.", modulos: ["cobranzas", "conciliacion", "pagos"] },
+  { id: "gastos", label: "Gastos empresariales", descripcion: "Compras y gastos, órdenes de compra, proveedores y recurrentes.", modulos: ["gastos-empresariales"] },
+  { id: "inventario", label: "Inventario", descripcion: "Productos, stock, movimientos, traslados y depósitos.", modulos: ["inventario"] },
+  { id: "reportes", label: "Reportes", descripcion: "Todos los reportes.", modulos: ["reportes"] },
+  { id: "omnicanal", label: "Omnicanal", descripcion: "Conversaciones y canales de WhatsApp.", modulos: ["conversaciones"] },
+  { id: "rrhh", label: "RR HH", descripcion: "Personal y liquidaciones de sueldo.", modulos: ["rrhh"] },
+  { id: "cuotas", label: "Planes de cuotas y mora", descripcion: "Configuración › Planes de cuotas y mora.", modulos: [], pantallas: ["/configuracion/cuotas"] },
+];
+
+/** Preset de cada rubro: qué módulos quedan apagados. */
+export const MODULOS_APAGADOS_RUBRO: Record<Exclude<Rubro, "personalizado">, ModuloRubroId[]> = {
+  comercio: [],
+  gastronomia: [],
+  sorteos: ["comercial", "inventario", "cuotas"],
+  inmobiliaria: ["inventario"],
+};
+
+/** ¿El módulo del menú (id de module.ts) está apagado? */
+export function moduloApagado(moduloId: string, f: Funciones | null | undefined): boolean {
+  const ap = f?.modulos_apagados;
+  if (!ap?.length) return false;
+  return MODULOS_RUBRO.some((m) => ap.includes(m.id) && m.modulos.includes(moduloId));
+}
+
+/** ¿La pantalla está apagada (por su módulo o por ella misma)? */
+export function pantallaApagada(moduloId: string, href: string, f: Funciones | null | undefined): boolean {
+  const ap = f?.modulos_apagados;
+  if (!ap?.length) return false;
+  return MODULOS_RUBRO.some((m) => ap.includes(m.id) && (m.modulos.includes(moduloId) || !!m.pantallas?.includes(href)));
+}
 
 /** Lo que devuelve funciones_empresa() (GET /api/configuracion/funciones). */
 export type FuncionesEmpresa = Funciones & {
@@ -37,7 +76,7 @@ export type FuncionesEmpresa = Funciones & {
   productos_recetas: number | null;
 };
 
-export const SIN_FUNCIONES: Funciones = { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, ocultas: false };
+export const SIN_FUNCIONES: Funciones = { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, ocultas: false, modulos_apagados: [] };
 
 export const URL_FUNCIONES = "/api/configuracion/funciones";
 export const MSJ_FUNCION_INACTIVA = "Esta función no está activa en tu empresa";

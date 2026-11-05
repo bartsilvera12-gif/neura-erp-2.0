@@ -9,18 +9,17 @@
  * Solo el Administrador guarda (la base lo vuelve a exigir). Apagar no borra nada.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Building2, ChefHat, ClipboardList, Loader2, QrCode, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
+import { AlertTriangle, Blocks, Building2, ChefHat, ClipboardList, Loader2, QrCode, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { recargarUsuario } from "@/lib/sesion/ContextoUsuario";
 import { Aviso, Interruptor, Tarjeta } from "@/modules/facturacion/ui";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO } from "@/modules/inventario/ui";
-import { rubroDe, URL_FUNCIONES, type FuncionesEmpresa, type FuncionPantalla, type Rubro } from "@/modules/configuracion/funciones";
+import { MODULOS_APAGADOS_RUBRO, MODULOS_RUBRO, rubroDe, URL_FUNCIONES, type FuncionesEmpresa, type FuncionPantalla, type ModuloRubroId, type Rubro } from "@/modules/configuracion/funciones";
 import { pantallasCatalogo } from "@/modules/registry";
-import { clienteConfig } from "@/cliente.config";
 
-type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean; sorteos: boolean; inmobiliaria: boolean };
+type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean; sorteos: boolean; inmobiliaria: boolean; modulos_apagados: ModuloRubroId[] };
 
 const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: string; resumen: string; Icono: typeof Store }[] = [
   {
@@ -54,32 +53,33 @@ const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: 
 ];
 
 const PRESET: Record<Exclude<Rubro, "personalizado">, Borrador> = {
-  comercio: { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false },
-  gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false, sorteos: false, inmobiliaria: false },
-  sorteos: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: true, inmobiliaria: false },
-  inmobiliaria: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: true },
+  comercio: { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.comercio },
+  gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false, sorteos: false, inmobiliaria: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.gastronomia },
+  sorteos: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: true, inmobiliaria: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.sorteos },
+  inmobiliaria: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.inmobiliaria },
 };
 
 const deEmpresa = (d: FuncionesEmpresa): Borrador => ({
   mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false, sorteos: !!d.sorteos, inmobiliaria: !!d.inmobiliaria,
+  modulos_apagados: d.modulos_apagados ?? [],
 });
+
+/** Para comparar el borrador con lo guardado (la lista de módulos, sin importar el orden). */
+const huella = (b: Borrador) => JSON.stringify({ ...b, modulos_apagados: [...b.modulos_apagados].sort() });
 
 const plural = (n: number, s: string, p: string) => `${n} ${n === 1 ? s : p}`;
 
 /** Las pantallas propias de un rubro salen del menú real: lo que dice acá es lo que se ve. */
 function pantallasDelRubro(r: Exclude<Rubro, "personalizado">) {
   const preset = PRESET[r];
-  const propias = (Object.keys(preset) as (keyof Borrador)[]).filter((k) => preset[k]);
+  const propias = (Object.keys(preset) as (keyof Borrador)[]).filter((k) => k !== "modulos_apagados" && preset[k]);
   const catalogo = pantallasCatalogo();
   return propias.flatMap((f) => catalogo.filter((p) => p.funcion === (f as FuncionPantalla)).map((p) => p.label));
 }
 
-/** La base también sale del menú real: los módulos de este cliente con pantallas que no dependen del rubro. */
-function modulosBase() {
-  const pantallas = pantallasCatalogo().filter((p) => !p.funcion);
-  const orden = (id: string) => clienteConfig.modulos.indexOf(id);
-  return [...new Map([...pantallas].sort((a, b) => orden(a.moduloId) - orden(b.moduloId)).map((p) => [p.moduloId, p.moduloLabel])).values()];
-}
+/** Receta 138: módulos que el rubro deja apagados. */
+const apagadosDelRubro = (r: Exclude<Rubro, "personalizado">) =>
+  MODULOS_APAGADOS_RUBRO[r].map((id) => MODULOS_RUBRO.find((m) => m.id === id)?.label ?? id);
 
 export default function RubroFuncionesPage() {
   const [cfg, setCfg] = useState<FuncionesEmpresa | null>(null);
@@ -107,7 +107,7 @@ export default function RubroFuncionesPage() {
   useEffect(() => { void cargar(); }, [cargar]);
 
   const rubro = rubroDe(b);
-  const cambios = !!cfg && (Object.keys(b) as (keyof Borrador)[]).some((k) => deEmpresa(cfg)[k] !== b[k]);
+  const cambios = !!cfg && huella(deEmpresa(cfg)) !== huella(b);
   const soloLectura = !cfg?.puede_editar;
   const abiertas = (cfg?.cuentas_abiertas ?? 0) + (cfg?.pedidos_sin_cerrar ?? 0);
   const bloqueaMesas = !!cfg && cfg.mesas && !b.mesas && abiertas > 0;
@@ -197,14 +197,6 @@ export default function RubroFuncionesPage() {
         detalle="Aplica las funciones típicas del rubro. Después podés ajustar cada una."
         acciones={rubro === "personalizado" ? <span className="inline-flex items-center justify-center rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-900 ring-1 ring-violet-200">Personalizado</span> : null}
       >
-        <div className="mb-3 rounded-xl border border-slate-200 bg-slate-50 p-3.5">
-          <span className="block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Base, incluida en todos los rubros</span>
-          <span className="mt-1.5 flex flex-wrap gap-1">
-            {modulosBase().map((m) => (
-              <span key={m} className="rounded-md bg-white px-1.5 py-0.5 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200">{m}</span>
-            ))}
-          </span>
-        </div>
         <div role="radiogroup" aria-label="Rubro" className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-4">
           {RUBROS.map((r) => {
             const sel = rubro === r.key;
@@ -237,6 +229,9 @@ export default function RubroFuncionesPage() {
                       ))}
                     </span>
                   </>
+                ) : null}
+                {apagadosDelRubro(r.key).length ? (
+                  <span className="mt-2 block text-[11px] text-slate-500">Sin {apagadosDelRubro(r.key).join(", ")}</span>
                 ) : null}
               </button>
             );
@@ -294,6 +289,22 @@ export default function RubroFuncionesPage() {
             etiqueta={<span className="inline-flex items-center gap-1.5"><Building2 className="h-4 w-4 text-slate-400" aria-hidden /> Inmobiliaria</span>}
             descripcion="Propiedades para vender o alquilar con su ficha: ciudad y barrio, m² de terreno y construidos, cuenta catastral, finca, manzana y lote, documentación, y si son propias o de un dueño con su comisión. Al prenderla, Supervisor, Cajero y Vendedor ya ven las propiedades."
           />
+        </div>
+      </Tarjeta>
+
+      {/* ── Módulos (receta 138) ─────────────────────────────────────────── */}
+      <Tarjeta icono={<Blocks className="h-4 w-4" />} titulo="Módulos" detalle="El rubro deja prendidos solo los módulos que usa. Podés prender o apagar cada uno: apagar lo saca del menú, no borra nada. Soporte y Configuración están siempre.">
+        <div className="space-y-2.5">
+          {MODULOS_RUBRO.map((m) => (
+            <Interruptor
+              key={m.id}
+              activo={!b.modulos_apagados.includes(m.id)}
+              disabled={soloLectura || guardando}
+              onChange={(v) => tocar({ modulos_apagados: v ? b.modulos_apagados.filter((x) => x !== m.id) : [...b.modulos_apagados, m.id] })}
+              etiqueta={m.label}
+              descripcion={m.descripcion}
+            />
+          ))}
         </div>
       </Tarjeta>
 

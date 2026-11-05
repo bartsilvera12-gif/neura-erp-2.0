@@ -23,7 +23,7 @@ import { moduloRrhh } from "@/modules/rrhh/module";
 import { moduloSorteos } from "@/modules/sorteos/module";
 import { moduloInmobiliaria } from "@/modules/inmobiliaria/module";
 import type { PerfilSesion } from "@/modules/usuarios/permisos";
-import { pantallaConFuncionVisible, type FuncionPantalla, type Funciones } from "@/modules/configuracion/funciones";
+import { moduloApagado, pantallaApagada, pantallaConFuncionVisible, type FuncionPantalla, type Funciones } from "@/modules/configuracion/funciones";
 
 // El orden de acá es el orden dentro de cada familia del menú (igual que sistemas-propio):
 // Comercial: Clientes, CRM Funnel, Presupuestos, Gestión Clientes, Planes, Agenda, Proyectos — en el menú son UN ítem
@@ -208,6 +208,7 @@ export function hrefsDeModulo(id: string): string[] {
  */
 export function perfilVePantalla(p: Pantalla, rol: string | undefined, perfil: PerfilSesion | null | undefined, funciones?: Funciones | null): boolean {
   if (!pantallaConFuncionVisible(p.funcion, funciones)) return false;
+  if (pantallaApagada(p.moduloId, p.href, funciones)) return false; // receta 138
   if (p.niveles?.length && (!rol || !p.niveles.includes(rol))) return false;
   if (!perfil) return true; // sin perfil (servidor viejo): como antes, solo por rol
   if (p.permiso && !perfil.todo && !perfil.permisos.includes(p.permiso)) return false;
@@ -247,10 +248,13 @@ function conAtajos(mods: Modulo[], rol: string | undefined, perfil: PerfilSesion
 }
 
 function modulosVisibles(rol: string | undefined, perfil: PerfilSesion | null | undefined, funciones?: Funciones | null): Modulo[] {
-  const base = modulosActivos(rol).map((m) =>
-    // Receta 75: sub-pantallas de funciones apagadas fuera (también sin perfil cargado).
-    m.children?.some((c) => c.funcion) ? { ...m, children: m.children.filter((c) => pantallaConFuncionVisible(c.funcion, funciones)) } : m,
-  );
+  const base = modulosActivos(rol)
+    .filter((m) => !moduloApagado(m.id, funciones)) // receta 138: módulos apagados por el rubro
+    .map((m) =>
+      // Receta 75: sub-pantallas de funciones apagadas fuera (también sin perfil cargado). 138: y las apagadas sueltas.
+      m.children?.length ? { ...m, children: m.children.filter((c) => pantallaConFuncionVisible(c.funcion, funciones) && !pantallaApagada(m.id, c.href, funciones)) } : m,
+    )
+    .filter((m) => !m.children || m.children.length > 0);
   if (!perfil) return base;
   const catalogo = pantallasCatalogo();
   const ve = (href: string) => {
