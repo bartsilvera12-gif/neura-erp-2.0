@@ -15,7 +15,7 @@ export type FilaReceta = {
   id: string;
   nombre: string;
   sku: string;
-  tipo: "menu" | "preparacion" | "fabricado";
+  tipo: "menu" | "preparacion";
   /** Receta 97: se fabrica por tanda (Fabricado, o preparación con stock propio). */
   por_tanda?: boolean;
   /** Receta 97: stock propio en el depósito del usuario (por tanda). */
@@ -84,7 +84,7 @@ export type ExtraComun = {
 
 export type DetalleReceta = {
   producto: {
-    id: string; nombre: string; sku: string; tipo_producto: "menu" | "materia_prima" | "reventa" | "fabricado"; unidad_medida: string;
+    id: string; nombre: string; sku: string; tipo_producto: "menu" | "materia_prima" | "reventa"; unidad_medida: string;
     precio_venta: number; descuento_pct: number | null; imagen_url: string | null; stock_actual: number; activo: boolean;
     controla_lotes?: boolean;
   };

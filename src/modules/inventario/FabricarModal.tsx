@@ -2,7 +2,8 @@
 
 /**
  * Fabricar por tanda (receta 97), en un CapaModal (hoja a todo el ancho en celular):
- *   · qué fabricar (Fabricados y preparaciones por tanda), en qué depósito y cuánto;
+ *   · qué fabricar (preparaciones por tanda), elegido de una lista a la vista (con su stock y
+ *     cuánto alcanza), en qué depósito y cuánto;
  *   · "salió de verdad": si salió menos, la diferencia es merma de producción (su costo se
  *     reparte en lo que salió);
  *   · vista previa EN VIVO de las materias primas que se van a usar (con merma de la receta y
@@ -12,7 +13,8 @@
  */
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertTriangle, Factory, Loader2 } from "lucide-react";
+import { AlertTriangle, Factory, Loader2, RefreshCw } from "lucide-react";
+import { MiniaturaProducto } from "@/modules/compras/partes";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { Select } from "@/components/Select";
 import { SelectorFecha } from "@/components/SelectorFecha";
@@ -122,10 +124,6 @@ export function FabricarModal({ productoInicial, onClose, onHecho }: {
     }
   }
 
-  const opciones: [string, string][] = [
-    ["", lista === null ? "Cargando…" : "Elegí qué fabricar"],
-    ...(lista ?? []).map((p): [string, string] => [p.id, `${p.nombre} · hay ${cant(p.stock, decimalesDe(p.unidad_medida))} ${unidadCorta(p.unidad_medida)}`]),
-  ];
 
   return (
     <ModalDocumento
@@ -146,29 +144,78 @@ export function FabricarModal({ productoInicial, onClose, onHecho }: {
     >
       <div className="space-y-5">
         {errorLista ? <p className="rounded-lg bg-rose-50 p-3 text-sm text-rose-700">{errorLista}</p> : null}
+
+        {hayVariosDepositos(deps.datos) ? (
+          // div y no label: un <label> con el botón del Select adentro le repite el click (abre y cierra).
+          <div className="min-w-0">
+            <span className={ET}>Depósito *</span>
+            <Select block value={dep} onChange={(v) => setDeposito(v)} options={opcionesDepositos(deps.datos)} etiqueta="Depósito" />
+          </div>
+        ) : null}
+
         {lista && lista.length === 0 ? (
           <div className="rounded-xl border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-slate-600">
             <p className="font-medium text-slate-700">Todavía no hay nada para fabricar</p>
             <p className="mx-auto mt-1 max-w-md text-xs text-slate-500">
-              Creá el producto en <Link href="/inventario" className="font-semibold text-[var(--brand)] hover:underline">Productos</Link> con el tipo «Fabricado»
-              (ej. Bolsa de maní 250 g) y cargale su receta en <Link href="/inventario/recetas" className="font-semibold text-[var(--brand)] hover:underline">Recetas</Link>.
+              Se fabrican por tanda las preparaciones: una materia prima con receta marcada «Se fabrica por tanda»
+              (ej. Salsa de la casa). Cargala en <Link href="/inventario/recetas" className="font-semibold text-[var(--brand)] hover:underline">Recetas</Link>.
             </p>
           </div>
         ) : null}
 
-        <div className={`grid gap-3 ${hayVariosDepositos(deps.datos) ? "sm:grid-cols-[1fr_220px]" : ""}`}>
-          {/* div y no label: un <label> con el botón del Select adentro le repite el click (abre y cierra). */}
-          <div className="min-w-0">
-            <span className={ET}>Qué fabricás *</span>
-            <Select block value={productoId} onChange={setProductoId} options={opciones} etiqueta="Qué fabricás" disabled={!lista?.length} />
+        {/* Qué fabricás: a la vista (nada de desplegables que se cortan). Elegido, queda solo ese. */}
+        {lista === null && !errorLista ? (
+          <div className="flex items-center justify-center gap-2 rounded-xl border border-slate-200 px-4 py-6 text-sm text-slate-400">
+            <Loader2 className="h-4 w-4 animate-spin" /> Cargando…
           </div>
-          {hayVariosDepositos(deps.datos) ? (
-            <div className="min-w-0">
-              <span className={ET}>Depósito *</span>
-              <Select block value={dep} onChange={(v) => setDeposito(v)} options={opcionesDepositos(deps.datos)} etiqueta="Depósito" />
+        ) : prod ? (
+          <div>
+            <span className={ET}>Qué fabricás *</span>
+            <div className="flex items-center gap-3 rounded-xl border border-[var(--brand)] bg-[var(--brand-50)] px-3 py-2.5">
+              <MiniaturaProducto url={prod.imagen_url} nombre={prod.nombre} />
+              <span className="min-w-0 flex-1">
+                <span className="block font-semibold leading-snug text-slate-900 [overflow-wrap:anywhere]">{prod.nombre}</span>
+                <span className="block text-[11px] text-slate-500">hay {cant(prod.stock, dec)} {unidadCorta(unidad)} · rinde {cant(Number(prod.rendimiento) || 1, dec)} {unidadCorta(unidad)} por tanda</span>
+              </span>
+              {(lista?.length ?? 0) > 1 ? (
+                <button type="button" onClick={() => { setProductoId(""); elegido.current = null; setPrevia(null); }}
+                  className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[var(--brand)] hover:bg-white">
+                  <RefreshCw className="h-3.5 w-3.5" /> Cambiar
+                </button>
+              ) : null}
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : lista && lista.length ? (
+          <div>
+            <span className={ET}>Qué fabricás *</span>
+            <ul className="max-h-[min(22rem,50dvh)] divide-y divide-slate-100 overflow-y-auto overscroll-contain rounded-xl border border-slate-200">
+              {lista.map((p) => {
+                const d = decimalesDe(p.unidad_medida);
+                const u = unidadCorta(p.unidad_medida);
+                const nada = p.alcanza != null && Number(p.alcanza) <= 0;
+                return (
+                  <li key={p.id}>
+                    <button type="button" onClick={() => setProductoId(p.id)}
+                      className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--brand-50)]">
+                      <MiniaturaProducto url={p.imagen_url} nombre={p.nombre} />
+                      <span className="min-w-0 flex-1">
+                        <span className="block font-medium leading-snug text-slate-800 [overflow-wrap:anywhere]">{p.nombre}</span>
+                        <span className="block font-mono text-[11px] text-slate-400">{p.sku}</span>
+                      </span>
+                      <span className="shrink-0 text-right text-xs leading-relaxed text-slate-500">
+                        hay <b className="font-semibold tabular-nums text-slate-700">{cant(p.stock, d)}</b> {u}
+                        <br />
+                        {p.alcanza == null ? <span className="text-slate-400">sin límite</span>
+                          : nada ? <span className="font-semibold text-rose-600">falta materia prima</span>
+                          : <>alcanza para <span className="tabular-nums">{cant(Number(p.alcanza), d)}</span> {u}</>}
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        ) : null}
 
         {prod ? (
           <>

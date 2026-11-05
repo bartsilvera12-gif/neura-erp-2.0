@@ -146,10 +146,9 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
 
   const esPreparacion = det?.producto.tipo_producto === "materia_prima";
   const esPlato = det?.producto.tipo_producto === "menu";
-  const esFabricado = det?.producto.tipo_producto === "fabricado";
   // Se mide en su unidad (kg, l, unidades) en vez de porciones.
-  const porUnidad = esPreparacion || esFabricado;
-  const porTanda = esFabricado || (esPreparacion && tanda);
+  const porUnidad = esPreparacion;
+  const porTanda = esPreparacion && tanda;
   const unidadProd = det?.producto.unidad_medida ?? "Unidad";
   const rendimiento = Math.max(0, numero(rend));
   const costos = useMemo(() => lineas.map((l) => {
@@ -312,8 +311,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
       ancho="max-w-3xl"
       titulo={<><ChefHat className="h-5 w-5 shrink-0" style={{ color: TEAL }} /> <span className="min-w-0 truncate">{titulo}</span></>}
       subtitulo={det ? (
-        esFabricado ? `Fabricado · ${det.producto.sku} · se fabrica por tanda y se vende con su stock`
-        : esPreparacion ? `Preparación · se mide en ${unidadCorta(unidadProd)} · ${porTanda ? "se fabrica por tanda (tiene stock)" : "no lleva stock propio"}`
+        esPreparacion ? `Preparación · se mide en ${unidadCorta(unidadProd)} · ${porTanda ? "se fabrica por tanda (tiene stock)" : "no lleva stock propio"}`
         : `Plato del menú · ${det.producto.sku}`
       ) : "Cargando…"}
       onClose={busy ? undefined : onClose}
@@ -322,7 +320,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
           {det.tiene_receta && puedeEditar ? (
             confirmarQuitar ? (
               <span className="mr-auto flex flex-wrap items-center gap-2 text-xs text-rose-700">
-                ¿Quitar la receta?{esFabricado ? " No se podrá fabricar." : esPreparacion ? " Vuelve a ser materia prima con stock." : " El plato no se podrá vender."}
+                ¿Quitar la receta?{esPreparacion ? " Vuelve a ser materia prima con stock." : " El plato no se podrá vender."}
                 <button type="button" disabled={busy} onClick={() => void guardar([])} className="rounded-lg bg-rose-600 px-3 py-1.5 font-semibold text-white disabled:opacity-50 max-sm:min-h-11">Sí, quitar</button>
                 <button type="button" disabled={busy} onClick={() => setConfirmarQuitar(false)} className="rounded-lg px-2 py-1.5 font-semibold text-slate-500 max-sm:min-h-11">No</button>
               </span>
@@ -433,9 +431,11 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-[180px_1fr] sm:items-start">
                 <label className="block">
                   <span className={ET}>Rendimiento *</span>
-                  <div className="relative">
-                    <input inputMode="decimal" enterKeyHint="next" disabled={!puedeEditar} value={rend} onChange={(e) => setRend(e.target.value.replace(/[^\d.,]/g, ""))} className={`${NUM} pr-16`} />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{porUnidad ? unidadCorta(unidadProd) : "porciones"}</span>
+                  {/* La unidad en su propio recuadro: el número nunca se le encima. */}
+                  <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-white transition hover:border-slate-300 focus-within:border-[var(--brand)] focus-within:ring-4 focus-within:ring-[var(--brand-100)]">
+                    <input inputMode="decimal" enterKeyHint="next" disabled={!puedeEditar} value={rend} onChange={(e) => setRend(e.target.value.replace(/[^\d.,]/g, ""))}
+                      aria-label="Rendimiento" className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-right text-sm tabular-nums outline-none disabled:bg-slate-50 disabled:text-slate-400" />
+                    <span className="flex shrink-0 items-center border-l border-slate-200 bg-slate-50 px-3 text-xs font-medium text-slate-500">{porUnidad ? unidadCorta(unidadProd) : "porciones"}</span>
                   </div>
                 </label>
                 <p className="text-[11px] leading-relaxed text-slate-500 sm:pt-6">
@@ -503,11 +503,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                   Se usa en: {det.usado_en.map((u, i) => <span key={u.id}>{i ? ", " : ""}<strong className="text-slate-700">{u.nombre}</strong></span>)}.
                 </p>
               ) : null}
-              {esFabricado ? (
-                <p className="text-[11px] text-slate-400">
-                  El precio se cambia en <Link href="/inventario" className="font-semibold text-[var(--brand)] hover:underline">Productos</Link>. Se vende con su stock: el stock sube cuando lo fabricás en <Link href="/inventario/produccion" className="font-semibold text-[var(--brand)] hover:underline">Producción</Link> (descuenta estos ingredientes). Los costos de arriba son estimados con el costo promedio; al fabricar se usa el costo real de cada compra.
-                </p>
-              ) : !esPreparacion ? (
+              {!esPreparacion ? (
                 <p className="text-[11px] text-slate-400">
                   El precio se cambia en <Link href="/inventario" className="font-semibold text-[var(--brand)] hover:underline">Productos</Link>. Sin receta el plato no se puede vender; si falta un ingrediente, tampoco (y sale del menú QR).
                 </p>

@@ -57,12 +57,12 @@ export type DetalleProduccion = Omit<FilaProduccion, "insumos" | "producto"> & {
   }[];
 };
 
-/** Producto que se puede fabricar (Fabricado o preparación por tanda, con receta). */
+/** Lo que se puede fabricar: preparaciones por tanda (materia prima con receta). */
 export type Fabricable = {
   id: string;
   nombre: string;
   sku: string;
-  tipo_producto: "fabricado" | "materia_prima";
+  tipo_producto: "materia_prima";
   unidad_medida: string;
   rendimiento: number;
   controla_lotes: boolean;

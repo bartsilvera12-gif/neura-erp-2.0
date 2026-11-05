@@ -15,7 +15,7 @@ declare
   v_admin uuid := (select id from usuarios where auth_user_id = pg_temp.fx('admin'));
 begin
   -- Rubro.
-  v := guardar_funciones_empresa('{"rubro": "gimnasio"}');
+  v := guardar_funciones_empresa('{"rubro": "gimnasio", "confirmar_recetas": true}');
   perform pg_temp.ok('Gimnasio: el rubro prende la función y apaga Planes de cuotas',
     v->>'rubro' = 'gimnasio' and (v->>'gimnasio')::boolean and not (v->>'sorteos')::boolean and v->'modulos_apagados' ? 'cuotas', v::text);
 

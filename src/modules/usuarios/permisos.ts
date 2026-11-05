@@ -91,7 +91,7 @@ export const GRUPOS_PERMISOS: { id: string; label: string; permisos: DefPermiso[
       { id: "aprobar_perdidas", label: "Aprobar ajustes y pérdidas", descripcion: "Aprueba o rechaza ajustes y pérdidas: recién ahí se mueve el stock.", sensible: true },
       { id: "crear_traslados", label: "Crear y anular traslados", descripcion: "Manda mercadería de un depósito a otro (con nota de remisión) y anula traslados en tránsito.", niveles: ["ADMIN"] },
       { id: "recibir_traslados", label: "Recibir traslados", descripcion: "Confirma la recepción de un traslado que llega a su sucursal." },
-      { id: "fabricar", label: "Fabricar productos", descripcion: "Fabrica por tanda: descuenta las materias primas de la receta y suma el stock del producto fabricado. Los niveles Administrador y Supervisor también anulan producciones." },
+      { id: "fabricar", label: "Fabricar productos", descripcion: "Fabrica por tanda las preparaciones: descuenta las materias primas de la receta y suma el stock de la preparación. Los niveles Administrador y Supervisor también anulan producciones." },
     ],
   },
   {

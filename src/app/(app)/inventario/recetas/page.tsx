@@ -6,8 +6,8 @@
  * del usuario y estado (completa / sin receta / falta ingrediente). Tocar una fila abre el editor
  * (CapaModal). "Nueva preparación" elige una materia prima para cargarle su receta.
  * /inventario/recetas?producto=<id> abre directo el editor de ese producto (desde la ficha).
- * Receta 97: también los productos Fabricados y las preparaciones por tanda (stock propio, se
- * fabrican en Inventario › Producción): muestran su stock y cuánto se puede fabricar.
+ * Receta 97: las preparaciones por tanda (stock propio, se fabrican en Inventario › Producción)
+ * muestran su stock y cuánto se puede fabricar. (El tipo Fabricado se fue en la 160: pasó a Menú.)
  */
 import { useEffect, useMemo, useState } from "react";
 import { ChefHat, Factory, Loader2, Plus, Search, X } from "lucide-react";
@@ -19,7 +19,9 @@ import { Select } from "@/components/Select";
 import { AccionesPagina, BarraFiltros, EncabezadoPagina, GrillaKpis } from "@/components/EncabezadoPagina";
 import { TablaTarjetas, type ColumnaTabla } from "@/components/TablaResponsive";
 import { invalidarLista, useListaCacheada } from "@/modules/inventario/lista-cache";
-import { BuscadorProductos } from "@/modules/compras/partes";
+import { MiniaturaProducto } from "@/modules/compras/partes";
+import { apiFetch } from "@/lib/api/client-fetch";
+import type { ProductoInventario } from "@/modules/inventario/tipos";
 import { ModalDocumento, Pestanas } from "@/modules/inventario/ui";
 import { RecetaEditor } from "@/modules/inventario/RecetaEditor";
 import { ExtrasComunes } from "@/modules/inventario/ExtrasComunes";
@@ -94,8 +96,8 @@ export default function RecetasPage() {
     {
       key: "tipo", titulo: "Tipo", movil: "chip",
       celda: (f) => (
-        <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${f.tipo === "menu" ? "bg-orange-50 text-orange-700 ring-orange-200" : f.tipo === "fabricado" ? "bg-violet-50 text-violet-700 ring-violet-200" : "bg-lime-50 text-lime-800 ring-lime-200"}`}>
-          {f.tipo === "menu" ? "Menú" : f.tipo === "fabricado" ? `Fabricado · ${unidadCorta(f.unidad_medida)}` : `Preparación · ${unidadCorta(f.unidad_medida)}${f.por_tanda ? " · por tanda" : ""}`}
+        <span className={`inline-flex whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ${f.tipo === "menu" ? "bg-orange-50 text-orange-700 ring-orange-200" : "bg-lime-50 text-lime-800 ring-lime-200"}`}>
+          {f.tipo === "menu" ? "Menú" : `Preparación · ${unidadCorta(f.unidad_medida)}${f.por_tanda ? " · por tanda" : ""}`}
         </span>
       ),
     },
@@ -176,7 +178,7 @@ export default function RecetasPage() {
           <ChefHat className="mx-auto h-8 w-8 text-slate-300" />
           <p className="mt-3 text-sm font-medium text-slate-700">{hayFiltros ? "Ninguna receta coincide con los filtros" : "Todavía no hay recetas"}</p>
           <p className="mx-auto mt-1 max-w-md text-xs text-slate-500">
-            {hayFiltros ? "Probá con otra búsqueda o cambiá los filtros." : "Creá tus platos en Productos con el tipo «Menú» (o lo que fabricás como «Fabricado») y tus insumos como «Materia prima»; después cargá acá la receta de cada uno."}
+            {hayFiltros ? "Probá con otra búsqueda o cambiá los filtros." : "Creá tus platos en Productos con el tipo «Menú» y tus insumos como «Materia prima»; después cargá acá la receta de cada uno."}
           </p>
         </>
       )}
@@ -189,7 +191,7 @@ export default function RecetasPage() {
         volver={{ href: "/inventario/panel", label: "Inventario" }}
         kicker="Inventario · Recetas"
         titulo="Recetas"
-        subtitulo="Ingredientes, merma y costo de cada plato o producto fabricado. Los platos descuentan sus ingredientes al venderse; los fabricados, al fabricarlos."
+        subtitulo="Ingredientes, merma y costo de cada plato y preparación. Los platos descuentan sus ingredientes al venderse; las preparaciones por tanda, al fabricarlas."
         acciones={vista === "recetas" && (puedeEditar || puedeFabricar) ? (
           <AccionesPagina acciones={[
             ...(puedeFabricar ? [{ etiqueta: "Fabricar", icono: <Factory />, onClick: () => router.push("/inventario/produccion?fabricar=1") }] : []),
@@ -226,7 +228,7 @@ export default function RecetasPage() {
             busqueda={
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                <input type="search" enterKeyHint="search" aria-label="Buscar recetas" placeholder="Buscar plato, fabricado o preparación..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className={`${input} w-full pl-9 pr-10`} />
+                <input type="search" enterKeyHint="search" aria-label="Buscar recetas" placeholder="Buscar plato o preparación..." value={busqueda} onChange={(e) => setBusqueda(e.target.value)} className={`${input} w-full pl-9 pr-10`} />
                 {busqueda ? (
                   <button onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda" className="absolute right-1 top-1/2 inline-flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700">
                     <X className="h-3.5 w-3.5" />
@@ -235,7 +237,7 @@ export default function RecetasPage() {
               </div>
             }
           >
-            <Select value={tipo} onChange={setTipo} minWidth={180} etiqueta="Tipo" options={[["", "Todas las recetas"], ["menu", "Solo platos (Menú)"], ["fabricado", "Solo fabricados"], ["preparacion", "Solo preparaciones"]]} />
+            <Select value={tipo} onChange={setTipo} minWidth={180} etiqueta="Tipo" options={[["", "Todas las recetas"], ["menu", "Solo platos (Menú)"], ["preparacion", "Solo preparaciones"]]} />
             <Select value={estado} onChange={setEstado} minWidth={180} etiqueta="Estado" options={[["", "Todos los estados"], ["completa", "Completas"], ["faltante", "Falta ingrediente"], ["sin_receta", "Sin receta"]]} />
           </BarraFiltros>
         </div>
@@ -271,10 +273,12 @@ export default function RecetasPage() {
       {eligiendo ? (
         <ModalDocumento ancho="max-w-lg" titulo="Nueva preparación" subtitulo="Elegí la materia prima que se prepara en la cocina (ej. Salsa de la casa)" onClose={() => setEligiendo(false)}>
           <div className="space-y-3 pb-2">
-            <BuscadorProductos tipo="materia_prima" onElegir={(p) => { setEligiendo(false); setAbierto(p.id); }} />
+            <ElegirMateriaPrima
+              conReceta={new Set(todas.filter((f) => f.tipo === "preparacion").map((f) => f.id))}
+              onElegir={(id) => { setEligiendo(false); setAbierto(id); }} />
             <p className="text-[11px] leading-relaxed text-slate-500">
               Si todavía no existe, creala en <strong>Productos</strong> como «Materia prima» con su unidad (kg, l, unidad) y stock en 0: si se descuenta al vender no lleva stock propio (si se fabrica por tanda, sí).
-              Para un plato nuevo, creá el producto con el tipo «Menú»; para algo que fabricás y vendés (ej. Bolsa de maní 250 g), con el tipo «Fabricado»: aparecen acá para cargarles la receta.
+              Para un plato nuevo, creá el producto con el tipo «Menú»: aparece acá para cargarle la receta.
             </p>
           </div>
         </ModalDocumento>
@@ -292,5 +296,71 @@ function Kpi({ color, etiqueta, valor, onClick, activo }: { color: string; etiqu
       </p>
       <p className="mt-0.5 text-[15px] font-semibold tabular-nums text-slate-900">{valor}</p>
     </button>
+  );
+}
+
+/**
+ * "Nueva preparación": TODAS las materias primas en una lista dentro del modal (no un desplegable
+ * que se corta), con buscador, stock y costo. Las que ya tienen receta lo dicen.
+ */
+function ElegirMateriaPrima({ conReceta, onElegir }: { conReceta: Set<string>; onElegir: (id: string) => void }) {
+  const [q, setQ] = useState("");
+  const [filas, setFilas] = useState<ProductoInventario[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [cargando, setCargando] = useState(true);
+
+  useEffect(() => {
+    let vivo = true;
+    setCargando(true);
+    const t = setTimeout(() => {
+      apiFetch<{ rows: ProductoInventario[]; total: number }>(`/api/productos?paginado=1&por_pagina=200&tipo=materia_prima&q=${encodeURIComponent(q.trim())}`)
+        .then((d) => { if (vivo) { setFilas(d.rows); setTotal(d.total); setError(null); } })
+        .catch((e) => { if (vivo) setError((e as Error).message); })
+        .finally(() => { if (vivo) setCargando(false); });
+    }, q.trim() ? 200 : 0);
+    return () => { vivo = false; clearTimeout(t); };
+  }, [q]);
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <input type="search" enterKeyHint="search" value={q} onChange={(e) => setQ(e.target.value)} autoFocus autoComplete="off"
+          placeholder="Buscar materia prima…" aria-label="Buscar materia prima"
+          className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-9 pr-9 text-sm outline-none transition hover:border-slate-300 focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
+        {cargando ? <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-slate-400" /> : null}
+      </div>
+      {error ? <p className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p> : null}
+      <ul className="max-h-[min(26rem,55dvh)] divide-y divide-slate-100 overflow-y-auto overscroll-contain rounded-xl border border-slate-200">
+        {filas === null ? (
+          <li className="px-4 py-8 text-center text-sm text-slate-400">Cargando…</li>
+        ) : filas.length === 0 ? (
+          <li className="px-4 py-8 text-center text-sm text-slate-500">{q.trim() ? `Ninguna materia prima coincide con «${q.trim()}».` : "Todavía no hay materias primas."}</li>
+        ) : filas.map((p) => {
+          const tiene = conReceta.has(p.id);
+          return (
+            <li key={p.id}>
+              <button type="button" onClick={() => onElegir(p.id)}
+                className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left text-sm transition-colors hover:bg-[var(--brand-50)]">
+                <MiniaturaProducto url={p.imagen_url} nombre={p.nombre} />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-medium leading-snug text-slate-800 [overflow-wrap:anywhere]">{p.nombre}</span>
+                  <span className="flex flex-wrap items-center gap-x-2 text-[11px] text-slate-400">
+                    <span className="font-mono">{p.sku}</span>
+                    {tiene ? <span className="rounded-full bg-lime-50 px-2 py-0.5 font-semibold text-lime-800 ring-1 ring-lime-200">Ya tiene receta</span> : null}
+                  </span>
+                </span>
+                <span className="shrink-0 text-right text-xs leading-relaxed text-slate-500">
+                  {p.controla_stock ? <>stock <b className="font-semibold tabular-nums text-slate-700">{cant(Number(p.stock_actual), 3)}</b> {unidadCorta(p.unidad_medida)}</> : <span className="text-slate-400">sin stock propio</span>}
+                  {p.costo_promedio != null ? <><br />costo <span className="tabular-nums">{gs(Number(p.costo_promedio))}</span></> : null}
+                </span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {filas && total > filas.length ? <p className="text-[11px] text-slate-500">Se muestran {filas.length} de {total}: escribí para encontrar la que buscás.</p> : null}
+    </div>
   );
 }

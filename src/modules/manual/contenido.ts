@@ -350,18 +350,18 @@ export const GUIAS: Guia[] = [
     ],
   },
   {
-    id: "produccion", grupo: "Cocina y recetas", ruta: "/inventario/produccion", titulo: "Fabricar por tanda", resumen: "Lo que hacés vos para vender después, como bolsas de maní.",
+    id: "produccion", grupo: "Cocina y recetas", ruta: "/inventario/produccion", titulo: "Fabricar por tanda", resumen: "Las preparaciones que hacés por tanda, como la salsa de la casa.",
     bloques: [
       { img: "inventario-produccion", alt: "Pantalla de Producción", pasos: [
         { t: "Tocá Fabricar.", marca: "Fabricar" },
       ] },
       { img: "fabricar-datos", alt: "Ventana para fabricar con un producto elegido", pasos: [
-        { t: "Elegí qué fabricás.", d: "Solo aparecen los productos de tipo Fabricado que tienen receta.", marca: "Qué fabricás *" },
+        { t: "Elegí qué fabricás.", d: "Aparecen las preparaciones que se fabrican por tanda: tocá la que vas a hacer.", marca: "Qué fabricás *" },
         { t: "Elegí el depósito de donde salen las materias primas.", marca: "Depósito *" },
         { t: "Escribí cuánto vas a fabricar.", d: "Si no sabés, Usar el máximo pone todo lo que alcanza.", marca: "Vas a fabricar *" },
         { t: "En Salió de verdad cargá lo que salió.", d: "Si esperabas 40 y salieron 38, queda registrada la merma.", marca: "Salió de verdad" },
         { t: "Acá ves qué materias primas se van a usar y si alcanzan.", d: "Abajo está el costo.", marca: "Materias primas que se usan" },
-        { t: "Tocá el botón Fabricar, al final de la ventana.", d: "Bajan las materias primas y sube el stock del producto." },
+        { t: "Tocá el botón Fabricar, al final de la ventana.", d: "Bajan las materias primas y sube el stock de la preparación." },
       ] },
       { ojo: "Si no alcanzan las materias primas, no te deja fabricar: comprá primero." },
     ],
@@ -387,7 +387,7 @@ export const GUIAS: Guia[] = [
         { t: "Tocá Nuevo producto.", marca: "Nuevo producto" },
       ] },
       { img: "producto-nuevo", alt: "Formulario de nuevo producto", rubro: "gastronomia", pasos: [
-        { t: "Elegí el tipo de producto.", d: "Reventa se vende tal cual. Menú es un plato con receta. Materia prima es un ingrediente. Fabricado lo hacés vos y tiene stock.", marca: "Reventa" },
+        { t: "Elegí el tipo de producto.", d: "Reventa se vende tal cual. Menú es un plato con receta. Materia prima es un ingrediente (con receta, una preparación).", marca: "Reventa" },
         { t: "Escribí el nombre como querés que aparezca en el ticket.", marca: "Nombre *" },
         { t: "El SKU es su código interno.", d: "Tocá Generar y listo.", marca: "SKU *" },
         { t: "Si trae código de barras, pasá el lector acá.", marca: "Código de barras (opcional)" },

@@ -135,7 +135,7 @@ function Produccion() {
           </div>
           <p className="text-sm font-semibold text-slate-700">{q || vista || deposito || desde || hasta ? "Ninguna producción coincide con los filtros" : "Todavía no fabricaste nada"}</p>
           {!(q || vista || deposito || desde || hasta) ? (
-            <p className="mx-auto mt-1 max-w-sm text-xs text-slate-500">Elegí un producto Fabricado (con su receta), cuánto vas a fabricar y cuánto salió: se descuentan las materias primas y se suma al stock.</p>
+            <p className="mx-auto mt-1 max-w-sm text-xs text-slate-500">Elegí una preparación que se fabrica por tanda (con su receta), cuánto vas a fabricar y cuánto salió: se descuentan las materias primas y se suma al stock.</p>
           ) : null}
         </>
       )}
