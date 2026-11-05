@@ -349,7 +349,7 @@ function ModalPlan({ plan, tipos, onClose, onGuardado }: { plan: Plan | null; ti
         </div>
         {conGimnasio ? (
           <label className="block">
-            <span className={LABEL}>Clases por mes (gimnasio)</span>
+            <span className={LABEL}>Clases por mes</span>
             <input inputMode="numeric" className={INPUT} value={clasesMes} onChange={(e) => setClasesMes(e.target.value.replace(/[^\d]/g, "").slice(0, 3))} placeholder="Vacío = ilimitado" />
             <span className="mt-1 block text-xs text-slate-500">Cada clase culminada descuenta una. Cuando se terminan, las siguientes se cobran como clase suelta.</span>
           </label>

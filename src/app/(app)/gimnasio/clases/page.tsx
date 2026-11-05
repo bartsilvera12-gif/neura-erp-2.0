@@ -130,7 +130,7 @@ export default function ClasesGimnasio() {
 
   return (
     <div className="space-y-4 pb-10">
-      <EncabezadoPagina kicker="Gimnasio" titulo="Clases" subtitulo="Cada clase se repite todas las semanas en sus días y aparece sola en la Recepción y en la Agenda." volver={{ href: "/gimnasio", label: "Recepción" }}
+      <EncabezadoPagina kicker="Asistencia" titulo="Clases" subtitulo="Cada clase se repite todas las semanas en sus días y aparece sola en la Recepción y en la Agenda." volver={{ href: "/gimnasio/panel", label: "Asistencia" }}
         acciones={puede ? (
           <div className="grid grid-cols-2 gap-2 max-sm:w-full sm:flex">
             <button type="button" disabled={!cfg} onClick={() => setReglas(true)} className={`${BOTON_SECUNDARIO} max-sm:min-h-11`}><Settings2 className="h-4 w-4" /> Precios y reglas</button>

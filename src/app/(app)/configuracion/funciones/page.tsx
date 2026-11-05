@@ -53,7 +53,7 @@ const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: 
   },
   {
     key: "gimnasio",
-    titulo: "Gimnasio",
+    titulo: "Asistencia",
     ejemplos: "Gimnasio, natación, artes marciales, academias",
     resumen: "Clases con cupo y horario, turnos individuales, recepción con control de deuda, membresías con clases por mes y comisión de profesores.",
     Icono: Dumbbell,
@@ -347,7 +347,7 @@ export default function RubroFuncionesPage() {
             activo={b.gimnasio}
             disabled={soloLectura || guardando}
             onChange={(v) => tocar({ gimnasio: v })}
-            etiqueta={<span className="inline-flex items-center gap-1.5"><Dumbbell className="h-4 w-4 text-slate-400" aria-hidden /> Gimnasio</span>}
+            etiqueta={<span className="inline-flex items-center gap-1.5"><Dumbbell className="h-4 w-4 text-slate-400" aria-hidden /> Asistencia</span>}
             descripcion="Clases con horario y cupo, turnos individuales, recepción que marca la asistencia y frena a quien debe, membresías con clases por mes, clase suelta que se cobra en la caja y comisión de profesores. Al prenderla, Supervisor, Cajero y Vendedor ya atienden la recepción."
           />
         </div>

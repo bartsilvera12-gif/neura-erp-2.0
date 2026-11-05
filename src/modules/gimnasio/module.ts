@@ -5,11 +5,12 @@ import type { Modulo } from "@/modules/types";
 // (Supervisor, Cajero y Vendedor al prenderla); Comisiones: gimnasio_administrar.
 export const moduloGimnasio: Modulo = {
   id: "gimnasio",
-  label: "Gimnasio",
+  label: "Asistencia",
   palabras: ["asistencia", "clases", "turnos", "alumnos", "natacion", "artes marciales", "academia", "recepcion", "socios"],
-  href: "/gimnasio",
+  href: "/gimnasio/panel",
+  panel: true,
   icon: "dumbbell",
-  familia: "Gimnasio",
+  familia: "Asistencia",
   children: [
     { label: "Recepción", href: "/gimnasio", funcion: "gimnasio", permiso: "gimnasio_recepcion", palabras: ["asistencia", "entrada", "llegada", "check in", "hoy"] },
     { label: "Clases", href: "/gimnasio/clases", funcion: "gimnasio", permiso: "gimnasio_recepcion", palabras: ["horarios", "cupo", "profesores", "turnos"] },

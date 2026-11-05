@@ -117,7 +117,7 @@ export const NOMBRE_FUNCION: Record<FuncionId, string> = {
   pedidos: "Pedidos de mostrador",
   sorteos: "Sorteos",
   inmobiliaria: "Inmobiliaria",
-  gimnasio: "Gimnasio",
+  gimnasio: "Asistencia",
 };
 
 /** Función que exige una ruta de /api (null = ninguna). La pública /api/publico/mesas se chequea aparte. */

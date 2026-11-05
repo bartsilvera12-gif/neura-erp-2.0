@@ -45,7 +45,7 @@ const TEMAS: { grupo: string; titulo: string; detalle: string; Icono: ComponentT
   { grupo: "Cobros", titulo: "Cobrar deudas", detalle: "Quién te debe y cómo registrar el pago", Icono: Banknote },
   { grupo: "Sorteos", titulo: "Sorteos", detalle: "Crear, vender, confirmar pagos y sortear", Icono: Ticket },
   { grupo: "Inmobiliaria", titulo: "Propiedades", detalle: "Cargar, vender en cuotas, alquilar y avisar", Icono: Building2 },
-  { grupo: "Gimnasio", titulo: "Gimnasio", detalle: "Clases, recepción, membresías y profesores", Icono: Dumbbell },
+  { grupo: "Asistencia", titulo: "Asistencia", detalle: "Clases, recepción, membresías y profesores", Icono: Dumbbell },
   { grupo: "Reportes", titulo: "Ver mis números", detalle: "Reportes en Excel o PDF", Icono: BarChart3 },
   { grupo: "Atención al cliente", titulo: "Chats y soporte", detalle: "Responder a tus clientes", Icono: MessageCircle },
   { grupo: "RR HH", titulo: "Mi personal", detalle: "Datos, ausencias, vacaciones y liquidación", Icono: IdCard },
@@ -143,7 +143,10 @@ function Visor({ d, onAmpliar }: { d: Diapositiva; onAmpliar: () => void }) {
   );
 }
 
-function Recorrido({ guia, rubro }: { guia: Guia; rubro: RubroImagen }) {
+/** Recorrido completo (botón "Empezá acá"): la guía es una de la serie y al terminar sigue la próxima. */
+type Serie = { n: number; total: number; siguiente: Guia | null; proximoTema: { n: number; titulo: string } | null };
+
+function Recorrido({ guia, rubro, serie }: { guia: Guia; rubro: RubroImagen; serie?: Serie }) {
   const lista = useMemo(() => diapositivas(guia, rubro), [guia, rubro]);
   const [i, setI] = useState(0);
   const [ampliada, setAmpliada] = useState(false);
@@ -168,7 +171,16 @@ function Recorrido({ guia, rubro }: { guia: Guia; rubro: RubroImagen }) {
     return () => window.removeEventListener("keydown", h);
   }, [lista.length, ampliada]);
 
-  const volver = tema ? `/manual?tema=${encodeURIComponent(tema.grupo)}` : "/manual";
+  // Terminó la última guía del recorrido completo: ya no hay nada que seguir.
+  useEffect(() => {
+    if (fin && serie && !serie.siguiente) {
+      try { localStorage.removeItem("manual-recorrido"); } catch { /* sin almacenamiento */ }
+    }
+  }, [fin, serie]);
+
+  const volver = serie ? "/manual" : tema ? `/manual?tema=${encodeURIComponent(tema.grupo)}` : "/manual";
+  const router = useRouter();
+  const irA = (n: number) => router.push(`/manual?recorrido=${n}`);
 
   return (
     // Todo entra en la pantalla de una: la imagen toma el alto que queda.
@@ -177,6 +189,9 @@ function Recorrido({ guia, rubro }: { guia: Guia; rubro: RubroImagen }) {
         <ArrowLeft className="h-4 w-4" /> Volver
       </Link>
       <div className="shrink-0">
+        {serie ? (
+          <p className="mb-1 text-sm font-semibold text-[var(--brand)]">Recorrido completo · Guía {serie.n + 1} de {serie.total}{tema ? ` · ${tema.titulo}` : ""}</p>
+        ) : null}
         <h1 className="text-2xl font-bold text-slate-900">{guia.titulo}</h1>
         {!fin ? (
           <div className="mt-2 flex items-center gap-3">
@@ -188,7 +203,36 @@ function Recorrido({ guia, rubro }: { guia: Guia; rubro: RubroImagen }) {
         ) : null}
       </div>
 
-      {fin ? (
+      {fin && serie ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+          <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-600 text-white"><Check className="h-8 w-8" aria-hidden /></span>
+          {serie.siguiente ? (
+            <>
+              <p className="mt-3 text-xl font-bold text-slate-900">¡Bien! Ya viste {serie.n + 1} de {serie.total}.</p>
+              <p className="mt-1 text-base text-slate-600">Sigue: <span className="font-semibold text-slate-800">{serie.siguiente.titulo}</span></p>
+              <div className="mt-4 flex flex-col justify-center gap-2 sm:flex-row">
+                <button type="button" onClick={() => irA(serie.n + 1)} className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[var(--brand)] px-6 text-base font-semibold text-white">
+                  Seguir <ArrowRight className="h-5 w-5" />
+                </button>
+                {serie.proximoTema ? (
+                  <button type="button" onClick={() => irA(serie.proximoTema!.n)} className="min-h-12 rounded-xl border border-slate-200 bg-white px-6 text-base font-medium text-slate-700">
+                    Saltar a {serie.proximoTema.titulo}
+                  </button>
+                ) : null}
+                <Link href="/manual" className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-base font-medium text-slate-700 no-underline">Seguir otro día</Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="mt-3 text-xl font-bold text-slate-900">¡Terminaste el recorrido!</p>
+              <p className="mt-1 text-base text-slate-600">Viste las {serie.total} guías. Cuando quieras repasar algo, buscalo arriba en el manual.</p>
+              <div className="mt-4 flex justify-center">
+                <Link href="/manual" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[var(--brand)] px-6 text-base font-semibold text-white no-underline">Volver al manual</Link>
+              </div>
+            </>
+          )}
+        </div>
+      ) : fin ? (
         <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
           <span className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-600 text-white"><Check className="h-8 w-8" aria-hidden /></span>
           <p className="mt-3 text-xl font-bold text-slate-900">¡Listo! Eso es todo.</p>
@@ -310,6 +354,36 @@ function Manual() {
     });
   }, [me, rubroImagen]);
 
+  // Recorrido completo: primero el día de trabajo, después lo básico y los temas en el orden de la portada.
+  const recorrido = useMemo(() => {
+    const orden = ["Primeros pasos", ...TEMAS.map((t) => t.grupo).filter((g) => g !== "Primeros pasos")];
+    const pos = (g: Guia) => (g.id.startsWith("dia-") ? -1 : orden.indexOf(g.grupo) === -1 ? orden.length : orden.indexOf(g.grupo));
+    return guias.map((g, i) => ({ g, i })).sort((a, b) => pos(a.g) - pos(b.g) || a.i - b.i).map((x) => x.g);
+  }, [guias]);
+  const nRecorrido = params.get("recorrido");
+  const enRecorrido = nRecorrido !== null && /^\d+$/.test(nRecorrido) ? Math.min(Number(nRecorrido), Math.max(recorrido.length - 1, 0)) : null;
+  useEffect(() => {
+    if (enRecorrido === null || !recorrido.length) return;
+    try { localStorage.setItem("manual-recorrido", String(enRecorrido)); } catch { /* sin almacenamiento: no pasa nada */ }
+  }, [enRecorrido, recorrido.length]);
+  const [guardado, setGuardado] = useState<number | null>(null);
+  useEffect(() => {
+    if (enRecorrido !== null) return; // se relee al volver a la portada
+    try { const v = Number(localStorage.getItem("manual-recorrido")); setGuardado(Number.isFinite(v) && v > 0 ? v : null); } catch { setGuardado(null); }
+  }, [enRecorrido]);
+
+  if (enRecorrido !== null && recorrido[enRecorrido]) {
+    const g = recorrido[enRecorrido];
+    const proximo = recorrido.findIndex((x, k) => k > enRecorrido && x.grupo !== g.grupo);
+    const temaProx = proximo > enRecorrido + 1 ? TEMAS.find((t) => t.grupo === recorrido[proximo].grupo) : null;
+    return (
+      <ContextoRubro.Provider value={ordenCarpetas}>
+        <Recorrido key={`r-${enRecorrido}`} guia={g} rubro={rubroImagen}
+          serie={{ n: enRecorrido, total: recorrido.length, siguiente: recorrido[enRecorrido + 1] ?? null, proximoTema: temaProx ? { n: proximo, titulo: temaProx.titulo } : null }} />
+      </ContextoRubro.Provider>
+    );
+  }
+
   const guia = guias.find((g) => g.id === idGuia) ?? null;
   if (guia) {
     return (
@@ -358,15 +432,23 @@ function Manual() {
         )
       ) : (
         <>
-          {delDia ? (
-            <button type="button" onClick={() => router.push(`/manual?guia=${delDia.id}`)} className="flex min-h-20 w-full items-center gap-4 rounded-2xl bg-[var(--brand)] p-4 text-left text-white">
-              <Rocket className="h-8 w-8 shrink-0" aria-hidden />
-              <span className="min-w-0 flex-1">
-                <span className="block text-lg font-bold">¿Es tu primera vez? Empezá acá</span>
-                <span className="block text-sm text-white/85">Cómo es un día de trabajo, paso a paso</span>
-              </span>
-              <ArrowRight className="h-6 w-6 shrink-0" aria-hidden />
-            </button>
+          {recorrido.length ? (
+            <div className="space-y-2">
+              <button type="button" onClick={() => router.push("/manual?recorrido=0")} className="flex min-h-20 w-full items-center gap-4 rounded-2xl bg-[var(--brand)] p-4 text-left text-white">
+                <Rocket className="h-8 w-8 shrink-0" aria-hidden />
+                <span className="min-w-0 flex-1">
+                  <span className="block text-lg font-bold">¿Es tu primera vez? Empezá acá</span>
+                  <span className="block text-sm text-white/85">Un recorrido por todo el sistema, paso a paso ({recorrido.length} guías){delDia ? ", empezando por un día de trabajo" : ""}</span>
+                </span>
+                <ArrowRight className="h-6 w-6 shrink-0" aria-hidden />
+              </button>
+              {guardado !== null && guardado < recorrido.length ? (
+                <button type="button" onClick={() => router.push(`/manual?recorrido=${guardado}`)} className="flex min-h-12 w-full items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 text-left text-sm font-medium text-slate-700 transition hover:border-[var(--brand)]">
+                  <span className="min-w-0 flex-1">Seguir el recorrido donde lo dejaste: <span className="font-semibold text-slate-900">guía {guardado + 1} de {recorrido.length}</span></span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-[var(--brand)]" aria-hidden />
+                </button>
+              ) : null}
+            </div>
           ) : null}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {TEMAS.filter((t) => guias.some((g) => g.grupo === t.grupo)).map((t) => (

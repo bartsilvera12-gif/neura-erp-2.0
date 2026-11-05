@@ -3962,57 +3962,45 @@
  },
  "gimnasio": {
   "gim-menu": {
-   "Gimnasio": {
+   "Asistencia": {
     "x": 3.8,
-    "y": 75.2
-   },
-   "Recepción": {
-    "x": 4.7,
-    "y": 80.2
-   },
-   "Clases": {
-    "x": 4.7,
-    "y": 85.2
-   },
-   "Comisiones de profesores": {
-    "x": 4.7,
-    "y": 90.1
+    "y": 39.3
    }
   },
   "gim-recepcion": {
    "Anotar alumno": {
     "x": 54.7,
-    "y": 70.4
+    "y": 75.6
    },
    "Llegó": {
     "x": 77.4,
-    "y": 42.5
+    "y": 47.7
    },
    "Culminó": {
     "x": 82.1,
-    "y": 42.5
+    "y": 47.7
    },
    "No vino": {
     "x": 88,
-    "y": 42.5
+    "y": 47.7
    }
   },
   "gim-alumno": {
    "Alumno": {
     "x": 20,
-    "y": 23.5
+    "y": 28.7
    },
    "Debe Gs. 180.000 vencido": {
     "x": 36,
-    "y": 35.8
+    "y": 41
    },
    "Entrada libre": {
     "x": 36.8,
-    "y": 65.9
+    "y": 71.1
    },
    "Cobrar": {
     "x": 21.6,
-    "y": 65.9
+    "y": 71.1
    }
   },
   "gim-turno": {
@@ -4096,7 +4084,7 @@
     "x": 31.3,
     "y": 53.6
    },
-   "Clases por mes (gimnasio)": {
+   "Clases por mes": {
     "x": 31.3,
     "y": 63.3
    },
@@ -4117,6 +4105,20 @@
    "Total del mes": {
     "x": 21.6,
     "y": 66.1
+   }
+  },
+  "gim-panel": {
+   "Recepción": {
+    "x": 21.3,
+    "y": 38.5
+   },
+   "Clases": {
+    "x": 47.6,
+    "y": 38.5
+   },
+   "Comisiones de profesores": {
+    "x": 74,
+    "y": 38.5
    }
   }
  }

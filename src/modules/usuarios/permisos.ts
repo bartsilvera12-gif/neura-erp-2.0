@@ -124,9 +124,9 @@ export const GRUPOS_PERMISOS: { id: string; label: string; permisos: DefPermiso[
   {
     // Receta 150
     id: "gimnasio",
-    label: "Gimnasio",
+    label: "Asistencia",
     permisos: [
-      { id: "gimnasio_recepcion", label: "Recepción del gimnasio", descripcion: "Ve las clases del día, anota alumnos, crea turnos y marca llegadas, asistencias y faltas." },
+      { id: "gimnasio_recepcion", label: "Recepción de asistencia", descripcion: "Ve las clases del día, anota alumnos, crea turnos y marca llegadas, asistencias y faltas." },
       { id: "gimnasio_forzar_entrada", label: "Dejar entrar con deuda vencida", descripcion: "Marca la entrada de un alumno que debe (con un motivo, que queda registrado).", sensible: true },
       { id: "gimnasio_administrar", label: "Administrar clases, precios y comisiones", descripcion: "Crea y cambia clases y horarios, el precio de la clase suelta, el bloqueo por deuda y la comisión de los profesores.", niveles: ["ADMIN"], sensible: true },
     ],

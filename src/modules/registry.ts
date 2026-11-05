@@ -81,7 +81,7 @@ export function moduloEstaActivo(id: string): boolean {
 // entero si no tiene. Se identifica por su href (es lo que guarda perfil_pantallas).
 
 /** Orden de las familias del menú (y del editor de perfiles). */
-export const ORDEN_FAMILIAS = ["Comercial", "Caja", "Sorteos", "Inmobiliaria", "Finanzas", "Gastos", "Operaciones", "Reportes", "Omnicanal", "Soporte", "Configuración", "Administración", "General"];
+export const ORDEN_FAMILIAS = ["Comercial", "Caja", "Sorteos", "Inmobiliaria", "Asistencia", "Finanzas", "Gastos", "Operaciones", "Reportes", "Omnicanal", "Soporte", "Configuración", "Administración", "General"];
 
 export type Pantalla = {
   href: string;

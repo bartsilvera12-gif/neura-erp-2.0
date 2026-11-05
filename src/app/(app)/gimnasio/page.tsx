@@ -158,7 +158,7 @@ export default function RecepcionGimnasio() {
 
   return (
     <div className="space-y-4 pb-10">
-      <EncabezadoPagina kicker="Gimnasio" titulo="Recepción" subtitulo="Buscá al alumno para ver si está al día, o marcá la asistencia en cada clase."
+      <EncabezadoPagina kicker="Asistencia" titulo="Recepción" volver={{ href: "/gimnasio/panel", label: "Asistencia" }} subtitulo="Buscá al alumno para ver si está al día, o marcá la asistencia en cada clase."
         acciones={
           <div className="grid grid-cols-2 gap-2 max-sm:w-full sm:flex">
             <button type="button" onClick={() => setTurno(true)} className={`${BOTON_SECUNDARIO} max-sm:min-h-11`}><CalendarClock className="h-4 w-4" /> Turno individual</button>

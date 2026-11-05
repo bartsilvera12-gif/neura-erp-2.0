@@ -68,7 +68,7 @@ export default function ComisionesProfesores() {
   const total = (r?.profesores ?? []).reduce((s, p) => s + Number(p.comision), 0);
   return (
     <div className="space-y-4 pb-10">
-      <EncabezadoPagina kicker="Gimnasio" titulo="Comisiones de profesores" subtitulo="Se calculan con las asistencias culminadas de cada mes." volver={{ href: "/gimnasio", label: "Recepción" }} />
+      <EncabezadoPagina kicker="Asistencia" titulo="Comisiones de profesores" subtitulo="Se calculan con las asistencias culminadas de cada mes." volver={{ href: "/gimnasio/panel", label: "Asistencia" }} />
 
       <section className="space-y-3 rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
         <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-900"><Percent className="h-4 w-4 text-slate-400" /> Cómo se paga</h2>
