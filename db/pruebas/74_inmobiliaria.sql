@@ -59,7 +59,10 @@ begin
   v := propiedades_lista('{"q": "san bernardino 22"}');
   perform pg_temp.ok('Inmobiliaria: se busca por ciudad y lote, sin tildes ni orden', (v->>'total')::integer = 1 and v->'items'->0->>'id' = p3->>'id', v::text);
   v := propiedades_lista('{"ciudad": "asuncion"}');
-  perform pg_temp.ok('Inmobiliaria: el filtro de ciudad ignora tildes', (v->>'total')::integer = 1, v::text);
+  -- (la demo puede tener otras propiedades en Asunción: se mira solo las de la prueba)
+  perform pg_temp.ok('Inmobiliaria: el filtro de ciudad ignora tildes',
+    exists (select 1 from jsonb_array_elements(v->'items') x where x->>'id' = p2->>'id')
+    and not exists (select 1 from jsonb_array_elements(v->'items') x where x->>'id' in (p1->>'id', p3->>'id')), v::text);
 
   -- Estado: vendida no se vuelve a vender en la caja.
   v := propiedad_estado((p1->>'id')::uuid, 'vendida');
