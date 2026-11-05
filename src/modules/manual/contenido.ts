@@ -38,7 +38,7 @@ export const LLEGAR: Record<string, [string, string?]> = {
   cliente: ["Comercial", "Clientes"], crm: ["Comercial", "CRM Funnel"], presupuestos: ["Comercial", "Presupuestos"], gestion: ["Comercial", "Gestión Clientes"],
   comisiones: ["Comercial", "Comisiones"], planes: ["Comercial", "Planes"], agenda: ["Comercial", "Agenda"],
   "cobrar-deuda": ["Finanzas", "Pagos"], conciliacion: ["Finanzas", "Conciliación"], cobranzas: ["Finanzas", "Cobranzas"],
-  reportes: ["Reportes"], omnicanal: ["Omnicanal", "Conversaciones"], soporte: ["Soporte"],
+  reportes: ["Reportes"], omnicanal: ["Omnicanal", "Conversaciones"], soporte: ["Soporte"], "whatsapp-canal": ["Omnicanal", "Canales de WhatsApp"],
   empresa: ["Configuración", "Datos de la empresa"], facturacion: ["Configuración", "Tickets y facturación"], usuarios: ["Configuración", "Usuarios"],
   rubro: ["Configuración", "Rubro y funciones"], "config-comisiones": ["Configuración", "Comisiones"],
   "rrhh-datos": ["RR HH", "Personal"], "rrhh-salario": ["RR HH", "Personal"], "rrhh-ausencia": ["RR HH", "Personal"], "rrhh-vacaciones": ["RR HH", "Personal"],
@@ -742,6 +742,27 @@ export const GUIAS: Guia[] = [
 
   // ── Atención al cliente ──────────────────────────────────────────────────────
   {
+    id: "whatsapp-canal", grupo: "Atención al cliente", ruta: "/conversaciones/canales", titulo: "Conectar el WhatsApp de la empresa",
+    resumen: "Una sola vez: el número y las claves que te da YCloud o Meta.",
+    bloques: [
+      { texto: "Lo hace el administrador una sola vez, con los datos que te da el proveedor (YCloud o Meta). Hasta que lo prendas, nada cambia." },
+      { img: "canales-lista", alt: "Canales de WhatsApp", pasos: [{ t: "Tocá Conectar un WhatsApp.", marca: "Conectar un WhatsApp" }] },
+      { img: "canales-nuevo", alt: "Conectar un WhatsApp", pasos: [
+        { t: "Elegí el proveedor.", d: "YCloud o la API oficial de Meta.", marca: "YCloud" },
+        { t: "Escribí el número de WhatsApp de la empresa.", d: "Con 595 y sin el 0: 595981123456.", marca: "Número de WhatsApp Business" },
+        { t: "Pegá la API key.", d: "En YCloud: Developers › API Keys.", marca: "API key" },
+        { t: "Pegá el secreto del webhook.", d: "Lo da YCloud cuando creás el webhook.", marca: "Secreto del webhook" },
+        { t: "Tocá Guardar.", d: "El canal queda apagado hasta que lo pruebes.", marca: "Guardar" },
+      ] },
+      { img: "canales-tarjeta", alt: "Canal de WhatsApp guardado", pasos: [
+        { t: "Copiá la URL del webhook y pegala en el proveedor.", d: "En YCloud: Developers › Webhooks, con los avisos de mensajes y de estados.", marca: "URL del webhook (pegala en el proveedor)" },
+        { t: "Tocá Probar conexión.", d: "Si dice «Conexión correcta», las claves están bien.", marca: "Probar conexión" },
+        { t: "Tocá Prender.", d: "Probá escribiendo al número desde otro celular: el mensaje tiene que aparecer en la bandeja.", marca: "Prender" },
+      ] },
+      { ojo: "Las claves no se vuelven a mostrar. Si las cambiás en el proveedor, tocá Editar y cargalas de nuevo." },
+    ],
+  },
+  {
     id: "omnicanal", grupo: "Atención al cliente", ruta: "/conversaciones", titulo: "Responder los chats", resumen: "Todos los mensajes de los clientes en un solo lugar.",
     bloques: [
       { img: "conversaciones", alt: "Bandeja de conversaciones", pasos: [
@@ -898,6 +919,7 @@ export const GUIAS: Guia[] = [
   {
     id: "sorteo-whatsapp", grupo: "Sorteos", ruta: "/sorteos/whatsapp", titulo: "Vender por WhatsApp", resumen: "Un bot toma el pedido, reserva los números y recibe el comprobante.",
     bloques: [
+      { texto: "Antes, conectá el número de la empresa en Omnicanal › Canales de WhatsApp (guía «Conectar el WhatsApp de la empresa»). Mientras tanto podés probar el bot acá mismo, con el chat de prueba." },
       { img: "sorteo-whatsapp", alt: "Venta por WhatsApp", pasos: [
         { t: "Prendé el bot.", marca: "Atender los chats de WhatsApp con el bot" },
         { t: "Elegí en qué WhatsApp atiende y tocá Guardar.", marca: "Guardar" },

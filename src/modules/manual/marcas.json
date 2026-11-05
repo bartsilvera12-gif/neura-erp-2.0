@@ -1173,6 +1173,22 @@
    "Conversaciones": {
     "x": 21.3,
     "y": 30.8
+   },
+   "Finalizadas": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Monitoreo": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Historial omnicanal": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Canales de WhatsApp": {
+    "x": 47.6,
+    "y": 47.4
    }
   },
   "panel-config": {
@@ -1409,6 +1425,51 @@
    "Rechazar": {
     "x": 56,
     "y": 66.6,
+    "lado": "abajo"
+   }
+  },
+  "canales-lista": {
+   "Conectar un WhatsApp": {
+    "x": 81.3,
+    "y": 24.1
+   }
+  },
+  "canales-nuevo": {
+   "YCloud": {
+    "x": 31.3,
+    "y": 27.8
+   },
+   "Número de WhatsApp Business": {
+    "x": 31.3,
+    "y": 43.4
+   },
+   "API key": {
+    "x": 31.3,
+    "y": 53.9
+   },
+   "Secreto del webhook": {
+    "x": 31.3,
+    "y": 64.4
+   },
+   "Guardar": {
+    "x": 65,
+    "y": 80.5,
+    "lado": "abajo"
+   }
+  },
+  "canales-tarjeta": {
+   "URL del webhook (pegala en el proveedor)": {
+    "x": 61.2,
+    "y": 43.5
+   },
+   "Probar conexión": {
+    "x": 73.9,
+    "y": 57.8,
+    "lado": "abajo"
+   },
+   "Prender": {
+    "x": 85.1,
+    "y": 57.8,
     "lado": "abajo"
    }
   }
@@ -2805,6 +2866,22 @@
    "Conversaciones": {
     "x": 21.3,
     "y": 30.8
+   },
+   "Finalizadas": {
+    "x": 47.6,
+    "y": 30.8
+   },
+   "Monitoreo": {
+    "x": 74,
+    "y": 30.8
+   },
+   "Historial omnicanal": {
+    "x": 21.3,
+    "y": 47.4
+   },
+   "Canales de WhatsApp": {
+    "x": 47.6,
+    "y": 47.4
    }
   },
   "panel-config": {
@@ -3442,6 +3519,51 @@
    "Rechazar": {
     "x": 56,
     "y": 66.6,
+    "lado": "abajo"
+   }
+  },
+  "canales-lista": {
+   "Conectar un WhatsApp": {
+    "x": 81.3,
+    "y": 24.1
+   }
+  },
+  "canales-nuevo": {
+   "YCloud": {
+    "x": 31.3,
+    "y": 27.8
+   },
+   "Número de WhatsApp Business": {
+    "x": 31.3,
+    "y": 43.4
+   },
+   "API key": {
+    "x": 31.3,
+    "y": 53.9
+   },
+   "Secreto del webhook": {
+    "x": 31.3,
+    "y": 64.4
+   },
+   "Guardar": {
+    "x": 65,
+    "y": 80.5,
+    "lado": "abajo"
+   }
+  },
+  "canales-tarjeta": {
+   "URL del webhook (pegala en el proveedor)": {
+    "x": 61.2,
+    "y": 43.5
+   },
+   "Probar conexión": {
+    "x": 73.9,
+    "y": 57.8,
+    "lado": "abajo"
+   },
+   "Prender": {
+    "x": 85.1,
+    "y": 57.8,
     "lado": "abajo"
    }
   }
