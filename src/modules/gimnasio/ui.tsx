@@ -6,11 +6,12 @@
  *   · AccionesAsistencia: Llegó / Culminó / No vino (y Confirmar, Reagendar, Cancelar en "Más").
  *     Si la base frena la entrada por deuda y el usuario puede forzarla, pide el motivo y reintenta.
  *   · PanelAlumno: la card "Asistencia" del alumno: al día o debe, membresía con las clases que le
- *     quedan, próximas clases, últimas asistencias, entrada libre y cobrar.
+ *     quedan, próximas clases, últimas asistencias, entrada libre, cobrar y su link para marcar solo.
+ *   · LinkAlumno: el link personal del alumno (receta 155), por WhatsApp o copiado.
  */
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, CheckCircle2, DoorOpen, KeyRound, Loader2, MoreHorizontal, ReceiptText } from "lucide-react";
+import { AlertTriangle, Check, CheckCircle2, Copy, DoorOpen, Link2, Loader2, MoreHorizontal, ReceiptText, RefreshCw, Send } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { usePermiso } from "@/lib/sesion/ContextoUsuario";
 import { PedirMotivo } from "@/modules/inventario/ui";
@@ -116,28 +117,65 @@ function Fila({ a, conAcciones, apilado, onHecho }: { a: Asistencia; conAcciones
   );
 }
 
-/** PIN para que el alumno marque solo con el link (receta 153). El PIN nuevo se ve una sola vez. */
-function PinAlumno({ clienteId, tiene, onCambio }: { clienteId: string; tiene: boolean; onCambio: () => void }) {
-  const [pin, setPin] = useState<string | null>(null);
+/** WhatsApp con el número del alumno si es de Paraguay (09… o 595…); si no, WhatsApp elige a quién. */
+export function whatsappAlumno(telefono: string | null | undefined, texto: string): string {
+  const tel = (telefono ?? "").replace(/\D/g, "");
+  const numero = tel.startsWith("09") ? `595${tel.slice(1)}` : tel.startsWith("595") ? tel : "";
+  return `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+}
+
+/**
+ * El link personal del alumno (receta 155): con él reserva, cancela y marca su asistencia solo, desde
+ * donde esté. Se manda por WhatsApp o se copia. `conCambiar` = muestra "Cambiar link" (si lo perdió).
+ */
+export function LinkAlumno({ clienteId, conCambiar }: { clienteId: string; conCambiar?: boolean }) {
+  const [d, setD] = useState<{ token: string; nombre: string; telefono: string | null } | null>(null);
+  const [copiado, setCopiado] = useState(false);
+  const [rehacer, setRehacer] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  async function crear() {
+  const pedir = useCallback(async (nuevo: boolean) => {
     setOcupado(true); setError(null);
-    try { setPin((await apiFetch<{ pin: string }>(`/api/gimnasio/clientes/${clienteId}/pin`, { method: "POST", body: "{}" })).pin); onCambio(); }
+    try { setD(await apiFetch(`/api/gimnasio/clientes/${clienteId}/link`, { method: "POST", body: JSON.stringify({ rehacer: nuevo }) })); setRehacer(false); }
     catch (e) { setError((e as Error).message); } finally { setOcupado(false); }
+  }, [clienteId]);
+  useEffect(() => { setD(null); void pedir(false); }, [pedir]);
+  const link = d && typeof window !== "undefined" ? `${window.location.origin}/a/${d.token}` : "";
+  const texto = d ? `Hola ${d.nombre.split(" ")[0]}! Con este link reservás tus clases y marcás tu asistencia: ${link}` : "";
+  async function copiar() {
+    try { await navigator.clipboard.writeText(link); setCopiado(true); setTimeout(() => setCopiado(false), 2000); } catch { setError("No se pudo copiar: copialo a mano."); }
   }
   return (
     <div className="rounded-xl border border-slate-200 px-3 py-2.5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
-          <KeyRound className="h-4 w-4 shrink-0 text-slate-400" />
-          {pin ? <>PIN nuevo: <span className="font-mono text-lg font-bold tracking-[0.3em] text-slate-900">{pin}</span></> : tiene ? "Tiene PIN para marcar solo" : "Sin PIN para marcar solo"}
+          <Link2 className="h-4 w-4 shrink-0 text-slate-400" /> Su link para reservar y marcar
         </span>
-        <button type="button" disabled={ocupado} onClick={() => void crear()} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg px-2 text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand-50,#eef7f7)] disabled:opacity-50">
-          {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : null}{tiene || pin ? "Cambiar PIN" : "Crear PIN"}
-        </button>
+        <span className="flex items-center gap-1">
+          <button type="button" disabled={!d} onClick={() => void copiar()} className="inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 disabled:opacity-50">
+            {copiado ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />} {copiado ? "Copiado" : "Copiar"}
+          </button>
+          <a href={d ? whatsappAlumno(d.telefono, texto) : undefined} target="_blank" rel="noopener noreferrer" aria-disabled={!d}
+            className={`inline-flex min-h-10 items-center gap-1.5 whitespace-nowrap rounded-lg px-2 text-sm font-semibold text-[var(--brand)] no-underline hover:bg-[var(--brand-50,#eef7f7)] ${d ? "" : "pointer-events-none opacity-50"}`}>
+            {ocupado && !d ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />} WhatsApp
+          </a>
+        </span>
       </div>
-      {pin ? <p className="mt-1 text-xs text-slate-500">Dáselo al alumno ahora: no se vuelve a mostrar. Con su CI y este PIN marca su llegada desde el link o el QR.</p> : null}
+      {conCambiar && d ? (rehacer ? (
+        <div className="mt-2 space-y-2 rounded-lg bg-rose-50 p-2.5">
+          <p className="text-xs text-rose-900">El link que tiene deja de andar y le tenés que mandar el nuevo.</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setRehacer(false)} className="min-h-10 rounded-lg px-3 text-sm font-medium text-slate-600 hover:bg-white">No, dejarlo</button>
+            <button type="button" disabled={ocupado} onClick={() => void pedir(true)} className="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-rose-600 px-3 text-sm font-semibold text-white disabled:opacity-50">
+              {ocupado ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Sí, cambiar el link
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" onClick={() => setRehacer(true)} className="mt-1 inline-flex min-h-9 items-center gap-1.5 text-xs font-medium text-slate-500 hover:text-rose-700">
+          <RefreshCw className="h-3.5 w-3.5" /> Cambiar link (si lo perdió o se lo pasó a otro)
+        </button>
+      )) : null}
       {error ? <p role="alert" className="mt-1 text-xs text-rose-700">{error}</p> : null}
     </div>
   );
@@ -209,7 +247,7 @@ export function PanelAlumno({ clienteId, compacto, recarga = 0, onCambio }: { cl
       </div>
       {errEntrada ? <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{errEntrada}</p> : null}
 
-      <PinAlumno clienteId={d.cliente.id} tiene={!!d.tiene_pin} onCambio={cargar} />
+      <LinkAlumno clienteId={d.cliente.id} />
 
       <div>
         <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-400">Próximas clases</h4>

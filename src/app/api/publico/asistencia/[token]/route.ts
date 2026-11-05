@@ -1,8 +1,9 @@
 /**
- * Público (sin sesión) — el alumno marca su asistencia (receta 153): link /a/<token> + CI + PIN.
- *   POST /api/publico/asistencia/<token> { accion: "entrar", documento, pin } → { alumno }
- *   POST /api/publico/asistencia/<token> { accion: "marcar", documento, pin, cita_id | null } → { marcada, alumno }
- * La base valida el link, la CI y el PIN en cada llamada (5 PIN mal = 15 minutos bloqueado).
+ * Público (sin sesión) — el alumno con SU link (receta 155): /a/<token>.
+ *   POST /api/publico/asistencia/<token> { accion: "ver" }                                  → { alumno }
+ *   POST /api/publico/asistencia/<token> { accion: "reservar" | "cancelar" | "marcar", cita_id } → { hecho, alumno }
+ *   POST /api/publico/asistencia/<token> { accion: "libre" }                                → { hecho, alumno }
+ * La base valida el link en cada llamada.
  */
 import { NextResponse } from "next/server";
 import { z } from "zod";
@@ -13,10 +14,10 @@ import { ipDe, mensajeDb, TOKEN_RE } from "@/modules/sorteos/publico";
 export const dynamic = "force-dynamic";
 const SIN_CACHE = { "cache-control": "no-store" };
 
-const base = { documento: z.string().trim().min(4).max(20), pin: z.string().regex(/^\d{4}$/) };
 const cuerpo = z.discriminatedUnion("accion", [
-  z.object({ accion: z.literal("entrar"), ...base }),
-  z.object({ accion: z.literal("marcar"), ...base, cita_id: z.string().uuid().nullable() }),
+  z.object({ accion: z.literal("ver") }),
+  z.object({ accion: z.literal("libre") }),
+  z.object({ accion: z.enum(["reservar", "cancelar", "marcar"]), cita_id: z.string().uuid() }),
 ]);
 
 const responder = (status: number, error: string) => NextResponse.json({ ok: false, error }, { status, headers: SIN_CACHE });
@@ -24,15 +25,15 @@ const responder = (status: number, error: string) => NextResponse.json({ ok: fal
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
   if (!TOKEN_RE.test(token)) return responder(404, "Este link no es válido.");
-  if (!permitirIp(`asistencia|${ipDe(req)}`, 30, 60_000)) return responder(429, "Demasiados intentos. Probá en un minuto.");
+  if (!permitirIp(`asistencia|${ipDe(req)}`, 60, 60_000)) return responder(429, "Demasiados intentos. Probá en un minuto.");
   const r = cuerpo.safeParse(await req.json().catch(() => null));
-  if (!r.success) return responder(422, r.error.issues.some((i) => i.path.includes("pin")) ? "El PIN tiene 4 números." : "Escribí tu CI.");
+  if (!r.success) return responder(422, "Pedido inválido.");
   const b = r.data;
-  const { data, error } = b.accion === "entrar"
-    ? await clientePublico().rpc("gim_publico_entrar", { p_token: token, p_documento: b.documento, p_pin: b.pin })
-    : await clientePublico().rpc("gim_publico_marcar", { p_token: token, p_documento: b.documento, p_pin: b.pin, p_cita: b.cita_id });
-  if (error) return responder(error.code === "42501" ? 403 : 400, mensajeDb(error.message, "No se pudo marcar la asistencia"));
+  const { data, error } = b.accion === "ver"
+    ? await clientePublico().rpc("gim_publico_mio", { p_token: token })
+    : await clientePublico().rpc("gim_publico_accion", { p_token: token, p_accion: b.accion, p_cita: "cita_id" in b ? b.cita_id : null });
+  if (error) return responder(error.code === "42501" ? 403 : 400, mensajeDb(error.message, "No se pudo completar"));
   const d = data as { ok: boolean; error?: string } & Record<string, unknown>;
-  if (!d?.ok) return responder(400, d?.error ?? "La CI o el PIN no coinciden");
+  if (!d?.ok) return responder(400, d?.error ?? "No se pudo completar");
   return NextResponse.json({ ok: true, data: d }, { headers: SIN_CACHE });
 }

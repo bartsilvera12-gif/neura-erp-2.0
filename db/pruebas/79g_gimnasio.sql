@@ -1,5 +1,6 @@
 -- Gimnasio (receta 150): rubro, clases con cupo, asistencias, membresía con clases por mes, clase suelta,
--- deuda vencida que frena la entrada (y se fuerza con motivo) y comisión de profesores.
+-- deuda vencida que frena la entrada (y se fuerza con motivo) y comisión de profesores. Recetas 151 (Agenda)
+-- y 155 (el link de cada alumno para reservar, cancelar y marcar solo).
 do $$
 declare
   v jsonb;
@@ -123,37 +124,65 @@ begin
   perform pg_temp.ok('Gimnasio: cancelar la clase en la Agenda cancela a sus alumnos',
     (select bool_and(x->>'estado' = 'cancelada') from jsonb_array_elements(gim_cliente(v_b)->'historial') x where (x->>'cita_id')::uuid = v_cita));
 
-  -- Receta 153: el alumno marca solo con el link, su CI y su PIN.
-  perform pg_temp.rechaza('Autoasistencia: sin CI no se crea el PIN', format('select gim_alumno_pin_crear(%L)', v_b), 'CI');
-  insert into clientes (empresa_id, nombre, documento) values (pg_temp.fx('empresa'), 'PRUEBA Alumna Sola', '7.654.321') returning id into v_b;
-  v := gim_autoasistencia_link();
-  v_venta := gim_alumno_pin_crear(v_b);
-  update clientes set documento = '1.112.223' where id = v_d;
-  v_prod := null;
+  -- Receta 155: cada alumno con su link reserva, cancela y marca solo (sin CI ni PIN).
+  insert into clientes (empresa_id, nombre) values (pg_temp.fx('empresa'), 'PRUEBA Alumna Sola') returning id into v_b;
   declare
-    v_token text := v->>'token';
-    v_pin text := v_venta->>'pin';
-    v_pin_d text := (gim_alumno_pin_crear(v_d))->>'pin';
+    v_tok text := (gim_alumno_link(v_b))->>'token';
+    v_tok_d text := (gim_alumno_link(v_d))->>'token';
+    v_man uuid;
+    v_ya uuid;
+    v_emp text := (gim_autoasistencia_link())->>'token';
     r jsonb;
   begin
-    perform pg_temp.ok('Autoasistencia: el link es de 48 caracteres', v_token ~ '^[0-9a-f]{48}$', v::text);
+    perform pg_temp.ok('Link del alumno: 48 caracteres', v_tok ~ '^[0-9a-f]{48}$', v_tok);
+    perform pg_temp.ok('Link del alumno: pedirlo de nuevo da el mismo', (gim_alumno_link(v_b))->>'token' = v_tok);
+    perform pg_temp.ok('Link del alumno: la ficha dice que lo tiene', (gim_cliente(v_b)->>'tiene_link')::boolean);
+    v := gim_dia(v_hoy + 2);
+    select (x->>'cita_id')::uuid into v_man from jsonb_array_elements(v->'clases') x where x->>'clase_id' = v_clase::text;
+    insert into agenda_citas (empresa_id, responsable_id, titulo, tipo, estado, inicio_at, fin_at, gim_clase_id, metadata)
+    values (pg_temp.fx('empresa'), v_admin, 'PRUEBA Ya empieza', 'clase', 'confirmada', now() + interval '10 minutes', now() + interval '40 minutes', v_clase, '{"gim_cupo": 2}')
+    returning id into v_ya;
+
     execute 'set local role anon';
-    r := gim_publico_entrar(v_token, '7654321', case when v_pin = '0000' then '1111' else '0000' end);
-    perform pg_temp.ok('Autoasistencia: PIN mal no entra', not (r->>'ok')::boolean, r::text);
-    r := gim_publico_entrar(v_token, '7.654.321', v_pin);
-    perform pg_temp.ok('Autoasistencia: con CI (con o sin puntos) y PIN entra y ve las clases de hoy',
-      (r->>'ok')::boolean and jsonb_array_length(r->'alumno'->'clases') >= 1, r::text);
-    r := gim_publico_marcar(v_token, '7654321', v_pin, null);
-    perform pg_temp.ok('Autoasistencia: marcar la sala la culmina y cobra la clase suelta',
-      (r->>'ok')::boolean and not (r->'marcada'->>'cubierta')::boolean and (r->'marcada'->>'valor')::numeric = 30000, r::text);
-    r := gim_publico_marcar(v_token, '7654321', v_pin, null);
-    perform pg_temp.ok('Autoasistencia: no marca dos veces la sala', not (r->>'ok')::boolean and r->>'error' like 'Ya marcaste%', r::text);
-    r := gim_publico_marcar(v_token, '1112223', v_pin_d, null);
-    perform pg_temp.ok('Autoasistencia: con deuda vencida lo manda a recepción', not (r->>'ok')::boolean and r->>'error' like '%recepción%', r::text);
-    for i in 1..5 loop perform gim_publico_entrar(v_token, '1112223', 'x'); end loop;
-    perform pg_temp.rechaza('Autoasistencia: 5 PIN mal lo bloquean', format('select gim_publico_entrar(%L, %L, %L)', v_token, '1112223', v_pin_d), 'Demasiados');
-    perform pg_temp.rechaza('Autoasistencia: un link inventado no sirve', format('select gim_publico_entrar(%L, %L, %L)', repeat('a', 48), '7654321', v_pin), 'no es válido');
-    perform pg_temp.rechaza('Autoasistencia: sin sesión no se crea un PIN', format('select gim_alumno_pin_crear(%L)', v_b), 'permission denied');
+    r := gim_publico_mio(v_tok);
+    perform pg_temp.ok('Link del alumno: ve sus clases de la semana',
+      (r->>'ok')::boolean and exists (select 1 from jsonb_array_elements(r->'alumno'->'clases') x where (x->>'cita_id')::uuid = v_man and (x->>'puede_reservar')::boolean)
+      and exists (select 1 from jsonb_array_elements(r->'alumno'->'clases') x where (x->>'cita_id')::uuid = v_ya and (x->>'puede_marcar')::boolean), r::text);
+    r := gim_publico_accion(v_tok, 'marcar', v_man);
+    perform pg_temp.ok('Link del alumno: una clase de otro día no se marca', not (r->>'ok')::boolean and r->>'error' like '%no es de hoy%', r::text);
+    r := gim_publico_accion(v_tok, 'reservar', v_man);
+    perform pg_temp.ok('Link del alumno: reserva una clase de otro día', (r->>'ok')::boolean
+      and exists (select 1 from jsonb_array_elements(r->'alumno'->'clases') x where (x->>'cita_id')::uuid = v_man and x->>'estado' = 'confirmada' and (x->>'puede_cancelar')::boolean), r::text);
+    r := gim_publico_accion(v_tok_d, 'reservar', v_man);
+    perform pg_temp.ok('Link del alumno: con la clase llena no reserva', not (r->>'ok')::boolean and r->>'error' like '%llena%', r::text);
+    r := gim_publico_accion(v_tok, 'cancelar', v_man);
+    perform pg_temp.ok('Link del alumno: cancela su reserva y libera el lugar', (r->>'ok')::boolean
+      and exists (select 1 from jsonb_array_elements(r->'alumno'->'clases') x where (x->>'cita_id')::uuid = v_man and x->>'estado' is null and (x->>'puede_reservar')::boolean), r::text);
+    r := gim_publico_accion(v_tok, 'reservar', v_man);
+    perform pg_temp.ok('Link del alumno: vuelve a reservar después de cancelar', (r->>'ok')::boolean, r::text);
+    r := gim_publico_accion(v_tok, 'marcar', v_ya);
+    perform pg_temp.ok('Link del alumno: marca la clase de ahora sin estar anotado, la culmina y cobra suelta',
+      (r->>'ok')::boolean and not (r->'hecho'->>'cubierta')::boolean and (r->'hecho'->>'valor')::numeric = 30000, r::text);
+    r := gim_publico_accion(v_tok, 'marcar', v_ya);
+    perform pg_temp.ok('Link del alumno: no marca dos veces', not (r->>'ok')::boolean and r->>'error' like 'Ya marcaste%', r::text);
+    r := gim_publico_accion(v_tok, 'cancelar', v_ya);
+    perform pg_temp.ok('Link del alumno: una clase ya empezada o marcada no se cancela', not (r->>'ok')::boolean, r::text);
+    r := gim_publico_accion(v_tok, 'libre', null);
+    perform pg_temp.ok('Link del alumno: entrada libre', (r->>'ok')::boolean and (r->'alumno'->>'entrada_libre_hoy')::boolean, r::text);
+    r := gim_publico_accion(v_tok, 'libre', null);
+    perform pg_temp.ok('Link del alumno: una sola entrada libre por día', not (r->>'ok')::boolean and r->>'error' like 'Ya marcaste%', r::text);
+    r := gim_publico_accion(v_tok_d, 'marcar', v_ya);
+    perform pg_temp.ok('Link del alumno: con deuda vencida lo manda a recepción', not (r->>'ok')::boolean and r->>'error' like '%recepción%', r::text);
+    r := gim_publico_mio(v_tok_d);
+    perform pg_temp.ok('Link del alumno: con deuda vencida sale bloqueado y no puede marcar', (r->'alumno'->>'bloqueado')::boolean
+      and not exists (select 1 from jsonb_array_elements(r->'alumno'->'clases') x where (x->>'puede_marcar')::boolean), r::text);
+    perform pg_temp.rechaza('Link del alumno: un link inventado no sirve', format('select gim_publico_mio(%L)', repeat('a', 48)), 'no es válido');
+    perform pg_temp.ok('Link del alumno: el link de la empresa (153) se reconoce para avisar', (gim_publico_info(v_emp))->>'tipo' = 'empresa');
+    perform pg_temp.rechaza('Link del alumno: sin sesión no se crea un link', format('select gim_alumno_link(%L)', v_b), 'permission denied');
+    execute 'set local role authenticated';
+    v_tok_d := (gim_alumno_link(v_d, true))->>'token';
+    execute 'set local role anon';
+    perform pg_temp.ok('Link del alumno: rehacer el link deja el nuevo andando', (gim_publico_mio(v_tok_d)->>'ok')::boolean);
     execute 'set local role authenticated';
   end;
 

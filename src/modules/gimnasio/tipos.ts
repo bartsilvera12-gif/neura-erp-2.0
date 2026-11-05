@@ -67,8 +67,8 @@ export type FichaAlumno = {
   deuda_vencida: number;
   deuda_total: number;
   bloqueado: boolean;
-  /** Receta 153: ya tiene PIN para marcar solo. */
-  tiene_pin?: boolean;
+  /** Receta 155: ya tiene su link para reservar y marcar solo. */
+  tiene_link?: boolean;
   membresia: { suscripcion_id: string; plan: string; precio: number; clases_mes: number | null; usadas: number; restantes: number | null } | null;
   proximas: Asistencia[];
   historial: Asistencia[];
