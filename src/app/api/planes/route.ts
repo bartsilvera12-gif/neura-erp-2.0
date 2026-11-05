@@ -9,7 +9,8 @@ import { withTenant } from "@/lib/api/with-tenant";
 import { created, ok, fail, ERR } from "@/lib/api/responses";
 import { errorDb } from "@/modules/clientes/suscripciones/server";
 
-const COLS = "id, nombre, descripcion, precio, moneda, tipo_iva, activo, created_at, tipo_id, duracion_meses, tipo:planes_tipos(nombre)";
+// "*": un schema sin la receta 150 (gim_clases_mes) sigue andando.
+const COLS = "*, tipo:planes_tipos(nombre)";
 
 export const GET = withTenant(async (ctx, req) => {
   const soloActivos = new URL(req.url).searchParams.get("activos") === "1";
@@ -39,6 +40,8 @@ const crearPlan = z.object({
   activo: z.boolean().default(true),
   tipo_id: z.string().uuid().nullish(),
   duracion_meses: z.coerce.number().int().min(1, "El plazo es de al menos 1 mes").max(600, "El plazo es de hasta 600 meses").nullish(),
+  // Receta 150 (Gimnasio): clases por mes (null = ilimitado).
+  gim_clases_mes: z.coerce.number().int().min(1, "Al menos 1 clase por mes").max(100, "Hasta 100 clases por mes").nullish(),
 });
 
 export const POST = withTenant(
@@ -52,6 +55,7 @@ export const POST = withTenant(
       activo: input.activo,
       tipo_id: input.tipo_id ?? null,
       duracion_meses: input.duracion_meses ?? null,
+      ...(input.gim_clases_mes !== undefined ? { gim_clases_mes: input.gim_clases_mes ?? null } : {}),
     });
     if (error) {
       if ((error as { code?: string }).code === "23505") return fail(`Ya existe un plan llamado "${input.nombre}"`, 422);

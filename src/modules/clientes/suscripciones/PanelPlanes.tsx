@@ -11,6 +11,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Plus, Tag, Trash2 } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
+import { useFuncion } from "@/lib/sesion/ContextoUsuario";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { Modal } from "@/components/Modal";
 import { MenuAcciones, type ItemMenu } from "@/components/MenuAcciones";
@@ -277,6 +278,9 @@ function ModalPlan({ plan, tipos, onClose, onGuardado }: { plan: Plan | null; ti
   const [tipoId, setTipoId] = useState(plan?.tipo_id ?? "");
   const [tipoNuevo, setTipoNuevo] = useState("");
   const [plazo, setPlazo] = useState<number | null>(plan?.duracion_meses ?? null);
+  // Receta 150: con Gimnasio, el plan dice cuántas clases por mes cubre ("" = ilimitado).
+  const conGimnasio = useFuncion("gimnasio");
+  const [clasesMes, setClasesMes] = useState(plan?.gim_clases_mes ? String(plan.gim_clases_mes) : "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -293,7 +297,7 @@ function ModalPlan({ plan, tipos, onClose, onGuardado }: { plan: Plan | null; ti
       const tipo = tipoId === "__nuevo__"
         ? (await apiFetch<TipoPlan>("/api/planes/tipos", { method: "POST", body: JSON.stringify({ nombre: tipoNuevo.trim() }) })).id
         : tipoId || null;
-      const body = JSON.stringify({ nombre: nombre.trim(), descripcion: descripcion.trim() || null, precio: Number(precio), moneda, tipo_iva: iva, activo, tipo_id: tipo, duracion_meses: plazo });
+      const body = JSON.stringify({ nombre: nombre.trim(), descripcion: descripcion.trim() || null, precio: Number(precio), moneda, tipo_iva: iva, activo, tipo_id: tipo, duracion_meses: plazo, ...(conGimnasio ? { gim_clases_mes: clasesMes ? Number(clasesMes) : null } : {}) });
       if (plan) await apiFetch(`/api/planes/${plan.id}`, { method: "PATCH", body });
       else await apiFetch("/api/planes", { method: "POST", body });
       onGuardado(plan ? `Plan ${nombre.trim()} guardado` : `Plan ${nombre.trim()} creado`);
@@ -343,6 +347,13 @@ function ModalPlan({ plan, tipos, onClose, onGuardado }: { plan: Plan | null; ti
             <Select block value={iva} onChange={(v) => setIva(v as TipoIva)} etiqueta="IVA" options={[["10%", "IVA 10%"], ["5%", "IVA 5%"], ["exenta", "Exenta"]]} />
           </div>
         </div>
+        {conGimnasio ? (
+          <label className="block">
+            <span className={LABEL}>Clases por mes (gimnasio)</span>
+            <input inputMode="numeric" className={INPUT} value={clasesMes} onChange={(e) => setClasesMes(e.target.value.replace(/[^\d]/g, "").slice(0, 3))} placeholder="Vacío = ilimitado" />
+            <span className="mt-1 block text-xs text-slate-500">Cada clase culminada descuenta una. Cuando se terminan, las siguientes se cobran como clase suelta.</span>
+          </label>
+        ) : null}
         <label className="flex min-h-11 cursor-pointer items-center gap-2 sm:min-h-0">
           <input type="checkbox" className="h-4 w-4 accent-[var(--brand)]" checked={activo} onChange={(e) => setActivo(e.target.checked)} />
           <span className="text-sm text-slate-700">Activo <span className="text-xs text-slate-500">(se puede elegir en suscripciones nuevas)</span></span>

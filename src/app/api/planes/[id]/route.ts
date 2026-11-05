@@ -19,6 +19,8 @@ const editarPlan = z.object({
   activo: z.boolean().optional(),
   tipo_id: z.string().uuid().nullable().optional(),
   duracion_meses: z.coerce.number().int().min(1, "El plazo es de al menos 1 mes").max(600, "El plazo es de hasta 600 meses").nullable().optional(),
+  // Receta 150 (Gimnasio): clases por mes (null = ilimitado). Rige desde el próximo uso.
+  gim_clases_mes: z.coerce.number().int().min(1, "Al menos 1 clase por mes").max(100, "Hasta 100 clases por mes").nullable().optional(),
 });
 
 export const PATCH = withTenant(
@@ -45,6 +47,7 @@ export const PATCH = withTenant(
     if (input.activo !== undefined) patch.activo = input.activo;
     if (input.tipo_id !== undefined) patch.tipo_id = input.tipo_id;
     if (input.duracion_meses !== undefined) patch.duracion_meses = input.duracion_meses;
+    if (input.gim_clases_mes !== undefined) patch.gim_clases_mes = input.gim_clases_mes;
     if (input.precio !== undefined) {
       patch.precio = Math.round(input.precio * 100) / 100;
     }

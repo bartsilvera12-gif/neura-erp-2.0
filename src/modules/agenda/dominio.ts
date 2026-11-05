@@ -7,6 +7,7 @@
 export const AGENDA_ESTADOS = [
   "pendiente",
   "confirmada",
+  "en_espera", // receta 150 (Gimnasio): el alumno llegó y espera su turno
   "completada",
   "no_asistio",
   "cancelada",
@@ -34,7 +35,7 @@ export function isAgendaEstado(v: unknown): v is AgendaEstado {
 export const TIPO_CITA_CAPACITACION = "capacitacion";
 
 /** Tipos de cita sugeridos (los genéricos del actual; demo/consulta/servicio eran de Neura). */
-export const TIPOS_CITA = ["evento", "reunion", "llamada", "visita", "seguimiento", "capacitacion", "otro"];
+export const TIPOS_CITA = ["evento", "reunion", "llamada", "visita", "seguimiento", "capacitacion", "clase", "otro"]; // "clase": receta 150
 
 /**
  * "Avisarme" de cada evento: minutos antes del inicio (se guarda en metadata.aviso_min; null =

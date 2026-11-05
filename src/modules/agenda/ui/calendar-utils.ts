@@ -202,6 +202,7 @@ const TIPO_LABEL: Record<string, string> = {
   visita: "Visita",
   seguimiento: "Seguimiento",
   capacitacion: "Capacitación",
+  clase: "Clase",
   otro: "Otro",
 };
 export function tipoLabel(tipo: string | null | undefined): string {

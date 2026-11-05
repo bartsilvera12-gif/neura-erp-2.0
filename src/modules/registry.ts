@@ -22,6 +22,7 @@ import { moduloConfiguracion } from "@/modules/configuracion/module";
 import { moduloRrhh } from "@/modules/rrhh/module";
 import { moduloSorteos } from "@/modules/sorteos/module";
 import { moduloInmobiliaria } from "@/modules/inmobiliaria/module";
+import { moduloGimnasio } from "@/modules/gimnasio/module";
 import type { PerfilSesion } from "@/modules/usuarios/permisos";
 import { moduloApagado, pantallaApagada, pantallaConFuncionVisible, type FuncionPantalla, type Funciones } from "@/modules/configuracion/funciones";
 
@@ -43,6 +44,7 @@ const TODOS: Modulo[] = [
   moduloCaja,
   moduloSorteos,
   moduloInmobiliaria,
+  moduloGimnasio,
   moduloCobranzas,
   moduloConciliacion,
   moduloPagos,

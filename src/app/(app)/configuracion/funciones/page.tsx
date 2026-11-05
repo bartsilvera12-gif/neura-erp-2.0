@@ -9,7 +9,7 @@
  * Solo el Administrador guarda (la base lo vuelve a exigir). Apagar no borra nada.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Blocks, Building2, ChefHat, ClipboardList, Loader2, QrCode, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
+import { AlertTriangle, Blocks, Building2, ChefHat, ClipboardList, Dumbbell, Loader2, QrCode, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -19,7 +19,7 @@ import { BOTON_PRIMARIO, BOTON_SECUNDARIO } from "@/modules/inventario/ui";
 import { MODULOS_APAGADOS_RUBRO, MODULOS_RUBRO, rubroDe, URL_FUNCIONES, type FuncionesEmpresa, type FuncionPantalla, type ModuloRubroId, type Rubro } from "@/modules/configuracion/funciones";
 import { pantallasCatalogo } from "@/modules/registry";
 
-type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean; sorteos: boolean; inmobiliaria: boolean; modulos_apagados: ModuloRubroId[] };
+type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean; sorteos: boolean; inmobiliaria: boolean; gimnasio: boolean; modulos_apagados: ModuloRubroId[] };
 
 const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: string; resumen: string; Icono: typeof Store }[] = [
   {
@@ -51,6 +51,13 @@ const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: 
     Icono: Building2,
   },
   {
+    key: "gimnasio",
+    titulo: "Gimnasio",
+    ejemplos: "Gimnasio, natación, artes marciales, academias",
+    resumen: "Clases con cupo y horario, turnos individuales, recepción con control de deuda, membresías con clases por mes y comisión de profesores.",
+    Icono: Dumbbell,
+  },
+  {
     key: "neura",
     titulo: "Neura",
     ejemplos: "Uso interno de Neura",
@@ -60,15 +67,16 @@ const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: 
 ];
 
 const PRESET: Record<Exclude<Rubro, "personalizado">, Borrador> = {
-  comercio: { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.comercio },
-  gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false, sorteos: false, inmobiliaria: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.gastronomia },
-  sorteos: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: true, inmobiliaria: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.sorteos },
-  inmobiliaria: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.inmobiliaria },
-  neura: { mesas: true, cocina: true, recetas: true, pedidos: true, sorteos: true, inmobiliaria: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.neura },
+  comercio: { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, gimnasio: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.comercio },
+  gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.gastronomia },
+  sorteos: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: true, inmobiliaria: false, gimnasio: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.sorteos },
+  inmobiliaria: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: true, gimnasio: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.inmobiliaria },
+  neura: { mesas: true, cocina: true, recetas: true, pedidos: true, sorteos: true, inmobiliaria: true, gimnasio: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.neura },
+  gimnasio: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.gimnasio },
 };
 
 const deEmpresa = (d: FuncionesEmpresa): Borrador => ({
-  mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false, sorteos: !!d.sorteos, inmobiliaria: !!d.inmobiliaria,
+  mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false, sorteos: !!d.sorteos, inmobiliaria: !!d.inmobiliaria, gimnasio: !!d.gimnasio,
   modulos_apagados: d.modulos_apagados ?? [],
 });
 
@@ -296,6 +304,13 @@ export default function RubroFuncionesPage() {
             onChange={(v) => tocar({ inmobiliaria: v })}
             etiqueta={<span className="inline-flex items-center gap-1.5"><Building2 className="h-4 w-4 text-slate-400" aria-hidden /> Inmobiliaria</span>}
             descripcion="Propiedades para vender o alquilar con su ficha: ciudad y barrio, m² de terreno y construidos, cuenta catastral, finca, manzana y lote, documentación, y si son propias o de un dueño con su comisión. Al prenderla, Supervisor, Cajero y Vendedor ya ven las propiedades."
+          />
+          <Interruptor
+            activo={b.gimnasio}
+            disabled={soloLectura || guardando}
+            onChange={(v) => tocar({ gimnasio: v })}
+            etiqueta={<span className="inline-flex items-center gap-1.5"><Dumbbell className="h-4 w-4 text-slate-400" aria-hidden /> Gimnasio</span>}
+            descripcion="Clases con horario y cupo, turnos individuales, recepción que marca la asistencia y frena a quien debe, membresías con clases por mes, clase suelta que se cobra en la caja y comisión de profesores. Al prenderla, Supervisor, Cajero y Vendedor ya atienden la recepción."
           />
         </div>
       </Tarjeta>

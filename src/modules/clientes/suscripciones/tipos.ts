@@ -18,6 +18,8 @@ export type Plan = {
   tipo_id: string | null;
   tipo_nombre: string | null;
   duracion_meses: number | null;
+  /** Receta 150 (Gimnasio): clases por mes que cubre la membresía (null = ilimitado). */
+  gim_clases_mes?: number | null;
   /** suscripciones no canceladas que lo usan */
   suscripciones?: number;
 };

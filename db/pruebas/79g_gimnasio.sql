@@ -1,0 +1,104 @@
+-- Gimnasio (receta 150): rubro, clases con cupo, asistencias, membresía con clases por mes, clase suelta,
+-- deuda vencida que frena la entrada (y se fuerza con motivo) y comisión de profesores.
+do $$
+declare
+  v jsonb;
+  v_clase uuid;
+  v_cita uuid;
+  v_a uuid; v_b uuid; v_c uuid; v_d uuid;
+  v_plan uuid;
+  v_as uuid;
+  v_prod uuid;
+  v_venta jsonb;
+  v_hoy date := (now() at time zone 'America/Asuncion')::date;
+  v_admin uuid := (select id from usuarios where auth_user_id = pg_temp.fx('admin'));
+begin
+  -- Rubro.
+  v := guardar_funciones_empresa('{"rubro": "gimnasio"}');
+  perform pg_temp.ok('Gimnasio: el rubro prende la función y apaga Planes de cuotas',
+    v->>'rubro' = 'gimnasio' and (v->>'gimnasio')::boolean and not (v->>'sorteos')::boolean and v->'modulos_apagados' ? 'cuotas', v::text);
+
+  v := gim_config_guardar('{"precio_clase_suelta": 30000, "bloquear_morosos": true, "comision_modo": "por_alumno", "comision_monto": 10000}');
+  perform pg_temp.ok('Gimnasio: guarda precio de clase suelta y comisión', (v->>'precio_clase_suelta')::numeric = 30000 and v->>'comision_modo' = 'por_alumno', v::text);
+
+  -- Clase de todos los días con 1 lugar: aparece sola en el día.
+  perform pg_temp.rechaza('Gimnasio: una clase sin días no se guarda',
+    $q$select gim_clase_guardar('{"nombre": "PRUEBA Sin días", "dias": [], "hora": "10:00"}')$q$, 'día');
+  v_clase := (gim_clase_guardar(jsonb_build_object('nombre', 'PRUEBA Natación', 'profesor_id', v_admin, 'dias', jsonb_build_array(1,2,3,4,5,6,7),
+    'hora', '23:00', 'duracion_min', 30, 'cupo', 1))->>'id')::uuid;
+  v := gim_dia(v_hoy);
+  select (x->>'cita_id')::uuid into v_cita from jsonb_array_elements(v->'clases') x where x->>'clase_id' = v_clase::text;
+  perform pg_temp.ok('Gimnasio: la clase aparece en el día', v_cita is not null, v::text);
+  perform gim_dia(v_hoy);
+  perform pg_temp.igual('Gimnasio: mirar el día dos veces no duplica la clase',
+    (select count(*) from agenda_citas where gim_clase_id = v_clase and (inicio_at at time zone 'America/Asuncion')::date = v_hoy), 1);
+
+  insert into clientes (empresa_id, nombre) values (pg_temp.fx('empresa'), 'PRUEBA Alumno Suelto') returning id into v_a;
+  insert into clientes (empresa_id, nombre) values (pg_temp.fx('empresa'), 'PRUEBA Alumno Sin Lugar') returning id into v_b;
+  insert into clientes (empresa_id, nombre) values (pg_temp.fx('empresa'), 'PRUEBA Alumno Socio') returning id into v_c;
+  insert into clientes (empresa_id, nombre) values (pg_temp.fx('empresa'), 'PRUEBA Alumno Moroso') returning id into v_d;
+
+  -- Cupo.
+  v := gim_anotar(v_cita, v_a);
+  perform pg_temp.ok('Gimnasio: anota al alumno pendiente', v->>'estado' = 'pendiente', v::text);
+  perform pg_temp.rechaza('Gimnasio: no se anota dos veces', format('select gim_anotar(%L, %L)', v_cita, v_a), 'Ya está anotado');
+  perform pg_temp.rechaza('Gimnasio: con el cupo lleno no se anota', format('select gim_anotar(%L, %L)', v_cita, v_b), 'llena');
+
+  -- Sin membresía: culmina y se cobra la clase suelta (venta a crédito que vence hoy).
+  v_as := (v->>'id')::uuid;
+  v := gim_asistencia_estado(v_as, 'en_espera');
+  perform pg_temp.ok('Gimnasio: Llegó deja la asistencia en espera', v->>'estado' = 'en_espera' and v->>'llegada_at' is not null, v::text);
+  perform pg_temp.rechaza('Gimnasio: en espera no vuelve a pendiente', format('select gim_asistencia_estado(%L, %L)', v_as, 'pendiente'), 'Ya llegó');
+  v := gim_asistencia_estado(v_as, 'culminada');
+  perform pg_temp.ok('Gimnasio: sin membresía se cobra como clase suelta', not (v->>'cubierta')::boolean and v->>'venta_id' is not null and (v->>'valor')::numeric = 30000, v::text);
+  perform pg_temp.ok('Gimnasio: la clase suelta queda a cobrar, vence hoy y es ticket sin RUC',
+    exists (select 1 from ventas vt join cuentas_por_cobrar c on c.venta_id = vt.id
+             where vt.id = (v->>'venta_id')::uuid and vt.total = 30000 and vt.tipo_venta = 'CREDITO' and vt.tipo_documento = 'ticket'
+               and not vt.comisionable and c.vencimiento = v_hoy and c.saldo = 30000));
+  perform pg_temp.rechaza('Gimnasio: una asistencia culminada no cambia más', format('select gim_asistencia_estado(%L, %L)', v_as, 'no_asistio'), 'cerrada');
+  v := gim_cliente(v_a);
+  perform pg_temp.ok('Gimnasio: lo que debe hoy no lo frena (todavía no venció)', not (v->>'bloqueado')::boolean and (v->>'deuda_total')::numeric = 30000, v::text);
+
+  -- Membresía de 1 clase por mes: la primera la cubre, la segunda se cobra suelta.
+  insert into planes (empresa_id, nombre, precio, moneda, tipo_iva, activo, gim_clases_mes)
+  values (pg_temp.fx('empresa'), 'PRUEBA Membresía 1 clase', 200000, 'GS', '10%', true, 1) returning id into v_plan;
+  perform crear_suscripcion(jsonb_build_object('cliente_id', v_c, 'plan_id', v_plan, 'fecha_inicio', date_trunc('month', v_hoy)::date));
+  v := gim_entrada(v_c);
+  perform pg_temp.ok('Gimnasio: la membresía cubre la entrada', (v->>'cubierta')::boolean and v->>'venta_id' is null and v->>'estado' = 'culminada', v::text);
+  perform pg_temp.rechaza('Gimnasio: dos entradas libres el mismo día no', format('select gim_entrada(%L)', v_c), 'Ya tiene la entrada');
+  v := gim_cliente(v_c);
+  perform pg_temp.ok('Gimnasio: la ficha muestra las clases que le quedan', (v->'membresia'->>'restantes')::int = 0 and (v->'membresia'->>'usadas')::int = 1, v::text);
+  v := gim_turno_crear(jsonb_build_object('cliente_id', v_c, 'profesor_id', v_admin, 'inicio_at', (v_hoy + time '06:00') at time zone 'America/Asuncion', 'duracion_min', 30, 'titulo', 'PRUEBA Personal'));
+  v := gim_asistencia_estado((v->>'id')::uuid, 'culminada');
+  perform pg_temp.ok('Gimnasio: con las clases del mes usadas, la siguiente se cobra suelta', not (v->>'cubierta')::boolean and v->>'venta_id' is not null, v::text);
+  perform pg_temp.ok('Gimnasio: el turno individual completa su cita de la Agenda',
+    exists (select 1 from agenda_citas where id = (v->>'cita_id')::uuid and estado = 'completada' and tipo = 'clase'));
+
+  -- Deuda vencida: frena la entrada; forzarla pide motivo y queda registrada.
+  v_prod := pg_temp.producto('Cuota vieja', 150000);
+  perform pg_temp.comprar(v_prod, 1, 1000);
+  v_venta := pg_temp.vender_a(v_d, v_prod, 1, 'CREDITO');
+  execute 'set local role service_role';
+  update cuentas_por_cobrar set vencimiento = v_hoy - 10 where venta_id = (v_venta->>'venta_id')::uuid;
+  execute 'set local role authenticated';
+  v := gim_cliente(v_d);
+  perform pg_temp.ok('Gimnasio: con deuda vencida sale bloqueado', (v->>'bloqueado')::boolean and (v->>'deuda_vencida')::numeric = 150000, v::text);
+  perform pg_temp.rechaza('Gimnasio: con deuda vencida no entra', format('select gim_entrada(%L)', v_d), 'deuda vencida de Gs. 150.000');
+  perform pg_temp.rechaza('Gimnasio: forzar la entrada pide motivo', format('select gim_entrada(%L, true, null)', v_d), 'motivo');
+  v := gim_entrada(v_d, true, 'PRUEBA pagó por transferencia');
+  perform pg_temp.ok('Gimnasio: forzada con motivo entra y queda marcada', (v->>'forzada')::boolean and v->>'estado' = 'culminada', v::text);
+  execute 'set local role service_role';
+  perform pg_temp.ok('Gimnasio: queda quién la forzó y por qué',
+    exists (select 1 from gim_asistencias where id = (v->>'id')::uuid and forzada_por = v_admin and forzada_motivo = 'PRUEBA pagó por transferencia'));
+  execute 'set local role authenticated';
+
+  -- Comisión: por alumno, solo las asistencias con profesor (clase y turno; la entrada libre no).
+  v := gim_comisiones(v_hoy, v_hoy);
+  perform pg_temp.ok('Gimnasio: comisión por alumno del profesor',
+    exists (select 1 from jsonb_array_elements(v->'profesores') x
+             where (x->>'profesor_id')::uuid = v_admin and (x->>'alumnos')::int >= 2 and (x->>'comision')::numeric = (x->>'alumnos')::numeric * 10000), v::text);
+
+  -- Sin sesión no se usa.
+  perform pg_temp.rechaza('Gimnasio: sin sesión no se ve el día', $q$set local role anon; select gim_dia()$q$, 'permission denied');
+  execute 'set local role authenticated';
+end $$;
