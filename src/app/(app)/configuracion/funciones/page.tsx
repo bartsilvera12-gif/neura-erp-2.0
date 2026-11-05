@@ -9,7 +9,7 @@
  * Solo el Administrador guarda (la base lo vuelve a exigir). Apagar no borra nada.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Blocks, Building2, ChefHat, ClipboardList, Dumbbell, Loader2, QrCode, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
+import { AlertTriangle, Blocks, Check, Building2, ChefHat, ClipboardList, Dumbbell, Loader2, QrCode, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
@@ -213,9 +213,12 @@ export default function RubroFuncionesPage() {
         detalle="Aplica las funciones típicas del rubro. Después podés ajustar cada una."
         acciones={rubro === "personalizado" ? <span className="inline-flex items-center justify-center rounded-full bg-violet-50 px-2.5 py-1 text-xs font-semibold text-violet-900 ring-1 ring-violet-200">Personalizado</span> : null}
       >
-        <div role="radiogroup" aria-label="Rubro" className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+        <div role="radiogroup" aria-label="Rubro" className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
           {RUBROS.map((r) => {
             const sel = rubro === r.key;
+            const trae = r.key === "neura" ? [] : pantallasDelRubro(r.key);
+            // Soporte es de uso interno de Neura: no hace falta repetir en cada rubro que no lo trae.
+            const noTrae = apagadosDelRubro(r.key).filter((x) => x !== "Soporte");
             return (
               <button
                 key={r.key}
@@ -224,36 +227,39 @@ export default function RubroFuncionesPage() {
                 aria-checked={sel}
                 disabled={soloLectura || guardando}
                 onClick={() => tocar(PRESET[r.key])}
-                className={`min-h-11 rounded-xl border p-3.5 text-left transition disabled:cursor-not-allowed ${sel ? "border-[var(--brand)] bg-[var(--brand-50,#eef7f7)] ring-2 ring-[var(--brand-100)]" : "border-slate-200 hover:border-slate-300 hover:bg-slate-50"} ${soloLectura && !sel ? "opacity-60" : ""}`}
+                className={`flex h-full min-h-11 flex-col rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed ${sel ? "border-[var(--brand)] bg-[var(--brand-50,#eef7f7)] ring-2 ring-[var(--brand-100)]" : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"} ${soloLectura && !sel ? "opacity-60" : ""}`}
               >
-                <span className="flex items-center gap-2.5">
-                  <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg ${sel ? "bg-[var(--brand)] text-white" : "bg-slate-100 text-slate-500"}`}>
-                    <r.Icono className="h-4.5 w-4.5" aria-hidden />
+                <span className="flex w-full items-start gap-3">
+                  <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${sel ? "bg-[var(--brand)] text-white" : "bg-slate-100 text-slate-500"}`}>
+                    <r.Icono className="h-5 w-5" aria-hidden />
                   </span>
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-slate-800">{r.titulo}</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-semibold text-slate-900">{r.titulo}</span>
                     <span className="block text-xs text-slate-500">{r.ejemplos}</span>
                   </span>
+                  <span aria-hidden className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${sel ? "border-[var(--brand)] bg-[var(--brand)]" : "border-slate-300 bg-white"}`}>
+                    {sel ? <Check className="h-3 w-3 text-white" strokeWidth={3} /> : null}
+                  </span>
                 </span>
-                <span className="mt-2 block text-xs leading-relaxed text-slate-500">{r.resumen}</span>
-                {r.key !== "neura" && pantallasDelRubro(r.key).length ? (
-                  <>
-                    <span className="mt-2.5 block text-[11px] font-semibold uppercase tracking-wider text-slate-400">Pantallas propias</span>
-                    <span className="mt-1 flex flex-wrap gap-1">
-                      {pantallasDelRubro(r.key).map((p) => (
-                        <span key={p} className="rounded-md bg-slate-100 px-1.5 py-0.5 text-[11px] font-medium text-slate-600">{p}</span>
-                      ))}
-                    </span>
-                  </>
-                ) : null}
-                {apagadosDelRubro(r.key).length ? (
-                  <span className="mt-2 block text-[11px] text-slate-500">Sin {apagadosDelRubro(r.key).join(", ")}</span>
-                ) : null}
+                <span className="mt-3 block text-[13px] leading-relaxed text-slate-600">{r.resumen}</span>
+                <span className="mt-auto block w-full pt-3">
+                  <span className="block border-t border-slate-200/80 pt-3">
+                    {trae.length ? (
+                      <span className="flex flex-wrap gap-1.5">
+                        {trae.map((p) => (
+                          <span key={p} className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${sel ? "bg-white text-[var(--brand)] ring-1 ring-[var(--brand-100)]" : "bg-slate-100 text-slate-600"}`}>{p}</span>
+                        ))}
+                      </span>
+                    ) : (
+                      <span className="block text-xs font-medium text-slate-500">{r.key === "neura" ? "Incluye Soporte" : "Solo lo básico: caja, ventas, stock y clientes"}</span>
+                    )}
+                    {noTrae.length ? <span className="mt-2 block text-[11px] text-slate-400">Sin {noTrae.join(", ")}</span> : null}
+                  </span>
+                </span>
               </button>
             );
           })}
-        </div>
-      </Tarjeta>
+        </div>      </Tarjeta>
 
       {/* ── Funciones ─────────────────────────────────────────────────────── */}
       <Tarjeta icono={<Sparkles className="h-4 w-4" />} titulo="Funciones" detalle="La Caja, el inventario y las compras funcionan igual con todo apagado. Al prender Mesas y QR o Cocina, los perfiles Cajero y Supervisor ya las reciben; con Sorteos, también el Vendedor. Recetas y Producción quedan para el Administrador. Se ajusta en Usuarios › Perfiles y permisos.">
