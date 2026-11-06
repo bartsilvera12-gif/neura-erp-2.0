@@ -254,8 +254,11 @@ begin
           from receta_insumos(v_op.producto_id, 1) x join productos i on i.id = x.insumo_id
          where i.controla_stock
       loop
-        perform inv_mover(r.o_empresa, ins.insumo_id, v_dep, -ins.cantidad, ins.costo, 'comedor', 'comedor_retiro',
-                          v_consumo, '', 'Retiro comedor · ' || v_op.nombre, null, r.o_nombre);
+        -- Best-effort: no frena el retiro si falta stock de algún insumo.
+        if coalesce((select cantidad from stock_depositos where producto_id = ins.insumo_id and deposito_id = v_dep), 0) >= ins.cantidad then
+          perform inv_mover(r.o_empresa, ins.insumo_id, v_dep, -ins.cantidad, ins.costo, 'comedor', 'comedor_retiro',
+                            v_consumo, '', 'Retiro comedor · ' || v_op.nombre, null, r.o_nombre);
+        end if;
       end loop;
     end if;
   end if;

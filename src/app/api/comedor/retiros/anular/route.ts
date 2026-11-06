@@ -7,7 +7,7 @@ const anular = z.object({ consumo_id: z.string().uuid(), motivo: z.string().trim
 
 export const POST = withTenant(
   async (ctx, _req, input) => {
-    const r = await ctx.db.rpc("comedor_retiro_anular", { p_consumo: input.consumo_id, p_motivo: input.motivo ?? null });
+    const r = await ctx.db.rpc("comedor_consumo_anular", { p_consumo: input.consumo_id, p_motivo: input.motivo ?? null });
     if (r.error) return ERR.server();
     return ok(r.data);
   },

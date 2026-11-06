@@ -16,6 +16,8 @@ export const moduloComedor: Modulo = {
     { label: "Funcionarios", href: "/comedor/funcionarios", funcion: "comedor", permiso: "comedor_administrar", palabras: ["padron", "empleados", "ci", "importar", "excel", "saldo"] },
     { label: "Menú semanal", href: "/comedor/menu", funcion: "comedor", permiso: "comedor_administrar", palabras: ["menu", "almuerzo", "opciones", "reservas", "enlace", "link", "semana", "platos"] },
     { label: "Retiro", href: "/comedor/retiro", funcion: "comedor", permiso: "comedor_recepcion", palabras: ["retiro", "entrega", "marca", "asistencia", "terminal", "kiosco", "ci", "huella", "subsidio"] },
+    { label: "Cantina", href: "/comedor/cantina", funcion: "comedor", permiso: "comedor_recepcion", palabras: ["cantina", "kiosco", "productos", "extra", "gaseosa", "snack", "cuenta"] },
+    { label: "Liquidación", href: "/comedor/liquidacion", funcion: "comedor", permiso: "comedor_administrar", palabras: ["liquidacion", "cierre", "mes", "factura", "empresa", "subsidio", "excedente", "reporte", "pdf", "excel"] },
     { label: "Configuración del comedor", href: "/comedor/configuracion", funcion: "comedor", permiso: "comedor_administrar", palabras: ["empresa", "contratante", "subsidio", "cierre"] },
   ],
 };
