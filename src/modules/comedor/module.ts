@@ -14,6 +14,7 @@ export const moduloComedor: Modulo = {
   familia: "Comedor",
   children: [
     { label: "Funcionarios", href: "/comedor/funcionarios", funcion: "comedor", permiso: "comedor_administrar", palabras: ["padron", "empleados", "ci", "importar", "excel", "saldo"] },
+    { label: "Menú semanal", href: "/comedor/menu", funcion: "comedor", permiso: "comedor_administrar", palabras: ["menu", "almuerzo", "opciones", "reservas", "enlace", "link", "semana", "platos"] },
     { label: "Configuración del comedor", href: "/comedor/configuracion", funcion: "comedor", permiso: "comedor_administrar", palabras: ["empresa", "contratante", "subsidio", "cierre"] },
   ],
 };

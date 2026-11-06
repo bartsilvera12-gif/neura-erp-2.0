@@ -6,6 +6,7 @@ import { clienteConfig } from "@/cliente.config";
 
 const TARJETAS: TarjetaPanel[] = [
   { href: "/comedor/funcionarios", titulo: "Funcionarios", imagen: "/comercial/clientes-fichero-contactos.webp", color: hslDeMarca(clienteConfig.color), posicion: "50% 45%" },
+  { href: "/comedor/menu", titulo: "Menú semanal", imagen: "/comercial/agenda-planificador-escribiendo.webp", color: "35 60% 24%", posicion: "50% 50%" },
   { href: "/comedor/configuracion", titulo: "Configuración del comedor", imagen: "/configuracion/empresa-edificios.webp", color: "215 45% 24%", posicion: "50% 50%" },
 ];
 

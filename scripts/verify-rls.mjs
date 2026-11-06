@@ -41,7 +41,9 @@ const PUBLICAS = new Set(["mesa_qr_activo", "mesa_menu_publico", "mesa_pedido_pu
   "sorteo_publico", "sorteo_publico_libres", "sorteo_publico_comprar", "sorteo_publico_orden", "sorteo_publico_comprobante",
   "sorteo_publico_numero", "sorteo_publico_lista", "sorteo_referido", "sorteo_vendedor_entrar", "sorteo_vendedor_vender",
   // Recetas 153-156: el alumno del gimnasio marca y reserva solo con su link (token) o con documento + PIN.
-  "gim_publico_info", "gim_publico_entrar", "gim_publico_marcar", "gim_publico_mio", "gim_publico_accion"]);
+  "gim_publico_info", "gim_publico_entrar", "gim_publico_marcar", "gim_publico_mio", "gim_publico_accion",
+  // Receta 162: el funcionario ve el menú y reserva con el link del comedor + su CI.
+  "comedor_publico_menu", "comedor_publico_mis_reservas", "comedor_publico_reservar"]);
 
 const filas = r.stdout.trim().split("\n").filter(Boolean).map((l) => l.split("|"));
 const de = (k) => filas.filter((f) => f[0] === k).map((f) => f[1]);
