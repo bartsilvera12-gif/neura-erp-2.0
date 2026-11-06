@@ -182,7 +182,7 @@ export function Hilo({
                   cargarAnteriores();
                 }}
                 disabled={cargandoAnteriores}
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-[#3F8E91] shadow-sm hover:bg-slate-50 disabled:opacity-60 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-4 [@media(pointer:coarse)]:text-xs"
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-[var(--brand)] shadow-sm hover:bg-slate-50 disabled:opacity-60 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-4 [@media(pointer:coarse)]:text-xs"
               >
                 {cargandoAnteriores ? (
                   <>
@@ -211,7 +211,7 @@ export function Hilo({
             setVerBoton(false);
             alFondo();
           }}
-          className="absolute bottom-3 right-4 z-10 inline-flex items-center gap-1 rounded-full bg-[#4FAEB2] px-3 py-1.5 text-[11px] font-semibold text-white shadow-lg shadow-[#4FAEB2]/30 hover:bg-[#3F8E91] [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-4 [@media(pointer:coarse)]:text-xs"
+          className="absolute bottom-3 right-4 z-10 inline-flex items-center gap-1 rounded-full bg-[var(--brand-400)] px-3 py-1.5 text-[11px] font-semibold text-white shadow-lg shadow-[var(--brand-400)]/30 hover:bg-[var(--brand)] [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:px-4 [@media(pointer:coarse)]:text-xs"
         >
           <ArrowDown className="h-3.5 w-3.5" /> Mensajes nuevos
         </button>

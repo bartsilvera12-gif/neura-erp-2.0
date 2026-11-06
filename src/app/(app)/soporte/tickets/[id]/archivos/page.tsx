@@ -134,7 +134,7 @@ export default function TicketArchivosPage() {
       ) : (
         <ul className="divide-y divide-slate-100">
           {lista.map((a) => (
-            <li key={a.id} className="-mx-2 flex items-center gap-4 rounded-xl px-2 py-3 transition-colors hover:bg-[#4FAEB2]/[0.04]">
+            <li key={a.id} className="-mx-2 flex items-center gap-4 rounded-xl px-2 py-3 transition-colors hover:bg-[var(--brand-400)]/[0.04]">
               {a.url ? (
                 <a href={a.url} target="_blank" rel="noreferrer" className="shrink-0" aria-label={`Ver ${a.nombre}`}>
                   <Vista a={a} />
@@ -162,7 +162,7 @@ export default function TicketArchivosPage() {
 
       <div className="mt-6 space-y-3 border-t border-slate-100 pt-5">
         <p className="flex items-center gap-2 text-[13px] font-bold text-slate-800">
-          <Files className="h-4 w-4 text-[#4FAEB2]" aria-hidden /> Agregar más archivos
+          <Files className="h-4 w-4 text-[var(--brand-400)]" aria-hidden /> Agregar más archivos
         </p>
         <ZonaArchivos archivos={nuevos} onCambio={setNuevos} deshabilitada={!!subiendo} />
         {error && lista != null ? <Aviso>{error}</Aviso> : null}

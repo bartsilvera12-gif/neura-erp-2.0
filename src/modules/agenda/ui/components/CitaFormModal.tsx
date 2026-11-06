@@ -29,8 +29,8 @@ type ClienteMode = "existente" | "nuevo";
 
 const DURACIONES = [15, 30, 45, 60, 90, 120];
 
-const TEAL = "#4FAEB2";
-const TEAL_DARK = "#3F8E91";
+const TEAL = "var(--brand)";
+const TEAL_DARK = "var(--brand-600)";
 
 /** fecha (YYYY-MM-DD) + hora (HH:mm), en hora de Paraguay → ISO. */
 function combinar(fecha: string, hora: string): string | null {
@@ -65,7 +65,7 @@ function opcionesHora(valor: string, desde?: string): [string, string][] {
 }
 
 const inputCls =
-  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition-colors hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20";
+  "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm transition-colors hover:border-[var(--brand-400)]/60 focus:border-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]/20";
 const labelCls = "block text-xs font-medium text-slate-600 mb-1";
 
 function SectionHead({ children }: { children: React.ReactNode }) {
@@ -302,12 +302,12 @@ export default function CitaFormModal({
 
   return (
     <CapaModal onClose={onClose} fondo="bg-slate-900/55 backdrop-blur-sm">
-      <div className={`relative flex w-full max-w-lg ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15`}>
+      <div className={`relative flex w-full max-w-lg ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[var(--brand-400)]/10 ring-1 ring-[var(--brand-400)]/15`}>
         {/* barra superior degradé */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--brand-400)] via-[var(--brand-400)]/80 to-[var(--brand-400)]/40" />
 
         {/* header con gradiente sutil */}
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-4 pb-3 pt-4 sm:px-5 sm:pb-4 sm:pt-5">
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[var(--brand-400)]/5 px-4 pb-3 pt-4 sm:px-5 sm:pb-4 sm:pt-5">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold tracking-tight text-slate-900">{tituloModal}</h2>
             <p className="mt-0.5 text-sm text-slate-500">{subtitulo}</p>
@@ -315,7 +315,7 @@ export default function CitaFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2]"
+            className="rounded-xl border border-slate-200 bg-white p-2 text-slate-400 shadow-sm transition-colors hover:border-[var(--brand-400)]/60 hover:text-[var(--brand-400)]"
             aria-label="Cerrar"
           >
             <X className="h-4 w-4" />
@@ -365,7 +365,7 @@ export default function CitaFormModal({
                     onClick={() => aplicarDuracion(d)}
                     style={active ? { backgroundColor: TEAL, borderColor: TEAL } : undefined}
                     className={`rounded-full border px-2.5 py-0.5 text-[11px] font-medium transition-colors [@media(pointer:coarse)]:px-3 [@media(pointer:coarse)]:py-2 ${
-                      active ? "text-white shadow-sm" : "border-slate-300 text-slate-600 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]"
+                      active ? "text-white shadow-sm" : "border-slate-300 text-slate-600 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)]"
                     }`}
                   >
                     {d < 60 ? `${d}m` : d === 60 ? "1h" : `${d / 60}h`}
@@ -382,8 +382,8 @@ export default function CitaFormModal({
           {/* AVISO Y NOTAS */}
           <section className="space-y-3">
             <SectionHead>Aviso</SectionHead>
-            <div className="flex items-start gap-3 rounded-2xl border border-[#4FAEB2]/20 bg-[#4FAEB2]/5 p-3">
-              <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[#3F8E91] shadow-sm ring-1 ring-[#4FAEB2]/20">
+            <div className="flex items-start gap-3 rounded-2xl border border-[var(--brand-400)]/20 bg-[var(--brand-400)]/5 p-3">
+              <span className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-white text-[var(--brand)] shadow-sm ring-1 ring-[var(--brand-400)]/20">
                 <BellRing className="h-4 w-4" />
               </span>
               <div className="min-w-0 flex-1">
@@ -407,7 +407,7 @@ export default function CitaFormModal({
               type="button"
               onClick={() => setDetalles((v) => !v)}
               aria-expanded={detalles}
-              className="flex min-h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]"
+              className="flex min-h-11 w-full items-center justify-between rounded-xl border border-slate-200 bg-slate-50/70 px-3.5 py-2.5 text-left text-sm font-medium text-slate-700 transition-colors hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)]"
             >
               <span>
                 Más detalles
@@ -485,7 +485,7 @@ export default function CitaFormModal({
               {clienteMode === "existente" ? (
                 <ClienteSelect valor={cliente} onChange={setCliente} />
               ) : (
-                <div className="space-y-3 rounded-2xl border border-[#4FAEB2]/20 bg-[#4FAEB2]/5 p-4">
+                <div className="space-y-3 rounded-2xl border border-[var(--brand-400)]/20 bg-[var(--brand-400)]/5 p-4">
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div>
                       <label className={labelCls}>Nombre</label>
@@ -525,7 +525,7 @@ export default function CitaFormModal({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2]"
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[var(--brand-400)]/60 hover:text-[var(--brand-400)]"
           >
             Cancelar
           </button>

@@ -171,7 +171,7 @@ export default function EstadoRapido() {
                 disabled={guardando != null}
                 onClick={() => void guardar("responsable", { responsable_id: yo?.id })}
                 title="Asignarme este ticket"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/10 px-3.5 text-[13px] font-semibold text-[#2F6E71] transition hover:bg-[#4FAEB2]/20 disabled:opacity-60"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-[var(--brand-400)]/40 bg-[var(--brand-400)]/10 px-3.5 text-[13px] font-semibold text-[var(--brand-700)] transition hover:bg-[var(--brand-400)]/20 disabled:opacity-60"
               >
                 {guardando === "responsable" ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Hand className="h-3.5 w-3.5" aria-hidden />}
                 Tomar

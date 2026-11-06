@@ -99,7 +99,7 @@ export function TabSuscripciones({ clienteNombre, ruc, avisoRuc, suscripciones, 
       key: "acc", titulo: "Acción", movil: "acciones", claseTh: "text-right", claseTd: "text-right",
       celda: (s) => (
         <MenuAcciones items={items(s)} etiqueta={`Acciones de ${s.plan}`}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-[#4FAEB2]/60 hover:bg-slate-50 hover:text-[#4FAEB2]">
+          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-400 transition-colors hover:border-[var(--brand-400)]/60 hover:bg-slate-50 hover:text-[var(--brand-400)]">
           <MoreHorizontal className="h-4 w-4" />
         </MenuAcciones>
       ),

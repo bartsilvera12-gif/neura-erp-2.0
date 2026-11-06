@@ -654,7 +654,7 @@ function Contenedor({ modal, titulo, subtitulo, onClose, footer, children }: {
   return (
     <CapaModal onClose={onClose} z="z-[120]">
       <div role="dialog" aria-modal="true" aria-label={titulo}
-        className={`flex w-full max-w-2xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[#4FAEB2]/15`}
+        className={`flex w-full max-w-2xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[var(--brand-400)]/15`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 py-3 pl-4 pr-2 sm:px-6 sm:py-4">
           <div className="min-w-0">

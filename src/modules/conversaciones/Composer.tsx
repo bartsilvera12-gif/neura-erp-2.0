@@ -37,7 +37,7 @@ const tiempo = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2
 const botonIcono = (activo: boolean, alerta = false) =>
   `inline-flex h-9 w-9 items-center justify-center rounded-lg border disabled:opacity-50 ${
     activo
-      ? "border-[#4FAEB2]/50 bg-[#4FAEB2]/10 text-[#3F8E91]"
+      ? "border-[var(--brand-400)]/50 bg-[var(--brand-400)]/10 text-[var(--brand)]"
       : alerta
         ? "border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100"
         : "border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -330,9 +330,9 @@ export function Composer(p: ComposerProps) {
         />
       ) : null}
       {p.respondiendo ? (
-        <div className="flex items-start gap-2 rounded-md border-l-[3px] border-[#4FAEB2] bg-slate-50 px-2 py-1.5">
+        <div className="flex items-start gap-2 rounded-md border-l-[3px] border-[var(--brand-400)] bg-slate-50 px-2 py-1.5">
           <div className="min-w-0 flex-1">
-            <span className="block text-[10px] font-semibold uppercase tracking-wide text-[#3F8E91]">Respondiendo a {p.respondiendo.from_me ? "vos" : "el cliente"}</span>
+            <span className="block text-[10px] font-semibold uppercase tracking-wide text-[var(--brand)]">Respondiendo a {p.respondiendo.from_me ? "vos" : "el cliente"}</span>
             <span className="block truncate text-[12px] text-slate-600">{previewMensaje(p.respondiendo)}</span>
           </div>
           <button type="button" onClick={p.onCancelarRespuesta} aria-label="Cancelar respuesta" className="shrink-0 rounded px-1 text-slate-400 hover:bg-slate-200 hover:text-slate-600 @max-lg:-my-1 @max-lg:inline-flex @max-lg:h-10 @max-lg:w-10 @max-lg:items-center @max-lg:justify-center">
@@ -348,7 +348,7 @@ export function Composer(p: ComposerProps) {
             etiqueta="Adjuntar y más"
             items={itemsMas}
             className={`inline-flex h-11 w-11 items-center justify-center rounded-full transition-colors @lg:hidden ${
-              modoNota ? "bg-amber-100 text-amber-800" : panel ? "bg-[#4FAEB2]/10 text-[#3F8E91]" : "text-slate-500 hover:bg-slate-100"
+              modoNota ? "bg-amber-100 text-amber-800" : panel ? "bg-[var(--brand-400)]/10 text-[var(--brand)]" : "text-slate-500 hover:bg-slate-100"
             }`}
           >
             {modoNota ? <Lock className="h-5 w-5" aria-hidden /> : <Plus className="h-6 w-6" aria-hidden />}
@@ -434,7 +434,7 @@ export function Composer(p: ComposerProps) {
                     value={qrBusca}
                     onChange={(e) => setQrBusca(e.target.value)}
                     placeholder="Buscar…"
-                    className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none max-sm:h-11 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
+                    className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none max-sm:h-11 focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20"
                   />
                 </div>
               ) : (
@@ -451,9 +451,9 @@ export function Composer(p: ComposerProps) {
                           type="button"
                           onMouseEnter={() => setQrIdx(i)}
                           onClick={() => usarRespuesta(r)}
-                          className={`w-full rounded-lg px-2 py-2 text-left text-xs max-sm:min-h-12 max-sm:px-3 max-sm:text-sm ${barra && i === qrIdx ? "bg-[#4FAEB2]/10" : "hover:bg-slate-50"}`}
+                          className={`w-full rounded-lg px-2 py-2 text-left text-xs max-sm:min-h-12 max-sm:px-3 max-sm:text-sm ${barra && i === qrIdx ? "bg-[var(--brand-400)]/10" : "hover:bg-slate-50"}`}
                         >
-                          <span className="block font-mono font-semibold text-[#3F8E91]">{r.atajo}</span>
+                          <span className="block font-mono font-semibold text-[var(--brand)]">{r.atajo}</span>
                           <span className="mt-0.5 line-clamp-2 text-[11px] text-slate-500">{r.texto}</span>
                         </button>
                       </li>
@@ -494,8 +494,8 @@ export function Composer(p: ComposerProps) {
             </button>
           </div>
         ) : voz.pendiente ? (
-          <div className="flex min-h-[2.25rem] min-w-0 flex-1 items-center gap-2 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/[0.06] px-2.5 py-1.5 @max-lg:min-h-11 @max-lg:gap-1 @max-lg:px-1.5 @max-lg:py-1">
-            <Mic className="h-4 w-4 shrink-0 text-[#3F8E91] @max-sm:hidden" aria-hidden />
+          <div className="flex min-h-[2.25rem] min-w-0 flex-1 items-center gap-2 rounded-xl border border-[var(--brand-400)]/40 bg-[var(--brand-400)]/[0.06] px-2.5 py-1.5 @max-lg:min-h-11 @max-lg:gap-1 @max-lg:px-1.5 @max-lg:py-1">
+            <Mic className="h-4 w-4 shrink-0 text-[var(--brand)] @max-sm:hidden" aria-hidden />
             <audio src={voz.pendiente.url} controls className="h-8 min-w-0 flex-1" />
             <button type="button" onClick={() => voz.descartar(true)} aria-label="Descartar nota de voz" className="inline-flex h-7 shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 hover:text-red-600 @max-lg:h-10 @max-lg:w-10 @max-lg:justify-center @max-lg:px-0">
               <Trash2 className="h-3.5 w-3.5 @max-lg:h-4 @max-lg:w-4" aria-hidden /> <span className="@max-lg:sr-only">Descartar</span>
@@ -510,7 +510,7 @@ export function Composer(p: ComposerProps) {
             className={`min-w-0 flex-1 resize-none rounded-xl border px-3.5 py-2 text-sm text-slate-900 shadow-sm outline-none transition-colors placeholder:text-slate-400 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-50 @max-lg:min-h-11 @max-lg:rounded-[1.375rem] @max-lg:py-2.5 @max-lg:leading-snug ${
               modoNota
                 ? "border-amber-300 bg-amber-50 focus:border-amber-400 focus:ring-amber-200"
-                : "border-slate-200 bg-white hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:ring-[#4FAEB2]/20"
+                : "border-slate-200 bg-white hover:border-[var(--brand-400)]/60 focus:border-[var(--brand-400)] focus:ring-[var(--brand-400)]/20"
             }`}
             placeholder={
               modoNota
@@ -535,7 +535,7 @@ export function Composer(p: ComposerProps) {
           <button
             type="button"
             onClick={() => void voz.iniciar()}
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#4FAEB2] text-white shadow-sm shadow-[#4FAEB2]/20 @lg:hidden"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[var(--brand-400)] text-white shadow-sm shadow-[var(--brand-400)]/20 @lg:hidden"
             aria-label="Grabar nota de voz"
           >
             <Mic className="h-5 w-5" aria-hidden />
@@ -547,7 +547,7 @@ export function Composer(p: ComposerProps) {
           aria-label={modoNota ? "Guardar nota" : "Enviar"}
           className={`shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors disabled:cursor-not-allowed disabled:opacity-50 @max-lg:h-11 @max-lg:w-11 @max-lg:justify-center @max-lg:rounded-full @max-lg:p-0 ${
             puedeGrabar && !texto.trim() ? "hidden @lg:inline-flex" : "inline-flex"
-          } ${modoNota ? "bg-amber-500 hover:bg-amber-600" : "bg-[#4FAEB2] shadow-[#4FAEB2]/20 hover:bg-[#3F8E91]"}`}
+          } ${modoNota ? "bg-amber-500 hover:bg-amber-600" : "bg-[var(--brand-400)] shadow-[var(--brand-400)]/20 hover:bg-[var(--brand)]"}`}
         >
           <span className="@max-lg:hidden">{modoNota ? "Guardar nota" : "Enviar"}</span>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 @max-lg:hidden" aria-hidden="true">
@@ -652,7 +652,7 @@ function PanelPlantillas({
           )
         ) : (
           <div className="space-y-2">
-            <button type="button" onClick={() => setSel(null)} className="text-[11px] text-[#3F8E91] hover:underline max-sm:min-h-10 max-sm:text-sm">← Elegir otra</button>
+            <button type="button" onClick={() => setSel(null)} className="text-[11px] text-[var(--brand)] hover:underline max-sm:min-h-10 max-sm:text-sm">← Elegir otra</button>
             <p className="text-xs font-semibold text-slate-800">{sel.nombre}</p>
             {slots.map((s) => (
               <label key={s} className="block">
@@ -661,7 +661,7 @@ function PanelPlantillas({
                   type="text"
                   value={vars[s] ?? ""}
                   onChange={(e) => setVars((prev) => ({ ...prev, [s]: e.target.value }))}
-                  className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 max-sm:h-11"
+                  className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs outline-none focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20 max-sm:h-11"
                   placeholder={`Valor para {{${s}}}`}
                 />
               </label>
@@ -674,7 +674,7 @@ function PanelPlantillas({
               type="button"
               disabled={faltan}
               onClick={() => onEnviar(sel.id, vars)}
-              className="w-full rounded-lg bg-[#4FAEB2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3F8E91] disabled:bg-slate-200 disabled:text-slate-400 max-sm:min-h-11 max-sm:text-sm"
+              className="w-full rounded-lg bg-[var(--brand-400)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand)] disabled:bg-slate-200 disabled:text-slate-400 max-sm:min-h-11 max-sm:text-sm"
             >
               Enviar plantilla
             </button>
@@ -750,7 +750,7 @@ function ArchivosPendientes({
 }: { archivos: File[]; onQuitar: (i: number) => void; onAgregar: () => void; onCancelar: () => void; onEnviar: () => void }) {
   const n = archivos.length;
   return (
-    <div className="rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/[0.06] p-2">
+    <div className="rounded-xl border border-[var(--brand-400)]/40 bg-[var(--brand-400)]/[0.06] p-2">
       <div className="flex gap-2.5 overflow-x-auto pt-1.5 pr-1.5 pb-1">
         {archivos.map((f, i) => (
           <MiniaturaArchivo key={`${f.name}-${f.size}-${f.lastModified}-${i}`} archivo={f} onQuitar={() => onQuitar(i)} />
@@ -760,7 +760,7 @@ function ArchivosPendientes({
             type="button"
             onClick={onAgregar}
             aria-label="Agregar más archivos"
-            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg border border-dashed border-[#4FAEB2]/60 text-[#3F8E91] hover:bg-[#4FAEB2]/10"
+            className="flex h-20 w-20 shrink-0 items-center justify-center rounded-lg border border-dashed border-[var(--brand-400)]/60 text-[var(--brand)] hover:bg-[var(--brand-400)]/10"
           >
             <Plus className="h-6 w-6" />
           </button>
@@ -770,7 +770,7 @@ function ArchivosPendientes({
         <p className="text-[11px] text-slate-500">El texto escrito va como pie {n === 1 ? "del archivo" : "del primero"} · Enter envía · Esc cancela</p>
         <div className="flex shrink-0 gap-2">
           <button type="button" onClick={onCancelar} className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-semibold text-slate-600 hover:bg-slate-50 @max-lg:min-h-10 @max-sm:flex-1">Cancelar</button>
-          <button type="button" onClick={onEnviar} className="rounded-lg bg-[#4FAEB2] px-3 py-1 text-xs font-semibold text-white hover:bg-[#3F8E91] @max-lg:min-h-10 @max-sm:flex-1">
+          <button type="button" onClick={onEnviar} className="rounded-lg bg-[var(--brand-400)] px-3 py-1 text-xs font-semibold text-white hover:bg-[var(--brand)] @max-lg:min-h-10 @max-sm:flex-1">
             {n === 1 ? "Enviar" : `Enviar ${n} archivos`}
           </button>
         </div>

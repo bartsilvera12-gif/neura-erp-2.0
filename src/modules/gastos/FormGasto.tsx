@@ -36,7 +36,7 @@ import {
 } from "@/modules/gastos/tipos";
 import { SelectorFecha } from "@/components/SelectorFecha";
 
-const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 max-sm:py-2.5 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 disabled:bg-slate-50 disabled:text-slate-400";
+const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 max-sm:py-2.5 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20 disabled:bg-slate-50 disabled:text-slate-400";
 const LABEL = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500";
 
 type Linea = { key: string; categoria_id: string | null; descripcion: string; monto: number; iva_tipo: IvaTipo; sucursal_id: string | null; empleado_id: string | null };
@@ -368,10 +368,10 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
               <div className="flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600"><CheckCircle2 className="h-8 w-8" /></div>
               {hecho.confirmado ? (
                 <>
-                  <p className="text-sm text-slate-500">Número generado: <b className="font-mono text-[#3F8E91]">{hecho.numero ?? "—"}</b> · {monto(hecho.total, hecho.moneda)}</p>
+                  <p className="text-sm text-slate-500">Número generado: <b className="font-mono text-[var(--brand)]">{hecho.numero ?? "—"}</b> · {monto(hecho.total, hecho.moneda)}</p>
                   {hecho.credito ? (
                     <p className="text-sm text-slate-600">Quedó como deuda con el proveedor. Pagalo desde{" "}
-                      <Link href="/compras/pagos" className="font-semibold text-[#3F8E91] hover:underline">Pagos a proveedores</Link>.</p>
+                      <Link href="/compras/pagos" className="font-semibold text-[var(--brand)] hover:underline">Pagos a proveedores</Link>.</p>
                   ) : hecho.caja ? (
                     <p className="text-sm text-slate-600">El efectivo salió de la caja abierta (egreso registrado).</p>
                   ) : (
@@ -394,7 +394,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                 <div className="flex rounded-xl bg-slate-100 p-1 max-sm:w-full" role="radiogroup" aria-label="Comprobante">
                   {([[true, "Con comprobante", " fiscal"], [false, "Sin comprobante", ""]] as const).map(([v, l, extra]) => (
                     <button key={l} type="button" role="radio" aria-checked={form.con_comprobante === v} onClick={() => set("con_comprobante", v)}
-                      className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition max-sm:min-h-11 max-sm:flex-1 ${form.con_comprobante === v ? "bg-white text-[#3F8E91] shadow-sm" : "text-slate-500"}`}>{l}{extra ? <span className="max-sm:hidden">{extra}</span> : null}</button>
+                      className={`rounded-lg px-3 py-1.5 text-sm font-semibold transition max-sm:min-h-11 max-sm:flex-1 ${form.con_comprobante === v ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500"}`}>{l}{extra ? <span className="max-sm:hidden">{extra}</span> : null}</button>
                   ))}
                 </div>
                 {!form.con_comprobante ? (
@@ -413,7 +413,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                   <SelectorFecha block etiqueta={form.con_comprobante ? "Fecha del comprobante" : "Fecha"} max={hoyPY()} value={form.fecha_comprobante} onChange={(v) => set("fecha_comprobante", v)} claseBoton="rounded-xl px-3 py-2 text-slate-800" />
                 </div>
                 {autocompletado ? (
-                  <p className="flex items-start gap-1.5 rounded-lg bg-[#4FAEB2]/10 px-3 py-1.5 text-xs text-[#2f6f72] sm:col-span-6">
+                  <p className="flex items-start gap-1.5 rounded-lg bg-[var(--brand-400)]/10 px-3 py-1.5 text-xs text-[#2f6f72] sm:col-span-6">
                     <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0" /> {autocompletado}
                   </p>
                 ) : null}
@@ -453,7 +453,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                         setPorLinea((x) => !x);
                         setForm((f) => ({ ...f, items: f.items.map((it) => ({ ...it, sucursal_id: it.sucursal_id ?? f.sucursal_id })) }));
                       }} title="Repartir las líneas entre sucursales"
-                        className={`inline-flex shrink-0 items-center gap-1 rounded-xl border px-2.5 text-xs font-semibold max-sm:min-h-11 ${porLinea ? "border-[#4FAEB2] bg-[#4FAEB2]/10 text-[#3F8E91]" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
+                        className={`inline-flex shrink-0 items-center gap-1 rounded-xl border px-2.5 text-xs font-semibold max-sm:min-h-11 ${porLinea ? "border-[var(--brand-400)] bg-[var(--brand-400)]/10 text-[var(--brand)]" : "border-slate-200 text-slate-500 hover:bg-slate-50"}`}>
                         <Split className="h-3.5 w-3.5" /> Por línea
                       </button>
                     ) : null}
@@ -465,7 +465,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                     <div className="flex rounded-xl bg-slate-100 p-1">
                       {(["GS", "USD"] as const).map((m) => (
                         <button key={m} type="button" onClick={() => setForm((f) => ({ ...f, moneda: m, medio_pago: m === "USD" && f.medio_pago === "efectivo" ? "transferencia" : f.medio_pago }))}
-                          className={`rounded-lg px-3 py-1 text-sm font-semibold max-sm:min-h-11 max-sm:px-4 ${form.moneda === m ? "bg-white text-[#3F8E91] shadow-sm" : "text-slate-500"}`}>{m === "GS" ? "Gs." : "USD"}</button>
+                          className={`rounded-lg px-3 py-1 text-sm font-semibold max-sm:min-h-11 max-sm:px-4 ${form.moneda === m ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500"}`}>{m === "GS" ? "Gs." : "USD"}</button>
                       ))}
                     </div>
                     {usd ? (
@@ -485,7 +485,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                   <div className="flex rounded-xl bg-white p-1 ring-1 ring-slate-200">
                     {(["contado", "credito"] as const).map((t) => (
                       <button key={t} type="button" onClick={() => setForm((f) => ({ ...f, tipo_pago: t, medio_pago: t === "contado" && !f.medio_pago ? "transferencia" : f.medio_pago }))}
-                        className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition max-sm:min-h-11 ${form.tipo_pago === t ? "bg-[#4FAEB2] text-white shadow-sm" : "text-slate-500"}`}>
+                        className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold transition max-sm:min-h-11 ${form.tipo_pago === t ? "bg-[var(--brand-400)] text-white shadow-sm" : "text-slate-500"}`}>
                         {t === "contado" ? "Contado" : "Crédito"}
                       </button>
                     ))}
@@ -543,7 +543,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Detalle{form.items.length > 1 ? ` (${form.items.length} líneas)` : ""}</h3>
                   <button type="button" onClick={() => set("items", [...form.items, nuevaLinea(porLinea ? form.sucursal_id : null)])}
-                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-[#3F8E91] hover:bg-slate-50 max-sm:min-h-11 max-sm:px-3" title="Alt+N">
+                    className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-slate-50 max-sm:min-h-11 max-sm:px-3" title="Alt+N">
                     <Plus className="h-3.5 w-3.5" /> Agregar línea
                   </button>
                 </div>
@@ -566,7 +566,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                           <div className="sm:col-span-5">
                             <label className={LABEL}>Subcategoría *</label>
                             {nuevaSub?.fila === i ? (
-                              <div className="space-y-1.5 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/5 p-2">
+                              <div className="space-y-1.5 rounded-xl border border-[var(--brand-400)]/40 bg-[var(--brand-400)]/5 p-2">
                                 <Select value={nuevaSub.rubro} onChange={(v) => setNuevaSub({ ...nuevaSub, rubro: v })} block compacto
                                   options={(cat?.rubros ?? []).map((r): [string, string] => [r.id, `Rubro: ${r.nombre}`])} />
                                 <div className="flex gap-1.5">
@@ -578,7 +578,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                                 </div>
                                 <div className="flex justify-end gap-1.5">
                                   <button type="button" onClick={() => setNuevaSub(null)} className="rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-white max-sm:min-h-11 max-sm:flex-1 max-sm:border max-sm:border-slate-200 max-sm:bg-white max-sm:text-sm">Cancelar</button>
-                                  <button type="button" onClick={() => void crearSubcategoria()} className="rounded-lg bg-[#4FAEB2] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[#3F8E91] max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">Crear</button>
+                                  <button type="button" onClick={() => void crearSubcategoria()} className="rounded-lg bg-[var(--brand-400)] px-2.5 py-1 text-xs font-semibold text-white hover:bg-[var(--brand)] max-sm:min-h-11 max-sm:flex-1 max-sm:text-sm">Crear</button>
                                 </div>
                               </div>
                             ) : (
@@ -642,7 +642,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                 </div>
                 {/* Celular: agregar otra línea al final de la lista (sin volver arriba) */}
                 <button type="button" onClick={() => set("items", [...form.items, nuevaLinea(porLinea ? form.sucursal_id : null)])}
-                  className="mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 text-sm font-semibold text-[#3F8E91] active:bg-[#4FAEB2]/5 sm:hidden">
+                  className="mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 text-sm font-semibold text-[var(--brand)] active:bg-[var(--brand-400)]/5 sm:hidden">
                   <Plus className="h-4 w-4" /> Agregar otra línea
                 </button>
               </div>
@@ -666,7 +666,7 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
                   <input ref={fileRef} type="file" multiple accept={ACCEPT_COMPROBANTE} className="hidden"
                     onChange={(e) => { const fs = Array.from(e.target.files ?? []); setArchivos((a) => [...a, ...fs].slice(0, 20)); e.target.value = ""; }} />
                   <button type="button" onClick={() => fileRef.current?.click()}
-                    className="flex w-full items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-left text-sm text-slate-600 hover:border-[#4FAEB2] hover:bg-[#4FAEB2]/5 max-sm:min-h-11">
+                    className="flex w-full items-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-2 text-left text-sm text-slate-600 hover:border-[var(--brand-400)] hover:bg-[var(--brand-400)]/5 max-sm:min-h-11">
                     <Paperclip className="h-4 w-4 shrink-0 text-slate-400" />
                     <span>Factura, recibo, comprobante de transferencia…</span>
                   </button>
@@ -700,8 +700,8 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
         <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
           {hecho ? (
             <>
-              {!gastoId ? <button onClick={otro} className="rounded-xl border border-[#4FAEB2]/50 px-4 py-2 text-sm font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/5 max-sm:flex-1">Cargar otro</button> : null}
-              <button onClick={onClose} className="rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] max-sm:flex-1">Cerrar</button>
+              {!gastoId ? <button onClick={otro} className="rounded-xl border border-[var(--brand-400)]/50 px-4 py-2 text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/5 max-sm:flex-1">Cargar otro</button> : null}
+              <button onClick={onClose} className="rounded-xl bg-[var(--brand-400)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand)] max-sm:flex-1">Cerrar</button>
             </>
           ) : (
             <>
@@ -717,11 +717,11 @@ export function FormGasto({ gastoId, onClose, onHecho }: {
               {/* En celular "Cancelar" se omite: la ✕ de arriba (44 px) cierra igual y los dos botones entran cómodos. */}
               <button onClick={onClose} disabled={!!busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 disabled:opacity-50 max-sm:hidden">Cancelar</button>
               <button onClick={() => void guardar(false)} disabled={!!busy || cargando}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#4FAEB2]/50 px-4 py-2 text-sm font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/5 disabled:opacity-50 max-sm:flex-1 max-sm:px-3">
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[var(--brand-400)]/50 px-4 py-2 text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/5 disabled:opacity-50 max-sm:flex-1 max-sm:px-3">
                 {busy === "borrador" ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar borrador
               </button>
               <button onClick={() => void guardar(true)} disabled={!!busy || cargando || !!faltante}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 max-sm:flex-1 max-sm:px-3">
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-400)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand)] disabled:opacity-50 max-sm:flex-1 max-sm:px-3">
                 {busy === "confirmar" ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {busy === "confirmar" ? "Confirmando…" : "Confirmar gasto"}
               </button>
             </>

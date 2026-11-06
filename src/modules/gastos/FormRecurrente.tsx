@@ -20,7 +20,7 @@ import {
   type Catalogos, type IvaTipo, type MedioPagoGasto, type Moneda, type Plantilla, type TipoPago,
 } from "@/modules/gastos/tipos";
 
-const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 max-sm:py-2.5 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
+const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 max-sm:py-2.5 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20";
 const LABEL = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500";
 
 type Linea = { key: string; categoria_id: string | null; descripcion: string; monto: number; iva_tipo: IvaTipo; sucursal_id: string | null; empleado_id: string | null };
@@ -127,7 +127,7 @@ export function FormRecurrente({ plantilla, onClose, onGuardado }: { plantilla: 
                   <div className="flex rounded-xl bg-slate-100 p-1 sm:inline-flex" role="radiogroup" aria-label="Comprobante">
                     {([[true, "Con comprobante", " fiscal"], [false, "Sin comprobante", " (sueldos, viáticos…)"]] as const).map(([v, l, extra]) => (
                       <button key={l} type="button" role="radio" aria-checked={conComp === v} onClick={() => setConComp(v)}
-                        className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold max-sm:min-h-11 ${conComp === v ? "bg-white text-[#3F8E91] shadow-sm" : "text-slate-500"}`}>{l}<span className="max-sm:hidden">{extra}</span></button>
+                        className={`flex-1 rounded-lg px-3 py-1.5 text-sm font-semibold max-sm:min-h-11 ${conComp === v ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500"}`}>{l}<span className="max-sm:hidden">{extra}</span></button>
                     ))}
                   </div>
                 </div>
@@ -164,7 +164,7 @@ export function FormRecurrente({ plantilla, onClose, onGuardado }: { plantilla: 
               <div>
                 <div className="mb-2 flex items-center justify-between">
                   <h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Líneas</h3>
-                  <button type="button" onClick={() => setItems((xs) => [...xs, linea()])} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-[#3F8E91] hover:bg-slate-50 max-sm:min-h-11 max-sm:px-3"><Plus className="h-3.5 w-3.5" /> Línea</button>
+                  <button type="button" onClick={() => setItems((xs) => [...xs, linea()])} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-slate-50 max-sm:min-h-11 max-sm:px-3"><Plus className="h-3.5 w-3.5" /> Línea</button>
                 </div>
                 <div className="space-y-2">
                   {items.map((it, i) => {
@@ -197,7 +197,7 @@ export function FormRecurrente({ plantilla, onClose, onGuardado }: { plantilla: 
                   })}
                 </div>
                 <button type="button" onClick={() => setItems((xs) => [...xs, linea()])}
-                  className="mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 text-sm font-semibold text-[#3F8E91] active:bg-[#4FAEB2]/5 sm:hidden">
+                  className="mt-2 flex min-h-11 w-full items-center justify-center gap-1.5 rounded-xl border border-dashed border-slate-300 text-sm font-semibold text-[var(--brand)] active:bg-[var(--brand-400)]/5 sm:hidden">
                   <Plus className="h-4 w-4" /> Agregar otra línea
                 </button>
                 <p className="mt-2 text-right text-sm text-slate-600 max-sm:hidden">Total previsto: <b className="text-slate-900">{total > 0 ? monto(total, moneda) : "variable"}</b></p>
@@ -205,7 +205,7 @@ export function FormRecurrente({ plantilla, onClose, onGuardado }: { plantilla: 
 
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div><label className={LABEL}>Notas</label><input className={INPUT} maxLength={500} enterKeyHint="done" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} placeholder="Ej. contrato hasta dic. 2027" /></div>
-                {p ? <label className="flex items-center gap-2 pt-5 text-sm text-slate-600 max-sm:min-h-11 max-sm:pt-0"><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} className="accent-[#4FAEB2] max-sm:h-5 max-sm:w-5" /> Activa (aparece al generar)</label> : null}
+                {p ? <label className="flex items-center gap-2 pt-5 text-sm text-slate-600 max-sm:min-h-11 max-sm:pt-0"><input type="checkbox" checked={activo} onChange={(e) => setActivo(e.target.checked)} className="accent-[var(--brand-400)] max-sm:h-5 max-sm:w-5" /> Activa (aparece al generar)</label> : null}
               </div>
             </>
           )}
@@ -218,7 +218,7 @@ export function FormRecurrente({ plantilla, onClose, onGuardado }: { plantilla: 
           </div>
           <button onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 max-sm:flex-1">Cancelar</button>
           <button onClick={() => void guardar()} disabled={busy || !!faltante || !cat}
-            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 max-sm:flex-[2]">
+            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-400)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand)] disabled:opacity-50 max-sm:flex-[2]">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar plantilla
           </button>
         </div>

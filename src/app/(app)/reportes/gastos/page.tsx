@@ -23,7 +23,7 @@ import { PresupuestoModal } from "@/modules/gastos/Presupuesto";
 import { corto, fechaCorta, gs, nombreMes, type Resumen } from "@/modules/gastos/tipos";
 import { SelectorFecha } from "@/components/SelectorFecha";
 
-const INPUT = "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
+const INPUT = "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20";
 
 type Rango = { desde: string; hasta: string };
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
@@ -116,7 +116,7 @@ function ResumenGastos() {
         <ScrollHorizontal className="rounded-xl bg-slate-100 p-1 md:overflow-visible" ariaLabel="Período" dependencias={[preset]}>
           {ATAJOS.map(([k, l]) => (
             <button key={k} onClick={() => elegirAtajo(k)} aria-pressed={preset === k} data-activo={preset === k ? "true" : undefined}
-              className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-md:min-h-11 max-md:text-[13px] ${preset === k ? "bg-white text-[#3F8E91] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{l}</button>
+              className={`shrink-0 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition max-md:min-h-11 max-md:text-[13px] ${preset === k ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>{l}</button>
           ))}
         </ScrollHorizontal>
         <div className="grid grid-cols-2 gap-2 md:contents">
@@ -187,7 +187,7 @@ function ResumenGastos() {
       <div className="grid gap-4 lg:grid-cols-3">
         <Tarjeta titulo="Por categoría" sub="Tocá un rubro para ver sus subcategorías; la raya oscura es el presupuesto." className="lg:col-span-2"
           extra={pres && pres.previsto > 0 ? null : (
-            <button onClick={() => setPresupuesto(true)} className="-my-2 inline-flex min-h-11 items-center text-xs font-semibold text-[#3F8E91] hover:underline sm:my-0 sm:min-h-0">Cargar presupuesto</button>
+            <button onClick={() => setPresupuesto(true)} className="-my-2 inline-flex min-h-11 items-center text-xs font-semibold text-[var(--brand)] hover:underline sm:my-0 sm:min-h-0">Cargar presupuesto</button>
           )}>
           {datos ? (
             <div className="space-y-1">
@@ -204,7 +204,7 @@ function ResumenGastos() {
                   <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <p className="min-w-0 text-xs font-semibold uppercase tracking-wide text-slate-500">{r.nombre} por subcategoría</p>
-                      <button onClick={() => irAGastos({ categoria: r.id!, estado: "confirmado" })} className="-my-2 inline-flex min-h-11 shrink-0 items-center text-xs font-semibold text-[#3F8E91] hover:underline sm:my-0 sm:min-h-0">Ver los gastos</button>
+                      <button onClick={() => irAGastos({ categoria: r.id!, estado: "confirmado" })} className="-my-2 inline-flex min-h-11 shrink-0 items-center text-xs font-semibold text-[var(--brand)] hover:underline sm:my-0 sm:min-h-0">Ver los gastos</button>
                     </div>
                     <BarrasH filas={r.subcategorias.map((s) => ({
                       key: s.id, label: s.nombre, partes: [{ valor: Number(s.total), color: C_OPERATIVOS, label: s.nombre }],
@@ -222,7 +222,7 @@ function ResumenGastos() {
           ) : (
             <div className="flex flex-col items-center gap-3 py-6 text-center">
               <p className="text-sm text-slate-500">No hay presupuesto para este período.</p>
-              <button onClick={() => setPresupuesto(true)} className="rounded-xl bg-[#4FAEB2] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] max-sm:min-h-11">Cargar presupuesto</button>
+              <button onClick={() => setPresupuesto(true)} className="rounded-xl bg-[var(--brand-400)] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[var(--brand)] max-sm:min-h-11">Cargar presupuesto</button>
             </div>
           )) : <Esqueleto alto="h-32" />}
         </Tarjeta>
@@ -268,7 +268,7 @@ function Kpi({ titulo, valor, pie, color, destacado, href, onClick }: {
       {pie ? <p className="mt-1 text-[11px] text-slate-500">{pie}</p> : null}
     </>
   );
-  const cls = `block min-w-0 rounded-2xl border px-3 py-3 text-left transition sm:px-4 ${destacado ? "border-[#4FAEB2]/40 bg-[#4FAEB2]/5 max-sm:col-span-2" : "border-slate-200 bg-white"} ${href || onClick ? "hover:border-[#4FAEB2]/60 hover:shadow-sm active:bg-slate-50" : ""}`;
+  const cls = `block min-w-0 rounded-2xl border px-3 py-3 text-left transition sm:px-4 ${destacado ? "border-[var(--brand-400)]/40 bg-[var(--brand-400)]/5 max-sm:col-span-2" : "border-slate-200 bg-white"} ${href || onClick ? "hover:border-[var(--brand-400)]/60 hover:shadow-sm active:bg-slate-50" : ""}`;
   if (href) return <Link href={href} className={cls}>{cuerpo}</Link>;
   if (onClick) return <button onClick={onClick} className={cls}>{cuerpo}</button>;
   return <div className={cls}>{cuerpo}</div>;
@@ -306,7 +306,7 @@ function BloquePresupuesto({ previsto, gastado, onEditar }: { previsto: number; 
           <dd className={`font-semibold tabular-nums ${excedido ? "text-rose-600" : "text-emerald-700"}`}>{gs(Math.abs(previsto - gastado))}</dd>
         </div>
       </dl>
-      <button onClick={onEditar} className="inline-flex items-center text-xs font-semibold text-[#3F8E91] hover:underline max-sm:min-h-11">Editar presupuesto</button>
+      <button onClick={onEditar} className="inline-flex items-center text-xs font-semibold text-[var(--brand)] hover:underline max-sm:min-h-11">Editar presupuesto</button>
     </div>
   );
 }

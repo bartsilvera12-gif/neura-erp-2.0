@@ -55,7 +55,7 @@ function duracion(inicio: string, fin: string): string {
 
 /** Paleta estable por nombre, para que cada persona conserve su color. */
 const AVATARES = [
-  "bg-[#4FAEB2]/15 text-[#2F6E71]",
+  "bg-[var(--brand-400)]/15 text-[var(--brand-700)]",
   "bg-violet-500/15 text-violet-700",
   "bg-amber-500/20 text-amber-700",
   "bg-emerald-600/15 text-emerald-700",
@@ -187,9 +187,9 @@ export default function CitaDetalleModal({
 
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5">
           {/* Fecha y hora: hoja de calendario con el día + rango grande con la duración. */}
-          <div className="flex items-center gap-4 rounded-2xl border border-[#4FAEB2]/25 bg-gradient-to-br from-[#4FAEB2]/[0.07] via-white to-white p-3.5">
-            <div className="flex w-14 shrink-0 flex-col overflow-hidden rounded-xl border border-[#4FAEB2]/30 bg-white text-center shadow-sm">
-              <span className="bg-[#3F8E91] py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">{fmtMes(cita.inicio_at)}</span>
+          <div className="flex items-center gap-4 rounded-2xl border border-[var(--brand-400)]/25 bg-gradient-to-br from-[var(--brand-400)]/[0.07] via-white to-white p-3.5">
+            <div className="flex w-14 shrink-0 flex-col overflow-hidden rounded-xl border border-[var(--brand-400)]/30 bg-white text-center shadow-sm">
+              <span className="bg-[var(--brand)] py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white">{fmtMes(cita.inicio_at)}</span>
               <span className="py-1 text-xl font-bold leading-none tabular-nums text-slate-900">{fmtNumDia(cita.inicio_at)}</span>
             </div>
             <div className="min-w-0 flex-1">
@@ -198,7 +198,7 @@ export default function CitaDetalleModal({
               <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-lg font-semibold tabular-nums tracking-tight text-slate-900">
                 {fmtHora(cita.inicio_at)} – {fmtHora(cita.fin_at)}
                 {dur ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-[#4FAEB2]/12 px-2 py-0.5 text-[11px] font-semibold text-[#2F6E71]">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--brand-400)]/12 px-2 py-0.5 text-[11px] font-semibold text-[var(--brand-700)]">
                     <Clock className="h-3 w-3" aria-hidden="true" />
                     {dur}
                   </span>
@@ -223,7 +223,7 @@ export default function CitaDetalleModal({
                       </span>
                       <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-slate-800">{nombre}</span>
                       {i === 0 && responsables.length > 1 ? (
-                        <span className="shrink-0 rounded-md bg-[#4FAEB2]/12 px-1.5 py-0.5 text-[10px] font-semibold text-[#3F8E91]">principal</span>
+                        <span className="shrink-0 rounded-md bg-[var(--brand-400)]/12 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand)]">principal</span>
                       ) : null}
                     </li>
                   );
@@ -235,7 +235,7 @@ export default function CitaDetalleModal({
               <Fila titulo="Cliente / contacto" icono={Building2}>
                 {cliente ? (
                   cita.cliente_id ? (
-                    <Link href={`/clientes/${cita.cliente_id}`} className="text-[13px] font-medium text-slate-800 hover:text-[#3F8E91] hover:underline">
+                    <Link href={`/clientes/${cita.cliente_id}`} className="text-[13px] font-medium text-slate-800 hover:text-[var(--brand)] hover:underline">
                       {cliente}
                     </Link>
                   ) : (
@@ -243,14 +243,14 @@ export default function CitaDetalleModal({
                   )
                 ) : null}
                 {telefono ? (
-                  <a href={`tel:${telefono.replace(/\s+/g, "")}`} className="mt-0.5 flex w-fit items-center gap-1 text-[12px] text-slate-500 hover:text-[#3F8E91]">
+                  <a href={`tel:${telefono.replace(/\s+/g, "")}`} className="mt-0.5 flex w-fit items-center gap-1 text-[12px] text-slate-500 hover:text-[var(--brand)]">
                     <Phone className="h-3 w-3" aria-hidden="true" /> {telefono}
                   </a>
                 ) : null}
                 {cita.cliente_id && tipificacionId ? (
                   <Link
                     href={`/clientes/${cita.cliente_id}/tipificacion#tip-${tipificacionId}`}
-                    className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-[#3F8E91] hover:underline"
+                    className="mt-1 inline-flex items-center gap-1 text-[12px] font-medium text-[var(--brand)] hover:underline"
                   >
                     <ClipboardPen className="h-3.5 w-3.5" /> Ver tipificación
                   </Link>
@@ -265,7 +265,7 @@ export default function CitaDetalleModal({
                     href={cita.ubicacion.trim()}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="break-all text-[13px] font-medium text-[#3F8E91] underline underline-offset-2 hover:text-[#2F6E71]"
+                    className="break-all text-[13px] font-medium text-[var(--brand)] underline underline-offset-2 hover:text-[var(--brand-700)]"
                   >
                     {cita.ubicacion}
                   </a>
@@ -383,7 +383,7 @@ function BtnPri({ children, disabled, onClick }: { children: React.ReactNode; di
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="rounded-lg bg-[#3F8E91] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[#2F6E71] disabled:opacity-50"
+      className="rounded-lg bg-[var(--brand)] px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand-700)] disabled:opacity-50"
     >
       {children}
     </button>

@@ -12,14 +12,15 @@ import { Select } from "@/components/Select";
 import { HojaInferior } from "@/components/HojaInferior";
 import { useEsMovil } from "@/lib/ui/responsive";
 import { buscar } from "@/lib/busqueda";
+import { clienteConfig } from "@/cliente.config";
 
-export const ACENTO = "#4FAEB2";
-export const ACENTO_OSC = "#2F6E71";
+export const ACENTO = clienteConfig.color;
+export const ACENTO_OSC = oscurecer(clienteConfig.color);
 
 export type Tono = "turquesa" | "celeste" | "azul" | "violeta" | "ambar" | "naranja" | "verde" | "rosa" | "pizarra" | "indigo";
 
 export const TONOS: Record<Tono, { suave: string; texto: string; borde: string; solido: string; hex: string }> = {
-  turquesa: { suave: "bg-[#4FAEB2]/12", texto: "text-[#2F6E71]", borde: "border-[#4FAEB2]/30", solido: "bg-[#4FAEB2]", hex: "#4FAEB2" },
+  turquesa: { suave: "bg-[var(--brand-400)]/12", texto: "text-[var(--brand-700)]", borde: "border-[var(--brand-400)]/30", solido: "bg-[var(--brand-400)]", hex: clienteConfig.color },
   celeste: { suave: "bg-sky-100", texto: "text-sky-700", borde: "border-sky-200", solido: "bg-sky-500", hex: "#0ea5e9" },
   azul: { suave: "bg-blue-100", texto: "text-blue-700", borde: "border-blue-200", solido: "bg-blue-500", hex: "#3b82f6" },
   violeta: { suave: "bg-violet-100", texto: "text-violet-700", borde: "border-violet-200", solido: "bg-violet-500", hex: "#8b5cf6" },
@@ -31,7 +32,7 @@ export const TONOS: Record<Tono, { suave: string; texto: string; borde: string; 
   indigo: { suave: "bg-indigo-100", texto: "text-indigo-700", borde: "border-indigo-200", solido: "bg-indigo-500", hex: "#6366f1" },
 };
 
-export const PALETA_TIPOS = ["#4FAEB2", "#8b5cf6", "#f59e0b", "#0ea5e9", "#f43f5e", "#10b981", "#6366f1"];
+export const PALETA_TIPOS = [clienteConfig.color, "#8b5cf6", "#f59e0b", "#0ea5e9", "#f43f5e", "#10b981", "#6366f1"];
 
 export const TONO_ESTADO: Record<string, Tono> = {
   pendiente: "pizarra",
@@ -47,7 +48,7 @@ export const TONO_ESTADO: Record<string, Tono> = {
 export const TONO_AREA: Record<string, Tono> = { Técnico: "celeste", QA: "violeta", Admin: "ambar", Equipo: "pizarra" };
 
 export const claseInput =
-  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition focus:border-[#4FAEB2] focus:outline-none focus:ring-4 focus:ring-[#4FAEB2]/15";
+  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 placeholder:text-slate-400 shadow-[0_1px_2px_rgba(15,23,42,0.03)] transition focus:border-[var(--brand-400)] focus:outline-none focus:ring-4 focus:ring-[var(--brand-400)]/15";
 
 export const claseEtiqueta = "mb-1.5 block text-[12px] font-semibold text-slate-600";
 
@@ -156,8 +157,8 @@ export function TarjetaViva({ children, className = "" }: { children: ReactNode;
 type VarianteBoton = "primario" | "secundario" | "fantasma" | "peligro";
 
 const BOTON: Record<VarianteBoton, string> = {
-  primario: "bg-[#4FAEB2] text-white hover:bg-[#439A9E] border border-transparent shadow-[0_6px_16px_-6px_rgba(79,174,178,0.75)] active:translate-y-px",
-  secundario: "bg-white text-slate-700 border border-slate-200 hover:border-[#4FAEB2]/50 hover:bg-[#4FAEB2]/5 hover:text-[#2F6E71]",
+  primario: "bg-[var(--brand-400)] text-white hover:bg-[#439A9E] border border-transparent shadow-[0_6px_16px_-6px_rgba(79,174,178,0.75)] active:translate-y-px",
+  secundario: "bg-white text-slate-700 border border-slate-200 hover:border-[var(--brand-400)]/50 hover:bg-[var(--brand-400)]/5 hover:text-[var(--brand-700)]",
   fantasma: "bg-transparent text-slate-600 border border-transparent hover:bg-slate-100",
   peligro: "bg-white text-rose-600 border border-rose-200 hover:bg-rose-50",
 };
@@ -304,7 +305,7 @@ export function Interruptor({ activo, onCambio, etiqueta, disabled }: { activo: 
       aria-label={etiqueta}
       disabled={disabled}
       onClick={() => onCambio(!activo)}
-      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50 ${activo ? "bg-[#4FAEB2]" : "bg-slate-300"}`}
+      className={`relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:opacity-50 ${activo ? "bg-[var(--brand-400)]" : "bg-slate-300"}`}
     >
       <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${activo ? "left-[18px]" : "left-0.5"}`} />
     </button>
@@ -333,7 +334,7 @@ export function Desplegable({
 
 export function EnlaceMiga({ href, children }: { href: string; children: ReactNode }) {
   return (
-    <Link href={href} className="font-medium text-slate-500 no-underline hover:text-[#2F6E71]">
+    <Link href={href} className="font-medium text-slate-500 no-underline hover:text-[var(--brand-700)]">
       {children}
     </Link>
   );
@@ -451,7 +452,7 @@ export function SelectorBuscable({
                     aria-selected={sel}
                     onMouseEnter={() => setActivo(i)}
                     onClick={() => elegir(o.value)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] max-sm:min-h-12 max-sm:px-3 max-sm:text-[15px] ${i === activo ? "bg-slate-50" : ""} ${sel ? "font-semibold text-[#2F6E71]" : "text-slate-700"}`}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] max-sm:min-h-12 max-sm:px-3 max-sm:text-[15px] ${i === activo ? "bg-slate-50" : ""} ${sel ? "font-semibold text-[var(--brand-700)]" : "text-slate-700"}`}
                   >
                     {avatares && o.value ? <Avatar nombre={o.label} tam={22} tono={o.tono} /> : null}
                     <span className="min-w-0 flex-1 truncate">{o.label}</span>
@@ -511,7 +512,7 @@ export function SelectorBuscable({
                     aria-selected={sel}
                     onMouseEnter={() => setActivo(i)}
                     onClick={() => elegir(o.value)}
-                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] max-sm:min-h-12 max-sm:px-3 max-sm:text-[15px] ${i === activo ? "bg-slate-50" : ""} ${sel ? "font-semibold text-[#2F6E71]" : "text-slate-700"}`}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] max-sm:min-h-12 max-sm:px-3 max-sm:text-[15px] ${i === activo ? "bg-slate-50" : ""} ${sel ? "font-semibold text-[var(--brand-700)]" : "text-slate-700"}`}
                   >
                     {avatares && o.value ? <Avatar nombre={o.label} tam={22} tono={o.tono} /> : null}
                     <span className="min-w-0 flex-1 truncate">{o.label}</span>

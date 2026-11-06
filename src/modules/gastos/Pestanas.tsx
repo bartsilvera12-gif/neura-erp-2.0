@@ -22,8 +22,8 @@ export function PestanasGastos() {
         <ArrowLeft className="h-3.5 w-3.5" /> Gastos empresariales
       </Link>
       <div className="flex items-center gap-2 max-md:hidden">
-        <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4FAEB2]">Gastos empresariales</p>
+        <span aria-hidden className="inline-block h-2 w-2 rounded-full bg-[var(--brand-400)] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-400)]">Gastos empresariales</p>
       </div>
     </div>
   );

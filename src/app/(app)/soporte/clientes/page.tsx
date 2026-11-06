@@ -85,11 +85,11 @@ export default function SoporteClientesPage() {
                 </thead>
                 <tbody>
                   {visibles.map((f) => (
-                    <tr key={f.cliente_id} onClick={() => ir(f.cliente_id)} className="group cursor-pointer border-b border-slate-100 last:border-0 hover:bg-[#4FAEB2]/[0.04]">
+                    <tr key={f.cliente_id} onClick={() => ir(f.cliente_id)} className="group cursor-pointer border-b border-slate-100 last:border-0 hover:bg-[var(--brand-400)]/[0.04]">
                       <td className="px-5 py-3">
                         <span className="flex items-center gap-2.5 font-semibold text-slate-800">
                           <Avatar nombre={f.cliente_nombre} tam={28} />
-                          <Link href={`/clientes/${f.cliente_id}`} onClick={(e) => e.stopPropagation()} className="text-slate-800 no-underline group-hover:text-[#2F6E71] hover:underline" title="Abrir la ficha del cliente">
+                          <Link href={`/clientes/${f.cliente_id}`} onClick={(e) => e.stopPropagation()} className="text-slate-800 no-underline group-hover:text-[var(--brand-700)] hover:underline" title="Abrir la ficha del cliente">
                             {f.cliente_nombre}
                           </Link>
                         </span>
@@ -108,7 +108,7 @@ export default function SoporteClientesPage() {
                       </td>
                       <td className="max-w-[280px] px-3 py-3">
                         {f.ultimo ? (
-                          <Link href={`/soporte/tickets/${f.ultimo.id}`} onClick={(e) => e.stopPropagation()} className="block truncate text-slate-700 no-underline hover:text-[#2F6E71]">
+                          <Link href={`/soporte/tickets/${f.ultimo.id}`} onClick={(e) => e.stopPropagation()} className="block truncate text-slate-700 no-underline hover:text-[var(--brand-700)]">
                             <span className="tabular-nums text-slate-400">{numeroTicket(f.ultimo.numero)}</span> {f.ultimo.asunto}
                           </Link>
                         ) : (

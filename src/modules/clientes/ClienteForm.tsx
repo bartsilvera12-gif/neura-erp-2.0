@@ -115,7 +115,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
       pie={
         <>
           <button type="button" onClick={onClose} className={BTN_SECUNDARIO}>Cancelar</button>
-          <button type="submit" form="cli-form" disabled={busy || !f.nombre.trim() || !f.documento.trim() || !f.telefono.trim()} className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none" style={busy || !f.nombre.trim() || !f.documento.trim() || !f.telefono.trim() ? undefined : { backgroundColor: BRAND }}>
+          <button type="submit" form="cli-form" disabled={busy || !f.nombre.trim() || !f.documento.trim() || !f.telefono.trim()} className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[var(--brand-400)]/20 transition hover:brightness-95 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none" style={busy || !f.nombre.trim() || !f.documento.trim() || !f.telefono.trim() ? undefined : { backgroundColor: BRAND }}>
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {busy ? "Guardando…" : editando ? "Guardar cambios" : "Guardar cliente"}
           </button>
@@ -213,7 +213,7 @@ export function ClienteForm({ cliente, onClose, onSaved }: { cliente?: ClienteFi
 
 /** Cuerpo scrolleable del marco (fondo gris con los bloques en tarjetas). */
 export const CUERPO = "min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain bg-slate-50/50 px-3 py-4 sm:space-y-5 sm:px-6 sm:py-5";
-export const BTN_SECUNDARIO = "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50";
+export const BTN_SECUNDARIO = "rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[var(--brand-400)]/60 hover:text-[var(--brand-400)] disabled:opacity-50";
 
 /**
  * Marco del modal de cliente (lo comparten el formulario y la vista de datos): panel con
@@ -230,22 +230,22 @@ export function MarcoCliente({ onClose, kicker, titulo, subtitulo, extra, pie, c
         role="dialog"
         aria-modal="true"
         aria-labelledby="cli-form-titulo"
-        className={`relative flex w-full max-w-4xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15`}
+        className={`relative flex w-full max-w-4xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[var(--brand-400)]/10 ring-1 ring-[var(--brand-400)]/15`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
       >
-        <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
-        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
+        <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--brand-400)] via-[var(--brand-400)]/80 to-[var(--brand-400)]/40" />
+        <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[var(--brand-400)]/5 px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <span aria-hidden="true" className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4FAEB2]">{kicker}</p>
+              <span aria-hidden="true" className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--brand-400)] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-400)]">{kicker}</p>
             </div>
             <h2 id="cli-form-titulo" className="mt-1 truncate text-xl font-semibold sm:text-2xl tracking-tight text-slate-900">{titulo}</h2>
             {subtitulo ? <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">{subtitulo}</p> : null}
             {extra}
           </div>
           <button type="button" onClick={onClose} disabled={!onClose} aria-label="Cerrar"
-            className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
+            className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition-colors hover:border-[var(--brand-400)]/60 hover:text-[var(--brand-400)] disabled:opacity-50">
             <X className="h-4 w-4" />
           </button>
         </div>

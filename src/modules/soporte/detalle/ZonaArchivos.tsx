@@ -66,14 +66,14 @@ export default function ZonaArchivos({
           if (!deshabilitada && e.dataTransfer.files.length) agregar(e.dataTransfer.files);
         }}
         className={`flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed text-center transition ${compacta ? "px-4 py-4" : "px-4 py-8"} ${
-          sobre ? "scale-[1.01] border-[#4FAEB2] bg-[#4FAEB2]/10" : "border-[#4FAEB2]/30 bg-gradient-to-br from-[#4FAEB2]/[0.05] to-sky-50/50 hover:border-[#4FAEB2]/60"
+          sobre ? "scale-[1.01] border-[var(--brand-400)] bg-[var(--brand-400)]/10" : "border-[var(--brand-400)]/30 bg-gradient-to-br from-[var(--brand-400)]/[0.05] to-sky-50/50 hover:border-[var(--brand-400)]/60"
         } ${deshabilitada ? "cursor-not-allowed opacity-60" : ""}`}
       >
-        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[#4FAEB2] shadow-[0_6px_16px_-8px_rgba(79,174,178,0.8)]">
+        <span className="grid h-11 w-11 place-items-center rounded-2xl bg-white text-[var(--brand-400)] shadow-[0_6px_16px_-8px_rgba(79,174,178,0.8)]">
           <UploadCloud className="h-5 w-5" aria-hidden />
         </span>
         <p className="mt-2 text-[13px] font-semibold text-slate-700">
-          <span className="[@media(pointer:coarse)]:hidden">Arrastrá archivos aquí o </span><span className="text-[#2F6E71] underline decoration-[#4FAEB2]/40 underline-offset-2"><span className="[@media(pointer:coarse)]:hidden">elegilos</span><span className="hidden [@media(pointer:coarse)]:inline">Tocá para elegir archivos</span></span>
+          <span className="[@media(pointer:coarse)]:hidden">Arrastrá archivos aquí o </span><span className="text-[var(--brand-700)] underline decoration-[var(--brand-400)]/40 underline-offset-2"><span className="[@media(pointer:coarse)]:hidden">elegilos</span><span className="hidden [@media(pointer:coarse)]:inline">Tocá para elegir archivos</span></span>
         </p>
         <p className="mt-0.5 text-[11.5px] text-slate-400">Imágenes, videos, PDF, Excel, Word y cualquier otro archivo (máx. {tamanoLegible(ARCHIVO_MAX_BYTES)} c/u)</p>
         <input

@@ -103,7 +103,7 @@ export function Historial({ usuarioId, perfilId, recarga = 0 }: { usuarioId?: st
       <span className="absolute bottom-1 left-[3px] top-1 w-px bg-slate-200" aria-hidden />
       {eventos.map((ev) => (
         <li key={ev.id} className="relative">
-          <span className="absolute -left-4 top-1.5 h-[7px] w-[7px] rounded-full ring-2 ring-white" style={{ backgroundColor: ev.accion === "desactivado" || ev.accion === "eliminado" ? "#e11d48" : "#4FAEB2" }} aria-hidden />
+          <span className="absolute -left-4 top-1.5 h-[7px] w-[7px] rounded-full ring-2 ring-white" style={{ backgroundColor: ev.accion === "desactivado" || ev.accion === "eliminado" ? "#e11d48" : "var(--brand)" }} aria-hidden />
           <p className="text-[13px] text-slate-800">
             <span className="font-semibold">{ev.actor_nombre ?? "Sistema"}</span>{" "}
             <span className="text-slate-600">{(ACCIONES[ev.accion] ?? ev.accion).toLowerCase()}</span>

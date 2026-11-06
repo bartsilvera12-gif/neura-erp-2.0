@@ -116,7 +116,7 @@ export function ModalTicket({ conv, contacto, onCerrar, onAbrirFicha }: { conv: 
                     key={c.codigo}
                     type="button"
                     onClick={() => setClas(c.codigo)}
-                    className={`rounded-xl border px-3 py-2 text-left text-xs transition-colors ${clas === c.codigo ? "border-[#4FAEB2] bg-[#4FAEB2]/10 text-[#2F6E71]" : "border-slate-200 hover:bg-slate-50"}`}
+                    className={`rounded-xl border px-3 py-2 text-left text-xs transition-colors ${clas === c.codigo ? "border-[var(--brand-400)] bg-[var(--brand-400)]/10 text-[var(--brand-700)]" : "border-slate-200 hover:bg-slate-50"}`}
                   >
                     <span className="block font-semibold">{c.nombre}</span>
                     {c.sla_horas ? <span className="text-[11px] text-slate-500">SLA {c.sla_horas} h laborales</span> : null}

@@ -82,7 +82,7 @@ export function PerfilTributario({ clienteId, tipoCliente }: { clienteId: string
       <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 sm:px-5 sm:py-3.5">
           <div className="flex items-center gap-2.5">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#4FAEB2]/12 text-[#3F8E91]"><Landmark className="h-3.5 w-3.5" /></span>
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--brand-400)]/12 text-[var(--brand)]"><Landmark className="h-3.5 w-3.5" /></span>
             <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">Perfil tributario</h3>
             <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${activo ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-500"}`}>{activo ? "Activo" : "Sin perfil"}</span>
           </div>
@@ -117,7 +117,7 @@ export function PerfilTributario({ clienteId, tipoCliente }: { clienteId: string
             className={`flex w-full max-w-2xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl`}>
             <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-6">
               <div className="min-w-0">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4FAEB2]">Perfil tributario</p>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-400)]">Perfil tributario</p>
                 <h2 id="perfil-trib-titulo" className="mt-0.5 text-lg font-semibold text-slate-900">Datos tributarios del cliente</h2>
               </div>
               <button type="button" onClick={() => setAbierto(false)} disabled={busy} aria-label="Cerrar" className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm hover:text-[var(--brand)] disabled:opacity-50">

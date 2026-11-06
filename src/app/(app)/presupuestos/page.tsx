@@ -272,8 +272,8 @@ function Lista() {
             minAncho={880}
             vacio={vacio}
             claseTabla="w-full text-left text-sm"
-            claseThead="border-b-2 border-[#4FAEB2]/15 bg-[#4FAEB2]/[0.05]"
-            thBase="whitespace-nowrap px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-[#3F8E91] first:pl-5 last:pr-5"
+            claseThead="border-b-2 border-[var(--brand-400)]/15 bg-[var(--brand-400)]/[0.05]"
+            thBase="whitespace-nowrap px-3 py-3 text-[11px] font-bold uppercase tracking-wider text-[var(--brand)] first:pl-5 last:pr-5"
             tdBase="px-3 py-3 first:pl-5 last:pr-5"
             columnas={[
               {

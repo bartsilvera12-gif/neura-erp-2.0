@@ -31,7 +31,7 @@ import type { Modulo } from "@/modules/types";
 // menú QR, sorteos y tickets/comprobantes.
 const LOGO = "/brand/zentra-logo-360.webp";
 
-const ACCENT = "#7dcfd2";
+const ACCENT = "var(--zentra-accent)";
 
 export type UsuarioMarco = { email?: string | null; nombre?: string | null; rol?: string; perfil?: { nombre?: string | null } | null };
 
@@ -156,7 +156,7 @@ export function MarcoApp({
       >
         <div
           className={`relative flex shrink-0 items-center border-b ${collapsed ? "h-16 justify-center gap-1 px-1" : "h-28 justify-center px-3"}`}
-          style={{ borderColor: "var(--zentra-sidebar-border)", backgroundColor: "rgba(16,74,78,0.35)" }}
+          style={{ borderColor: "var(--zentra-sidebar-border)", backgroundColor: "color-mix(in srgb, var(--brand) 22%, transparent)" }}
         >
           <Logo collapsed={collapsed} />
           <button
@@ -473,7 +473,7 @@ function NavItem({
         <>
           <span className="flex-1 truncate">{label}</span>
           {badge ? (
-            <span className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: "rgba(125,207,210,0.18)", color: ACCENT }}>{badge}</span>
+            <span className="rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: "color-mix(in srgb, var(--zentra-accent) 20%, transparent)", color: ACCENT }}>{badge}</span>
           ) : null}
         </>
       ) : null}
@@ -537,7 +537,7 @@ function CajonMenu({ abierto, onCerrar, children }: { abierto: boolean; onCerrar
         className={`pt-safe absolute inset-y-0 left-0 flex w-[min(300px,86vw)] flex-col text-slate-300 shadow-2xl ${arrastre ? "" : "transition-transform duration-[250ms] ease-[cubic-bezier(0.16,1,0.3,1)]"}`}
         style={{ backgroundColor: "var(--zentra-sidebar)", transform: abierto ? `translateX(${arrastre}px)` : "translateX(-100%)" }}
       >
-        <div className="flex h-16 shrink-0 items-center justify-between border-b pl-4 pr-2" style={{ borderColor: "var(--zentra-sidebar-border)", backgroundColor: "rgba(16,74,78,0.35)" }}>
+        <div className="flex h-16 shrink-0 items-center justify-between border-b pl-4 pr-2" style={{ borderColor: "var(--zentra-sidebar-border)", backgroundColor: "color-mix(in srgb, var(--brand) 22%, transparent)" }}>
           <Link href="/" aria-label="Inicio" className="flex items-center">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={LOGO} alt="Zentra" width={360} height={185} decoding="async" className="h-10 w-auto object-contain" />

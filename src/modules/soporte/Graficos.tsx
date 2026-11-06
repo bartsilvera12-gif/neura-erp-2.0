@@ -5,6 +5,7 @@
  * etiqueta arriba y una dona con conic-gradient. Mismos colores que el actual.
  */
 import { PALETA_TIPOS } from "@/modules/soporte/ui";
+import { clienteConfig } from "@/cliente.config";
 
 export function GraficoBarras({
   datos,
@@ -26,7 +27,7 @@ export function GraficoBarras({
           <span key={f} className="pointer-events-none absolute inset-x-0 border-t border-dashed border-slate-100" style={{ bottom: `${f * 88}%` }} aria-hidden />
         ))}
         {datos.map((d) => {
-          const color = d.color ?? "#4FAEB2";
+          const color = d.color ?? clienteConfig.color;
           const h = (d.valor / max) * 88;
           return (
             <div key={d.clave} className="group relative flex h-full flex-1 flex-col items-center justify-end" title={titulo ? titulo(d) : `${d.etiqueta}: ${d.valor}`}>

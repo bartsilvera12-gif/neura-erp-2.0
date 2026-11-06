@@ -51,8 +51,8 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
   const claseBurbuja = nota
     ? "bg-amber-50 text-amber-950 border border-amber-200 shadow-sm rounded-br-md"
     : mio
-      ? "bg-[#4FAEB2] text-white rounded-br-md shadow-md shadow-[#4FAEB2]/25 ring-1 ring-white/15"
-      : "bg-white text-slate-800 rounded-bl-md border border-slate-200 shadow-sm border-l-[3px] border-l-[#4FAEB2]/55";
+      ? "bg-[var(--brand-400)] text-white rounded-br-md shadow-md shadow-[var(--brand-400)]/25 ring-1 ring-white/15"
+      : "bg-white text-slate-800 rounded-bl-md border border-slate-200 shadow-sm border-l-[3px] border-l-[var(--brand-400)]/55";
   const tenue = nota ? "text-amber-700/80" : mio ? "text-sky-100" : "text-slate-400";
   const claro = mio && !nota;
   const archivo = nombreArchivo(m);
@@ -122,7 +122,7 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
             onClick={() => cita.id && onIrA(cita.id)}
             title={cita.id ? "Ir al mensaje citado" : undefined}
             className={`mb-1.5 block w-full rounded-lg border-l-[3px] px-2 py-1 text-left text-[12px] transition-colors enabled:hover:brightness-95 ${
-              claro ? "border-white/60 bg-white/15 text-white/90" : "border-[#4FAEB2] bg-slate-50 text-slate-600"
+              claro ? "border-white/60 bg-white/15 text-white/90" : "border-[var(--brand-400)] bg-slate-50 text-slate-600"
             }`}
           >
             {cita.from_me == null ? null : (
@@ -173,7 +173,7 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
           <div className="space-y-1.5">
             <div className={`rounded-xl border px-3 py-2.5 ${claro ? "border-white/30 bg-white/20 text-white" : "border-slate-200 bg-slate-50 text-slate-900"}`}>
               <div className="flex items-start gap-3">
-                <FileText className={`h-7 w-7 shrink-0 ${claro ? "text-white" : "text-[#4FAEB2]"}`} aria-hidden />
+                <FileText className={`h-7 w-7 shrink-0 ${claro ? "text-white" : "text-[var(--brand-400)]"}`} aria-hidden />
                 <span className="min-w-0 flex-1">
                   <span className={`block text-[10px] font-bold uppercase tracking-wide ${claro ? "text-sky-100" : "text-slate-500"}`}>
                     Documento{m.media_size ? ` · ${tamanoLegible(m.media_size)}` : ""}
@@ -187,7 +187,7 @@ function Burbuja({ m, url, cita, onResponder, onVerImagen, onIrA, onReintentar, 
                     type="button"
                     onClick={() => void descargar(url, archivo)}
                     className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-colors [@media(pointer:coarse)]:min-h-10 [@media(pointer:coarse)]:px-3.5 [@media(pointer:coarse)]:text-xs ${
-                      claro ? "bg-white/25 text-white hover:bg-white/35" : "bg-[#4FAEB2] text-white hover:bg-[#3F8E91]"
+                      claro ? "bg-white/25 text-white hover:bg-white/35" : "bg-[var(--brand-400)] text-white hover:bg-[var(--brand)]"
                     }`}
                   >
                     <Download className="h-3.5 w-3.5" aria-hidden /> Descargar

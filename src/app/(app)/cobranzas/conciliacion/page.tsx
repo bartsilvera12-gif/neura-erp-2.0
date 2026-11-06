@@ -35,7 +35,7 @@ const TABS: { key: EstadoCobroPendiente | ""; label: string }[] = [
   { key: "anulado", label: "Anulado" },
   { key: "", label: "Todas" },
 ];
-const CONTROL = "rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-600 outline-none focus:ring-2 focus:ring-[#4FAEB2]/40";
+const CONTROL = "rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-600 outline-none focus:ring-2 focus:ring-[var(--brand-400)]/40";
 const fechaHora = (iso: string) => new Date(iso).toLocaleString("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const fmt = (v: number | string) => Math.round(Number(v) || 0).toLocaleString("es-PY");
 
@@ -234,7 +234,7 @@ function Conciliacion() {
       celda: (c) => (
         <>
           {c.numero_operacion}
-          {c.referencia_generada ? <span className="block font-sans text-[10px] text-[#3F8E91]">generada</span> : null}
+          {c.referencia_generada ? <span className="block font-sans text-[10px] text-[var(--brand)]">generada</span> : null}
         </>
       ),
     },
@@ -288,7 +288,7 @@ function Conciliacion() {
       celda: (c) => (
         <div className="flex flex-wrap items-center justify-end gap-1.5 text-xs">
           {c.comprobante_path ? (
-            <button onClick={() => void verComprobante(c)} className="inline-flex items-center gap-1 rounded px-2 py-1 text-[#3F8E91] hover:bg-slate-100">
+            <button onClick={() => void verComprobante(c)} className="inline-flex items-center gap-1 rounded px-2 py-1 text-[var(--brand)] hover:bg-slate-100">
               <Paperclip className="h-3.5 w-3.5" /> Ver
             </button>
           ) : null}
@@ -329,8 +329,8 @@ function Conciliacion() {
       ) : null}
 
       {analizando ? (
-        <div className="flex items-center gap-3 rounded-lg border border-[#4FAEB2]/30 bg-[#4FAEB2]/5 p-3 text-sm text-[#3F8E91]">
-          <span className="inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-[#4FAEB2]" />
+        <div className="flex items-center gap-3 rounded-lg border border-[var(--brand-400)]/30 bg-[var(--brand-400)]/5 p-3 text-sm text-[var(--brand)]">
+          <span className="inline-block h-2 w-2 shrink-0 animate-pulse rounded-full bg-[var(--brand-400)]" />
           Leyendo el extracto y cruzando contra las transferencias aprobadas{mes ? ` de ${meses.find((m) => m.value === mes)?.label ?? mes}` : ""}…
         </div>
       ) : null}
@@ -342,7 +342,7 @@ function Conciliacion() {
         <ScrollHorizontal claseFila="gap-2" role="tablist" ariaLabel="Estado de la transferencia" dependencias={[estado]}>
           {TABS.map((t) => (
             <button key={t.key || "todas"} type="button" role="tab" aria-selected={estado === t.key} onClick={() => setEstado(t.key)}
-              className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold max-sm:min-h-11 ${estado === t.key ? "bg-[#4FAEB2] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
+              className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-sm font-semibold max-sm:min-h-11 ${estado === t.key ? "bg-[var(--brand-400)] text-white" : "border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"}`}>
               {t.label}
               {conteo(t.key) != null ? <span className={`tabular-nums text-xs ${estado === t.key ? "text-white/80" : "text-slate-400"}`}>({conteo(t.key)})</span> : null}
             </button>
@@ -388,7 +388,7 @@ function Conciliacion() {
             thBase="whitespace-nowrap px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-slate-500"
             tdBase="px-3 py-2"
             // Fila destacada (llegó desde la campanita): resaltada y llevada a la vista.
-            claseFila={(c) => `cobro-${c.id} ${destacado === c.id ? "bg-[#4FAEB2]/[0.07] ring-2 ring-inset ring-[#4FAEB2]/40" : ""}`}
+            claseFila={(c) => `cobro-${c.id} ${destacado === c.id ? "bg-[var(--brand-400)]/[0.07] ring-2 ring-inset ring-[var(--brand-400)]/40" : ""}`}
             vacio={<p className="px-3 py-8 text-center text-sm text-slate-400">{q ? "Sin resultados para la búsqueda." : `Sin transferencias${mes ? " en el mes seleccionado" : ""}.`}</p>}
           />
         )}
@@ -440,7 +440,7 @@ function Conciliacion() {
             <style>{`
               .cb-aprob-card { animation: cbPop .18s ease-out; }
               @keyframes cbPop { from { transform: scale(.9); opacity: 0 } to { transform: scale(1); opacity: 1 } }
-              .cb-spinner { display:block; width:56px; height:56px; border-radius:9999px; border:5px solid rgba(79,174,178,.22); border-top-color:#4FAEB2; animation: cbSpin .7s linear infinite; }
+              .cb-spinner { display:block; width:56px; height:56px; border-radius:9999px; border:5px solid color-mix(in srgb, var(--brand) 22%, transparent); border-top-color:var(--brand); animation: cbSpin .7s linear infinite; }
               @keyframes cbSpin { to { transform: rotate(360deg) } }
               .cb-check { width:56px; height:56px; }
               .cb-check-circle { fill:#22c55e; transform-box: fill-box; transform-origin: center; animation: cbPunch .45s cubic-bezier(.65,0,.45,1); }
@@ -572,16 +572,16 @@ function ModalBancos({ onClose }: { onClose: () => void }) {
                 <li key={b.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-2 text-sm ${b.activo ? "" : "opacity-50"}`}>
                   <span className="min-w-0 flex-1 truncate font-medium text-slate-800 max-sm:basis-full">{b.nombre}</span>
                   <label className="flex items-center gap-1 text-[11px] text-slate-500 max-sm:min-h-11 max-sm:gap-2 max-sm:text-xs" title="No emite N° de operación: se genera una referencia">
-                    <input type="checkbox" checked={b.sin_referencia} onChange={(e) => void cambiar(b, { sin_referencia: e.target.checked })} className="h-3.5 w-3.5 accent-[#4FAEB2]" />
+                    <input type="checkbox" checked={b.sin_referencia} onChange={(e) => void cambiar(b, { sin_referencia: e.target.checked })} className="h-3.5 w-3.5 accent-[var(--brand-400)]" />
                     Sin referencia
                   </label>
                   {b.sin_referencia ? (
                     <input defaultValue={b.prefijo ?? ""} maxLength={6} placeholder="SR" aria-label={`Prefijo de ${b.nombre}`}
                       onBlur={(e) => { const v = e.target.value.trim().toUpperCase(); if (v !== (b.prefijo ?? "")) void cambiar(b, { prefijo: v || null }); }}
-                      className="w-14 rounded-md border border-slate-200 px-1.5 py-0.5 font-mono text-[11px] uppercase outline-none focus:ring-2 focus:ring-[#4FAEB2]/30 max-sm:h-11 max-sm:w-20" />
+                      className="w-14 rounded-md border border-slate-200 px-1.5 py-0.5 font-mono text-[11px] uppercase outline-none focus:ring-2 focus:ring-[var(--brand-400)]/30 max-sm:h-11 max-sm:w-20" />
                   ) : null}
                   <label className="flex items-center gap-1 text-[11px] text-slate-500 max-sm:ml-auto max-sm:min-h-11 max-sm:gap-2 max-sm:text-xs">
-                    <input type="checkbox" checked={b.activo} onChange={(e) => void cambiar(b, { activo: e.target.checked })} className="h-3.5 w-3.5 accent-[#4FAEB2]" />
+                    <input type="checkbox" checked={b.activo} onChange={(e) => void cambiar(b, { activo: e.target.checked })} className="h-3.5 w-3.5 accent-[var(--brand-400)]" />
                     Activo
                   </label>
                 </li>
@@ -593,10 +593,10 @@ function ModalBancos({ onClose }: { onClose: () => void }) {
           <div className="flex flex-wrap items-center gap-2">
             <input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Nuevo banco…" maxLength={60} className={`${CONTROL} min-w-0 flex-1 max-sm:h-11 max-sm:basis-full`} />
             <label className="flex items-center gap-1 text-xs text-slate-500 max-sm:min-h-11 max-sm:gap-2">
-              <input type="checkbox" checked={sinRef} onChange={(e) => setSinRef(e.target.checked)} className="h-3.5 w-3.5 accent-[#4FAEB2]" /> Sin referencia
+              <input type="checkbox" checked={sinRef} onChange={(e) => setSinRef(e.target.checked)} className="h-3.5 w-3.5 accent-[var(--brand-400)]" /> Sin referencia
             </label>
             {sinRef ? <input value={prefijo} onChange={(e) => setPrefijo(e.target.value.toUpperCase())} maxLength={6} placeholder="Prefijo" className={`${CONTROL} w-20 font-mono uppercase max-sm:h-11`} /> : null}
-            <button onClick={() => void agregar()} disabled={busy || nombre.trim().length < 2} className="rounded-lg bg-[#4FAEB2] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 max-sm:ml-auto max-sm:px-5">
+            <button onClick={() => void agregar()} disabled={busy || nombre.trim().length < 2} className="rounded-lg bg-[var(--brand-400)] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[var(--brand)] disabled:opacity-50 max-sm:ml-auto max-sm:px-5">
               {busy ? "Agregando…" : "Agregar"}
             </button>
           </div>

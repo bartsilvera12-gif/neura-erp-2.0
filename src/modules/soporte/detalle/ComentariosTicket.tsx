@@ -122,7 +122,7 @@ export default function ComentariosTicket({ enTarjeta = true }: { enTarjeta?: bo
         </ol>
       )}
 
-      <div ref={finRef} className={`${enTarjeta ? "mt-6" : "mt-4"} space-y-3 rounded-2xl border border-[#4FAEB2]/25 bg-gradient-to-br from-[#4FAEB2]/[0.06] to-white p-4`}>
+      <div ref={finRef} className={`${enTarjeta ? "mt-6" : "mt-4"} space-y-3 rounded-2xl border border-[var(--brand-400)]/25 bg-gradient-to-br from-[var(--brand-400)]/[0.06] to-white p-4`}>
         <textarea
           className={`${claseInput} min-h-24`}
           value={texto}

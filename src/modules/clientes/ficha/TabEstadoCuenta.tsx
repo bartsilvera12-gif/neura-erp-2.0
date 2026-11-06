@@ -142,7 +142,7 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
     {
       key: "numero", titulo: "Número", movil: "titulo", claseTd: "font-mono text-slate-800",
       celda: (v) => (
-        <button type="button" onClick={() => setViendo(v.id)} className="text-[#4FAEB2] hover:underline font-semibold">
+        <button type="button" onClick={() => setViendo(v.id)} className="text-[var(--brand-400)] hover:underline font-semibold">
           {v.numero_control}
         </button>
       ),
@@ -174,12 +174,12 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
     return (
       <div className="flex flex-nowrap items-center justify-end gap-2">
         {it && it.saldo > 0 && it.cxc ? (
-          <button type="button" onClick={() => onRegistrarPago(it.cxc!.id)} className="rounded-lg px-1 text-xs font-medium text-[#4FAEB2] hover:underline max-sm:px-3 max-sm:text-sm max-sm:font-semibold">
+          <button type="button" onClick={() => onRegistrarPago(it.cxc!.id)} className="rounded-lg px-1 text-xs font-medium text-[var(--brand-400)] hover:underline max-sm:px-3 max-sm:text-sm max-sm:font-semibold">
             Registrar pago
           </button>
         ) : null}
         {ver ? (
-          <button type="button" onClick={() => setViendo(v.id)} className="text-xs font-medium text-slate-500 hover:text-[#4FAEB2] hover:underline">
+          <button type="button" onClick={() => setViendo(v.id)} className="text-xs font-medium text-slate-500 hover:text-[var(--brand-400)] hover:underline">
             Ver
           </button>
         ) : null}
@@ -227,7 +227,7 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
           <button
             type="button"
             onClick={() => descargarArchivo(`/api/cobros/${k.id}/pdf`, `recibo-${k.numero_recibo}.pdf`).catch(() => {})}
-            className="text-xs font-medium text-slate-500 hover:text-[#4FAEB2] hover:underline max-sm:rounded-lg max-sm:border max-sm:border-slate-200 max-sm:px-3"
+            className="text-xs font-medium text-slate-500 hover:text-[var(--brand-400)] hover:underline max-sm:rounded-lg max-sm:border max-sm:border-slate-200 max-sm:px-3"
           >
             Recibo
           </button>
@@ -266,7 +266,7 @@ export function TabEstadoCuenta({ clienteId, ventas, recarga, esAdmin, onRegistr
           <button
             type="button"
             onClick={() => onRegistrarPago(null)}
-            className="inline-flex items-center justify-center text-sm font-medium text-[#4FAEB2] hover:text-[#3F8E91] max-sm:min-h-11 max-sm:rounded-lg max-sm:border max-sm:border-[#4FAEB2]/40 max-sm:bg-[#4FAEB2]/10 max-sm:font-semibold"
+            className="inline-flex items-center justify-center text-sm font-medium text-[var(--brand-400)] hover:text-[var(--brand)] max-sm:min-h-11 max-sm:rounded-lg max-sm:border max-sm:border-[var(--brand-400)]/40 max-sm:bg-[var(--brand-400)]/10 max-sm:font-semibold"
           >
             Registrar pago
           </button>

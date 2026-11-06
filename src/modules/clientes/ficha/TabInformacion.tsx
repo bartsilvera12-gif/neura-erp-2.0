@@ -225,7 +225,7 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
         <div className="flex w-full flex-wrap items-center gap-3 sm:w-auto">
           {guardado ? <span className="text-xs font-medium text-emerald-600">Cambios guardados</span> : null}
           <button type="button" onClick={abrir} onMouseEnter={cargarCatalogos} onFocus={cargarCatalogos}
-            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl sm:min-h-0 sm:w-auto px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl sm:min-h-0 sm:w-auto px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[var(--brand-400)]/20 transition hover:brightness-95"
             style={{ backgroundColor: TEAL }}>
             <Pencil className="h-4 w-4" /> Editar información
           </button>
@@ -273,20 +273,20 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
       {abierto ? (
         <CapaModal onClose={busy ? undefined : () => setAbierto(false)} fondo="bg-slate-900/55 backdrop-blur-sm">
           <div role="dialog" aria-modal="true" aria-labelledby="cli-info-titulo"
-            className={`relative flex w-full max-w-4xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15`}
+            className={`relative flex w-full max-w-4xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[var(--brand-400)]/10 ring-1 ring-[var(--brand-400)]/15`}
             style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}>
-            <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
-            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[#4FAEB2]/5 px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
+            <span aria-hidden="true" className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[var(--brand-400)] via-[var(--brand-400)]/80 to-[var(--brand-400)]/40" />
+            <div className="flex shrink-0 items-start justify-between gap-4 border-b border-slate-100 bg-gradient-to-br from-white via-white to-[var(--brand-400)]/5 px-4 pb-4 pt-5 sm:px-6 sm:pb-5 sm:pt-6">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <span aria-hidden="true" className="inline-block h-2 w-2 shrink-0 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#4FAEB2]">Editar</p>
+                  <span aria-hidden="true" className="inline-block h-2 w-2 shrink-0 rounded-full bg-[var(--brand-400)] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--brand-400)]">Editar</p>
                 </div>
                 <h2 id="cli-info-titulo" className="mt-1 truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">{cliente.nombre}</h2>
                 <p className="mt-1 text-[13px] text-slate-500 sm:text-sm">Todos los datos del cliente. La Actividad registra cada cambio.</p>
               </div>
               <button type="button" onClick={() => setAbierto(false)} disabled={busy} aria-label="Cerrar"
-                className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
+                className="rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 shadow-sm transition-colors hover:border-[var(--brand-400)]/60 hover:text-[var(--brand-400)] disabled:opacity-50">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -421,11 +421,11 @@ export function TabInformacion({ cliente, esAdmin, onGuardado }: { cliente: Clie
 
             <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 bg-white px-4 py-3 sm:px-6 sm:py-4 max-sm:[&>button]:flex-1 max-sm:[&>button]:justify-center">
               <button type="button" onClick={() => setAbierto(false)} disabled={busy}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
+                className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:border-[var(--brand-400)]/60 hover:text-[var(--brand-400)] disabled:opacity-50">
                 Cancelar
               </button>
               <button type="submit" form="cli-info-form" disabled={busy}
-                className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[var(--brand-400)]/20 transition hover:brightness-95 disabled:opacity-50"
                 style={{ backgroundColor: TEAL }}>
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {busy ? "Guardando…" : "Guardar cambios"}
               </button>
@@ -441,7 +441,7 @@ function Tarjeta({ titulo, icono: Icono, children, ancho = false }: { titulo: st
   return (
     <section className={`h-full rounded-2xl border border-slate-200 bg-white shadow-sm ${ancho ? "lg:col-span-2" : ""}`}>
       <div className="flex items-center gap-2.5 border-b border-slate-100 px-4 py-3 sm:px-5 sm:py-3.5">
-        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#4FAEB2]/12 text-[#3F8E91]"><Icono className="h-3.5 w-3.5" /></span>
+        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-[var(--brand-400)]/12 text-[var(--brand)]"><Icono className="h-3.5 w-3.5" /></span>
         <h3 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">{titulo}</h3>
       </div>
       <dl className={`grid grid-cols-1 gap-x-6 gap-y-3 px-4 py-3.5 sm:grid-cols-2 sm:gap-y-3.5 sm:px-5 sm:py-4 ${ancho ? "lg:grid-cols-4" : ""}`}>{children}</dl>

@@ -58,7 +58,7 @@ export function ProyectosDeCliente({ clienteId }: { clienteId: string }) {
           type="button"
           onClick={() => void cargar()}
           disabled={cargando}
-          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50"
+          className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors hover:border-[var(--brand-400)]/60 hover:text-[var(--brand-400)] disabled:opacity-50"
         >
           {cargando ? "Actualizando…" : "Actualizar"}
         </button>
@@ -72,7 +72,7 @@ export function ProyectosDeCliente({ clienteId }: { clienteId: string }) {
           <p className="mt-2 text-sm font-medium text-slate-600">Este cliente no tiene proyectos aún</p>
           <p className="mt-1 text-xs text-slate-500">
             Al crear un proyecto en{" "}
-            <Link href="/proyectos" className="font-semibold text-[#4FAEB2] hover:underline">
+            <Link href="/proyectos" className="font-semibold text-[var(--brand-400)] hover:underline">
               Proyectos
             </Link>{" "}
             y elegir este cliente, aparecerá acá.
@@ -91,7 +91,7 @@ export function ProyectosDeCliente({ clienteId }: { clienteId: string }) {
                 <button
                   type="button"
                   onClick={() => setAbierto(p.id)}
-                  className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:bg-slate-50/60"
+                  className="block w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm transition-colors hover:border-[var(--brand-400)]/60 hover:bg-slate-50/60"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">

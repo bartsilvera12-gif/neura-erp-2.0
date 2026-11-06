@@ -6,20 +6,20 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Globe, MessageCircle, Send, X, type LucideIcon } from "lucide-react";
 import { ventanaAbierta, type EstadoEntrega } from "@/modules/conversaciones/dominio";
 
-export const TURQUESA = "#4FAEB2";
-export const TURQUESA_OSCURO = "#3F8E91";
+export const TURQUESA = "var(--brand)";
+export const TURQUESA_OSCURO = "var(--brand-600)";
 
 export function tabClass(activo: boolean) {
   return `px-3.5 py-1.5 text-xs font-semibold rounded-xl transition-all inline-flex items-center gap-1.5 ${
-    activo ? "bg-[#4FAEB2] text-white shadow-sm shadow-[#4FAEB2]/25" : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+    activo ? "bg-[var(--brand-400)] text-white shadow-sm shadow-[var(--brand-400)]/25" : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"
   }`;
 }
 
 export const claseCampo =
-  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 transition-colors placeholder:text-slate-400 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20";
-export const claseEtiqueta = "mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[#2F6E71]";
+  "w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 transition-colors placeholder:text-slate-400 focus:border-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]/20";
+export const claseEtiqueta = "mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-700)]";
 export const botonPrimario =
-  "rounded-xl bg-[#4FAEB2] px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/25 transition-colors hover:bg-[#3F8E91] disabled:opacity-50 max-sm:min-h-11";
+  "rounded-xl bg-[var(--brand-400)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[var(--brand-400)]/25 transition-colors hover:bg-[var(--brand)] disabled:opacity-50 max-sm:min-h-11";
 export const botonSecundario =
   "rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50 max-sm:min-h-11";
 
@@ -87,7 +87,7 @@ export function Avatar({ letra, conNombre, grande }: { letra: string; conNombre:
     <span
       aria-hidden="true"
       className={`flex shrink-0 items-center justify-center rounded-full font-semibold ${grande ? "h-10 w-10 text-sm ring-2 ring-white shadow-sm" : "h-9 w-9 text-[12px]"} ${
-        conNombre ? "border border-[#4FAEB2]/30 bg-[#4FAEB2]/12 text-[#3F8E91]" : "border border-slate-200 bg-slate-100 text-slate-500"
+        conNombre ? "border border-[var(--brand-400)]/30 bg-[var(--brand-400)]/12 text-[var(--brand)]" : "border border-slate-200 bg-slate-100 text-slate-500"
       }`}
     >
       {letra}
@@ -174,11 +174,11 @@ export function Ventana({
       <div
         role="dialog"
         aria-modal="true"
-        className={`flex ${ALTO_MAX_MODAL} w-full ${ancho} flex-col overflow-hidden rounded-2xl border border-[#4FAEB2]/25 bg-white shadow-2xl shadow-[#2F6E71]/15`}
+        className={`flex ${ALTO_MAX_MODAL} w-full ${ancho} flex-col overflow-hidden rounded-2xl border border-[var(--brand-400)]/25 bg-white shadow-2xl shadow-[var(--brand-700)]/15`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
       >
-        <div className="flex shrink-0 items-start gap-3 border-b border-[#4FAEB2]/20 bg-gradient-to-r from-[#4FAEB2]/14 via-[#4FAEB2]/6 to-transparent px-4 py-3 sm:px-5 sm:py-4">
-          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#4FAEB2]/15 text-[#2F6E71]">
+        <div className="flex shrink-0 items-start gap-3 border-b border-[var(--brand-400)]/20 bg-gradient-to-r from-[var(--brand-400)]/14 via-[var(--brand-400)]/6 to-transparent px-4 py-3 sm:px-5 sm:py-4">
+          <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-400)]/15 text-[var(--brand-700)]">
             <Icono className="h-5 w-5" />
           </span>
           <div className="min-w-0 flex-1">

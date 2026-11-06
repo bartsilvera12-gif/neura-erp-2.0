@@ -331,7 +331,7 @@ function DetalleOrden({ id, onClose, onCambio }: { id: string; onClose: () => vo
                   <li key={c.id}>
                     <Link href={`/compras?ver=${c.id}`} title="Ver la compra"
                       className={`group flex items-center gap-3 rounded-2xl border border-slate-200 px-3.5 py-2.5 transition hover:border-[var(--brand)]/50 hover:bg-[var(--brand-50)] ${c.estado === "anulada" ? "opacity-50" : ""}`}>
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#4FAEB2]/12 text-[#3F8E91]"><FileText className="h-4 w-4" /></span>
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--brand-400)]/12 text-[var(--brand)]"><FileText className="h-4 w-4" /></span>
                       <span className="min-w-0 flex-1">
                         <span className={`block font-mono text-xs font-semibold text-slate-800 ${c.estado === "anulada" ? "line-through" : ""}`}>{c.numero_control}</span>
                         <span className="block truncate text-[11px] text-slate-500">Factura {c.numero_factura} · {fecha(c.fecha)}{c.estado === "anulada" ? " · anulada" : ""}</span>

@@ -32,9 +32,9 @@ type Modo = "finalizadas" | "seguimientos";
 
 const VACIOS: FiltrosFinalizadas = { desde: "", hasta: "", asesor: "", asignado: "", cola: "", estado: "", semaforo: "", q: "" };
 const campo =
-  "w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20 max-sm:h-11";
-const etiqueta = "flex flex-col gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[#2F6E71]";
-const tarjeta = "overflow-hidden rounded-2xl border border-[#4FAEB2]/20 bg-white shadow-[0_2px_12px_rgba(47,110,113,0.08)]";
+  "w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition-colors focus:border-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]/20 max-sm:h-11";
+const etiqueta = "flex flex-col gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-700)]";
+const tarjeta = "overflow-hidden rounded-2xl border border-[var(--brand-400)]/20 bg-white shadow-[0_2px_12px_rgba(47,110,113,0.08)]";
 
 const F_FECHA = new Intl.DateTimeFormat("es-PY", { timeZone: TZ_PY, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
 const fechaHora = (iso: string | null | undefined) => (iso ? F_FECHA.format(new Date(iso)).replace(",", "") : "—");
@@ -305,9 +305,9 @@ export function Finalizadas() {
 
       {/* Filtros */}
       <section className={tarjeta}>
-        <div className="flex flex-wrap items-center gap-2 border-b border-[#4FAEB2]/15 bg-gradient-to-r from-[#4FAEB2]/12 via-[#4FAEB2]/5 to-transparent px-4 py-3 md:px-5">
-          <SlidersHorizontal className="h-4 w-4 text-[#2F6E71]" aria-hidden />
-          <h2 className="text-xs font-bold uppercase tracking-wider text-[#2F6E71]">Filtros</h2>
+        <div className="flex flex-wrap items-center gap-2 border-b border-[var(--brand-400)]/15 bg-gradient-to-r from-[var(--brand-400)]/12 via-[var(--brand-400)]/5 to-transparent px-4 py-3 md:px-5">
+          <SlidersHorizontal className="h-4 w-4 text-[var(--brand-700)]" aria-hidden />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-[var(--brand-700)]">Filtros</h2>
           {/* Referencia del semáforo */}
           <span className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-slate-500">
             {SEMAFOROS.slice(0, 3).map((s) => (
@@ -394,7 +394,7 @@ export function Finalizadas() {
             </label>
           </div>
           <div className="mt-5 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
-            <button type="submit" className="rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/25 transition-colors hover:bg-[#3F8E91] max-sm:min-h-11 max-sm:flex-1">
+            <button type="submit" className="rounded-xl bg-[var(--brand-400)] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[var(--brand-400)]/25 transition-colors hover:bg-[var(--brand)] max-sm:min-h-11 max-sm:flex-1">
               Aplicar filtros
             </button>
             <button type="button" onClick={limpiar} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 max-sm:min-h-11 max-sm:flex-1">
@@ -415,8 +415,8 @@ export function Finalizadas() {
             onFila={(r) => setVisor(r)}
             minAncho={1500}
             claseTabla="w-full text-left text-sm"
-            claseThead="border-b border-[#4FAEB2]/20 bg-gradient-to-r from-[#4FAEB2]/12 via-[#4FAEB2]/6 to-transparent"
-            thBase="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[#2F6E71]"
+            claseThead="border-b border-[var(--brand-400)]/20 bg-gradient-to-r from-[var(--brand-400)]/12 via-[var(--brand-400)]/6 to-transparent"
+            thBase="px-3 py-3 text-xs font-semibold uppercase tracking-wide text-[var(--brand-700)]"
             tdBase="px-3 py-2.5"
             claseFila={() => "hover:!bg-slate-50/80"}
             vacio={
@@ -456,7 +456,7 @@ export function Finalizadas() {
                 celda: (r) =>
                   r.cierre_familia ? (
                     <div className="flex flex-col items-start gap-1 max-md:flex-row max-md:flex-wrap">
-                      <span className="rounded-full bg-[#4FAEB2]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[#2F6E71]">{r.cierre_familia}</span>
+                      <span className="rounded-full bg-[var(--brand-400)]/15 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--brand-700)]">{r.cierre_familia}</span>
                       {r.cierre_estado ? <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[11px] text-slate-600">{r.cierre_estado}</span> : null}
                     </div>
                   ) : (
@@ -512,7 +512,7 @@ export function Finalizadas() {
                         type="button"
                         disabled={ocupado === `seg:${r.id}`}
                         onClick={() => void hecho(r, true)}
-                        className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-[#4FAEB2] bg-[#4FAEB2] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 max-sm:min-h-11"
+                        className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-[var(--brand-400)] bg-[var(--brand-400)] px-2.5 py-1.5 text-xs font-semibold text-white hover:bg-[var(--brand)] disabled:opacity-50 max-sm:min-h-11"
                       >
                         {ocupado === `seg:${r.id}` ? <Girando /> : <CalendarCheck className="h-3.5 w-3.5" aria-hidden />} Marcar hecho
                       </button>
@@ -520,7 +520,7 @@ export function Finalizadas() {
                     <button
                       type="button"
                       onClick={() => setVisor(r)}
-                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-[#4FAEB2]/50 bg-[#4FAEB2]/8 px-2.5 py-1.5 text-xs font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/15 max-sm:min-h-11"
+                      className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg border border-[var(--brand-400)]/50 bg-[var(--brand-400)]/8 px-2.5 py-1.5 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/15 max-sm:min-h-11"
                     >
                       <Eye className="h-3.5 w-3.5" aria-hidden /> Ver chat
                     </button>
@@ -549,7 +549,7 @@ export function Finalizadas() {
                 type="button"
                 onClick={() => void cargarMas()}
                 disabled={cargandoMas}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-[#3F8E91] hover:bg-slate-50 disabled:opacity-50 max-sm:min-h-11"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 font-medium text-[var(--brand)] hover:bg-slate-50 disabled:opacity-50 max-sm:min-h-11"
               >
                 {cargandoMas ? <Girando /> : null} Cargar más
               </button>
@@ -566,9 +566,9 @@ export function Finalizadas() {
           detalle={`${telefonoLegible(visor.contacto_telefono)} · cerrada el ${fechaHora(visor.cerrada_at)}`}
           onCerrar={() => setVisor(null)}
           arriba={
-            <div className="rounded-2xl border border-[#4FAEB2]/25 bg-white p-4 shadow-[0_1px_3px_rgba(47,110,113,0.08)]">
+            <div className="rounded-2xl border border-[var(--brand-400)]/25 bg-white p-4 shadow-[0_1px_3px_rgba(47,110,113,0.08)]">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-[#4FAEB2]/15 px-3 py-1 text-[13px] font-semibold text-[#2F6E71]">{visor.cierre_familia ?? "Sin estado"}</span>
+                <span className="rounded-full bg-[var(--brand-400)]/15 px-3 py-1 text-[13px] font-semibold text-[var(--brand-700)]">{visor.cierre_familia ?? "Sin estado"}</span>
                 {visor.cierre_estado ? <span className="rounded-full bg-slate-100 px-3 py-1 text-[12.5px] text-slate-600">{visor.cierre_estado}</span> : null}
                 <PillSemaforo r={visor} />
                 <span className="ml-auto text-[11px] text-slate-500">
@@ -586,7 +586,7 @@ export function Finalizadas() {
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
                   <ProximaAccion r={visor} hoy={hoy} />
                   {visor.seguimiento_hecho_at ? (
-                    <button type="button" disabled={ocupado === `seg:${visor.id}`} onClick={() => void hecho(visor, false)} className="text-xs font-semibold text-slate-500 underline-offset-2 hover:text-[#3F8E91] hover:underline disabled:opacity-50 max-sm:min-h-10">
+                    <button type="button" disabled={ocupado === `seg:${visor.id}`} onClick={() => void hecho(visor, false)} className="text-xs font-semibold text-slate-500 underline-offset-2 hover:text-[var(--brand)] hover:underline disabled:opacity-50 max-sm:min-h-10">
                       Volver a pendiente
                     </button>
                   ) : (
@@ -594,7 +594,7 @@ export function Finalizadas() {
                       type="button"
                       disabled={ocupado === `seg:${visor.id}`}
                       onClick={() => void hecho(visor, true)}
-                      className="inline-flex items-center gap-1 rounded-lg bg-[#4FAEB2] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 max-sm:min-h-11"
+                      className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-400)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--brand)] disabled:opacity-50 max-sm:min-h-11"
                     >
                       <CalendarCheck className="h-3.5 w-3.5" aria-hidden /> Marcar hecho
                     </button>

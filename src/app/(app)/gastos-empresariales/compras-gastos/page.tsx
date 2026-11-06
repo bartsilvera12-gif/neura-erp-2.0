@@ -34,7 +34,7 @@ import { URL_CATALOGOS, fechaCorta, gs, monto, nombreMedioGasto, type Catalogos,
 
 const RUTA = "/gastos-empresariales/compras-gastos";
 const POR_PAGINA = 50;
-const INPUT = "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
+const INPUT = "rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20";
 const UUID = /^[0-9a-f-]{36}$/i;
 const primeroDelMes = () => `${hoyPY().slice(0, 8)}01`;
 /** Fin del mes actual: incluye los borradores programados de los próximos días. */
@@ -231,7 +231,7 @@ function ComprasYGastos() {
       <div className="grid grid-cols-4 gap-1 rounded-xl bg-slate-100 p-1 sm:inline-grid sm:w-auto" role="radiogroup" aria-label="Tipo de documento">
         {TIPOS.map(([v, l]) => (
           <button key={v} type="button" role="radio" aria-checked={tipoSegmento === v} onClick={() => setFiltro("tipo", v)}
-            className={`min-h-11 rounded-lg px-2 text-[13px] font-semibold transition sm:min-h-9 sm:px-4 sm:text-sm ${tipoSegmento === v ? "bg-white text-[#3F8E91] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
+            className={`min-h-11 rounded-lg px-2 text-[13px] font-semibold transition sm:min-h-9 sm:px-4 sm:text-sm ${tipoSegmento === v ? "bg-white text-[var(--brand)] shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>
             {l}
           </button>
         ))}
@@ -264,9 +264,9 @@ function ComprasYGastos() {
             <SelectorFecha compacto etiqueta="Hasta" value={f.hasta} onChange={(v) => setFiltro("hasta", v)} claseBoton="rounded-xl px-3 py-2 text-slate-800" className="min-w-0 max-md:w-full md:w-[150px]" />
           </div>
           {f.desde || f.hasta ? (
-            <button onClick={() => setF((x) => ({ ...x, desde: "", hasta: "" }))} className="text-xs font-semibold text-[#3F8E91] underline-offset-2 hover:underline max-md:col-span-2 max-md:min-h-11 max-md:rounded-lg max-md:border max-md:border-slate-200 max-md:no-underline">Todas las fechas</button>
+            <button onClick={() => setF((x) => ({ ...x, desde: "", hasta: "" }))} className="text-xs font-semibold text-[var(--brand)] underline-offset-2 hover:underline max-md:col-span-2 max-md:min-h-11 max-md:rounded-lg max-md:border max-md:border-slate-200 max-md:no-underline">Todas las fechas</button>
           ) : (
-            <button onClick={() => setF((x) => ({ ...x, desde: primeroDelMes(), hasta: finDelMes() }))} className="text-xs font-semibold text-[#3F8E91] underline-offset-2 hover:underline max-md:col-span-2 max-md:min-h-11 max-md:rounded-lg max-md:border max-md:border-slate-200 max-md:no-underline">Este mes</button>
+            <button onClick={() => setF((x) => ({ ...x, desde: primeroDelMes(), hasta: finDelMes() }))} className="text-xs font-semibold text-[var(--brand)] underline-offset-2 hover:underline max-md:col-span-2 max-md:min-h-11 max-md:rounded-lg max-md:border max-md:border-slate-200 max-md:no-underline">Este mes</button>
           )}
         </div>
         {(cat?.sucursales.length ?? 0) > 1 ? (
@@ -353,7 +353,7 @@ const numeroConIconos = (r: Fila) => (
   <>
     <span className="whitespace-nowrap font-mono font-semibold">{r.numero ?? "—"}</span>
     {r.adjuntos > 0 ? <Paperclip className="ml-1 inline h-3 w-3 text-slate-400" aria-label={`${r.adjuntos} adjuntos`} /> : null}
-    {r.recurrente_id ? <CalendarClock className="ml-1 inline h-3 w-3 text-[#4FAEB2]" aria-label="De una plantilla recurrente" /> : null}
+    {r.recurrente_id ? <CalendarClock className="ml-1 inline h-3 w-3 text-[var(--brand-400)]" aria-label="De una plantilla recurrente" /> : null}
   </>
 );
 

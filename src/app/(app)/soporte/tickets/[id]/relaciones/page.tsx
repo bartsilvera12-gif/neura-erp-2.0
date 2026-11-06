@@ -124,7 +124,7 @@ export default function TicketRelacionesPage() {
                     </td>
                     <td className="px-3 py-3 tabular-nums text-slate-500">{numeroTicket(r.ticket.numero)}</td>
                     <td className="max-w-[300px] px-3 py-3">
-                      <Link href={`/soporte/tickets/${r.ticket.id}`} className="font-medium text-slate-900 no-underline hover:text-[#2F6E71]">
+                      <Link href={`/soporte/tickets/${r.ticket.id}`} className="font-medium text-slate-900 no-underline hover:text-[var(--brand-700)]">
                         {r.ticket.asunto}
                       </Link>
                     </td>

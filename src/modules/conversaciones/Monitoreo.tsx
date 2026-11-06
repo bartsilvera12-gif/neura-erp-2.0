@@ -295,7 +295,7 @@ export function Monitoreo() {
               minAncho={760}
               thBase={thClase}
               tdBase="px-4 py-3"
-              claseFila={() => "hover:bg-[#4FAEB2]/[0.04]"}
+              claseFila={() => "hover:bg-[var(--brand-400)]/[0.04]"}
               columnas={[
                 {
                   key: "espera",
@@ -317,7 +317,7 @@ export function Monitoreo() {
                       <div className="flex min-w-0 items-center gap-2.5">
                         <AvatarTono nombre={nombre} />
                         <div className="min-w-0">
-                          <button type="button" onClick={() => setVisor({ id: c.id, nombre: c.contacto, telefono: c.telefono })} className="block max-w-[14rem] truncate text-left text-sm font-semibold text-slate-900 hover:text-[#3F8E91] hover:underline">
+                          <button type="button" onClick={() => setVisor({ id: c.id, nombre: c.contacto, telefono: c.telefono })} className="block max-w-[14rem] truncate text-left text-sm font-semibold text-slate-900 hover:text-[var(--brand)] hover:underline">
                             {nombre}
                           </button>
                           <p className="font-mono text-[11px] text-slate-500">{telefonoLegible(c.telefono)}</p>
@@ -388,8 +388,8 @@ export function Monitoreo() {
               const abierto = grupoAbierto === g.id;
               const a = porId.get(g.id);
               return (
-                <div key={g.id} className={`overflow-hidden rounded-xl border bg-white ${abierto ? "border-[#4FAEB2]/40 shadow-sm" : "border-slate-200"}`}>
-                  <button type="button" onClick={() => setGrupoAbierto(abierto ? null : g.id)} aria-expanded={abierto} className="flex min-h-14 w-full items-center justify-between gap-3 px-3 py-3 text-left hover:bg-[#4FAEB2]/[0.04] sm:px-4">
+                <div key={g.id} className={`overflow-hidden rounded-xl border bg-white ${abierto ? "border-[var(--brand-400)]/40 shadow-sm" : "border-slate-200"}`}>
+                  <button type="button" onClick={() => setGrupoAbierto(abierto ? null : g.id)} aria-expanded={abierto} className="flex min-h-14 w-full items-center justify-between gap-3 px-3 py-3 text-left hover:bg-[var(--brand-400)]/[0.04] sm:px-4">
                     <span className="flex min-w-0 items-center gap-2.5">
                       <AvatarTono nombre={g.nombre} />
                       <span className="min-w-0">
@@ -412,7 +412,7 @@ export function Monitoreo() {
                       {g.items.map((e) => (
                         <div key={e.id} className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs">
                           <div className="min-w-0 max-sm:basis-full">
-                            <button type="button" onClick={() => setVisor({ id: e.id, nombre: e.contacto, telefono: e.telefono })} className="text-sm font-semibold text-[#3F8E91] hover:underline">
+                            <button type="button" onClick={() => setVisor({ id: e.id, nombre: e.contacto, telefono: e.telefono })} className="text-sm font-semibold text-[var(--brand)] hover:underline">
                               {e.contacto?.trim() || telefonoLegible(e.telefono) || "Contacto sin datos"}
                             </button>
                             <p className="text-[11px] text-slate-500">
@@ -477,7 +477,7 @@ export function Monitoreo() {
           <Vacio>
             No hay asesores en ninguna cola.{" "}
             {esAdmin ? (
-              <Link href="/conversaciones/monitoreo/colas" className="font-semibold text-[#3F8E91] hover:underline">
+              <Link href="/conversaciones/monitoreo/colas" className="font-semibold text-[var(--brand)] hover:underline">
                 Configurá las colas
               </Link>
             ) : null}
@@ -574,7 +574,7 @@ function MenuAsignar({ agentes, ocupado, onElegir }: { agentes: AgenteMonitoreo[
                 setPos(null);
                 onElegir("auto");
               }}
-              className="flex min-h-12 w-full items-center gap-2.5 rounded-xl bg-[#4FAEB2]/8 px-3.5 text-left text-[15px] font-semibold text-[#3F8E91]"
+              className="flex min-h-12 w-full items-center gap-2.5 rounded-xl bg-[var(--brand-400)]/8 px-3.5 text-left text-[15px] font-semibold text-[var(--brand)]"
             >
               <Zap className="h-4 w-4" aria-hidden /> Asignar automáticamente
               <span className="ml-auto text-[11px] font-normal text-slate-400">regla de la cola</span>
@@ -618,7 +618,7 @@ function MenuAsignar({ agentes, ocupado, onElegir }: { agentes: AgenteMonitoreo[
                   setPos(null);
                   onElegir("auto");
                 }}
-                className="flex w-full items-center gap-2 border-b border-slate-100 bg-[#4FAEB2]/5 px-3 py-2.5 text-left text-xs font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/10"
+                className="flex w-full items-center gap-2 border-b border-slate-100 bg-[var(--brand-400)]/5 px-3 py-2.5 text-left text-xs font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/10"
               >
                 <Zap className="h-3.5 w-3.5" aria-hidden /> Asignar automáticamente
                 <span className="ml-auto text-[10px] font-normal text-slate-400">regla de la cola</span>
@@ -712,7 +712,7 @@ function TablaAgentes({
           </thead>
           <tbody className="divide-y divide-slate-100">
             {agentes.map((a) => (
-              <tr key={a.id} className={abierto === a.id ? "bg-[#4FAEB2]/[0.06]" : "hover:bg-[#4FAEB2]/[0.03]"}>
+              <tr key={a.id} className={abierto === a.id ? "bg-[var(--brand-400)]/[0.06]" : "hover:bg-[var(--brand-400)]/[0.03]"}>
                 <td className="px-4 py-3 max-sm:px-3">
                   <div className="flex min-w-0 items-center gap-2.5">
                     <AvatarTono nombre={a.nombre} />
@@ -744,8 +744,8 @@ function TablaAgentes({
                       type="button"
                       onClick={() => alternar(a.id)}
                       aria-expanded={abierto === a.id}
-                      className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-sm font-semibold tabular-nums text-[#3F8E91] [@media(pointer:coarse)]:min-h-10 [@media(pointer:coarse)]:px-3 ${
-                        abierto === a.id ? "border-[#4FAEB2] bg-[#4FAEB2]/12" : "border-transparent hover:bg-[#4FAEB2]/8"
+                      className={`inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-sm font-semibold tabular-nums text-[var(--brand)] [@media(pointer:coarse)]:min-h-10 [@media(pointer:coarse)]:px-3 ${
+                        abierto === a.id ? "border-[var(--brand-400)] bg-[var(--brand-400)]/12" : "border-transparent hover:bg-[var(--brand-400)]/8"
                       }`}
                     >
                       {a.leads}
@@ -767,11 +767,11 @@ function TablaAgentes({
       </div>
 
       {sel ? (
-        <div className="mt-4 overflow-hidden rounded-xl border border-[#4FAEB2]/30 bg-slate-50/40">
+        <div className="mt-4 overflow-hidden rounded-xl border border-[var(--brand-400)]/30 bg-slate-50/40">
           <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2 sm:px-4 sm:py-2.5">
             <p className="flex items-center gap-2 text-sm font-semibold text-slate-800">
               Chats de {sel.nombre}
-              {Array.isArray(det) ? <span className="rounded-full border border-[#4FAEB2]/30 bg-[#4FAEB2]/10 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-[#3F8E91]">{det.length}</span> : null}
+              {Array.isArray(det) ? <span className="rounded-full border border-[var(--brand-400)]/30 bg-[var(--brand-400)]/10 px-2 py-0.5 text-[10px] font-semibold tabular-nums text-[var(--brand)]">{det.length}</span> : null}
             </p>
             <button type="button" onClick={() => setAbierto(null)} className="inline-flex items-center justify-center rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 [@media(pointer:coarse)]:h-11 [@media(pointer:coarse)]:w-11" aria-label="Cerrar">
               <X className="h-4 w-4" />
@@ -861,7 +861,7 @@ function TablaAgentes({
                       <button
                         type="button"
                         onClick={() => onLeer({ id: l.id, nombre: l.contacto, telefono: l.telefono })}
-                        className="inline-flex items-center gap-1 rounded-lg border border-[#4FAEB2]/50 bg-[#4FAEB2]/8 px-3 py-1.5 text-xs font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/15"
+                        className="inline-flex items-center gap-1 rounded-lg border border-[var(--brand-400)]/50 bg-[var(--brand-400)]/8 px-3 py-1.5 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/15"
                       >
                         <Eye className="h-3.5 w-3.5" /> Leer
                       </button>
@@ -912,7 +912,7 @@ function TelefonoLead({ l }: { l: LeadDia }) {
           }}
           title={copiado ? "¡Copiado!" : "Copiar número"}
           aria-label="Copiar número"
-          className="inline-flex items-center justify-center rounded p-0.5 text-slate-400 hover:text-[#3F8E91] [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:h-10 [@media(pointer:coarse)]:w-10"
+          className="inline-flex items-center justify-center rounded p-0.5 text-slate-400 hover:text-[var(--brand)] [@media(pointer:coarse)]:-my-2 [@media(pointer:coarse)]:h-10 [@media(pointer:coarse)]:w-10"
         >
           {copiado ? <Check className="h-3 w-3 text-emerald-600" /> : <Copy className="h-3 w-3" />}
         </button>

@@ -14,7 +14,7 @@ import { Select } from "@/components/Select";
 import { AVISO_SIN_RUC } from "@/modules/empresa/tipos";
 import MontoInput from "@/components/ui/MontoInput";
 
-const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition-colors hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
+const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 shadow-sm outline-none transition-colors hover:border-[var(--brand-400)]/60 focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20";
 const LABEL = "mb-1.5 block text-xs font-medium uppercase tracking-wide text-slate-500";
 
 export function FacturaContadoModal({ clienteId, clienteNombre, ruc, avisoRuc, moneda, onClose, onEmitida, onEditarCliente }: {
@@ -105,7 +105,7 @@ export function FacturaContadoModal({ clienteId, clienteNombre, ruc, avisoRuc, m
               options={[["10%", "IVA 10%"], ["5%", "IVA 5%"], ["exenta", "Exenta"]]} />
           </div>
           <label className="flex min-h-11 cursor-pointer items-center gap-2.5 sm:min-h-0">
-            <input type="checkbox" className="h-4 w-4 shrink-0 accent-[#4FAEB2]" checked={comisionable}
+            <input type="checkbox" className="h-4 w-4 shrink-0 accent-[var(--brand-400)]" checked={comisionable}
               onChange={(e) => { setComisionable(e.target.checked); if (!e.target.checked) setVendedor(""); }} />
             <span className="text-sm text-slate-700">Esta factura es comisionable</span>
           </label>
@@ -121,11 +121,11 @@ export function FacturaContadoModal({ clienteId, clienteNombre, ruc, avisoRuc, m
 
         <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 bg-slate-50/60 px-5 py-3.5 max-sm:[&>button]:flex-1 max-sm:[&>button]:justify-center">
           <button type="button" onClick={onClose} disabled={busy}
-            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 shadow-sm hover:border-[var(--brand-400)]/60 hover:text-[var(--brand-400)] disabled:opacity-50">
             Cancelar
           </button>
           <button type="submit" disabled={busy || !ruc || !(monto > 0)}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#4FAEB2] px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[#3F8E91] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400">
+            className="inline-flex items-center gap-2 rounded-xl bg-[var(--brand-400)] px-5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400">
             {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} {busy ? "Emitiendo…" : "Emitir factura"}
           </button>
         </div>

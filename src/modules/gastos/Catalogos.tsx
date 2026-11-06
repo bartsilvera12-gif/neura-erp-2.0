@@ -17,12 +17,12 @@ import { Select } from "@/components/Select";
 import { TablaTarjetas } from "@/components/TablaResponsive";
 import { URL_CATALOGOS, nombreCuenta, type Catalogos, type CuentaBancaria, type Empleado, type Rubro, type Subcategoria } from "@/modules/gastos/tipos";
 
-const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 max-sm:py-2.5 text-sm text-slate-800 outline-none transition focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
+const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 max-sm:py-2.5 text-sm text-slate-800 outline-none transition focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20";
 const LABEL = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500";
 type Pestana = "categorias" | "empleados" | "cuentas";
 /** Ícono de editar: chico en escritorio, 44 × 44 al dedo en celular. */
 const BTN_ICONO = "inline-flex shrink-0 items-center justify-center rounded-lg p-1 text-slate-400 hover:text-slate-700 max-sm:h-11 max-sm:w-11";
-const BTN_AGREGAR = "inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-[#3F8E91] hover:bg-slate-50 max-sm:min-h-11 max-sm:px-3";
+const BTN_AGREGAR = "inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-1 text-xs font-semibold text-[var(--brand)] hover:bg-slate-50 max-sm:min-h-11 max-sm:px-3";
 /** Botones de los editores en línea (Cancelar / Guardar): en celular 44 px y se reparten el ancho. */
 const BTN_ED = "max-sm:min-h-11 max-sm:flex-1 max-sm:justify-center max-sm:text-sm";
 const CHECK = "flex items-center gap-1.5 text-xs text-slate-600 max-sm:min-h-11 max-sm:text-sm";
@@ -51,8 +51,8 @@ export function CatalogosGastos({ inicial = "categorias", onClose, onCambio }: {
           <ScrollHorizontal role="tablist" ariaLabel="Catálogos" dependencias={[tab]}>
             {([["categorias", "Categorías"], ["empleados", "Empleados"], ["cuentas", "Cuentas bancarias"]] as const).map(([k, l]) => (
               <button key={k} role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-                className={`relative shrink-0 whitespace-nowrap px-3 py-2.5 text-sm font-medium max-sm:min-h-11 ${tab === k ? "text-[#3F8E91]" : "text-slate-500 hover:text-slate-800"}`}>
-                {l}<span className={`absolute inset-x-2 bottom-0 h-0.5 rounded-full ${tab === k ? "bg-[#4FAEB2]" : ""}`} />
+                className={`relative shrink-0 whitespace-nowrap px-3 py-2.5 text-sm font-medium max-sm:min-h-11 ${tab === k ? "text-[var(--brand)]" : "text-slate-500 hover:text-slate-800"}`}>
+                {l}<span className={`absolute inset-x-2 bottom-0 h-0.5 rounded-full ${tab === k ? "bg-[var(--brand-400)]" : ""}`} />
               </button>
             ))}
           </ScrollHorizontal>
@@ -112,7 +112,7 @@ function TabCategorias({ rubros, onGuardado, onError }: { rubros: Rubro[]; onGua
               <button onClick={() => setEd({ id: r.id, nombre: r.nombre, padre_id: null, tipo_costo: "variable", deducible_iva: true, activo: r.activo })} aria-label={`Editar ${r.nombre}`}
                 className={`${BTN_ICONO} hover:bg-white`}><Pencil className="h-3.5 w-3.5" /></button>
               <button onClick={() => setEd({ nombre: "", padre_id: r.id, tipo_costo: "variable", deducible_iva: !r.es_personal, activo: true })}
-                className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold text-[#3F8E91] hover:bg-white max-sm:min-h-11"><Plus className="h-3.5 w-3.5" /> Subcategoría</button>
+                className="inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-xs font-semibold text-[var(--brand)] hover:bg-white max-sm:min-h-11"><Plus className="h-3.5 w-3.5" /> Subcategoría</button>
             </div>
           </div>
           {ed?.id === r.id ? <div className="p-2">{editor}</div> : null}
@@ -142,25 +142,25 @@ function TabCategorias({ rubros, onGuardado, onError }: { rubros: Rubro[]; onGua
 function EditorCat({ ed, setEd, busy, onOk }: { ed: EdCat; setEd: (e: EdCat | null) => void; busy: boolean; onOk: () => void }) {
   const esRubro = ed.padre_id === null;
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/5 p-2 max-sm:gap-x-3">
+    <div className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--brand-400)]/40 bg-[var(--brand-400)]/5 p-2 max-sm:gap-x-3">
       <input autoFocus className={`${INPUT} min-w-[12rem] flex-1 max-sm:min-w-0 max-sm:basis-full`} enterKeyHint="done" placeholder={esRubro ? "Nombre del rubro" : "Nombre de la subcategoría"} value={ed.nombre}
         onChange={(e) => setEd({ ...ed, nombre: e.target.value })} onKeyDown={(e) => { if (e.key === "Enter") onOk(); if (e.key === "Escape") setEd(null); }} />
       {!esRubro ? (
         <>
           <Select value={ed.tipo_costo} onChange={(v) => setEd({ ...ed, tipo_costo: v as "fijo" | "variable" })} compacto etiqueta="Tipo de costo" options={[["variable", "Variable"], ["fijo", "Fijo"]]} />
           <label className={CHECK}>
-            <input type="checkbox" checked={ed.deducible_iva} onChange={(e) => setEd({ ...ed, deducible_iva: e.target.checked })} className="accent-[#4FAEB2] max-sm:h-5 max-sm:w-5" /> IVA deducible
+            <input type="checkbox" checked={ed.deducible_iva} onChange={(e) => setEd({ ...ed, deducible_iva: e.target.checked })} className="accent-[var(--brand-400)] max-sm:h-5 max-sm:w-5" /> IVA deducible
           </label>
         </>
       ) : null}
       {ed.id ? (
         <label className={CHECK}>
-          <input type="checkbox" checked={ed.activo} onChange={(e) => setEd({ ...ed, activo: e.target.checked })} className="accent-[#4FAEB2] max-sm:h-5 max-sm:w-5" /> Activa
+          <input type="checkbox" checked={ed.activo} onChange={(e) => setEd({ ...ed, activo: e.target.checked })} className="accent-[var(--brand-400)] max-sm:h-5 max-sm:w-5" /> Activa
         </label>
       ) : null}
       <div className="contents max-sm:flex max-sm:basis-full max-sm:gap-2">
         <button onClick={() => setEd(null)} className={`rounded-lg px-2 py-1 text-xs text-slate-500 hover:bg-white max-sm:border max-sm:border-slate-200 max-sm:bg-white ${BTN_ED}`}>Cancelar</button>
-        <button onClick={onOk} disabled={busy || ed.nombre.trim().length < 2} className={`inline-flex items-center gap-1 rounded-lg bg-[#4FAEB2] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 ${BTN_ED}`}>
+        <button onClick={onOk} disabled={busy || ed.nombre.trim().length < 2} className={`inline-flex items-center gap-1 rounded-lg bg-[var(--brand-400)] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[var(--brand)] disabled:opacity-50 ${BTN_ED}`}>
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Guardar
         </button>
       </div>
@@ -189,7 +189,7 @@ function TabEmpleados({ empleados, sucursales, onGuardado, onError }: {
         <button onClick={() => setEd({ ...vacio })} className={BTN_AGREGAR}><Plus className="h-3.5 w-3.5" /> Empleado</button>
       </div>
       {ed ? (
-        <div className="grid grid-cols-2 gap-2 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/5 p-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 rounded-xl border border-[var(--brand-400)]/40 bg-[var(--brand-400)]/5 p-3 sm:grid-cols-4">
           <div className="col-span-2"><label className={LABEL}>Nombre *</label><input autoFocus className={INPUT} enterKeyHint="next" value={ed.nombre} onChange={(e) => setEd({ ...ed, nombre: e.target.value })} /></div>
           <div className="min-w-0"><label className={LABEL}>CI</label><input className={INPUT} inputMode="numeric" enterKeyHint="next" value={ed.ci} onChange={(e) => setEd({ ...ed, ci: e.target.value })} /></div>
           <div className="min-w-0"><label className={LABEL}>Cargo</label><input className={INPUT} enterKeyHint="done" value={ed.cargo} onChange={(e) => setEd({ ...ed, cargo: e.target.value })} /></div>
@@ -197,9 +197,9 @@ function TabEmpleados({ empleados, sucursales, onGuardado, onError }: {
             <Select value={ed.sucursal_id} onChange={(v) => setEd({ ...ed, sucursal_id: v })} block etiqueta="Sucursal" options={[["", "(Sin sucursal fija)"], ...sucursales.map((s): [string, string] => [s.id, s.nombre])]} />
           </div>
           <div className="col-span-2 flex flex-wrap items-end justify-end gap-2">
-            {ed.id ? <label className={`mr-auto ${CHECK} max-sm:basis-full`}><input type="checkbox" checked={ed.activo} onChange={(e) => setEd({ ...ed, activo: e.target.checked })} className="accent-[#4FAEB2] max-sm:h-5 max-sm:w-5" /> Activo</label> : null}
+            {ed.id ? <label className={`mr-auto ${CHECK} max-sm:basis-full`}><input type="checkbox" checked={ed.activo} onChange={(e) => setEd({ ...ed, activo: e.target.checked })} className="accent-[var(--brand-400)] max-sm:h-5 max-sm:w-5" /> Activo</label> : null}
             <button onClick={() => setEd(null)} className={`rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-white max-sm:border max-sm:border-slate-200 max-sm:bg-white ${BTN_ED}`}>Cancelar</button>
-            <button onClick={() => void ok()} disabled={busy || ed.nombre.trim().length < 2} className={`inline-flex items-center gap-1 rounded-lg bg-[#4FAEB2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 ${BTN_ED}`}>
+            <button onClick={() => void ok()} disabled={busy || ed.nombre.trim().length < 2} className={`inline-flex items-center gap-1 rounded-lg bg-[var(--brand-400)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand)] disabled:opacity-50 ${BTN_ED}`}>
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Guardar
             </button>
           </div>
@@ -254,7 +254,7 @@ function TabCuentas({ cuentas, bancos, onGuardado, onError }: {
         <button onClick={() => setEd({ ...vacio })} className={BTN_AGREGAR}><Plus className="h-3.5 w-3.5" /> Cuenta</button>
       </div>
       {ed ? (
-        <div className="grid grid-cols-2 gap-2 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/5 p-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 rounded-xl border border-[var(--brand-400)]/40 bg-[var(--brand-400)]/5 p-3 sm:grid-cols-4">
           <div className="col-span-2"><label className={LABEL}>Banco o entidad *</label>
             <Select value={ed.banco_id} onChange={(v) => setEd({ ...ed, banco_id: v })} block etiqueta="Banco o entidad" options={[...bancos.filter((b) => b.nombre !== "Otro").map((b): [string, string] => [b.id, b.nombre]), ["__otro__", "Otra entidad…"]]} />
           </div>
@@ -266,9 +266,9 @@ function TabCuentas({ cuentas, bancos, onGuardado, onError }: {
           <div className="min-w-0"><label className={LABEL}>Alias</label><input className={INPUT} enterKeyHint="next" placeholder="Operativa" value={ed.alias} onChange={(e) => setEd({ ...ed, alias: e.target.value })} /></div>
           <div className="col-span-2"><label className={LABEL}>Titular</label><input className={INPUT} enterKeyHint="done" value={ed.titular} onChange={(e) => setEd({ ...ed, titular: e.target.value })} /></div>
           <div className="col-span-2 flex flex-wrap items-end justify-end gap-2">
-            {ed.id ? <label className={`mr-auto ${CHECK} max-sm:basis-full`}><input type="checkbox" checked={ed.activa} onChange={(e) => setEd({ ...ed, activa: e.target.checked })} className="accent-[#4FAEB2] max-sm:h-5 max-sm:w-5" /> Activa</label> : null}
+            {ed.id ? <label className={`mr-auto ${CHECK} max-sm:basis-full`}><input type="checkbox" checked={ed.activa} onChange={(e) => setEd({ ...ed, activa: e.target.checked })} className="accent-[var(--brand-400)] max-sm:h-5 max-sm:w-5" /> Activa</label> : null}
             <button onClick={() => setEd(null)} className={`rounded-lg px-3 py-2 text-xs text-slate-500 hover:bg-white max-sm:border max-sm:border-slate-200 max-sm:bg-white ${BTN_ED}`}>Cancelar</button>
-            <button onClick={() => void ok()} disabled={busy || !ed.numero.trim()} className={`inline-flex items-center gap-1 rounded-lg bg-[#4FAEB2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 ${BTN_ED}`}>
+            <button onClick={() => void ok()} disabled={busy || !ed.numero.trim()} className={`inline-flex items-center gap-1 rounded-lg bg-[var(--brand-400)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand)] disabled:opacity-50 ${BTN_ED}`}>
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null} Guardar
             </button>
           </div>

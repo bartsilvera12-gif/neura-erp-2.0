@@ -79,7 +79,7 @@ function Tarjeta({
       onClick={() => onAbrir(c.id)}
       style={{ contentVisibility: "auto", containIntrinsicSize: `auto ${ALTO_TARJETA}px`, minHeight: ALTO_TARJETA }}
       className={`w-full border-b border-slate-100 px-3 py-2 text-left transition-colors ${
-        seleccionada ? "border-l-[3px] border-l-[#4FAEB2] bg-white" : "hover:bg-white"
+        seleccionada ? "border-l-[3px] border-l-[var(--brand-400)] bg-white" : "hover:bg-white"
       }`}
     >
       <div className="flex items-start gap-2.5">
@@ -89,14 +89,14 @@ function Tarjeta({
             <div className="min-w-0">
               <div className="truncate text-sm font-semibold text-slate-900">{nombre}</div>
               <div className="flex items-center gap-1 truncate font-mono text-[11px] tabular-nums text-slate-500">
-                <IconoCanal tipo={c.canal_tipo} className="h-3 w-3 shrink-0 text-[#4FAEB2]" />
+                <IconoCanal tipo={c.canal_tipo} className="h-3 w-3 shrink-0 text-[var(--brand-400)]" />
                 {telefonoLegible(c.contacto_telefono)}
               </div>
             </div>
             <div className="flex shrink-0 flex-col items-end gap-1">
-              <span className={`text-[10.5px] tabular-nums ${c.no_leidos > 0 ? "font-semibold text-[#3F8E91]" : "text-slate-400"}`}>{horaLista(c.ultimo_mensaje_at)}</span>
+              <span className={`text-[10.5px] tabular-nums ${c.no_leidos > 0 ? "font-semibold text-[var(--brand)]" : "text-slate-400"}`}>{horaLista(c.ultimo_mensaje_at)}</span>
               {c.no_leidos > 0 ? (
-                <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-[#4FAEB2] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">
+                <span className="inline-flex min-w-[1.25rem] items-center justify-center rounded-full bg-[var(--brand-400)] px-1.5 py-0.5 text-[11px] font-bold leading-none text-white">
                   {c.no_leidos > 99 ? "99+" : c.no_leidos}
                 </span>
               ) : null}

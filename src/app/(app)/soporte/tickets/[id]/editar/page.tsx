@@ -147,7 +147,7 @@ export default function TicketEditarPage() {
           </Campo>
         </div>
         {v.tipo_codigo ? (
-          <p className="flex items-center gap-2 rounded-lg bg-[#4FAEB2]/8 px-3 py-2 text-[12.5px] text-[#2F6E71]">
+          <p className="flex items-center gap-2 rounded-lg bg-[var(--brand-400)]/8 px-3 py-2 text-[12.5px] text-[var(--brand-700)]">
             <Clock className="h-4 w-4 shrink-0" aria-hidden />
             {sla != null ? (
               <span>

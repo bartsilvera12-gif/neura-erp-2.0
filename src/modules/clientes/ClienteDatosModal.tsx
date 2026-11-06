@@ -115,7 +115,7 @@ export function ClienteDatosModal({ id, onCerrar, onCambio }: { id: string; onCe
       <button type="button" onClick={onCerrar} className={BTN_SECUNDARIO}>Cerrar</button>
       {c && puedeEditar ? (
         <button type="button" onClick={() => setEditando(true)}
-          className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/20 transition hover:brightness-95"
+          className="inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[var(--brand-400)]/20 transition hover:brightness-95"
           style={{ backgroundColor: TEAL }}>
           <Pencil className="h-4 w-4" /> Editar
         </button>

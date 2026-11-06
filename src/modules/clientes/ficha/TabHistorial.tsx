@@ -119,7 +119,7 @@ export function TabHistorial({ clienteId, recarga }: { clienteId: string; recarg
       <div className="mb-4 flex items-center justify-between gap-3">
         <h3 className="text-sm font-semibold text-slate-700">Historial de cambios</h3>
         <button type="button" onClick={() => void cargar(true)} disabled={cargando}
-          className="min-h-11 shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors sm:min-h-0 hover:border-[#4FAEB2]/60 hover:text-[#4FAEB2] disabled:opacity-50">
+          className="min-h-11 shrink-0 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-600 transition-colors sm:min-h-0 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand-400)] disabled:opacity-50">
           {cargando ? "Actualizando…" : "Actualizar"}
         </button>
       </div>

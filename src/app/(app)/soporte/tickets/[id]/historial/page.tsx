@@ -74,7 +74,7 @@ function describir(e: Evento): Vista {
     case "creacion":
       return {
         icono: PlusCircle,
-        tono: "bg-[#4FAEB2]/15 text-[#2F6E71]",
+        tono: "bg-[var(--brand-400)]/15 text-[var(--brand-700)]",
         grupo: "estados",
         titulo: e.metadata?.origen === "tipificacion_cliente" ? "Ticket creado desde la tipificación del cliente" : "Ticket creado",
         cambio: e.nuevo ? { antes: null, despues: e.nuevo, colores: true } : undefined,
@@ -231,7 +231,7 @@ export default function TicketHistorialPage() {
                 type="button"
                 onClick={() => setFiltro(f.id)}
                 className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold transition ${
-                  filtro === f.id ? "bg-[#4FAEB2] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  filtro === f.id ? "bg-[var(--brand-400)] text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                 }`}
               >
                 {f.etiqueta}

@@ -64,7 +64,7 @@ function Recurrentes() {
         acciones={<AccionesPagina acciones={[{ etiqueta: "Nueva plantilla", icono: <Plus />, onClick: () => setForm({ p: null }) }]} />} />
 
       {/* Mes + acción principal (en celular: mes arriba a todo el ancho, cifras y el botón abajo) */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#4FAEB2]/30 bg-[#4FAEB2]/5 px-3 py-3 sm:px-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[var(--brand-400)]/30 bg-[var(--brand-400)]/5 px-3 py-3 sm:px-4">
         <div className="flex items-center gap-1 max-sm:w-full max-sm:justify-between">
           <button onClick={() => setPeriodo((p) => sumarMes(p, -1))} aria-label="Mes anterior" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 hover:bg-white max-sm:h-11 max-sm:w-11"><ChevronLeft className="h-4 w-4 max-sm:h-5 max-sm:w-5" /></button>
           <span className="min-w-[10rem] text-center text-base font-semibold capitalize text-slate-800">{nombreMes(periodo)}</span>
@@ -77,7 +77,7 @@ function Recurrentes() {
           {r && r.a_completar > 0 ? <span className="text-xs text-slate-500">{r.a_completar} con monto variable</span> : null}
         </div>
         <button onClick={() => setGenerar(true)} disabled={!pendientes.length}
-          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[#3F8E91] disabled:opacity-50 max-sm:min-h-11 max-sm:w-full">
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-400)] px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-[var(--brand)] disabled:opacity-50 max-sm:min-h-11 max-sm:w-full">
           <CalendarPlus className="h-4 w-4" />
           {pendientes.length ? `Generar gastos de ${nombreMes(periodo).split(" ")[0]} (${pendientes.length})` : "Todo generado este mes"}
         </button>
@@ -93,7 +93,7 @@ function Recurrentes() {
             : datos.plantillas.length === 0 ? (
               <div className="flex flex-col items-center gap-3 px-4 py-10 text-center">
                 <p className="text-sm text-slate-500">Todavía no hay plantillas. Cargá el alquiler, internet o los sueldos una vez y generalos cada mes.</p>
-                <button onClick={() => setForm({ p: null })} className="rounded-xl bg-[#4FAEB2] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91]">Nueva plantilla</button>
+                <button onClick={() => setForm({ p: null })} className="rounded-xl bg-[var(--brand-400)] px-3.5 py-2 text-sm font-semibold text-white hover:bg-[var(--brand)]">Nueva plantilla</button>
               </div>
             ) : (
               <ul className="divide-y divide-slate-100">
@@ -168,7 +168,7 @@ function FilaPlantilla({ p, onEditar, onBorrar }: { p: Plantilla; onEditar: () =
           <p className="text-sm font-semibold tabular-nums text-slate-800">{Number(p.total) > 0 ? monto(p.total, p.moneda) : <span className="text-slate-400">variable</span>}</p>
           {!p.aplica ? <p className="text-[11px] text-slate-400">{p.activo ? "fuera de vigencia" : "—"}</p>
             : p.generado ? (
-              <Link href={`/gastos-empresariales/compras-gastos?gasto=${p.generado.id}&desde=&hasta=`} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#3F8E91] hover:underline max-sm:-my-2 max-sm:min-h-11">
+              <Link href={`/gastos-empresariales/compras-gastos?gasto=${p.generado.id}&desde=&hasta=`} className="inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:min-h-11">
                 <CheckCircle2 className="h-3 w-3" /> {p.generado.numero ?? "Borrador"} {est && p.generado.estado !== "confirmado" ? `· ${est.t.toLowerCase()}` : ""}
               </Link>
             ) : <p className="inline-flex items-center gap-1 text-[11px] text-amber-700"><CalendarClock className="h-3 w-3" /> pendiente · {fechaCorta(p.fecha_periodo)}</p>}
@@ -232,7 +232,7 @@ function GenerarMes({ periodo, pendientes, onClose, onHecho }: { periodo: string
                 {hecho.creados.map((c) => (
                   <li key={c.id} className="flex items-center justify-between gap-2 px-3 py-2 max-sm:py-0.5">
                     <span className="min-w-0 truncate">{c.plantilla} <span className="text-xs text-slate-400">· {fechaCorta(c.fecha)}</span></span>
-                    <Link href={`/gastos-empresariales/compras-gastos?gasto=${c.id}&desde=&hasta=`} className="inline-flex shrink-0 items-center text-xs font-semibold text-[#3F8E91] hover:underline max-sm:min-h-11 max-sm:px-2">Abrir</Link>
+                    <Link href={`/gastos-empresariales/compras-gastos?gasto=${c.id}&desde=&hasta=`} className="inline-flex shrink-0 items-center text-xs font-semibold text-[var(--brand)] hover:underline max-sm:min-h-11 max-sm:px-2">Abrir</Link>
                   </li>
                 ))}
               </ul>
@@ -244,7 +244,7 @@ function GenerarMes({ periodo, pendientes, onClose, onHecho }: { periodo: string
                 {pendientes.map((p) => (
                   <li key={p.id}>
                     <label className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-slate-50 max-sm:min-h-12">
-                      <input type="checkbox" className="shrink-0 accent-[#4FAEB2] max-sm:h-5 max-sm:w-5" checked={sel.has(p.id)}
+                      <input type="checkbox" className="shrink-0 accent-[var(--brand-400)] max-sm:h-5 max-sm:w-5" checked={sel.has(p.id)}
                         onChange={(e) => setSel((s) => { const n = new Set(s); if (e.target.checked) n.add(p.id); else n.delete(p.id); return n; })} />
                       <span className="min-w-0 flex-1 max-sm:[overflow-wrap:anywhere] sm:truncate">{p.nombre} <span className="text-xs text-slate-400 max-sm:block">· vence {fechaCorta(p.fecha_periodo)}</span></span>
                       <span className="shrink-0 tabular-nums text-slate-700">{Number(p.total) > 0 ? monto(p.total, p.moneda) : "variable"}</span>
@@ -258,12 +258,12 @@ function GenerarMes({ periodo, pendientes, onClose, onHecho }: { periodo: string
         </div>
         <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 px-4 py-3 sm:px-6 sm:py-4">
           {hecho ? (
-            <Link href="/gastos-empresariales/compras-gastos?estado=borrador&desde=&hasta=" className="inline-flex items-center justify-center rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] max-sm:flex-1">Ver borradores</Link>
+            <Link href="/gastos-empresariales/compras-gastos?estado=borrador&desde=&hasta=" className="inline-flex items-center justify-center rounded-xl bg-[var(--brand-400)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand)] max-sm:flex-1">Ver borradores</Link>
           ) : (
             <>
               <button onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 max-sm:flex-1">Cancelar</button>
               <button onClick={() => void ok()} disabled={busy || sel.size === 0}
-                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 max-sm:flex-[2]">
+                className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-400)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand)] disabled:opacity-50 max-sm:flex-[2]">
                 {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarPlus className="h-4 w-4" />} Crear {sel.size} {sel.size === 1 ? "borrador" : "borradores"}
               </button>
             </>

@@ -111,7 +111,7 @@ export function ClienteSelect({
                   }
                 }}
                 placeholder="Buscar por nombre, RUC, teléfono…"
-                className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
+                className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20"
               />
             </div>
             <ul className="max-h-56 overflow-y-auto py-1">
@@ -130,7 +130,7 @@ export function ClienteSelect({
                     <button
                       type="button"
                       onClick={() => elegir(c)}
-                      className={`flex w-full flex-col px-3 py-2 text-left transition-colors hover:bg-slate-50 ${valor?.id === c.id ? "bg-[#4FAEB2]/10" : ""}`}
+                      className={`flex w-full flex-col px-3 py-2 text-left transition-colors hover:bg-slate-50 ${valor?.id === c.id ? "bg-[var(--brand-400)]/10" : ""}`}
                     >
                       <span className="truncate text-sm text-slate-800">{c.nombre ?? c.id}</span>
                       {c.ruc || c.documento || c.telefono ? (
@@ -154,7 +154,7 @@ export function ClienteSelect({
         type="button"
         onClick={() => setAbierto((v) => !v)}
         aria-label="Cliente"
-        className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm shadow-sm transition-colors hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20"
+        className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-left text-sm shadow-sm transition-colors hover:border-[var(--brand-400)]/60 focus:border-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]/20"
       >
         <span className={`min-w-0 flex-1 truncate ${valor ? "text-slate-900" : "text-slate-400"}`}>{valor ? valor.nombre ?? valor.id : "— Sin cliente —"}</span>
         <span aria-hidden="true" className={`shrink-0 text-slate-400 transition-transform ${abierto ? "rotate-180" : ""}`}>

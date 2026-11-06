@@ -250,11 +250,11 @@ export default function TablaTickets({
       <div className={`overflow-visible ${TARJETA}`}>
         {/* Filtros (celular / tablet chica: búsqueda + "Filtros" con el resto en una hoja) */}
         {angosta ? (
-          <div className="rounded-t-2xl border-b border-slate-100 bg-gradient-to-r from-[#4FAEB2]/[0.05] via-white to-sky-50/40 px-3 py-2.5">
+          <div className="rounded-t-2xl border-b border-slate-100 bg-gradient-to-r from-[var(--brand-400)]/[0.05] via-white to-sky-50/40 px-3 py-2.5">
             <BarraFiltros
               plano
               busqueda={<label className="relative block">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#4FAEB2]" aria-hidden />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--brand-400)]" aria-hidden />
             <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Buscar por asunto o #número…" aria-label="Buscar tickets" className={`${claseInput} h-11 pl-9`} type="search" enterKeyHint="search" />
           </label>}
               activos={[filtros.cliente_id, filtros.estado, filtros.tipo, filtros.responsable_id, filtros.cargados].filter(Boolean).length}
@@ -290,7 +290,7 @@ export default function TablaTickets({
               aria-pressed={soloCargados}
               title="Sólo los tickets que cargué yo"
               className={`inline-flex h-11 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-[12px] font-semibold transition-colors ${
-                soloCargados ? "border-[#4FAEB2] bg-[#4FAEB2]/10 text-[#2F6E71]" : "border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/60 hover:text-[#2F6E71]"
+                soloCargados ? "border-[var(--brand-400)] bg-[var(--brand-400)]/10 text-[var(--brand-700)]" : "border-slate-200 bg-white text-slate-600 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand-700)]"
               }`}
           >
               <UserPen className="h-3.5 w-3.5" aria-hidden /> Cargados por mí
@@ -298,9 +298,9 @@ export default function TablaTickets({
             </BarraFiltros>
           </div>
         ) : (
-        <div className="grid gap-2 rounded-t-2xl border-b border-slate-100 bg-gradient-to-r from-[#4FAEB2]/[0.05] via-white to-sky-50/40 px-4 py-3 sm:grid-cols-2 lg:grid-cols-[minmax(200px,1.4fr)_repeat(4,minmax(0,1fr))_auto_auto]">
+        <div className="grid gap-2 rounded-t-2xl border-b border-slate-100 bg-gradient-to-r from-[var(--brand-400)]/[0.05] via-white to-sky-50/40 px-4 py-3 sm:grid-cols-2 lg:grid-cols-[minmax(200px,1.4fr)_repeat(4,minmax(0,1fr))_auto_auto]">
           <label className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#4FAEB2]" aria-hidden />
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--brand-400)]" aria-hidden />
             <input value={texto} onChange={(e) => setTexto(e.target.value)} placeholder="Buscar por asunto o #número…" aria-label="Buscar tickets" className={`${claseInput} h-[42px] pl-9`} />
           </label>
           <SelectorBuscable
@@ -335,7 +335,7 @@ export default function TablaTickets({
             aria-pressed={soloCargados}
             title="Sólo los tickets que cargué yo"
             className={`inline-flex h-[42px] items-center justify-center gap-1.5 whitespace-nowrap rounded-xl border px-3 text-[12px] font-semibold transition-colors ${
-              soloCargados ? "border-[#4FAEB2] bg-[#4FAEB2]/10 text-[#2F6E71]" : "border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/60 hover:text-[#2F6E71]"
+              soloCargados ? "border-[var(--brand-400)] bg-[var(--brand-400)]/10 text-[var(--brand-700)]" : "border-slate-200 bg-white text-slate-600 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand-700)]"
             }`}
           >
             <UserPen className="h-3.5 w-3.5" aria-hidden /> Cargados por mí
@@ -358,7 +358,7 @@ export default function TablaTickets({
 
         )}
         <div className={`h-0.5 overflow-hidden transition-opacity ${cargando && datos ? "opacity-100" : "opacity-0"}`}>
-          <div className="h-full w-full animate-pulse bg-gradient-to-r from-transparent via-[#4FAEB2] to-transparent" />
+          <div className="h-full w-full animate-pulse bg-gradient-to-r from-transparent via-[var(--brand-400)] to-transparent" />
         </div>
 
         {error ? (
@@ -390,7 +390,7 @@ export default function TablaTickets({
               claseThead="border-b border-slate-100"
               thBase="px-3 py-3 text-[11px] font-bold uppercase tracking-wide text-slate-400"
               tdBase="px-3 py-3.5"
-              claseFila={() => "relative border-b border-slate-100 last:border-0 hover:!bg-[#4FAEB2]/[0.04]"}
+              claseFila={() => "relative border-b border-slate-100 last:border-0 hover:!bg-[var(--brand-400)]/[0.04]"}
               columnas={[
                 {
                   key: "num",
@@ -401,7 +401,7 @@ export default function TablaTickets({
                   celda: (t) => (
                     <>
                       <span className="absolute inset-y-2 left-0 w-1 rounded-r-full opacity-0 transition-opacity group-hover:opacity-100" style={{ backgroundColor: t.estado_color }} aria-hidden />
-                      <span className="font-bold tabular-nums text-slate-400 group-hover:text-[#2F6E71]">{numeroTicket(t.numero)}</span>
+                      <span className="font-bold tabular-nums text-slate-400 group-hover:text-[var(--brand-700)]">{numeroTicket(t.numero)}</span>
                     </>
                   ),
                   celdaMovil: (t) => (
@@ -417,7 +417,7 @@ export default function TablaTickets({
                   claseTd: "max-w-[340px]",
                   celda: (t) => (
                     <>
-                      <Link href={href(t.id)} onClick={(e) => e.stopPropagation()} className="line-clamp-2 font-semibold text-slate-800 no-underline group-hover:text-[#2F6E71]">
+                      <Link href={href(t.id)} onClick={(e) => e.stopPropagation()} className="line-clamp-2 font-semibold text-slate-800 no-underline group-hover:text-[var(--brand-700)]">
                         {t.asunto}
                       </Link>
                       <span className="mt-1 flex">
@@ -489,7 +489,7 @@ export default function TablaTickets({
                                   void tomar(t.id);
                                 }}
                                 title="Asignarme este ticket"
-                                className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-lg border border-[#4FAEB2]/40 bg-white px-2 py-1 text-[11px] font-bold text-[#2F6E71] opacity-0 transition hover:bg-[#4FAEB2]/10 focus:opacity-100 group-hover:opacity-100 disabled:opacity-60 max-md:min-h-10 max-md:px-3 max-md:text-xs max-md:opacity-100 [@media(hover:none)]:opacity-100"
+                                className="ml-auto inline-flex shrink-0 items-center gap-1 rounded-lg border border-[var(--brand-400)]/40 bg-white px-2 py-1 text-[11px] font-bold text-[var(--brand-700)] opacity-0 transition hover:bg-[var(--brand-400)]/10 focus:opacity-100 group-hover:opacity-100 disabled:opacity-60 max-md:min-h-10 max-md:px-3 max-md:text-xs max-md:opacity-100 [@media(hover:none)]:opacity-100"
                               >
                                 {tomando === t.id ? "…" : "Tomar"}
                               </button>
@@ -533,7 +533,7 @@ export default function TablaTickets({
                   type="button"
                   disabled={pagina <= 1}
                   onClick={() => cambiar({ pagina: String(pagina - 1) })}
-                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/50 disabled:opacity-40 max-md:h-11 max-md:w-11"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-[var(--brand-400)]/50 disabled:opacity-40 max-md:h-11 max-md:w-11"
                   aria-label="Página anterior"
                 >
                   <ChevronLeft className="h-4 w-4" />
@@ -548,7 +548,7 @@ export default function TablaTickets({
                         onClick={() => cambiar({ pagina: String(n) })}
                         aria-current={n === pagina ? "page" : undefined}
                         className={`h-8 min-w-8 rounded-lg px-2 font-semibold tabular-nums max-md:h-11 max-md:min-w-11 ${
-                          n === pagina ? "bg-[#4FAEB2] text-white shadow-[0_4px_12px_-4px_rgba(79,174,178,0.8)]" : "border border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/50"
+                          n === pagina ? "bg-[var(--brand-400)] text-white shadow-[0_4px_12px_-4px_rgba(79,174,178,0.8)]" : "border border-slate-200 bg-white text-slate-600 hover:border-[var(--brand-400)]/50"
                         }`}
                       >
                         {n}
@@ -559,7 +559,7 @@ export default function TablaTickets({
                   type="button"
                   disabled={pagina >= paginas}
                   onClick={() => cambiar({ pagina: String(pagina + 1) })}
-                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/50 disabled:opacity-40 max-md:h-11 max-md:w-11"
+                  className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:border-[var(--brand-400)]/50 disabled:opacity-40 max-md:h-11 max-md:w-11"
                   aria-label="Página siguiente"
                 >
                   <ChevronRight className="h-4 w-4" />

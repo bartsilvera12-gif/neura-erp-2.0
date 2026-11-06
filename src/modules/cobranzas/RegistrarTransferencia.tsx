@@ -24,7 +24,7 @@ import {
 } from "@/modules/cobranzas/tipos";
 import { SelectorFecha } from "@/components/SelectorFecha";
 
-const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
+const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 outline-none transition hover:border-slate-300 focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20";
 const LABEL = "mb-1 block text-[11px] font-semibold uppercase tracking-wide text-slate-500";
 const MAX_BYTES = 8 * 1024 * 1024;
 const TIPOS = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
@@ -235,7 +235,7 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
                   <ul className="divide-y divide-slate-100">
                     {resultados.map((f) => (
                       <li key={f.id}>
-                        <button type="button" onClick={() => void elegirFactura(f)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-[#4FAEB2]/[0.06]">
+                        <button type="button" onClick={() => void elegirFactura(f)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs hover:bg-[var(--brand-400)]/[0.06]">
                           <span className="min-w-0">
                             <span className="block truncate font-medium text-slate-800">{f.cliente_nombre}</span>
                             <span className="font-mono text-[11px] text-slate-500">{f.numero} · vence {fechaCorta(f.vencimiento)}</span>
@@ -252,7 +252,7 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
             <div>
               <div className="mb-1 flex items-center justify-between gap-2">
                 <span className={`${LABEL} mb-0`}>Facturas de {cliente.nombre}</span>
-                <button type="button" onClick={() => { setCliente(null); setCuotas([]); setElegidas({}); }} className="shrink-0 text-[11px] font-semibold text-[#3F8E91] hover:underline max-sm:-my-2 max-sm:min-h-11 max-sm:px-2 max-sm:text-xs">
+                <button type="button" onClick={() => { setCliente(null); setCuotas([]); setElegidas({}); }} className="shrink-0 text-[11px] font-semibold text-[var(--brand)] hover:underline max-sm:-my-2 max-sm:min-h-11 max-sm:px-2 max-sm:text-xs">
                   Cambiar
                 </button>
               </div>
@@ -264,10 +264,10 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
                     const sel = c.id in elegidas;
                     const max = disponible(c);
                     return (
-                      <li key={c.id} className={`flex items-center gap-2 px-3 py-2 text-xs ${sel ? "bg-[#4FAEB2]/[0.05]" : ""}`}>
+                      <li key={c.id} className={`flex items-center gap-2 px-3 py-2 text-xs ${sel ? "bg-[var(--brand-400)]/[0.05]" : ""}`}>
                         {/* El tilde con objetivo táctil de 44 px (sin agrandar la fila en escritorio). */}
                         <label className="-m-2 flex shrink-0 cursor-pointer items-center justify-center p-2 max-sm:h-11 max-sm:w-11">
-                          <input type="checkbox" checked={sel} disabled={!sel && max <= 0} onChange={() => alternar(c)} className="h-4 w-4 cursor-pointer accent-[#4FAEB2] max-sm:h-5 max-sm:w-5" aria-label={`Incluir ${c.numero}`} />
+                          <input type="checkbox" checked={sel} disabled={!sel && max <= 0} onChange={() => alternar(c)} className="h-4 w-4 cursor-pointer accent-[var(--brand-400)] max-sm:h-5 max-sm:w-5" aria-label={`Incluir ${c.numero}`} />
                         </label>
                         <span className="min-w-0 flex-1">
                           <span className={`block font-mono [overflow-wrap:anywhere] ${c.vencida ? "text-rose-600" : "text-slate-700"}`}>{c.numero} · vence {fechaCorta(c.vencimiento)}</span>
@@ -277,7 +277,7 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
                         </span>
                         {sel ? (
                           <MontoInput value={elegidas[c.id] ?? 0} decimals={false} onChange={(v) => setElegidas((m) => ({ ...m, [c.id]: v }))}
-                            className={`w-28 shrink-0 rounded-lg border px-2 py-1 text-right max-sm:min-h-11 text-xs tabular-nums outline-none focus:ring-2 focus:ring-[#4FAEB2]/20 ${(elegidas[c.id] ?? 0) > max || !((elegidas[c.id] ?? 0) > 0) ? "border-rose-300" : "border-slate-200"}`} />
+                            className={`w-28 shrink-0 rounded-lg border px-2 py-1 text-right max-sm:min-h-11 text-xs tabular-nums outline-none focus:ring-2 focus:ring-[var(--brand-400)]/20 ${(elegidas[c.id] ?? 0) > max || !((elegidas[c.id] ?? 0) > 0) ? "border-rose-300" : "border-slate-200"}`} />
                         ) : (
                           <span className="w-28 shrink-0 text-right tabular-nums text-slate-400">{gs(max)}</span>
                         )}
@@ -286,7 +286,7 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
                   })}
                 </ul>
               )}
-              {lineas.length > 1 ? <p className="mt-1 text-[11px] text-[#3F8E91]">Una sola transferencia aplicada a {lineas.length} facturas: se registran juntas o ninguna.</p> : null}
+              {lineas.length > 1 ? <p className="mt-1 text-[11px] text-[var(--brand)]">Una sola transferencia aplicada a {lineas.length} facturas: se registran juntas o ninguna.</p> : null}
               {montoMal ? <p className="mt-1 text-[11px] text-rose-600">El monto de {montoMal.numero} tiene que ser mayor a cero y no superar {gs(montoMal.max)}.</p> : null}
               {lineas.length ? <p className="mt-1 text-right text-xs text-slate-600">Total de la transferencia: <b className="tabular-nums text-slate-900">{gs(total)}</b></p> : null}
             </div>
@@ -312,19 +312,19 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
               <input value={operacion} onChange={(e) => { setOperacion(e.target.value); setOpAuto(false); }} placeholder="Nº de operación de la transferencia" className={`${INPUT} font-mono`} />
               {banco?.sin_referencia ? (
                 <button type="button" onClick={() => { setOperacion(generarReferencia(banco.prefijo)); setOpAuto(true); }} title="Generar una referencia nueva"
-                  className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-[#4FAEB2]/40 bg-[#4FAEB2]/10 px-3 text-xs font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/20 max-sm:min-h-11">
+                  className="inline-flex shrink-0 items-center gap-1 rounded-xl border border-[var(--brand-400)]/40 bg-[var(--brand-400)]/10 px-3 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/20 max-sm:min-h-11">
                   <RefreshCw className="h-3.5 w-3.5" /> Generar
                 </button>
               ) : null}
             </div>
-            {opAuto ? <p className="mt-1 text-[11px] text-[#3F8E91]">Referencia generada: {banco?.nombre} no emite comprobante. Podés editarla si tenés una.</p> : null}
+            {opAuto ? <p className="mt-1 text-[11px] text-[var(--brand)]">Referencia generada: {banco?.nombre} no emite comprobante. Podés editarla si tenés una.</p> : null}
           </div>
           <div>
             <span className={LABEL}>
               Comprobante <span className="normal-case text-slate-400">({fija || clienteInicial ? "obligatorio" : "opcional"} — JPG, PNG, WebP o PDF, máx. 8 MB)</span>
             </span>
             {!archivo ? (
-              <button type="button" onClick={() => fileRef.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/5">
+              <button type="button" onClick={() => fileRef.current?.click()} className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-3 text-sm font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/5">
                 <Paperclip className="h-4 w-4" /> Adjuntar imagen o PDF
               </button>
             ) : (
@@ -343,7 +343,7 @@ export function RegistrarTransferencia({ fija, clienteInicial, onClose, onHecho 
           <div className="flex shrink-0 gap-2">
             <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 max-sm:flex-1 max-sm:text-sm">Cancelar</button>
             <button type="button" onClick={() => void guardar()} disabled={busy || invalido}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#3F8E91] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#357a7d] disabled:opacity-50 max-sm:flex-[2] max-sm:text-sm">
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--brand)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#357a7d] disabled:opacity-50 max-sm:flex-[2] max-sm:text-sm">
               {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
               {busy ? "Enviando…" : fija ? "Enviar a aprobación" : "Registrar (queda pendiente)"}
             </button>

@@ -33,7 +33,7 @@ export function TramoBadge({ tramo }: { tramo: TramoKey }) {
 }
 
 const ESTADO_PROMESA: Record<PromesaPago["estado"], string> = {
-  pendiente: "border-[#4FAEB2]/40 bg-[#4FAEB2]/10 text-[#3F8E91]",
+  pendiente: "border-[var(--brand-400)]/40 bg-[var(--brand-400)]/10 text-[var(--brand)]",
   cumplida: "border-emerald-200 bg-emerald-50 text-emerald-700",
   cancelada: "border-slate-200 bg-slate-50 text-slate-500",
 };
@@ -123,9 +123,9 @@ export function DetalleCobranzaPanel({ clienteId, onClose, onCambio, avisar }: {
               <div className="flex items-start justify-between gap-3 border-b border-slate-100 bg-gradient-to-br from-slate-50 to-white px-4 py-3.5">
                 <div className="min-w-0">
                   <Link href={`/clientes/${d.cliente.cliente_id}`} title="Abrir la ficha del cliente"
-                    className="group inline-flex max-w-full items-center gap-1.5 text-base font-semibold text-slate-900 hover:text-[#3F8E91]">
+                    className="group inline-flex max-w-full items-center gap-1.5 text-base font-semibold text-slate-900 hover:text-[var(--brand)]">
                     <span className="truncate">{d.cliente.cliente_label}</span>
-                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-400 transition-colors group-hover:text-[#3F8E91]" />
+                    <ExternalLink className="h-3.5 w-3.5 shrink-0 text-slate-400 transition-colors group-hover:text-[var(--brand)]" />
                   </Link>
                   <div className="mt-0.5 truncate text-xs text-slate-500">
                     {[d.cliente.categoria, d.servicios.map(planDe).join(" · ")].filter(Boolean).join(" · ") || "Sin servicios con deuda"}
@@ -137,11 +137,11 @@ export function DetalleCobranzaPanel({ clienteId, onClose, onCambio, avisar }: {
               {d.cliente.telefono ? (
                 <div className="flex items-center justify-between gap-2 border-b border-slate-100 px-4 py-2.5">
                   <div className="flex min-w-0 items-center gap-2 text-sm text-slate-700">
-                    <Phone className="h-4 w-4 shrink-0 text-[#3F8E91]" />
+                    <Phone className="h-4 w-4 shrink-0 text-[var(--brand)]" />
                     <a href={`tel:${d.cliente.telefono}`} className="truncate font-medium tabular-nums hover:underline">{d.cliente.telefono}</a>
                   </div>
                   <button type="button" onClick={() => void copiar(d.cliente.telefono!)} aria-label="Copiar teléfono"
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors max-sm:min-h-11 max-sm:px-3.5 ${copiado ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-600 hover:border-[#3F8E91]/40 hover:text-[#3F8E91]"}`}>
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-semibold transition-colors max-sm:min-h-11 max-sm:px-3.5 ${copiado ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-600 hover:border-[var(--brand)]/40 hover:text-[var(--brand)]"}`}>
                     {copiado ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
                     {copiado ? "Copiado" : "Copiar"}
                   </button>
@@ -206,7 +206,7 @@ export function DetalleCobranzaPanel({ clienteId, onClose, onCambio, avisar }: {
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Servicios asociados ({d.servicios.length})</p>
                 {d.total_deuda > 0 ? (
                   <button type="button" onClick={() => setEnCaja(true)} title="Cobro en efectivo u otro medio por la caja (como hasta ahora)"
-                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91] max-sm:min-h-11 max-sm:px-3 max-sm:text-xs">
+                    className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-600 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)] max-sm:min-h-11 max-sm:px-3 max-sm:text-xs">
                     <Wallet className="h-3.5 w-3.5" /> Cobro en caja
                   </button>
                 ) : null}
@@ -256,7 +256,7 @@ export function DetalleCobranzaPanel({ clienteId, onClose, onCambio, avisar }: {
             <div>
               <div className="mb-2 flex items-center justify-between">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-500">Promesas de pago</p>
-                <button type="button" onClick={() => setPromesaOpen(true)} className="rounded-lg border border-[#4FAEB2]/40 bg-[#4FAEB2]/10 px-2.5 py-1 text-[11px] font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/20 max-sm:min-h-11 max-sm:px-3 max-sm:text-xs">
+                <button type="button" onClick={() => setPromesaOpen(true)} className="rounded-lg border border-[var(--brand-400)]/40 bg-[var(--brand-400)]/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/20 max-sm:min-h-11 max-sm:px-3 max-sm:text-xs">
                   + Agregar promesa
                 </button>
               </div>
@@ -267,7 +267,7 @@ export function DetalleCobranzaPanel({ clienteId, onClose, onCambio, avisar }: {
                   {d.promesas.map((p) => (
                     <li key={p.id} className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 px-3 py-2 text-xs">
                       <span className="min-w-0 text-slate-700">
-                        <b className={`tabular-nums ${p.estado === "pendiente" && p.fecha_promesa === d.hoy ? "text-[#3F8E91]" : ""}`}>{fechaCorta(p.fecha_promesa)}</b>
+                        <b className={`tabular-nums ${p.estado === "pendiente" && p.fecha_promesa === d.hoy ? "text-[var(--brand)]" : ""}`}>{fechaCorta(p.fecha_promesa)}</b>
                         <span className={`ml-2 inline-flex rounded-full border px-1.5 py-px text-[10px] font-semibold ${ESTADO_PROMESA[p.estado]}`}>{p.estado}</span>
                         {p.cerrada_motivo && p.estado !== "pendiente" ? <span className="ml-2 text-[10px] text-slate-400">{p.cerrada_motivo}</span> : null}
                       </span>
@@ -325,7 +325,7 @@ function ListaCuotas({ titulo, cuotas, puede, masVieja, onPagar }: {
                   {puede ? (
                     c.id === masVieja?.id ? (
                       libre > 0 ? (
-                        <button type="button" onClick={() => onPagar(c)} className="rounded-lg border border-[#4FAEB2]/40 bg-[#4FAEB2]/10 px-2 py-1 text-[10px] font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/20 max-sm:min-h-11 max-sm:px-3.5 max-sm:text-xs">
+                        <button type="button" onClick={() => onPagar(c)} className="rounded-lg border border-[var(--brand-400)]/40 bg-[var(--brand-400)]/10 px-2 py-1 text-[10px] font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/20 max-sm:min-h-11 max-sm:px-3.5 max-sm:text-xs">
                           Registrar pago
                         </button>
                       ) : (
@@ -385,7 +385,7 @@ function ModalPromesa({ clienteId, onClose, onHecho }: { clienteId: string; onCl
         </div>
         <div className="flex shrink-0 justify-end gap-2 border-t border-slate-100 px-5 py-3">
           <button type="button" onClick={onClose} disabled={busy} className="rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50 max-sm:flex-1 max-sm:text-sm">Cancelar</button>
-          <button type="button" disabled={busy || !fecha || fecha < hoy} onClick={() => void guardar()} className="rounded-xl bg-[#3F8E91] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#357a7d] disabled:opacity-50 max-sm:flex-1 max-sm:text-sm">
+          <button type="button" disabled={busy || !fecha || fecha < hoy} onClick={() => void guardar()} className="rounded-xl bg-[var(--brand)] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#357a7d] disabled:opacity-50 max-sm:flex-1 max-sm:text-sm">
             {busy ? "Guardando…" : "Guardar promesa"}
           </button>
         </div>

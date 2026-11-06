@@ -108,7 +108,7 @@ export function ResponsablesSelect({
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
                 placeholder="Buscar persona…"
-                className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
+                className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm outline-none focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20"
               />
             </div>
             <ul className="max-h-56 overflow-y-auto py-1">
@@ -130,7 +130,7 @@ export function ResponsablesSelect({
                         <span
                           aria-hidden="true"
                           className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
-                            elegido ? "border-[#3F8E91] bg-[#3F8E91] text-white" : "border-slate-300"
+                            elegido ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-slate-300"
                           }`}
                         >
                           {elegido ? (
@@ -141,7 +141,7 @@ export function ResponsablesSelect({
                         </span>
                         <span className="min-w-0 flex-1 truncate">{nombreDe(o.id)}</span>
                         {esPrincipal ? (
-                          <span className="shrink-0 rounded-md bg-[#4FAEB2]/12 px-1.5 py-0.5 text-[10px] font-semibold text-[#3F8E91]">principal</span>
+                          <span className="shrink-0 rounded-md bg-[var(--brand-400)]/12 px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand)]">principal</span>
                         ) : null}
                       </button>
                     </li>
@@ -160,14 +160,14 @@ export function ResponsablesSelect({
         type="button"
         disabled={disabled}
         onClick={() => setAbierto((v) => !v)}
-        className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm shadow-sm transition-colors hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20 disabled:cursor-not-allowed disabled:opacity-60"
+        className="flex w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm shadow-sm transition-colors hover:border-[var(--brand-400)]/60 focus:border-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]/20 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <span className="flex min-w-0 flex-1 flex-wrap gap-1">
           {valor.length === 0 ? (
             <span className="py-0.5 text-slate-400">Elegí responsables…</span>
           ) : (
             valor.map((id) => (
-              <span key={id} className="inline-flex max-w-full items-center gap-1 rounded-md bg-[#4FAEB2]/12 px-1.5 py-0.5 text-[12px] font-medium text-[#3F8E91]">
+              <span key={id} className="inline-flex max-w-full items-center gap-1 rounded-md bg-[var(--brand-400)]/12 px-1.5 py-0.5 text-[12px] font-medium text-[var(--brand)]">
                 <span className="truncate">{nombreDe(id)}</span>
                 <span
                   role="button"
@@ -177,7 +177,7 @@ export function ResponsablesSelect({
                     e.stopPropagation();
                     onChange(valor.filter((v) => v !== id));
                   }}
-                  className="cursor-pointer text-[#3F8E91]/60 hover:text-[#3F8E91]"
+                  className="cursor-pointer text-[var(--brand)]/60 hover:text-[var(--brand)]"
                 >
                   ×
                 </span>

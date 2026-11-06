@@ -157,7 +157,7 @@ export function SelectorEstado({
                 <span className="block text-xs font-semibold text-slate-800">{o.label}</span>
                 <span className="block text-[11px] leading-snug text-slate-500">{o.detalle}</span>
               </span>
-              {estado === o.id ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#3F8E91]" aria-hidden /> : null}
+              {estado === o.id ? <Check className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--brand)]" aria-hidden /> : null}
             </button>
           ))}
         </div>
@@ -192,8 +192,8 @@ export function Encabezado({ eyebrow, titulo, detalle, children, volver }: {
       <div className="min-w-0">
         {volver ? <VolverOmnicanal href={volver.href} label={volver.label} className="mb-1.5" /> : null}
         <div className="flex items-center gap-2">
-          <span aria-hidden className="h-2 w-2 rounded-full bg-[#4FAEB2] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#4FAEB2]">{eyebrow}</p>
+          <span aria-hidden className="h-2 w-2 rounded-full bg-[var(--brand-400)] shadow-[0_0_0_3px_rgba(79,174,178,0.18)]" />
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-400)]">{eyebrow}</p>
         </div>
         <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 [overflow-wrap:anywhere] sm:text-2xl">{titulo}</h1>
         {detalle ? <p className="mt-1 max-w-2xl text-[13px] text-slate-500 sm:text-sm">{detalle}</p> : null}
@@ -205,11 +205,11 @@ export function Encabezado({ eyebrow, titulo, detalle, children, volver }: {
 
 // Al dedo (celular / táctil) los botones miden 44 px (min-h/min-w: no pisan el diseño de escritorio).
 export const btnSecundario =
-  "inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#3F8E91] disabled:cursor-not-allowed disabled:opacity-50 max-sm:min-h-11 [@media(pointer:coarse)]:min-h-11";
+  "inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)] disabled:cursor-not-allowed disabled:opacity-50 max-sm:min-h-11 [@media(pointer:coarse)]:min-h-11";
 export const btnPrimario =
-  "inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/25 transition-colors hover:bg-[#3F8E91] disabled:opacity-50 max-sm:min-h-11 [@media(pointer:coarse)]:min-h-11";
+  "inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-400)] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[var(--brand-400)]/25 transition-colors hover:bg-[var(--brand)] disabled:opacity-50 max-sm:min-h-11 [@media(pointer:coarse)]:min-h-11";
 export const btnIcono =
-  "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:bg-[#4FAEB2]/8 hover:text-[#3F8E91] disabled:opacity-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11";
+  "inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-[var(--brand-400)]/60 hover:bg-[var(--brand-400)]/8 hover:text-[var(--brand)] disabled:opacity-50 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11";
 export const thClase = "px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-[0.08em] text-slate-500";
 /** Interruptor con aspecto de chip (mismo estilo que el de Inventario / Existencias). */
 export const CHIP_TOGGLE = (on: boolean) =>
@@ -236,14 +236,14 @@ export function Seccion({
     amber: "border-amber-200 bg-amber-50 text-amber-700",
     orange: "border-orange-200 bg-orange-50 text-orange-700",
     slate: "border-slate-200 bg-slate-50 text-slate-600",
-    teal: "border-[#4FAEB2]/30 bg-[#4FAEB2]/10 text-[#3F8E91]",
+    teal: "border-[var(--brand-400)]/30 bg-[var(--brand-400)]/10 text-[var(--brand)]",
   }[tonoContador];
   return (
-    <section className={`min-w-0 rounded-2xl border bg-white p-4 shadow-sm sm:p-6 ${destacada ? "border-[#4FAEB2]/45" : "border-slate-200"}`}>
+    <section className={`min-w-0 rounded-2xl border bg-white p-4 shadow-sm sm:p-6 ${destacada ? "border-[var(--brand-400)]/45" : "border-slate-200"}`}>
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
-            <span aria-hidden className="block h-5 w-1 rounded-full bg-[#4FAEB2]" />
+            <span aria-hidden className="block h-5 w-1 rounded-full bg-[var(--brand-400)]" />
             <h2 className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">{titulo}</h2>
             {contador != null ? <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold tabular-nums ${pill}`}>{contador}</span> : null}
           </div>
@@ -260,20 +260,20 @@ type Tono = "neutral" | "warning" | "success" | "featured" | "danger";
 export function Metrica({ label, valor, icono, tono = "neutral", pie }: { label: string; valor: ReactNode; icono: ReactNode; tono?: Tono; pie?: ReactNode }) {
   const card =
     tono === "featured"
-      ? "relative min-w-0 overflow-hidden rounded-2xl border border-[#4FAEB2]/55 bg-gradient-to-br from-white via-white to-[#4FAEB2]/8 p-3.5 shadow-[0_4px_18px_rgba(79,174,178,0.08)] sm:p-4"
+      ? "relative min-w-0 overflow-hidden rounded-2xl border border-[var(--brand-400)]/55 bg-gradient-to-br from-white via-white to-[var(--brand-400)]/8 p-3.5 shadow-[0_4px_18px_rgba(79,174,178,0.08)] sm:p-4"
       : "min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:p-4";
   const chip = {
-    featured: "border-[#4FAEB2]/30 bg-[#4FAEB2]/12 text-[#4FAEB2]",
+    featured: "border-[var(--brand-400)]/30 bg-[var(--brand-400)]/12 text-[var(--brand-400)]",
     warning: "border-amber-200 bg-amber-50 text-amber-600",
     success: "border-emerald-200 bg-emerald-50 text-emerald-600",
     danger: "border-rose-200 bg-rose-50 text-rose-600",
     neutral: "border-slate-200 bg-slate-50 text-slate-500",
   }[tono];
-  const valorCls = { featured: "text-[#3F8E91]", warning: "text-amber-700", success: "text-emerald-700", danger: "text-rose-700", neutral: "text-slate-900" }[tono];
+  const valorCls = { featured: "text-[var(--brand)]", warning: "text-amber-700", success: "text-emerald-700", danger: "text-rose-700", neutral: "text-slate-900" }[tono];
   return (
     <div className={card}>
       {tono === "featured" ? (
-        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/70 to-[#4FAEB2]/30" />
+        <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[var(--brand-400)] via-[var(--brand-400)]/70 to-[var(--brand-400)]/30" />
       ) : null}
       <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border ${chip}`}>{icono}</span>
       <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
@@ -297,7 +297,7 @@ export function AvatarTono({ nombre, chico }: { nombre: string; chico?: boolean 
 export function Cargando({ texto = "Cargando…" }: { texto?: string }) {
   return (
     <div className="flex items-center gap-3 py-8 text-sm text-slate-500">
-      <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-[#4FAEB2]" />
+      <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-[var(--brand-400)]" />
       {texto}
     </div>
   );

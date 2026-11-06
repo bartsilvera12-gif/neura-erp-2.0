@@ -14,7 +14,7 @@ import { MarcoApp } from "@/components/shell/MarcoApp";
 import { marcarSalida, useAvisoConexion } from "@/modules/usuarios/conexion";
 
 type Me = Usuario;
-const ACCENT = "#7dcfd2";
+const ACCENT = "var(--zentra-accent)";
 
 /**
  * Layout de la app autenticada: sesión, /api/me (perfil y pantallas) y guard de página.

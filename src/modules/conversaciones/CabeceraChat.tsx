@@ -24,7 +24,7 @@ import { Avatar, CanalBadge, VentanaWhatsApp } from "@/modules/conversaciones/ui
 import { SlaBadge } from "@/modules/conversaciones/ui-supervision";
 
 const btn = "inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-[11px] font-semibold shadow-sm transition-colors disabled:opacity-50";
-const btnBlanco = `${btn} border-slate-200 bg-white text-slate-700 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]`;
+const btnBlanco = `${btn} border-slate-200 bg-white text-slate-700 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)]`;
 /** Botones de la versión compacta: 44 px al dedo (40 con mouse). */
 const btnCompacto = "inline-flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border text-xs font-semibold shadow-sm transition-colors disabled:opacity-50 [@media(pointer:fine)]:h-10";
 
@@ -97,7 +97,7 @@ export function CabeceraChat({
               type="button"
               onClick={onVolver}
               aria-label="Volver a la lista de chats"
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 hover:text-[#4FAEB2] md:hidden"
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-slate-600 hover:bg-slate-100 hover:text-[var(--brand-400)] md:hidden"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
@@ -121,7 +121,7 @@ export function CabeceraChat({
               aria-expanded={fichaAbierta}
               aria-label="Ficha del contacto"
               title="Ficha del contacto: cliente, deuda, suscripción, tickets y CRM"
-              className={`${btnCompacto} w-11 ${fichaAbierta ? "border-[#4FAEB2] bg-[#4FAEB2]/10 text-[#3F8E91]" : "border-slate-200 bg-white text-slate-700"} [@media(pointer:fine)]:w-10`}
+              className={`${btnCompacto} w-11 ${fichaAbierta ? "border-[var(--brand-400)] bg-[var(--brand-400)]/10 text-[var(--brand)]" : "border-slate-200 bg-white text-slate-700"} [@media(pointer:fine)]:w-10`}
             >
               <UserRound className="h-[18px] w-[18px]" aria-hidden />
             </button>
@@ -130,7 +130,7 @@ export function CabeceraChat({
                 <Hand className="h-4 w-4 shrink-0" aria-hidden /> Tomar
               </button>
             ) : principal === "transferir" ? (
-              <button type="button" disabled={ocupado} onClick={onTransferir} title="Transferir" aria-label="Transferir" className={`${btnCompacto} border-transparent bg-[#4FAEB2] px-3 text-white`}>
+              <button type="button" disabled={ocupado} onClick={onTransferir} title="Transferir" aria-label="Transferir" className={`${btnCompacto} border-transparent bg-[var(--brand-400)] px-3 text-white`}>
                 <ArrowLeftRight className="h-4 w-4 shrink-0" aria-hidden /> <span className="max-[380px]:sr-only">Transferir</span>
               </button>
             ) : (
@@ -150,7 +150,7 @@ export function CabeceraChat({
               onClick={onFicha}
               aria-expanded={fichaAbierta}
               title="Ficha del contacto: cliente, deuda, suscripción, tickets y CRM"
-              className={`${btn} ${fichaAbierta ? "border-[#4FAEB2] bg-[#4FAEB2]/10 text-[#3F8E91]" : "border-slate-200 bg-white text-slate-700 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]"}`}
+              className={`${btn} ${fichaAbierta ? "border-[var(--brand-400)] bg-[var(--brand-400)]/10 text-[var(--brand)]" : "border-slate-200 bg-white text-slate-700 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)]"}`}
             >
               <UserRound className="h-3.5 w-3.5 shrink-0" aria-hidden /> Ficha
             </button>
@@ -160,7 +160,7 @@ export function CabeceraChat({
               </button>
             ) : null}
             {!cerrada ? (
-              <button type="button" disabled={ocupado} onClick={onTransferir} className={`${btn} border-transparent bg-[#4FAEB2] text-white shadow-[#4FAEB2]/25 hover:bg-[#3F8E91]`}>
+              <button type="button" disabled={ocupado} onClick={onTransferir} className={`${btn} border-transparent bg-[var(--brand-400)] text-white shadow-[var(--brand-400)]/25 hover:bg-[var(--brand)]`}>
                 <ArrowLeftRight className="h-3.5 w-3.5 shrink-0" aria-hidden /> Transferir
               </button>
             ) : null}
@@ -178,7 +178,7 @@ export function CabeceraChat({
               </button>
             ) : null}
             {!cerrada ? (
-              <button type="button" disabled={ocupado} onClick={onFinalizar} onMouseEnter={onPrecargarFinalizar} onFocus={onPrecargarFinalizar} className={`${btnBlanco} hover:bg-[#4FAEB2]/5`}>
+              <button type="button" disabled={ocupado} onClick={onFinalizar} onMouseEnter={onPrecargarFinalizar} onFocus={onPrecargarFinalizar} className={`${btnBlanco} hover:bg-[var(--brand-400)]/5`}>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-3.5 w-3.5 shrink-0" aria-hidden="true">
                   <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
                   <polyline points="22 4 12 14.01 9 11.01" />
@@ -225,7 +225,7 @@ export function CabeceraChat({
           {conv.cliente_id ? (
             <>
               <span aria-hidden="true" className="mx-0.5 h-3.5 w-px bg-slate-200 @max-2xl:hidden" />
-              <Link href={`/clientes/${conv.cliente_id}`} className="inline-flex items-center gap-1 rounded-full border border-[#4FAEB2]/30 bg-[#4FAEB2]/10 px-2 py-0.5 text-[10px] font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/20 @max-2xl:hidden">
+              <Link href={`/clientes/${conv.cliente_id}`} className="inline-flex items-center gap-1 rounded-full border border-[var(--brand-400)]/30 bg-[var(--brand-400)]/10 px-2 py-0.5 text-[10px] font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/20 @max-2xl:hidden">
                 Cliente →
               </Link>
             </>

@@ -19,12 +19,12 @@ import { ESTRATEGIA_LABEL, type AgenteCola, type Cola, type DatosColas, type Est
 import { CHIP_TOGGLE, Cargando, Encabezado, btnPrimario, btnSecundario } from "@/modules/conversaciones/ui-supervision";
 import { Girando } from "@/modules/conversaciones/ui";
 
-const seccion = "space-y-4 rounded-2xl border border-[#4FAEB2]/45 bg-white p-5 shadow-sm";
+const seccion = "space-y-4 rounded-2xl border border-[var(--brand-400)]/45 bg-white p-5 shadow-sm";
 const tituloSeccion = "text-xs font-bold uppercase tracking-wide text-slate-500";
 const etiqueta = "mb-1 block text-xs font-semibold uppercase text-slate-500";
 const campo =
-  "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm transition-colors hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20";
-const check = "h-4 w-4 [@media(pointer:coarse)]:h-6 [@media(pointer:coarse)]:w-6 rounded border-slate-300 text-[#4FAEB2] accent-[#4FAEB2] focus:ring-[#4FAEB2]/30";
+  "w-full rounded-xl border border-slate-200 px-3 py-2 text-sm shadow-sm transition-colors hover:border-[var(--brand-400)]/60 focus:border-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]/20";
+const check = "h-4 w-4 [@media(pointer:coarse)]:h-6 [@media(pointer:coarse)]:w-6 rounded border-slate-300 text-[var(--brand-400)] accent-[var(--brand-400)] focus:ring-[var(--brand-400)]/30";
 const ayuda = "mt-1 text-[11px] leading-relaxed text-slate-500";
 
 const ESTRATEGIAS: { id: Estrategia; label: string; detalle: string }[] = [
@@ -78,7 +78,7 @@ export function ConfigColas() {
   return (
     <div className="flex flex-col gap-6 pb-10">
       <nav className="text-xs text-slate-500">
-        <Link href="/conversaciones/monitoreo" className="hover:text-[#3F8E91] hover:underline max-sm:inline-flex max-sm:min-h-10 max-sm:items-center">Monitoreo</Link> / <span className="font-semibold text-slate-700">Colas y enrutamiento</span>
+        <Link href="/conversaciones/monitoreo" className="hover:text-[var(--brand)] hover:underline max-sm:inline-flex max-sm:min-h-10 max-sm:items-center">Monitoreo</Link> / <span className="font-semibold text-slate-700">Colas y enrutamiento</span>
       </nav>
       <Encabezado
         eyebrow="Omnicanal · Colas"
@@ -137,7 +137,7 @@ export function ConfigColas() {
                       <button
                         type="button"
                         onClick={() => setEditando({ id: c.id, cola: aCuerpo(c) })}
-                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-[#4FAEB2]/60 hover:text-[#3F8E91] max-sm:min-h-11 max-sm:px-5"
+                        className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)] max-sm:min-h-11 max-sm:px-5"
                       >
                         Editar
                       </button>
@@ -337,17 +337,17 @@ function EditorCola({
       <div
         role="dialog"
         aria-modal="true"
-        className={`relative flex h-[min(90dvh,960px)] ${ALTO_MAX_MODAL} w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[#4FAEB2]/10 ring-1 ring-[#4FAEB2]/15`}
+        className={`relative flex h-[min(90dvh,960px)] ${ALTO_MAX_MODAL} w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-[var(--brand-400)]/10 ring-1 ring-[var(--brand-400)]/15`}
         style={{ animation: "modal-pop 0.18s cubic-bezier(0.16,1,0.3,1)" }}
       >
-        <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/80 to-[#4FAEB2]/40" />
+        <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-[var(--brand-400)] via-[var(--brand-400)]/80 to-[var(--brand-400)]/40" />
         <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-200 px-4 py-3 sm:px-6 sm:py-4">
           <div className="flex items-start gap-3">
-            <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-[#4FAEB2]/15 text-[#2F6E71]">
+            <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--brand-400)]/15 text-[var(--brand-700)]">
               <Inbox className="h-5 w-5" aria-hidden />
             </span>
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#4FAEB2]">{id ? "Editar" : "Nueva"}</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--brand-400)]">{id ? "Editar" : "Nueva"}</p>
               <h2 className="text-lg font-semibold text-slate-900">{id ? "Editar cola" : "Nueva cola"}</h2>
               <p className="text-[13px] text-slate-500 max-sm:hidden">
                 {id ? "Modificá nombre, canales, estrategia, SLA y asesores de esta cola." : "Definí nombre, canales asociados, estrategia de distribución, SLA y asesores."}
@@ -387,8 +387,8 @@ function EditorCola({
             </div>
             <div className="grid gap-2 sm:grid-cols-2">
               {ESTRATEGIAS.map((s) => (
-                <label key={s.id} className={`flex cursor-pointer gap-3 rounded-xl border p-3 transition ${c.estrategia === s.id ? "border-[#4FAEB2]/60 bg-[#4FAEB2]/8" : "border-slate-200 hover:border-[#4FAEB2]/40"}`}>
-                  <input type="radio" name="estrategia" checked={c.estrategia === s.id} onChange={() => set("estrategia", s.id)} className="mt-0.5 accent-[#4FAEB2]" />
+                <label key={s.id} className={`flex cursor-pointer gap-3 rounded-xl border p-3 transition ${c.estrategia === s.id ? "border-[var(--brand-400)]/60 bg-[var(--brand-400)]/8" : "border-slate-200 hover:border-[var(--brand-400)]/40"}`}>
+                  <input type="radio" name="estrategia" checked={c.estrategia === s.id} onChange={() => set("estrategia", s.id)} className="mt-0.5 accent-[var(--brand-400)]" />
                   <span>
                     <span className="block text-sm font-semibold text-slate-800">{s.label}</span>
                     <span className="block text-[12px] leading-snug text-slate-500">{s.detalle}</span>
@@ -537,12 +537,12 @@ function EditorCola({
                   sumar([agregar]);
                   setAgregar("");
                 }}
-                className="rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/25 hover:bg-[#3F8E91] disabled:opacity-50 max-sm:min-h-11"
+                className="rounded-xl bg-[var(--brand-400)] px-4 py-2 text-sm font-semibold text-white shadow-sm shadow-[var(--brand-400)]/25 hover:bg-[var(--brand)] disabled:opacity-50 max-sm:min-h-11"
               >
                 Añadir
               </button>
               {disponibles.length > 1 ? (
-                <button type="button" onClick={() => sumar(disponibles.map((u) => u.id))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold max-sm:min-h-11 text-slate-600 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">
+                <button type="button" onClick={() => sumar(disponibles.map((u) => u.id))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold max-sm:min-h-11 text-slate-600 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)]">
                   Añadir todos
                 </button>
               ) : null}
@@ -581,7 +581,7 @@ function EditorCola({
                               max={500}
                               value={a.max_conversaciones}
                               onChange={(e) => setAgente(a.usuario_id, { max_conversaciones: Math.min(500, Math.max(1, numero(e.target.value, 20))) })}
-                              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-xs tabular-nums max-sm:h-11 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20"
+                              className="w-20 rounded-lg border border-slate-200 px-2 py-1 text-xs tabular-nums max-sm:h-11 focus:border-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]/20"
                               aria-label="Máximo de conversaciones"
                             />
                           </td>
@@ -615,7 +615,7 @@ function EditorCola({
               type="button"
               onClick={() => void guardar()}
               disabled={guardando}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-[#4FAEB2] px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[#4FAEB2]/25 transition-colors hover:bg-[#3F8E91] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-[var(--brand-400)] px-5 py-2.5 text-sm font-semibold text-white shadow-sm shadow-[var(--brand-400)]/25 transition-colors hover:bg-[var(--brand)] disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-400 disabled:shadow-none"
             >
               {guardando ? <Girando className="h-4 w-4" /> : null} {guardando ? "Guardando…" : "Guardar cola"}
             </button>
@@ -623,7 +623,7 @@ function EditorCola({
               type="button"
               onClick={onCerrar}
               disabled={guardando}
-              className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-[#4FAEB2]/60 hover:bg-[#4FAEB2]/5 hover:text-[#3F8E91]"
+              className="rounded-xl border border-slate-200 px-5 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:border-[var(--brand-400)]/60 hover:bg-[var(--brand-400)]/5 hover:text-[var(--brand)]"
             >
               Cancelar
             </button>

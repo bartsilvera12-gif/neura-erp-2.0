@@ -21,7 +21,7 @@ export const ESTADOS: Record<EstadoPresupuesto, { texto: string; clase: string; 
   aceptado: { texto: "Aceptado", clase: "bg-emerald-50 text-emerald-700", punto: "#10b981" },
   rechazado: { texto: "Rechazado", clase: "bg-rose-50 text-rose-700", punto: "#f43f5e" },
   vencido: { texto: "Vencido", clase: "bg-amber-50 text-amber-700", punto: "#f59e0b" },
-  convertido: { texto: "Convertido", clase: "bg-[#4FAEB2]/15 text-[#3F8E91]", punto: "#3F8E91" },
+  convertido: { texto: "Convertido", clase: "bg-[var(--brand-400)]/15 text-[var(--brand)]", punto: "var(--brand)" },
 };
 
 /** Una fila de la lista (listar_presupuestos). */

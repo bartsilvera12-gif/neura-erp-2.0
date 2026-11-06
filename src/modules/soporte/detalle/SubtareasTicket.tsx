@@ -217,7 +217,7 @@ function TarjetaSubtarea({ ticketId, sub, alCambiar }: { ticketId: string; sub: 
           ) : null}
           {error ? <Aviso>{error}</Aviso> : null}
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <label className="mr-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-[#2F6E71]">
+            <label className="mr-auto inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-[12px] font-semibold text-slate-500 hover:bg-white hover:text-[var(--brand-700)]">
               <Paperclip className="h-3.5 w-3.5" aria-hidden /> Adjuntar
               <input
                 type="file"

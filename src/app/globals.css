@@ -44,13 +44,14 @@ html[data-tema=oscuro] .qr-ok-grande {
   --brand-100: color-mix(in srgb, var(--brand) 20%, white);
   --brand-600: color-mix(in srgb, var(--brand) 86%, black);
   --brand-700: color-mix(in srgb, var(--brand) 72%, black);
+  --brand-400: color-mix(in srgb, var(--brand) 78%, white);
   --brand-dark: #023047;
-  /* ZENTRA — identidad lateral (turquesa profundo, contenido blanco) */
-  --zentra-sidebar: #0b3a3d;
-  --zentra-sidebar-elevated: #104a4e;
+  /* ZENTRA — marco lateral: deriva del color del cliente (--brand); el LOGO sigue fijo de Zentra. */
+  --zentra-sidebar: color-mix(in srgb, var(--brand) 45%, #0b1a24);
+  --zentra-sidebar-elevated: color-mix(in srgb, var(--brand) 58%, #0b1a24);
   --zentra-sidebar-border: rgba(255, 255, 255, 0.08);
   --zentra-sidebar-hover: rgba(255, 255, 255, 0.06);
-  --zentra-accent: #7dcfd2;
+  --zentra-accent: color-mix(in srgb, var(--brand) 55%, white);
 }
 
 html, body { height: 100%; }

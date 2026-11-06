@@ -211,7 +211,7 @@ export const EVENTO_RUTEO: Record<string, { label: string; clase: string }> = {
   cola_manual: { label: "En cola (asignación manual)", clase: "border-indigo-200 bg-indigo-50 text-indigo-700" },
   reasignada_sla: { label: "Reasignada por SLA", clase: "border-orange-200 bg-orange-50 text-orange-700" },
   sla_tope: { label: "SLA vencido (tope de reasignaciones)", clase: "border-rose-200 bg-rose-50 text-rose-700" },
-  tomada: { label: "Tomada", clase: "border-[#4FAEB2]/30 bg-[#4FAEB2]/10 text-[#3F8E91]" },
+  tomada: { label: "Tomada", clase: "border-[var(--brand-400)]/30 bg-[var(--brand-400)]/10 text-[var(--brand)]" },
   transferida: { label: "Transferida", clase: "border-violet-200 bg-violet-50 text-violet-700" },
   asignada_supervisor: { label: "Asignada por supervisor", clase: "border-violet-200 bg-violet-50 text-violet-700" },
   liberada: { label: "Quedó sin asignar", clase: "border-slate-200 bg-slate-50 text-slate-600" },
@@ -292,7 +292,7 @@ export function segundosEntre(desde: string | null | undefined, hasta: string | 
 
 /** Color estable por nombre para los avatares (6 tonos, como el sistema actual). */
 const TONOS_AVATAR = [
-  "bg-[#4FAEB2]/12 text-[#3F8E91] border-[#4FAEB2]/30",
+  "bg-[var(--brand-400)]/12 text-[var(--brand)] border-[var(--brand-400)]/30",
   "bg-violet-50 text-violet-700 border-violet-200",
   "bg-amber-50 text-amber-700 border-amber-200",
   "bg-emerald-50 text-emerald-700 border-emerald-200",

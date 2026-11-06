@@ -170,11 +170,11 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
     <TicketContext.Provider value={ctx}>
       <Pagina>
         <nav className="mb-3 flex items-center gap-2 text-[13.5px] text-slate-400" aria-label="Ruta">
-          <Link href="/soporte/tickets" className="font-medium text-slate-500 no-underline hover:text-[#2F6E71] max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">
+          <Link href="/soporte/tickets" className="font-medium text-slate-500 no-underline hover:text-[var(--brand-700)] max-sm:-my-2 max-sm:inline-flex max-sm:min-h-11 max-sm:items-center">
             Tickets
           </Link>
           <span aria-hidden>/</span>
-          <Link href={base} className="font-semibold text-slate-700 no-underline hover:text-[#2F6E71]">
+          <Link href={base} className="font-semibold text-slate-700 no-underline hover:text-[var(--brand-700)]">
             {numeroTicket(t.numero)}
           </Link>
           {editando ? (
@@ -204,7 +204,7 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
                   onClick={() => setMenu((m) => !m)}
                   aria-label="Más acciones"
                   aria-expanded={menu}
-                  className="grid h-[42px] w-[46px] place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[#4FAEB2]/50 max-sm:h-11"
+                  className="grid h-[42px] w-[46px] place-items-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition hover:border-[var(--brand-400)]/50 max-sm:h-11"
                 >
                   <MoreHorizontal className="h-5 w-5" />
                 </button>
@@ -212,7 +212,7 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
                   <div className="absolute right-0 top-12 z-30 w-60 max-w-[calc(100vw-1.5rem)] overflow-hidden rounded-xl border border-slate-200 bg-white p-1 text-[13px] shadow-xl">
                     {menuItems.map((it) => {
                       const Ic = it.ic;
-                      const cls = "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-medium text-slate-700 no-underline hover:bg-[#4FAEB2]/8 hover:text-[#2F6E71] max-sm:min-h-12 max-sm:text-[15px]";
+                      const cls = "flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left font-medium text-slate-700 no-underline hover:bg-[var(--brand-400)]/8 hover:text-[var(--brand-700)] max-sm:min-h-12 max-sm:text-[15px]";
                       return it.href ? (
                         <Link key={it.et} href={it.href} onClick={() => setMenu(false)} className={cls}>
                           <Ic className="h-4 w-4" aria-hidden />
@@ -246,8 +246,8 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
           <>
             {/* Franja de resumen */}
             <section className={`${TARJETA} mb-4 grid grid-cols-2 gap-y-1 p-2 sm:mb-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-[1.4fr_0.9fr_1fr_1fr_1fr] xl:divide-x xl:divide-slate-100 [&>*]:min-w-0 max-sm:[&>:first-child]:col-span-2`}>
-              <div className="min-w-0 rounded-xl bg-[#4FAEB2]/10 px-4 py-3">
-                <p className="flex items-center gap-1.5 text-[11.5px] font-medium text-[#3F8E91]">
+              <div className="min-w-0 rounded-xl bg-[var(--brand-400)]/10 px-4 py-3">
+                <p className="flex items-center gap-1.5 text-[11.5px] font-medium text-[var(--brand)]">
                   <UserRound className="h-3.5 w-3.5 shrink-0" strokeWidth={2} aria-hidden />
                   Cliente
                 </p>
@@ -261,7 +261,7 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
                         href={`/clientes/${t.cliente_id}/tipificacion${t.tipificacion_id ? `#tip-${t.tipificacion_id}` : ""}`}
                         title="Creado desde la tipificación del cliente"
                         aria-label="Creado desde la tipificación del cliente"
-                        className="ml-1.5 inline-flex translate-y-[1px] items-center rounded-full bg-[#4FAEB2]/12 p-[3px] align-baseline text-[#2F6E71] hover:bg-[#4FAEB2]/25"
+                        className="ml-1.5 inline-flex translate-y-[1px] items-center rounded-full bg-[var(--brand-400)]/12 p-[3px] align-baseline text-[var(--brand-700)] hover:bg-[var(--brand-400)]/25"
                       >
                         <Headset className="h-2.5 w-2.5" aria-hidden />
                       </Link>
@@ -330,7 +330,7 @@ export default function TicketLayout({ children }: { children: React.ReactNode }
                   </h2>
                   <Clave icono={UserRound} etiqueta="Cliente">
                     {t.cliente_id ? (
-                      <Link href={`/clientes/${t.cliente_id}`} className="text-slate-800 no-underline hover:text-[#2F6E71] hover:underline">
+                      <Link href={`/clientes/${t.cliente_id}`} className="text-slate-800 no-underline hover:text-[var(--brand-700)] hover:underline">
                         {t.cliente_nombre ?? "—"}
                       </Link>
                     ) : (

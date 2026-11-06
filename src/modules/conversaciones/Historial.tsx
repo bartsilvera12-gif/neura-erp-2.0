@@ -208,10 +208,10 @@ export function Historial() {
                 aria-label="Buscar contacto"
                 autoFocus
                 enterKeyHint="search"
-                className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-24 text-xs text-slate-800 outline-none max-md:h-11 placeholder:text-slate-400 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
+                className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-24 text-xs text-slate-800 outline-none max-md:h-11 placeholder:text-slate-400 focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20"
               />
               {buscando ? (
-                <span className="pointer-events-none absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 text-[11px] font-medium text-[#3F8E91]">
+                <span className="pointer-events-none absolute right-2 top-1/2 inline-flex -translate-y-1/2 items-center gap-1 text-[11px] font-medium text-[var(--brand)]">
                   <Girando /> <span className="max-sm:sr-only">Buscando…</span>
                 </span>
               ) : null}
@@ -233,7 +233,7 @@ export function Historial() {
                     key={c.id}
                     type="button"
                     onClick={() => elegir(c.id)}
-                    className={`flex min-h-16 w-full items-start gap-2.5 border-b border-slate-100 px-3 py-2.5 text-left transition-colors ${activo ? "border-l-[3px] border-l-[#4FAEB2] bg-white" : "hover:bg-white"}`}
+                    className={`flex min-h-16 w-full items-start gap-2.5 border-b border-slate-100 px-3 py-2.5 text-left transition-colors ${activo ? "border-l-[3px] border-l-[var(--brand-400)] bg-white" : "hover:bg-white"}`}
                   >
                     <AvatarTono nombre={n} />
                     <span className="min-w-0 flex-1">
@@ -277,11 +277,11 @@ export function Historial() {
                       <p className="truncate text-sm font-semibold text-slate-900">{nombre}</p>
                       <p className="font-mono text-[11px] tabular-nums text-slate-500">{telefonoLegible(contacto.telefono)}</p>
                     </div>
-                    {cargando ? <Girando className="h-3.5 w-3.5 text-[#3F8E91]" /> : null}
+                    {cargando ? <Girando className="h-3.5 w-3.5 text-[var(--brand)]" /> : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {contacto.cliente_id ? (
-                      <Link href={`/clientes/${contacto.cliente_id}`} className="inline-flex items-center gap-1 rounded-full border border-[#4FAEB2]/30 bg-[#4FAEB2]/10 px-2.5 py-1 text-[11px] max-sm:min-h-10 max-sm:px-3.5 font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/20">
+                      <Link href={`/clientes/${contacto.cliente_id}`} className="inline-flex items-center gap-1 rounded-full border border-[var(--brand-400)]/30 bg-[var(--brand-400)]/10 px-2.5 py-1 text-[11px] max-sm:min-h-10 max-sm:px-3.5 font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/20">
                         <UserRound className="h-3 w-3" aria-hidden /> Ver cliente →
                       </Link>
                     ) : null}
@@ -321,11 +321,11 @@ export function Historial() {
                             <button
                               type="button"
                               onClick={() => setVisor(c)}
-                              className="inline-flex items-center gap-1 rounded-lg border border-[#4FAEB2]/50 bg-[#4FAEB2]/8 px-2.5 py-1.5 text-xs font-semibold text-[#3F8E91] hover:bg-[#4FAEB2]/15 max-sm:min-h-11"
+                              className="inline-flex items-center gap-1 rounded-lg border border-[var(--brand-400)]/50 bg-[var(--brand-400)]/8 px-2.5 py-1.5 text-xs font-semibold text-[var(--brand)] hover:bg-[var(--brand-400)]/15 max-sm:min-h-11"
                             >
                               <Eye className="h-3.5 w-3.5" aria-hidden /> Leer chat
                             </button>
-                            <Link href={`/conversaciones?c=${c.id}`} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold max-sm:min-h-11 text-slate-700 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">
+                            <Link href={`/conversaciones?c=${c.id}`} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold max-sm:min-h-11 text-slate-700 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)]">
                               <MessagesSquare className="h-3.5 w-3.5" aria-hidden /> Bandeja
                             </Link>
                           </div>
@@ -334,7 +334,7 @@ export function Historial() {
                         {c.estado === "cerrada" && (c.cierre_estado || c.cierre_observacion) ? (
                           <div className="mt-2 rounded-lg border border-slate-100 bg-slate-50 px-2.5 py-2 text-xs">
                             <span className="font-semibold text-slate-700">Último cierre{c.cerrada_at ? ` (${larga(c.cerrada_at)})` : ""}:</span>{" "}
-                            {c.cierre_estado ? <span className="rounded-full bg-[#4FAEB2]/15 px-2 py-0.5 font-semibold text-[#2F6E71]">{c.cierre_estado}</span> : null}
+                            {c.cierre_estado ? <span className="rounded-full bg-[var(--brand-400)]/15 px-2 py-0.5 font-semibold text-[var(--brand-700)]">{c.cierre_estado}</span> : null}
                             {c.cierre_observacion ? <p className="mt-1 whitespace-pre-wrap text-slate-600 [overflow-wrap:anywhere]">{c.cierre_observacion}</p> : null}
                           </div>
                         ) : null}

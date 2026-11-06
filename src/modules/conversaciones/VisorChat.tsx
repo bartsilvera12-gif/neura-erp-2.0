@@ -66,7 +66,7 @@ export function VisorChat({
           {acciones}
           <Link
             href={`/conversaciones?c=${convId}`}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-sm transition-colors hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)]"
           >
             Abrir en la bandeja →
           </Link>

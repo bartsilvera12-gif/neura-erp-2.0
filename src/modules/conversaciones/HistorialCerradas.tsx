@@ -102,7 +102,7 @@ export function HistorialCerradas() {
               placeholder="Buscar por nombre, número, RUC o mensaje"
               aria-label="Buscar conversaciones cerradas"
               enterKeyHint="search"
-              className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-3 text-xs text-slate-800 outline-none max-md:h-11 placeholder:text-slate-400 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-8 pr-3 text-xs text-slate-800 outline-none max-md:h-11 placeholder:text-slate-400 focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20"
             />
           </div>
           <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
@@ -124,7 +124,7 @@ export function HistorialCerradas() {
         </div>
         <p className="flex shrink-0 items-center justify-between px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-wide text-slate-500">
           Cerradas · solo lectura
-          {cargando && filas.length ? <Girando className="h-3 w-3 text-[#3F8E91]" /> : null}
+          {cargando && filas.length ? <Girando className="h-3 w-3 text-[var(--brand)]" /> : null}
         </p>
         {error ? <p className="mx-3 mb-2 rounded-lg border border-red-200 bg-red-50 px-2 py-1.5 text-xs text-red-700">{error}</p> : null}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -188,13 +188,13 @@ function Lectura({ conv }: { conv: FilaBandeja }) {
         <div className="flex flex-wrap items-center gap-1.5">
           <Link
             href={`/conversaciones/historial?contacto=${conv.contacto_id}`}
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)]"
           >
             <History className="h-3.5 w-3.5" aria-hidden /> Historial del contacto
           </Link>
           <Link
             href={`/conversaciones?c=${conv.id}`}
-            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]"
+            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)]"
           >
             <MessagesSquare className="h-3.5 w-3.5" aria-hidden /> Abrir en la bandeja
           </Link>

@@ -94,13 +94,13 @@ export function PanelChat({
       }}
     >
       {arrastrando ? (
-        <div className="pointer-events-none absolute inset-2 z-30 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[#4FAEB2] bg-white/90 text-center backdrop-blur-sm">
-          <Paperclip className="h-8 w-8 text-[#4FAEB2]" aria-hidden />
+        <div className="pointer-events-none absolute inset-2 z-30 flex flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-[var(--brand-400)] bg-white/90 text-center backdrop-blur-sm">
+          <Paperclip className="h-8 w-8 text-[var(--brand-400)]" aria-hidden />
           {conv.estado === "cerrada" ? (
             <p className="text-sm font-semibold text-slate-600">La conversación está cerrada: reabrila para enviar archivos</p>
           ) : (
             <>
-              <p className="text-base font-semibold text-[#3F8E91]">Soltá los archivos para enviarlos</p>
+              <p className="text-base font-semibold text-[var(--brand)]">Soltá los archivos para enviarlos</p>
               <p className="text-xs text-slate-500">Imágenes, videos, audios o documentos · hasta 10 por vez</p>
             </>
           )}

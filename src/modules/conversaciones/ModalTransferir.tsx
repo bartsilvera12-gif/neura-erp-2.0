@@ -68,7 +68,7 @@ export function ModalTransferir({
           onChange={(e) => setQ(e.target.value)}
           placeholder="Buscar"
           autoFocus
-          className="w-full max-w-[14rem] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20 max-sm:h-11 max-sm:max-w-none"
+          className="w-full max-w-[14rem] rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none placeholder:text-slate-400 focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20 max-sm:h-11 max-sm:max-w-none"
         />
       </div>
       <div className="max-h-[min(42vh,320px)] divide-y divide-slate-100 overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-slate-50/40">
@@ -98,7 +98,7 @@ export function ModalTransferir({
                   disabled={!!ocupado || actual}
                   onClick={() => void correr(a.id, () => accionConversacion(conv.id, { accion: "transferir", asignado_id: a.id }))}
                   className={`shrink-0 rounded-lg px-3 py-1.5 text-xs font-semibold shadow-sm transition-colors disabled:pointer-events-none max-sm:min-h-11 ${
-                    actual ? "bg-emerald-100 text-emerald-700" : "bg-[#4FAEB2] text-white hover:bg-[#3F8E91] disabled:opacity-50"
+                    actual ? "bg-emerald-100 text-emerald-700" : "bg-[var(--brand-400)] text-white hover:bg-[var(--brand)] disabled:opacity-50"
                   }`}
                 >
                   {actual ? "Asignado" : ocupado === a.id ? "…" : "Transferir"}
@@ -113,7 +113,7 @@ export function ModalTransferir({
           type="button"
           disabled={!!ocupado}
           onClick={() => void correr("soltar", () => accionConversacion(conv.id, { accion: "soltar" }))}
-          className="mt-3 text-xs font-semibold text-slate-500 underline-offset-2 hover:text-[#3F8E91] hover:underline disabled:opacity-50 max-sm:min-h-10"
+          className="mt-3 text-xs font-semibold text-slate-500 underline-offset-2 hover:text-[var(--brand)] hover:underline disabled:opacity-50 max-sm:min-h-10"
         >
           Dejar sin asignar
         </button>
@@ -142,7 +142,7 @@ export function ModalTransferir({
                     type="button"
                     disabled={!!ocupado}
                     onClick={() => void correr(`cola:${c.id}`, () => accionConversacion(conv.id, { accion: "derivar", cola_id: c.id }), c.nombre)}
-                    className="shrink-0 rounded-lg border border-[#4FAEB2]/50 bg-white px-3 py-1.5 text-xs font-semibold text-[#3F8E91] shadow-sm hover:bg-[#4FAEB2]/10 disabled:opacity-50 max-sm:min-h-11"
+                    className="shrink-0 rounded-lg border border-[var(--brand-400)]/50 bg-white px-3 py-1.5 text-xs font-semibold text-[var(--brand)] shadow-sm hover:bg-[var(--brand-400)]/10 disabled:opacity-50 max-sm:min-h-11"
                   >
                     {ocupado === `cola:${c.id}` ? "…" : "Derivar"}
                   </button>

@@ -94,7 +94,7 @@ export function PresupuestoModal({ periodoInicial, onClose, onGuardado }: { peri
     }
   }
 
-  const INPUT = "w-36 max-sm:w-32 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 max-sm:py-2.5 text-right text-sm tabular-nums text-slate-800 outline-none focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20";
+  const INPUT = "w-36 max-sm:w-32 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 max-sm:py-2.5 text-right text-sm tabular-nums text-slate-800 outline-none focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20";
 
   return (
     <CapaModal onClose={guardando ? undefined : onClose}>
@@ -114,7 +114,7 @@ export function PresupuestoModal({ periodoInicial, onClose, onGuardado }: { peri
             <button onClick={() => setPeriodo((p) => sumarMes(p, 1))} aria-label="Mes siguiente" className="inline-flex items-center justify-center rounded-lg p-1.5 text-slate-500 hover:bg-white max-sm:h-11 max-sm:w-11"><ChevronRight className="h-4 w-4 max-sm:h-5 max-sm:w-5" /></button>
           </div>
           {hayAnterior ? (
-            <button onClick={copiarAnterior} aria-label="Copiar del mes anterior" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-[#3F8E91] hover:bg-slate-50 max-sm:min-h-11">
+            <button onClick={copiarAnterior} aria-label="Copiar del mes anterior" className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-[var(--brand)] hover:bg-slate-50 max-sm:min-h-11">
               <Copy className="h-3.5 w-3.5" /> Copiar<span className="max-[400px]:hidden"> del mes anterior</span>
             </button>
           ) : null}
@@ -157,7 +157,7 @@ export function PresupuestoModal({ periodoInicial, onClose, onGuardado }: { peri
           <div className="flex gap-2 max-sm:w-full">
             <button onClick={onClose} disabled={guardando} className="rounded-xl border border-slate-200 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 max-sm:flex-1">Cancelar</button>
             <button onClick={() => void guardar()} disabled={guardando || !cambios || !datos}
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[#4FAEB2] px-4 py-2 text-sm font-semibold text-white hover:bg-[#3F8E91] disabled:opacity-50 max-sm:flex-[2]">
+              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-[var(--brand-400)] px-4 py-2 text-sm font-semibold text-white hover:bg-[var(--brand)] disabled:opacity-50 max-sm:flex-[2]">
               {guardando ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar presupuesto
             </button>
           </div>
@@ -175,7 +175,7 @@ function RubroFilas({ r, ab, subTotal, montos, set, input, toggle }: {
     <>
       <tr className="border-t border-slate-100">
         <td className="py-2">
-          <button onClick={toggle} className="inline-flex items-center gap-1 text-left font-medium text-slate-800 hover:text-[#3F8E91] max-sm:-ml-1 max-sm:min-h-11 max-sm:pl-1" aria-expanded={ab}>
+          <button onClick={toggle} className="inline-flex items-center gap-1 text-left font-medium text-slate-800 hover:text-[var(--brand)] max-sm:-ml-1 max-sm:min-h-11 max-sm:pl-1" aria-expanded={ab}>
             <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition-transform ${ab ? "" : "-rotate-90"}`} /> {r.nombre}
           </button>
           <span className="block pl-5 text-[11px] tabular-nums text-slate-400 sm:hidden">Gastado {gs(r.gastado)}</span>

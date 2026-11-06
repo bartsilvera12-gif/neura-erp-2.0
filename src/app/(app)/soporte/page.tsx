@@ -90,7 +90,7 @@ function ItemsTickets({ items, conCliente = false }: { items: Item[]; conCliente
     <button
       type="button"
       onClick={() => setOrden(campo)}
-      className={`${extra} text-[10px] font-semibold uppercase tracking-wide transition ${orden === campo ? "text-[#2F6E71]" : "text-slate-400 hover:text-slate-600"}`}
+      className={`${extra} text-[10px] font-semibold uppercase tracking-wide transition ${orden === campo ? "text-[var(--brand-700)]" : "text-slate-400 hover:text-slate-600"}`}
     >
       {label}
       {orden === campo ? " ↓" : ""}
@@ -107,7 +107,7 @@ function ItemsTickets({ items, conCliente = false }: { items: Item[]; conCliente
       ) : null}
       <div className="divide-y divide-slate-100">
         {ordenados.map((it) => (
-          <Link key={it.id} href={`/soporte/tickets/${it.id}`} className="flex items-center gap-3 px-4 py-2 text-[12px] no-underline transition hover:bg-[#4FAEB2]/5">
+          <Link key={it.id} href={`/soporte/tickets/${it.id}`} className="flex items-center gap-3 px-4 py-2 text-[12px] no-underline transition hover:bg-[var(--brand-400)]/5">
             <span className="w-[52px] shrink-0 font-mono font-semibold text-slate-700">{numeroTicket(it.numero)}</span>
             {conCliente ? (
               <span className="min-w-0 flex-1 truncate font-medium text-slate-700" title={it.cliente}>

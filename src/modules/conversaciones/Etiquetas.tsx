@@ -92,7 +92,7 @@ export function EtiquetasPopover({
           }
         }}
         placeholder="Nueva etiqueta + Enter"
-        className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs outline-none max-sm:h-11 focus:border-[#4FAEB2] focus:ring-2 focus:ring-[#4FAEB2]/20"
+        className="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs outline-none max-sm:h-11 focus:border-[var(--brand-400)] focus:ring-2 focus:ring-[var(--brand-400)]/20"
       />
       {opciones.length ? (
         <div className="mt-2 flex flex-wrap gap-1">

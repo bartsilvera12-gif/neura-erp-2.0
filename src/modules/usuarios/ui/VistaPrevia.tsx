@@ -72,7 +72,7 @@ export function VistaPrevia({ b, compacta = false, sinTope = false }: {
                   return (
                     <div key={m.label} className="mb-1">
                       <p className="flex items-center gap-2 text-[12.5px] text-slate-200">
-                        <Icono className="h-3.5 w-3.5 text-[#7dcfd2]" /> {m.label}
+                        <Icono className="h-3.5 w-3.5 text-[var(--zentra-accent)]" /> {m.label}
                       </p>
                       {sub ? <p className="ml-[22px] text-[11px] leading-snug text-slate-400">{m.pantallas.map((p) => p.label).join(" · ")}</p> : null}
                     </div>

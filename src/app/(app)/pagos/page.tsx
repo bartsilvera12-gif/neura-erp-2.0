@@ -29,7 +29,7 @@ import { nombreMetodo } from "@/modules/clientes/cobros";
 import { SelectorFecha } from "@/components/SelectorFecha";
 
 const POR_PAGINA = 50;
-const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 hover:border-[#4FAEB2]/60 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20";
+const INPUT = "w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 shadow-sm transition-colors placeholder:text-slate-400 hover:border-[var(--brand-400)]/60 focus:border-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]/20";
 const LABEL = "mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500";
 const gs = (n: number | null | undefined) => `Gs. ${Math.round(Number(n) || 0).toLocaleString("es-PY")}`;
 const fecha = (d: string | null | undefined) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : "—");
@@ -129,7 +129,7 @@ export default function PagosPage() {
         titulo="Pagos"
         subtitulo="Registrar pagos de facturas pendientes de cobro"
         acciones={
-          <div role="tablist" aria-label="Vista" className="flex w-full gap-1 rounded-2xl border border-[#4FAEB2]/45 bg-white p-1.5 shadow-sm sm:w-auto">
+          <div role="tablist" aria-label="Vista" className="flex w-full gap-1 rounded-2xl border border-[var(--brand-400)]/45 bg-white p-1.5 shadow-sm sm:w-auto">
             <BotonTab activo={tab === "pendientes"} onClick={() => setTab("pendientes")} icono={<Clock className="h-4 w-4" />} label="Pendientes" n={pend?.total} />
             <BotonTab activo={tab === "cobrados"} onClick={() => setTab("cobrados")} icono={<CheckCircle2 className="h-4 w-4" />} label="Cobrados" n={cob?.total} />
           </div>
@@ -146,7 +146,7 @@ export default function PagosPage() {
 
       {/* Filtros: búsqueda siempre a la vista; en celular fechas, categoría y plan van en la hoja "Filtros". */}
       <BarraFiltros
-        className="md:items-end md:rounded-2xl md:border-[#4FAEB2]/45 md:p-4"
+        className="md:items-end md:rounded-2xl md:border-[var(--brand-400)]/45 md:p-4"
         activos={filtrosActivos}
         onLimpiar={limpiar}
         busqueda={
@@ -182,17 +182,17 @@ export default function PagosPage() {
 
       {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 [overflow-wrap:anywhere]">{error}</div> : null}
 
-      <section className="overflow-hidden rounded-2xl border border-[#4FAEB2]/45 bg-white shadow-sm">
+      <section className="overflow-hidden rounded-2xl border border-[var(--brand-400)]/45 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-4 py-3 sm:gap-3 sm:px-6 sm:py-4">
           <div className="flex min-w-0 items-center gap-2">
-            <span aria-hidden className="block h-5 w-1 shrink-0 rounded-full bg-[#4FAEB2]" />
+            <span aria-hidden className="block h-5 w-1 shrink-0 rounded-full bg-[var(--brand-400)]" />
             <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-600">
-              <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[#4FAEB2]" />
+              <span aria-hidden className="inline-block h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brand-400)]" />
               {tab === "pendientes" ? "Facturas pendientes de cobro" : "Pagos registrados"}
             </h2>
             {cargando ? <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-slate-400" /> : null}
           </div>
-          <span className="inline-flex items-center gap-1 rounded-full border border-[#4FAEB2]/30 bg-[#4FAEB2]/10 px-2.5 py-0.5 text-[11px] font-semibold text-[#3F8E91]">
+          <span className="inline-flex items-center gap-1 rounded-full border border-[var(--brand-400)]/30 bg-[var(--brand-400)]/10 px-2.5 py-0.5 text-[11px] font-semibold text-[var(--brand)]">
             {tab === "pendientes"
               ? hayFiltros ? `${pend?.total ?? 0} según filtros · ${pend?.total_general ?? 0} en total` : `${pend?.total ?? 0} facturas con saldo`
               : hayFiltros ? `${cob?.total ?? 0} según filtros · ${cob?.total_general ?? 0} en total` : `${cob?.total ?? 0} pagos`}
@@ -264,10 +264,10 @@ function TablaPendientes({ filas, cargando, recargando, hayFiltros, onLimpiar, t
   if (filas.length === 0) {
     return hayFiltros ? (
       <Vacio titulo="Ninguna factura con saldo coincide con los filtros"
-        cta={<button type="button" onClick={onLimpiar} className="text-xs font-semibold text-[#4FAEB2] hover:text-[#3F8E91] hover:underline max-sm:min-h-11 max-sm:px-3 max-sm:text-sm">Limpiar filtros</button>} />
+        cta={<button type="button" onClick={onLimpiar} className="text-xs font-semibold text-[var(--brand-400)] hover:text-[var(--brand)] hover:underline max-sm:min-h-11 max-sm:px-3 max-sm:text-sm">Limpiar filtros</button>} />
     ) : (
       <Vacio titulo="No hay facturas pendientes de cobro"
-        cta={<Link href="/clientes" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#4FAEB2] hover:text-[#3F8E91] hover:underline max-sm:min-h-11 max-sm:px-3 max-sm:text-sm">Ir a Clientes →</Link>} />
+        cta={<Link href="/clientes" className="inline-flex items-center gap-1.5 text-xs font-semibold text-[var(--brand-400)] hover:text-[var(--brand)] hover:underline max-sm:min-h-11 max-sm:px-3 max-sm:text-sm">Ir a Clientes →</Link>} />
     );
   }
   const columnas: ColumnaTabla<FilaPendiente>[] = [
@@ -280,7 +280,7 @@ function TablaPendientes({ filas, cargando, recargando, hayFiltros, onLimpiar, t
       key: "cliente", titulo: "Cliente", movil: "titulo", claseTd: "min-w-[12rem] lg:min-w-[16rem]",
       celda: (f) => (
         <>
-          <Link href={`/clientes/${f.cliente_id}`} className="block min-w-0 break-words font-medium text-[#3F8E91] hover:underline" title={f.cliente_nombre}>{f.cliente_nombre}</Link>
+          <Link href={`/clientes/${f.cliente_id}`} className="block min-w-0 break-words font-medium text-[var(--brand)] hover:underline" title={f.cliente_nombre}>{f.cliente_nombre}</Link>
           {f.plan_nombre ? <span className="block text-[11px] text-slate-400">{f.plan_nombre}</span> : null}
         </>
       ),
@@ -335,11 +335,11 @@ function TablaPendientes({ filas, cargando, recargando, hayFiltros, onLimpiar, t
           <div className="flex items-center gap-1.5">
             <button type="button" onClick={() => onTransferencia(f)} disabled={libre <= 0}
               title={libre <= 0 ? "Todo el saldo ya está esperando aprobación en Conciliación" : "Registrar el pago por transferencia (va a Conciliación)"}
-              className="inline-flex items-center gap-1 rounded-lg bg-[#4FAEB2] px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-[#4FAEB2]/25 transition-colors hover:bg-[#3F8E91] disabled:opacity-40 max-md:px-4 max-md:text-[13px]">
+              className="inline-flex items-center gap-1 rounded-lg bg-[var(--brand-400)] px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm shadow-[var(--brand-400)]/25 transition-colors hover:bg-[var(--brand)] disabled:opacity-40 max-md:px-4 max-md:text-[13px]">
               <Banknote className="h-3.5 w-3.5" /> Cobrar
             </button>
             <button type="button" onClick={() => onCaja(f)} title="Cobrar en caja (efectivo, tarjeta, POS…)"
-              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:border-[#4FAEB2]/60 hover:text-[#3F8E91] max-md:px-3.5 max-md:text-[13px]">
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1.5 text-[11px] font-semibold text-slate-600 transition-colors hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)] max-md:px-3.5 max-md:text-[13px]">
               <Wallet className="h-3.5 w-3.5" /> En caja
             </button>
           </div>
@@ -381,7 +381,7 @@ function TablaCobrados({ filas, cargando, recargando, hayFiltros, onLimpiar, tot
   if (filas.length === 0) {
     return hayFiltros ? (
       <Vacio titulo="Ningún pago coincide con los filtros"
-        cta={<button type="button" onClick={onLimpiar} className="text-xs font-semibold text-[#4FAEB2] hover:text-[#3F8E91] hover:underline max-sm:min-h-11 max-sm:px-3 max-sm:text-sm">Limpiar filtros</button>} />
+        cta={<button type="button" onClick={onLimpiar} className="text-xs font-semibold text-[var(--brand-400)] hover:text-[var(--brand)] hover:underline max-sm:min-h-11 max-sm:px-3 max-sm:text-sm">Limpiar filtros</button>} />
     ) : (
       <Vacio titulo="No hay pagos registrados" subtitulo="Los pagos aparecen acá cuando se cobran en caja o se aprueban en Conciliación." />
     );
@@ -399,12 +399,12 @@ function TablaCobrados({ filas, cargando, recargando, hayFiltros, onLimpiar, tot
     },
     {
       key: "cliente", titulo: "Cliente", movil: "titulo", claseTd: "min-w-[12rem] lg:min-w-[16rem]",
-      celda: (f) => <Link href={`/clientes/${f.cliente_id}`} className="block min-w-0 break-words font-medium text-slate-900 hover:text-[#3F8E91] hover:underline" title={f.cliente_nombre}>{f.cliente_nombre}</Link>,
-      celdaMovil: (f) => <Link href={`/clientes/${f.cliente_id}`} className="-my-2.5 inline-block py-2.5 hover:text-[#3F8E91] hover:underline">{f.cliente_nombre}</Link>,
+      celda: (f) => <Link href={`/clientes/${f.cliente_id}`} className="block min-w-0 break-words font-medium text-slate-900 hover:text-[var(--brand)] hover:underline" title={f.cliente_nombre}>{f.cliente_nombre}</Link>,
+      celdaMovil: (f) => <Link href={`/clientes/${f.cliente_id}`} className="-my-2.5 inline-block py-2.5 hover:text-[var(--brand)] hover:underline">{f.cliente_nombre}</Link>,
     },
     { key: "tipo", titulo: "Tipo de servicio", celda: (f) => <span className="inline-block max-w-[16rem] truncate align-bottom">{f.plan_nombre ?? f.categoria_nombre ?? "Sin clasificar"}</span>, celdaMovil: (f) => f.plan_nombre ?? f.categoria_nombre ?? "Sin clasificar" },
     { key: "vendedor", titulo: "Vendedor", celda: (f) => <span className="inline-block max-w-[12rem] truncate align-bottom">{f.vendedor ?? "—"}</span>, celdaMovil: (f) => f.vendedor ?? "—" },
-    { key: "monto", titulo: "Monto pagado", movil: "valor", claseTd: "whitespace-nowrap font-semibold tabular-nums text-[#3F8E91]", celda: (f) => gs(f.monto), celdaMovil: (f) => <span className="text-[#3F8E91]">{gs(f.monto)}</span> },
+    { key: "monto", titulo: "Monto pagado", movil: "valor", claseTd: "whitespace-nowrap font-semibold tabular-nums text-[var(--brand)]", celda: (f) => gs(f.monto), celdaMovil: (f) => <span className="text-[var(--brand)]">{gs(f.monto)}</span> },
     { key: "fecha", titulo: "Fecha", movil: "dato", claseTd: "whitespace-nowrap", celda: (f) => fecha(f.fecha_pago) },
     {
       key: "metodo", titulo: "Método", movil: "chip",
@@ -432,7 +432,7 @@ function TablaCobrados({ filas, cargando, recargando, hayFiltros, onLimpiar, tot
       key: "recibo", titulo: "Recibo", movil: "pie", claseTd: "whitespace-nowrap",
       celda: (f) => (
         <button type="button" onClick={() => recibo(f)} title={`Descargar el recibo ${f.numero_recibo}`}
-          className="inline-flex items-center gap-1.5 rounded-md border border-[#4FAEB2]/30 bg-[#4FAEB2]/10 px-2.5 py-1 text-[11px] font-semibold text-[#3F8E91] transition-colors hover:bg-[#4FAEB2]/20 max-md:px-3.5 max-md:text-[13px]">
+          className="inline-flex items-center gap-1.5 rounded-md border border-[var(--brand-400)]/30 bg-[var(--brand-400)]/10 px-2.5 py-1 text-[11px] font-semibold text-[var(--brand)] transition-colors hover:bg-[var(--brand-400)]/20 max-md:px-3.5 max-md:text-[13px]">
           {bajando === f.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Receipt className="h-3.5 w-3.5" />} {f.numero_recibo}
         </button>
       ),
@@ -444,7 +444,7 @@ function TablaCobrados({ filas, cargando, recargando, hayFiltros, onLimpiar, tot
         claseTabla="w-full text-sm" claseThead="bg-slate-50/80" thBase={TH} tdBase={TD} />
       <div role="status" className="flex w-full min-w-0 flex-col items-stretch gap-1 border-t-2 border-slate-100 bg-slate-50/80 px-4 py-3.5 sm:flex-row sm:items-center sm:justify-between sm:gap-2 sm:px-5">
         <p className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.1em] text-slate-700">{hayFiltros ? "Total cobrado (filtros activos)" : "Total cobrado en esta vista"}</p>
-        <p className="min-w-0 flex-1 whitespace-nowrap text-base font-bold tabular-nums text-[#3F8E91] sm:text-center sm:text-lg">{gs(totalMonto)}</p>
+        <p className="min-w-0 flex-1 whitespace-nowrap text-base font-bold tabular-nums text-[var(--brand)] sm:text-center sm:text-lg">{gs(totalMonto)}</p>
         <p className="shrink-0 text-[10px] text-slate-500 sm:text-right">{total} {total === 1 ? "registro" : "registros"} · recalcula al cambiar el filtro</p>
       </div>
     </>
@@ -454,7 +454,7 @@ function TablaCobrados({ filas, cargando, recargando, hayFiltros, onLimpiar, tot
 function BotonTab({ activo, onClick, icono, label, n }: { activo: boolean; onClick: () => void; icono: React.ReactNode; label: string; n?: number }) {
   return (
     <button type="button" role="tab" aria-selected={activo} onClick={onClick}
-      className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all max-sm:min-h-11 sm:flex-none ${activo ? "bg-[#4FAEB2] text-white shadow-md shadow-[#4FAEB2]/30" : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"}`}>
+      className={`flex flex-1 items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-all max-sm:min-h-11 sm:flex-none ${activo ? "bg-[var(--brand-400)] text-white shadow-md shadow-[var(--brand-400)]/30" : "text-slate-500 hover:bg-slate-100 hover:text-slate-700"}`}>
       <span className={activo ? "text-white" : "text-slate-400"}>{icono}</span>
       {label}
       {typeof n === "number" ? (
@@ -465,19 +465,19 @@ function BotonTab({ activo, onClick, icono, label, n }: { activo: boolean; onCli
 }
 
 function Kpi({ icono, label, valor, sub, acento = "neutro", className = "" }: { icono: React.ReactNode; label: string; valor: string; sub?: string; acento?: "neutro" | "destacado" | "aviso"; className?: string }) {
-  const chip = acento === "destacado" ? "border-[#4FAEB2]/30 bg-[#4FAEB2]/10 text-[#4FAEB2]" : acento === "aviso" ? "border-amber-200 bg-amber-50 text-amber-600" : "border-slate-200 bg-slate-50 text-slate-500";
+  const chip = acento === "destacado" ? "border-[var(--brand-400)]/30 bg-[var(--brand-400)]/10 text-[var(--brand-400)]" : acento === "aviso" ? "border-amber-200 bg-amber-50 text-amber-600" : "border-slate-200 bg-slate-50 text-slate-500";
   const tarjeta = acento === "destacado"
-    ? "relative min-w-0 overflow-hidden rounded-xl border border-[#4FAEB2]/55 bg-gradient-to-br from-white via-white to-[#4FAEB2]/[0.08] px-3 py-3 shadow-[0_4px_18px_rgba(79,174,178,0.08)] sm:px-3.5"
-    : "relative min-w-0 overflow-hidden rounded-xl border border-[#4FAEB2]/45 bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:px-3.5";
+    ? "relative min-w-0 overflow-hidden rounded-xl border border-[var(--brand-400)]/55 bg-gradient-to-br from-white via-white to-[var(--brand-400)]/[0.08] px-3 py-3 shadow-[0_4px_18px_rgba(79,174,178,0.08)] sm:px-3.5"
+    : "relative min-w-0 overflow-hidden rounded-xl border border-[var(--brand-400)]/45 bg-white px-3 py-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] sm:px-3.5";
   return (
     <div className={`${tarjeta} ${className}`}>
-      {acento === "destacado" ? <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-[#4FAEB2] via-[#4FAEB2]/70 to-[#4FAEB2]/30" /> : null}
+      {acento === "destacado" ? <span aria-hidden className="pointer-events-none absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-[var(--brand-400)] via-[var(--brand-400)]/70 to-[var(--brand-400)]/30" /> : null}
       <div className="flex items-start gap-2.5">
         {/* En celular sin ícono: el monto entero entra en media pantalla. */}
         <span className={`hidden h-7 w-7 shrink-0 items-center justify-center rounded-lg border sm:flex ${chip}`}>{icono}</span>
         <div className="min-w-0 flex-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500">{label}</p>
-          <p className={`mt-0.5 text-base font-semibold leading-tight tracking-tight tabular-nums sm:truncate sm:text-lg ${acento === "destacado" ? "text-[#3F8E91]" : acento === "aviso" ? "text-amber-600" : "text-slate-900"}`}>{valor}</p>
+          <p className={`mt-0.5 text-base font-semibold leading-tight tracking-tight tabular-nums sm:truncate sm:text-lg ${acento === "destacado" ? "text-[var(--brand)]" : acento === "aviso" ? "text-amber-600" : "text-slate-900"}`}>{valor}</p>
           {sub ? <p className="mt-0.5 truncate text-[10px] text-slate-500">{sub}</p> : null}
         </div>
       </div>
@@ -488,7 +488,7 @@ function Kpi({ icono, label, valor, sub, acento = "neutro", className = "" }: { 
 function Cargando({ texto }: { texto: string }) {
   return (
     <div className="flex items-center justify-center gap-3 py-16 text-sm text-slate-500">
-      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#4FAEB2]" /> {texto}
+      <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--brand-400)]" /> {texto}
     </div>
   );
 }
@@ -496,7 +496,7 @@ function Cargando({ texto }: { texto: string }) {
 function Vacio({ titulo, subtitulo, cta }: { titulo: string; subtitulo?: string; cta?: React.ReactNode }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 px-6 py-16 text-center">
-      <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[#4FAEB2]/25 bg-[#4FAEB2]/[0.08] text-[#4FAEB2]"><Inbox className="h-6 w-6" /></span>
+      <span className="flex h-14 w-14 items-center justify-center rounded-2xl border border-[var(--brand-400)]/25 bg-[var(--brand-400)]/[0.08] text-[var(--brand-400)]"><Inbox className="h-6 w-6" /></span>
       <p className="text-sm font-medium text-slate-700">{titulo}</p>
       {subtitulo ? <p className="text-xs text-slate-500">{subtitulo}</p> : null}
       {cta ? <div className="mt-1">{cta}</div> : null}

@@ -221,7 +221,7 @@ export default function SoporteReportesPage() {
                     <ul className="divide-y divide-slate-100">
                       {datos.devoluciones_qa.mas_devueltos.map((t) => (
                         <li key={t.id} className="flex items-center justify-between gap-3 px-5 py-2.5 text-[13px]">
-                          <Link href={`/soporte/tickets/${t.id}`} className="min-w-0 truncate text-slate-700 no-underline hover:text-[#2F6E71]">
+                          <Link href={`/soporte/tickets/${t.id}`} className="min-w-0 truncate text-slate-700 no-underline hover:text-[var(--brand-700)]">
                             <span className="tabular-nums text-slate-400">{numeroTicket(t.numero)}</span> {t.asunto}
                           </Link>
                           <span className="shrink-0 font-semibold tabular-nums text-rose-600">{t.devoluciones}</span>

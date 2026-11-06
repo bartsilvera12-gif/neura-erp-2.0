@@ -1,4 +1,5 @@
 "use client";
+import { clienteConfig } from "@/cliente.config";
 
 /**
  * Error que rompe hasta el layout raíz. Reemplaza al genérico de Next (en inglés) y, de paso,
@@ -17,7 +18,7 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
             </p>
             <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
               <button type="button" onClick={() => reset()}
-                style={{ minHeight: 44, padding: "0 18px", borderRadius: 12, border: 0, background: "#0b3a3d", color: "#fff", fontWeight: 600, cursor: "pointer" }}>
+                style={{ minHeight: 44, padding: "0 18px", borderRadius: 12, border: 0, background: clienteConfig.color, color: "#fff", fontWeight: 600, cursor: "pointer" }}>
                 Reintentar
               </button>
               <button type="button" onClick={() => window.location.reload()}

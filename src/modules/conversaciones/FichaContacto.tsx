@@ -160,7 +160,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
               {/* Cliente */}
               <Seccion titulo="Cliente">
                 {c ? (
-                  <div className="rounded-xl border border-[#4FAEB2]/30 bg-[#4FAEB2]/5 px-3 py-2.5">
+                  <div className="rounded-xl border border-[var(--brand-400)]/30 bg-[var(--brand-400)]/5 px-3 py-2.5">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <p className="text-xs font-semibold text-slate-900">{c.nombre}</p>
@@ -169,7 +169,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                           {!c.activo ? <span className="rounded-full border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">Inactivo</span> : null}
                         </div>
                       </div>
-                      <Link href={`/clientes/${c.id}`} className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-[#3F8E91] hover:underline max-lg:-my-2 max-lg:min-h-10 max-lg:text-xs">
+                      <Link href={`/clientes/${c.id}`} className="inline-flex shrink-0 items-center gap-1 text-[11px] font-semibold text-[var(--brand)] hover:underline max-lg:-my-2 max-lg:min-h-10 max-lg:text-xs">
                         Ver ficha <ExternalLink className="h-3 w-3" />
                       </Link>
                     </div>
@@ -202,7 +202,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                       type="button"
                       disabled={!!ocupado}
                       onClick={() => window.confirm("¿Desvincular este cliente del contacto?") && void accion("desvincular", () => vincularCliente(conv.id, null))}
-                      className="mt-1.5 text-[10px] font-semibold text-slate-500 underline-offset-2 hover:text-[#3F8E91] hover:underline max-lg:min-h-10 max-lg:text-xs"
+                      className="mt-1.5 text-[10px] font-semibold text-slate-500 underline-offset-2 hover:text-[var(--brand)] hover:underline max-lg:min-h-10 max-lg:text-xs"
                     >
                       No es este cliente
                     </button>
@@ -232,7 +232,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                         <button
                           type="button"
                           onClick={() => setCreandoCliente(true)}
-                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#4FAEB2] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[#3F8E91] max-lg:min-h-11 max-lg:px-4 max-lg:text-sm"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--brand-400)] px-2.5 py-1.5 text-[11px] font-semibold text-white hover:bg-[var(--brand)] max-lg:min-h-11 max-lg:px-4 max-lg:text-sm"
                         >
                           <UserPlus className="h-3.5 w-3.5" /> Crear cliente
                         </button>
@@ -240,7 +240,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                           type="button"
                           disabled={!!ocupado}
                           onClick={() => setBuscandoCliente(true)}
-                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91] max-lg:min-h-11 max-lg:px-4 max-lg:text-sm"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)] max-lg:min-h-11 max-lg:px-4 max-lg:text-sm"
                         >
                           Ya es cliente: buscarlo
                         </button>
@@ -255,7 +255,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                   <ul className="flex flex-col gap-1">
                     {c.tickets.map((t) => (
                       <li key={t.id}>
-                        <Link href={`/soporte/tickets/${t.id}`} className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] hover:border-[#4FAEB2]/50 hover:bg-slate-50 max-lg:min-h-11">
+                        <Link href={`/soporte/tickets/${t.id}`} className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] hover:border-[var(--brand-400)]/50 hover:bg-slate-50 max-lg:min-h-11">
                           <span className="font-mono font-semibold text-slate-700">{numeroTicket(t.numero)}</span>
                           <span className="min-w-0 flex-1 truncate text-slate-600">{t.asunto}</span>
                           <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold" style={{ backgroundColor: `${t.estado_color ?? "#94a3b8"}22`, color: t.estado_color ?? "#475569" }}>
@@ -289,7 +289,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                   <ul className="flex flex-col gap-1">
                     {proyectos.map((pr) => (
                       <li key={pr.id}>
-                        <Link href={`/proyectos/${pr.id}`} className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] hover:border-[#4FAEB2]/50 hover:bg-slate-50 max-lg:min-h-11">
+                        <Link href={`/proyectos/${pr.id}`} className="flex items-center gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-[11px] hover:border-[var(--brand-400)]/50 hover:bg-slate-50 max-lg:min-h-11">
                           <span className="font-mono font-semibold text-slate-700">{pr.numero}</span>
                           <span className="min-w-0 flex-1 truncate text-slate-600">{pr.titulo}</span>
                           {pr.estado ? (
@@ -313,7 +313,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                         <button
                           type="button"
                           onClick={() => setVisor(v)}
-                          className="flex w-full items-start gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-left text-[11px] hover:border-[#4FAEB2]/50 hover:bg-slate-50 max-lg:min-h-11"
+                          className="flex w-full items-start gap-2 rounded-lg border border-slate-200 px-2.5 py-1.5 text-left text-[11px] hover:border-[var(--brand-400)]/50 hover:bg-slate-50 max-lg:min-h-11"
                         >
                           <span className="mt-0.5 text-slate-400"><IconoCanal tipo={v.canal_tipo} /></span>
                           <span className="min-w-0 flex-1">
@@ -327,7 +327,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                               {v.asignado ? ` · ${v.asignado}` : ""}
                             </span>
                           </span>
-                          <Eye className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[#3F8E91]" aria-hidden />
+                          <Eye className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--brand)]" aria-hidden />
                         </button>
                       </li>
                     ))}
@@ -337,7 +337,7 @@ export function FichaContacto({ conv, onCerrar, onFila }: { conv: FilaBandeja; o
                 )}
                 <Link
                   href={`/conversaciones/historial?contacto=${ficha.contacto.id}`}
-                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[#3F8E91] hover:underline max-lg:min-h-10 max-lg:text-xs"
+                  className="mt-1.5 inline-flex items-center gap-1 text-[11px] font-semibold text-[var(--brand)] hover:underline max-lg:min-h-10 max-lg:text-xs"
                 >
                   Historial completo del contacto <ExternalLink className="h-3 w-3" />
                 </Link>
@@ -450,7 +450,7 @@ function BotonCopiar({ valor }: { valor: string }) {
           .catch(() => undefined)
       }
       title="Copiar número"
-      className="text-[10px] font-semibold text-slate-400 transition-colors hover:text-[#3F8E91] max-lg:-my-2 max-lg:min-h-10 max-lg:px-2 max-lg:text-xs"
+      className="text-[10px] font-semibold text-slate-400 transition-colors hover:text-[var(--brand)] max-lg:-my-2 max-lg:min-h-10 max-lg:px-2 max-lg:text-xs"
     >
       {copiado ? "copiado" : "copiar"}
     </button>

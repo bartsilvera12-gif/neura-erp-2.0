@@ -52,7 +52,7 @@ export function ModalRespuestas({ onCerrar }: { onCerrar: (cambio: boolean) => v
   return (
     <Ventana titulo="Respuestas rápidas" detalle='En el chat, escribí "/" y el atajo para insertar el texto.' icono={Zap} onCerrar={() => onCerrar(cambio)} ancho="max-w-xl">
       {edit ? (
-        <div className="mb-4 space-y-2 rounded-xl border border-[#4FAEB2]/30 bg-[#4FAEB2]/5 p-3">
+        <div className="mb-4 space-y-2 rounded-xl border border-[var(--brand-400)]/30 bg-[var(--brand-400)]/5 p-3">
           <input className={claseCampo} placeholder="/atajo" value={edit.atajo} onChange={(e) => setEdit({ ...edit, atajo: e.target.value })} autoFocus />
           <textarea className={`${claseCampo} min-h-[90px]`} placeholder="Texto de la respuesta" value={edit.texto} onChange={(e) => setEdit({ ...edit, texto: e.target.value })} />
           <div className="flex justify-end gap-2">
@@ -63,7 +63,7 @@ export function ModalRespuestas({ onCerrar }: { onCerrar: (cambio: boolean) => v
           </div>
         </div>
       ) : (
-        <button type="button" onClick={() => setEdit({ id: null, atajo: "/", texto: "" })} className="mb-3 inline-flex items-center gap-1.5 rounded-xl bg-[#4FAEB2] px-3 py-2 text-xs font-semibold text-white hover:bg-[#3F8E91]">
+        <button type="button" onClick={() => setEdit({ id: null, atajo: "/", texto: "" })} className="mb-3 inline-flex items-center gap-1.5 rounded-xl bg-[var(--brand-400)] px-3 py-2 text-xs font-semibold text-white hover:bg-[var(--brand)]">
           <Plus className="h-3.5 w-3.5" /> Nueva respuesta
         </button>
       )}
@@ -76,7 +76,7 @@ export function ModalRespuestas({ onCerrar }: { onCerrar: (cambio: boolean) => v
           {lista.map((r) => (
             <li key={r.id} className={`flex items-start gap-3 px-3 py-2.5 max-lg:items-center max-lg:gap-1 ${r.activo ? "" : "opacity-50"}`}>
               <div className="min-w-0 flex-1">
-                <p className="font-mono text-xs font-semibold text-[#3F8E91]">{r.atajo}</p>
+                <p className="font-mono text-xs font-semibold text-[var(--brand)]">{r.atajo}</p>
                 <p className="line-clamp-2 whitespace-pre-wrap text-xs text-slate-600">{r.texto}</p>
               </div>
               <label className="flex shrink-0 cursor-pointer items-center gap-1 text-[11px] text-slate-500 max-lg:min-h-10 max-lg:px-1 max-lg:text-xs">

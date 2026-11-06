@@ -229,7 +229,7 @@ export default function SeguimientoCobranzasPage() {
   // Columnas de TablaTarjetas: tabla con encabezados que ordenan (≥ 768 px) y tarjetas en celular.
   const columnas = useMemo((): ColumnaTabla<FilaSeguimiento>[] => {
     const promesaCls = (r: FilaSeguimiento) =>
-      hoy && r.c.promesa_fecha === hoy ? "border-[#4FAEB2] bg-[#4FAEB2]/10 text-[#3F8E91]" : "border-slate-200 bg-slate-50 text-slate-600";
+      hoy && r.c.promesa_fecha === hoy ? "border-[var(--brand-400)] bg-[var(--brand-400)]/10 text-[var(--brand)]" : "border-slate-200 bg-slate-50 text-slate-600";
     const celda: Record<string, (r: FilaSeguimiento) => React.ReactNode> = {
       cliente: (r) => (
         <>
@@ -262,13 +262,13 @@ export default function SeguimientoCobranzasPage() {
           <span onClick={(e) => e.stopPropagation()} className="-m-3 flex cursor-default p-3">
             <input type="checkbox" checked={marcada} onChange={(e) => void marcarEnviada(r.c.cliente_id, e.target.checked)}
               aria-label={`Cobranza enviada a ${r.c.cliente_label}`} title={marcada ? "Cobranza enviada este mes" : "Marcar como cobranza enviada este mes"}
-              className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-[#4FAEB2]" />
+              className="h-4 w-4 cursor-pointer rounded border-slate-300 accent-[var(--brand-400)]" />
           </span>
         );
       },
       accion: (r) => (
         <button type="button" onClick={(e) => { e.stopPropagation(); setDetalleId(r.c.cliente_id); }}
-          className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:border-[#4FAEB2]/60 hover:text-[#3F8E91]">
+          className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-slate-700 hover:border-[var(--brand-400)]/60 hover:text-[var(--brand)]">
           Ver detalle <ChevronRight className="h-3.5 w-3.5" />
         </button>
       ),
@@ -289,7 +289,7 @@ export default function SeguimientoCobranzasPage() {
         return (
           <label className="inline-flex min-h-11 cursor-pointer items-center gap-2 whitespace-nowrap rounded-lg px-2 text-[13px] font-medium text-slate-600">
             <input type="checkbox" checked={marcada} onChange={(e) => void marcarEnviada(r.c.cliente_id, e.target.checked)}
-              className="h-5 w-5 cursor-pointer rounded border-slate-300 accent-[#4FAEB2]" />
+              className="h-5 w-5 cursor-pointer rounded border-slate-300 accent-[var(--brand-400)]" />
             Cobranza enviada
           </label>
         );
@@ -315,11 +315,11 @@ export default function SeguimientoCobranzasPage() {
         key: col.id,
         etiquetaMovil: col.h,
         movil: col.movil,
-        claseTh: `${col.right ? "text-right" : "text-left"} ${activa ? "text-[#3F8E91]" : "text-slate-500"}`,
+        claseTh: `${col.right ? "text-right" : "text-left"} ${activa ? "text-[var(--brand)]" : "text-slate-500"}`,
         claseTd: td[col.id],
         titulo: col.key != null ? (
           <button type="button" onClick={() => tocarOrden(col.key!, col.kind)} title={col.hint ?? "Ordenar por esta columna"}
-            className="inline-flex cursor-pointer items-center gap-1 uppercase tracking-[0.08em] transition-colors hover:text-[#3F8E91]">
+            className="inline-flex cursor-pointer items-center gap-1 uppercase tracking-[0.08em] transition-colors hover:text-[var(--brand)]">
             {col.h}
             <span className={`text-[9px] leading-none ${activa ? "opacity-100" : "opacity-25"}`}>{activa ? (orden!.dir === "asc" ? "▲" : "▼") : "↕"}</span>
           </button>
@@ -372,12 +372,12 @@ export default function SeguimientoCobranzasPage() {
 
       {cargando && !data ? (
         <div className="flex items-center justify-center gap-3 py-20 text-sm text-slate-500">
-          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[#4FAEB2]" /> Cargando seguimiento de cobranzas…
+          <span className="inline-block h-2 w-2 animate-pulse rounded-full bg-[var(--brand-400)]" /> Cargando seguimiento de cobranzas…
         </div>
       ) : error && !data ? (
         <div className="space-y-4">
           <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">{error}</div>
-          <button type="button" onClick={() => void cargar()} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:border-[#4FAEB2]/60 max-sm:min-h-11">
+          <button type="button" onClick={() => void cargar()} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 shadow-sm hover:border-[var(--brand-400)]/60 max-sm:min-h-11">
             <RefreshCw className="h-3.5 w-3.5" /> Reintentar
           </button>
         </div>
@@ -391,7 +391,7 @@ export default function SeguimientoCobranzasPage() {
             </span>
             <span className="hidden text-slate-200 sm:inline">·</span>
             <span className="flex min-w-0 flex-col text-slate-500 sm:block">
-              <span className="text-[11px] sm:text-sm">Clientes con deuda</span> <b className="tabular-nums text-[#3F8E91] sm:ml-1">{cifras.clientes}</b>
+              <span className="text-[11px] sm:text-sm">Clientes con deuda</span> <b className="tabular-nums text-[var(--brand)] sm:ml-1">{cifras.clientes}</b>
             </span>
             <span className="hidden text-slate-200 sm:inline">·</span>
             <span className="flex min-w-0 flex-col text-slate-500 sm:block">
@@ -399,12 +399,12 @@ export default function SeguimientoCobranzasPage() {
             </span>
             <span className="hidden text-slate-200 sm:inline">·</span>
             <button type="button" onClick={() => setSoloPromesaHoy((v) => !v)} aria-pressed={soloPromesaHoy}
-              className={`-mx-2 -my-1 flex min-w-0 flex-col items-start rounded-lg px-2 py-1 text-left transition-colors sm:mx-0 sm:my-0 sm:inline-flex sm:flex-row sm:items-center sm:gap-1 sm:py-0.5 ${soloPromesaHoy ? "bg-[#4FAEB2]/10 text-[#3F8E91] ring-1 ring-[#4FAEB2]/40" : "text-slate-500 hover:bg-slate-50"}`}
+              className={`-mx-2 -my-1 flex min-w-0 flex-col items-start rounded-lg px-2 py-1 text-left transition-colors sm:mx-0 sm:my-0 sm:inline-flex sm:flex-row sm:items-center sm:gap-1 sm:py-0.5 ${soloPromesaHoy ? "bg-[var(--brand-400)]/10 text-[var(--brand)] ring-1 ring-[var(--brand-400)]/40" : "text-slate-500 hover:bg-slate-50"}`}
               title={soloPromesaHoy ? "Mostrando solo promesas de hoy (clic para quitar)" : "Ver solo los clientes que prometieron pagar hoy"}>
               <span className="text-[11px] sm:text-sm">Promesas hoy</span>
               <span className="inline-flex items-center gap-1">
-                <b className="tabular-nums text-[#3F8E91] sm:ml-1">{cifras.promesasHoy}</b>
-                <span className="text-[10px] font-semibold text-[#4FAEB2]">{soloPromesaHoy ? "· filtrando" : "· filtrar"}</span>
+                <b className="tabular-nums text-[var(--brand)] sm:ml-1">{cifras.promesasHoy}</b>
+                <span className="text-[10px] font-semibold text-[var(--brand-400)]">{soloPromesaHoy ? "· filtrando" : "· filtrar"}</span>
               </span>
             </button>
             {cargando ? <Loader2 className="ml-auto hidden h-3.5 w-3.5 animate-spin text-slate-400 sm:block" /> : null}
@@ -415,7 +415,7 @@ export default function SeguimientoCobranzasPage() {
             <ScrollHorizontal claseFila="gap-1.5" role="group" ariaLabel="Tramo de mora" dependencias={[tramo]}>
               {chips.map((t) => (
                 <button key={t.key} type="button" onClick={() => setTramo(t.key)} aria-pressed={tramo === t.key} data-activo={tramo === t.key ? "true" : undefined}
-                  className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors max-sm:min-h-11 ${tramo === t.key ? "border-[#4FAEB2] bg-[#4FAEB2]/10 text-[#3F8E91]" : "border-slate-200 bg-white text-slate-600 hover:border-[#4FAEB2]/60"}`}>
+                  className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl border px-3 py-1.5 text-xs font-semibold transition-colors max-sm:min-h-11 ${tramo === t.key ? "border-[var(--brand-400)] bg-[var(--brand-400)]/10 text-[var(--brand)]" : "border-slate-200 bg-white text-slate-600 hover:border-[var(--brand-400)]/60"}`}>
                   {t.label} <span className="tabular-nums text-slate-400">({t.count})</span>
                 </button>
               ))}
@@ -429,7 +429,7 @@ export default function SeguimientoCobranzasPage() {
                 <div className="relative">
                   <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                   <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar cliente, plan o categoría…" aria-label="Buscar cliente, plan o categoría" enterKeyHint="search"
-                    className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-9 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-[#4FAEB2] focus:outline-none focus:ring-2 focus:ring-[#4FAEB2]/20 max-md:h-11 [&::-webkit-search-cancel-button]:hidden" />
+                    className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-9 text-sm text-slate-800 shadow-sm placeholder:text-slate-400 focus:border-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]/20 max-md:h-11 [&::-webkit-search-cancel-button]:hidden" />
                   {q ? (
                     <button type="button" onClick={() => setQ("")} aria-label="Limpiar búsqueda" className="absolute right-1 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100">
                       <X className="h-3.5 w-3.5" />
