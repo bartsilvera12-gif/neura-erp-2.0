@@ -95,7 +95,7 @@ begin
     -- Descuento de stock best-effort: no frena la cantina si el inventario no alcanza.
     if prod.controla_stock and v_dep is not null
        and coalesce((select cantidad from stock_depositos where producto_id = prod.id and deposito_id = v_dep), 0) >= v_cant then
-      perform inv_mover(s.s_empresa, prod.id, v_dep, -v_cant, prod.costo, 'comedor', 'comedor_cantina',
+      perform inv_mover(s.s_empresa, prod.id, v_dep, -v_cant, prod.costo, 'comedor', 'comedor',
                         v_consumo, '', 'Cantina · ' || prod.nombre, s.s_usuario, s.s_nombre);
     end if;
     v_n := v_n + 1;
@@ -130,10 +130,10 @@ begin
         select x.insumo_id, x.cantidad, coalesce(i.costo_promedio, 0) as costo, i.controla_stock
           from receta_insumos(cc.producto_id, cc.cantidad) x join productos i on i.id = x.insumo_id where i.controla_stock
       loop
-        perform inv_mover(s.s_empresa, ins.insumo_id, v_dep, ins.cantidad, ins.costo, 'comedor', 'comedor_anul', cc.id, '', 'Anulación comedor', s.s_usuario, s.s_nombre);
+        perform inv_mover(s.s_empresa, ins.insumo_id, v_dep, ins.cantidad, ins.costo, 'comedor', 'comedor', cc.id, '', 'Anulación comedor', s.s_usuario, s.s_nombre);
       end loop;
     elsif cc.concepto = 'cantina' then
-      perform inv_mover(s.s_empresa, cc.producto_id, v_dep, cc.cantidad, cc.costo, 'comedor', 'comedor_anul', cc.id, '', 'Anulación cantina', s.s_usuario, s.s_nombre);
+      perform inv_mover(s.s_empresa, cc.producto_id, v_dep, cc.cantidad, cc.costo, 'comedor', 'comedor', cc.id, '', 'Anulación cantina', s.s_usuario, s.s_nombre);
     end if;
   end if;
   return jsonb_build_object('ok', true);
