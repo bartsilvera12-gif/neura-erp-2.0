@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
+import type { CSSProperties } from "react";
 import localFont from "next/font/local";
+import { clienteConfig } from "@/cliente.config";
 import "./globals.css";
 
 /**
@@ -34,7 +36,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     // suppressHydrationWarning: el menú QR (/m/<token>) pone data-tema="oscuro" en <html> antes de hidratar.
-    <html lang="es" className={jakarta.variable} suppressHydrationWarning>
+    // --brand = color del cliente (cliente.config): de acá lo heredan todas las pantallas del app.
+    // El sidebar usa sus propias variables --zentra-* (identidad fija de Zentra), no --brand.
+    <html lang="es" className={jakarta.variable} suppressHydrationWarning style={{ "--brand": clienteConfig.color } as CSSProperties}>
       <body>{children}</body>
     </html>
   );

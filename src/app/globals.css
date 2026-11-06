@@ -37,11 +37,13 @@ html[data-tema=oscuro] .qr-ok-grande {
 /* Identidad Neura: blanco + turquesa. El acento es un solo token para que cada
    clon lo re-tematice; el resto es blanco y escala slate. */
 :root {
+  /* --brand = color del cliente (lo setea <html> en layout.tsx desde cliente.config).
+     Los tonos se derivan de --brand, así cambian solos con el color de cada cliente. */
   --brand: #3f8e91;
-  --brand-50: #f0f9f9;
-  --brand-100: #d7eded;
-  --brand-600: #357b7e;
-  --brand-700: #2b6467;
+  --brand-50: color-mix(in srgb, var(--brand) 8%, white);
+  --brand-100: color-mix(in srgb, var(--brand) 20%, white);
+  --brand-600: color-mix(in srgb, var(--brand) 86%, black);
+  --brand-700: color-mix(in srgb, var(--brand) 72%, black);
   --brand-dark: #023047;
   /* ZENTRA — identidad lateral (turquesa profundo, contenido blanco) */
   --zentra-sidebar: #0b3a3d;
