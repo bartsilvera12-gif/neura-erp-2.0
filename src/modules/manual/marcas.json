@@ -1838,40 +1838,40 @@
   },
   "inventario-recetas": {
    "Empanada de carne": {
-    "x": 22.6,
-    "y": 61.3
+    "x": 23.2,
+    "y": 41.3
    },
    "COMPLETAS": {
-    "x": 23.7,
-    "y": 39.6,
+    "x": 22.2,
+    "y": 22.8,
     "z": 1.5
    },
    "ALCANZA PARA": {
-    "x": 83.5,
-    "y": 57.1
+    "x": 79.9,
+    "y": 34.4
    },
    "Nueva receta": {
-    "x": 31.9,
-    "y": 26.1
+    "x": 85.3,
+    "y": 13.8
    }
   },
   "receta-detalle": {
    "Ingredientes": {
-    "x": 21.6,
-    "y": 37.9
+    "x": 31.3,
+    "y": 25.6
    },
    "Rendimiento *": {
-    "x": 21.6,
-    "y": 28.1
+    "x": 31.3,
+    "y": 19.1
    },
    "COSTO POR PORCIÓN": {
-    "x": 22.6,
-    "y": 19.7,
+    "x": 31.9,
+    "y": 13.5,
     "z": 1.4
    },
    "Opciones": {
-    "x": 36.7,
-    "y": 14.2
+    "x": 41.3,
+    "y": 9.8
    }
   },
   "recetas-extras": {
