@@ -9,6 +9,9 @@
 begin;
 set local search_path to :"schema", public;
 set local client_min_messages to notice;
+-- Las pruebas cambian funciones y rubro: si al cliente se le ocultó la pantalla Rubro y funciones
+-- (clonar con "Ocultarle al cliente…"), se muestra solo dentro de esta transacción (el rollback la deja como estaba).
+update empresa_funciones set funciones_ocultas = false where funciones_ocultas;
 
 -- ── Comprobaciones ───────────────────────────────────────────────────────────
 create function pg_temp.ok(p_nombre text, p_cond boolean, p_detalle text default '') returns void language plpgsql as $$

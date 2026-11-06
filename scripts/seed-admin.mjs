@@ -4,16 +4,16 @@
  *
  *   node scripts/seed-admin.mjs --schema erp_republica --ssh neura-erp \
  *     --empresa "Ferretería República S.A." --email admin@republica.com.py --nombre "Juan Pérez" [--password ...]
- *     [--rubro comercio|gastronomia|sorteos|inmobiliaria] [--ocultar-rubro si]
+ *     [--rubro comercio|gastronomia|sorteos|inmobiliaria|gimnasio] [--ocultar-rubro si]
  *
  * 1. Cuenta de acceso en Supabase Auth (con SUPABASE_SERVICE_ROLE_KEY de .env.local). Si el email ya
  *    tiene cuenta (el Auth es compartido por la flota) se usa esa, sin tocarle la contraseña.
  * 2. En el schema: la empresa (sus perfiles, primera sucursal, depósito, caja y catálogo de gastos
  *    los crea la base sola) y el usuario ADMIN con el perfil Administrador.
- * 3. El rubro (Configuración › Rubro y funciones): Comercio, todo lo de cocina apagado (default);
- *    Gastronomía, Mesas y QR, Cocina y Recetas prendidas y dadas a Cajero y Supervisor (receta 113).
- *    Sorteos, solo la función Sorteos con sus pantallas y permisos (receta 123). Inmobiliaria, solo la
- *    función Inmobiliaria (receta 130). En los dos, cocina, mesas y pedidos de mostrador apagados.
+ * 3. El rubro con guardar_funciones_empresa (la misma función que Configuración › Rubro y funciones,
+ *    corrida como el admin): prende/apaga las funciones, da pantallas y permisos a los perfiles y apaga
+ *    los módulos que no van con el rubro (receta 138: Sorteos sin Comercial/Inventario/Cuotas,
+ *    Inmobiliaria sin Inventario, Gimnasio sin Cuotas; Soporte apagado en todos).
  *    --ocultar-rubro si: el cliente no ve esa pantalla (solo Neura lo cambia, por SQL).
  * Idempotente: si la empresa o el usuario ya están, no los duplica.
  */
@@ -36,10 +36,7 @@ if (!/^[a-z][a-z0-9_]{1,62}$/.test(schema)) falla("Falta --schema erp_cliente");
 if (!empresa || !nombre || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) falla("Faltan --empresa, --nombre o un --email válido");
 if (!args.ssh && !args.db) falla("Falta --ssh <servidor> o --db <postgres://...>");
 const rubro = (args.rubro ?? "comercio").trim().toLowerCase();
-if (!["comercio", "gastronomia", "sorteos", "inmobiliaria"].includes(rubro)) falla("--rubro tiene que ser comercio, gastronomia, sorteos o inmobiliaria");
-const gastro = rubro === "gastronomia";
-const sorteos = rubro === "sorteos";
-const inmo = rubro === "inmobiliaria";
+if (!["comercio", "gastronomia", "sorteos", "inmobiliaria", "gimnasio"].includes(rubro)) falla("--rubro tiene que ser comercio, gastronomia, sorteos, inmobiliaria o gimnasio");
 const ocultarRubro = ["si", "sí", "true", "1"].includes(String(args["ocultar-rubro"] ?? "").toLowerCase());
 
 const env = existsSync(join(raiz, ".env.local")) ? readFileSync(join(raiz, ".env.local"), "utf8") : "";
@@ -80,23 +77,24 @@ insert into usuarios (empresa_id, auth_user_id, nombre, nombres, email, rol, act
 select e.id, :'auth'::uuid, :'nombre', :'nombre', :'email', 'ADMIN', true
   from (select id from empresas order by creado_at limit 1) e
  where not exists (select 1 from usuarios where auth_user_id = :'auth'::uuid);
-insert into empresa_funciones (empresa_id, mesas, cocina, recetas, pedidos, sorteos, inmobiliaria, funciones_ocultas)
-select id, :'gastro'::boolean, :'gastro'::boolean, :'gastro'::boolean, not (:'sorteos'::boolean or :'inmo'::boolean),
-       :'sorteos'::boolean, :'inmo'::boolean, :'ocultas'::boolean
-  from (select id from empresas order by creado_at limit 1) e
-on conflict (empresa_id) do update set mesas = excluded.mesas, cocina = excluded.cocina, recetas = excluded.recetas, pedidos = excluded.pedidos,
-  sorteos = excluded.sorteos, inmobiliaria = excluded.inmobiliaria, funciones_ocultas = excluded.funciones_ocultas, updated_at = now();
-select rubro_dar_pantallas(id, :'gastro'::boolean, :'gastro'::boolean) from (select id from empresas order by creado_at limit 1) e where :'gastro'::boolean;
-select rubro_dar_sorteos(id) from (select id from empresas order by creado_at limit 1) e where :'sorteos'::boolean;
-select rubro_dar_inmobiliaria(id) from (select id from empresas order by creado_at limit 1) e where :'inmo'::boolean;
+-- 3. El rubro, con la MISMA función que la pantalla Rubro y funciones (prende/apaga funciones, da
+--    pantallas y permisos a los perfiles y apaga los módulos que no van con el rubro), como el admin.
+select set_config('request.jwt.claims', json_build_object('sub', :'auth', 'role', 'authenticated')::text, false);
+select set_config('request.jwt.claim.sub', :'auth', false);
+insert into empresa_funciones (empresa_id) select id from (select id from empresas order by creado_at limit 1) e on conflict (empresa_id) do nothing;
+update empresa_funciones set funciones_ocultas = false;
+select guardar_funciones_empresa(jsonb_build_object('rubro', :'rubro', 'confirmar_recetas', true)) is not null;
+update empresa_funciones set funciones_ocultas = :'ocultas'::boolean, updated_at = now();
+select set_config('request.jwt.claims', '', false);
+select set_config('request.jwt.claim.sub', '', false);
 select 'empresa=' || (select nombre from empresas order by creado_at limit 1) || ' perfil=' || coalesce((select p.nombre from usuarios u join perfiles p on p.id = u.perfil_id where u.auth_user_id = :'auth'::uuid), 'NINGUNO')
-  || ' rubro=' || (select case when sorteos and not (inmobiliaria or mesas or cocina or recetas) then 'Sorteos'
-                               when inmobiliaria and not (sorteos or mesas or cocina or recetas) then 'Inmobiliaria'
-                               when sorteos or inmobiliaria then 'personalizado'
-                               when mesas and cocina and recetas then 'Gastronomía' when not (mesas or cocina or recetas) then 'Comercio' else 'personalizado' end
+  || ' rubro=' || :'rubro' || ' funciones=' || (select concat_ws(',', case when mesas then 'mesas' end, case when cocina then 'cocina' end,
+                   case when recetas then 'recetas' end, case when pedidos then 'pedidos' end, case when sorteos then 'sorteos' end,
+                   case when inmobiliaria then 'inmobiliaria' end, case when gimnasio then 'gimnasio' end)
+                   || ' modulos_apagados=' || array_to_string(modulos_apagados, ',')
                    || case when funciones_ocultas then ' (oculto al cliente)' else '' end from empresa_funciones order by updated_at desc limit 1);
 `;
-const valores = { empresa, nombre, email, auth: authId, gastro, sorteos, inmo, ocultas: ocultarRubro };
+const valores = { empresa, nombre, email, auth: authId, rubro, ocultas: ocultarRubro };
 const r = args.ssh
   ? psqlRemoto(args.ssh, sql, { salida: "At", schema, vars: valores })
   : spawnSync("psql", [args.db, "-v", "ON_ERROR_STOP=1", "-At", "-v", `schema=${schema}`, ...Object.entries(valores).flatMap(([k, v]) => ["-v", `${k}=${v}`]), "-f", "-"], { input: sql, encoding: "utf8" });

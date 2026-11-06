@@ -132,6 +132,8 @@
         <span><b>Sorteos</b><small>Rifas y sorteos. Venta por web, WhatsApp y vendedores con link y PIN, revisión de comprobantes, cupones para la urna y sorteo del ganador.</small></span></label>
       <label class="rubro"><input type="radio" name="rubro" value="inmobiliaria">
         <span><b>Inmobiliaria</b><small>Venta y alquiler de casas, lotes, locales.</small></span></label>
+      <label class="rubro"><input type="radio" name="rubro" value="gimnasio">
+        <span><b>Gimnasio</b><small>Gimnasio, academia, estudio. Clases con cupo, recepción, membresías y el link para que el alumno marque solo.</small></span></label>
     </div>
     <label class="opcion"><input type="checkbox" name="ocultarRubro"><span><b>Ocultarle al cliente la pantalla Rubro y funciones</b><small>No la ve ni la puede cambiar; después solo Neura la vuelve a mostrar.</small></span></label>
   </section>
@@ -283,7 +285,7 @@ function evento(ev) {
     if (!s.publicado) pend.push(`Publicarlo: volvé a tocar Clonar con <b>Publicar el cliente</b> tildado (crea el repo, el dominio y la app en Coolify).`);
     document.getElementById("final").innerHTML = `<div class="final"><h4>${s.publicado ? "Cliente publicado" : "Clon listo"}</h4>
       ${s.publicado ? `<a href="${esc(s.publicado)}/login" target="_blank" rel="noopener"><b>${esc(s.publicado)}</b></a><br>` : ""}
-      Carpeta: <code>${esc(s.destino)}</code><br>Schema: <code>${esc(s.schema)}</code> · Rubro: ${({ gastronomia: "Gastronomía", sorteos: "Sorteos", inmobiliaria: "Inmobiliaria" })[s.rubro] ?? "Comercio"} · Admin: <code>${esc(s.admin)}</code>
+      Carpeta: <code>${esc(s.destino)}</code><br>Schema: <code>${esc(s.schema)}</code> · Rubro: ${({ gastronomia: "Gastronomía", sorteos: "Sorteos", inmobiliaria: "Inmobiliaria", gimnasio: "Gimnasio" })[s.rubro] ?? "Comercio"} · Admin: <code>${esc(s.admin)}</code>
       ${s.repo ? `<br>Repo: <a href="${esc(s.repo)}" target="_blank" rel="noopener">${esc(s.repo.replace("https://github.com/", ""))}</a>` : ""}
       ${s.password ? `<div class="clave"><code id="clave">${esc(s.password)}</code><button type="button" onclick="navigator.clipboard.writeText(document.getElementById('clave').textContent);this.textContent='Copiada'">Copiar</button></div><small>Contraseña inicial: se muestra solo ahora. Pasásela al cliente por un canal seguro.</small>` : ""}
       ${pend.length ? `<h4 style="margin-top:12px">Falta</h4><ul>${pend.map((p) => `<li>${p}</li>`).join("")}</ul>` : ""}</div>`;
