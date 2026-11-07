@@ -65,11 +65,10 @@ export default function MenuSemanalPage() {
   }
 
   async function publicar(valor: boolean) {
-    if (!semana?.id) { await guardar(); }
     setGuardando(true);
     setError(null);
     try {
-      // Asegura que esté guardado y tenga id.
+      // Guarda una vez (asegura id + opciones al día) y después publica.
       const guardada = await apiFetch<Semana>("/api/comedor/menu", { method: "POST", body: JSON.stringify({ semana_inicio: fecha, opciones: Object.values(opts).filter((o) => o.nombre.trim()) }) });
       const s = await apiFetch<Semana>("/api/comedor/menu/publicar", {
         method: "POST",
