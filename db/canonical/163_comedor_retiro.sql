@@ -152,6 +152,7 @@ declare
   v_hoy date := comedor_hoy();
   v_periodo date := comedor_periodo(v_hoy);
   v_res record;
+  v_reservo boolean;
   v_consumo record;
   v_subsidio numeric;
   v_consumido numeric;
@@ -161,6 +162,7 @@ begin
     from comedor_reservas r
     left join comedor_menu_opciones o on o.id = r.opcion_id
    where r.funcionario_id = p_funcionario and r.fecha = v_hoy;
+  v_reservo := found;  -- capturar YA: los SELECT de abajo pisan FOUND
 
   select id, es_especial, precio_habitual into v_consumo
     from comedor_consumos
@@ -176,7 +178,7 @@ begin
   return jsonb_build_object(
     'funcionario', jsonb_build_object('id', p_funcionario, 'nombre', p_nombre),
     'fecha', v_hoy,
-    'reservo', found or (v_res.elegido is not null),
+    'reservo', v_reservo,
     'reserva', case when v_res.opcion_id is not null
                     then jsonb_build_object('opcion_id', v_res.opcion_id, 'nombre', v_res.nombre, 'especial', v_res.especial)
                     else null end,
@@ -311,39 +313,8 @@ begin
 end;
 $fn$;
 
--- Anula un retiro (devuelve el stock y libera el subsidio). Queda auditado.
-create or replace function :"schema".comedor_retiro_anular(p_consumo uuid, p_motivo text) returns jsonb
-language plpgsql security definer set search_path = :"schema", public as $fn$
-declare
-  s record;
-  cc record;
-  v_dep uuid;
-  ins record;
-begin
-  select * into s from comedor_sesion('comedor_recepcion');
-  select * into cc from comedor_consumos where id = p_consumo and empresa_id = s.s_empresa and concepto = 'almuerzo' and anulado_at is null;
-  if not found then raise exception 'Retiro no encontrado o ya anulado'; end if;
-
-  update comedor_consumos set anulado_at = now(), anulado_por = s.s_usuario, motivo = nullif(trim(coalesce(p_motivo, '')), '')
-   where id = p_consumo;
-
-  -- Devuelve el stock de los insumos.
-  if cc.producto_id is not null and tiene_receta(cc.producto_id) then
-    v_dep := comedor_deposito(s.s_empresa);
-    if v_dep is not null then
-      for ins in
-        select x.insumo_id, x.cantidad, coalesce(i.costo_promedio, 0) as costo, i.controla_stock
-          from receta_insumos(cc.producto_id, cc.cantidad) x join productos i on i.id = x.insumo_id
-         where i.controla_stock
-      loop
-        perform inv_mover(s.s_empresa, ins.insumo_id, v_dep, ins.cantidad, ins.costo, 'comedor', 'comedor',
-                          cc.id, '', 'Anulación retiro comedor', s.s_usuario, s.s_nombre);
-      end loop;
-    end if;
-  end if;
-  return jsonb_build_object('ok', true);
-end;
-$fn$;
+-- (La anulación de retiros la hace comedor_consumo_anular (receta 164), que sirve para
+--  almuerzo y cantina y reversa el stock real; por eso acá no hay comedor_retiro_anular.)
 
 -- =============================================================================
 -- 5. Permisos
@@ -356,7 +327,7 @@ begin
     execute format('revoke all on function %s from public, anon, authenticated', f);
     execute format('grant execute on function %s to service_role', f);
   end loop;
-  foreach f in array array['comedor_terminal_leer()', 'comedor_terminal_guardar(uuid,boolean)', 'comedor_retiros_dia(date)', 'comedor_retiro_anular(uuid,text)'] loop
+  foreach f in array array['comedor_terminal_leer()', 'comedor_terminal_guardar(uuid,boolean)', 'comedor_retiros_dia(date)'] loop
     execute format('revoke all on function %s from public, anon', f);
     execute format('grant execute on function %s to authenticated, service_role', f);
   end loop;

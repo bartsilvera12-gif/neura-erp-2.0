@@ -111,7 +111,7 @@ begin
         'precio_especial', o.precio_especial, 'activa', o.activa,
         'reservas', (select count(*) from comedor_reservas r where r.opcion_id = o.id)
       ) order by o.dia, o.opcion)
-      from comedor_menu_opciones o where o.semana_id = s.id
+      from comedor_menu_opciones o where o.semana_id = s.id and o.activa
     ), '[]'::jsonb),
     'propio', (select count(*) from comedor_reservas r
                 where r.empresa_id = s.empresa_id and r.opcion_id is null
@@ -161,18 +161,24 @@ begin
   returning id into v_id;
 
   for it in select * from jsonb_array_elements(coalesce(p->'opciones', '[]'::jsonb)) loop
-    if trim(coalesce(it->>'nombre', '')) = '' then continue; end if;
+    if trim(coalesce(it->>'nombre', '')) = '' then
+      -- Slot vaciado por el usuario: desactiva la opción si existía (no la borra, para no perder
+      -- reservas ni historial). Así "borrar un plato" del grid efectivamente lo quita del menú.
+      update comedor_menu_opciones set activa = false
+       where semana_id = v_id and dia = (it->>'dia')::smallint and opcion = (it->>'opcion')::smallint;
+      continue;
+    end if;
     insert into comedor_menu_opciones (semana_id, dia, opcion, producto_id, nombre, especial, precio_habitual, precio_especial, activa)
     values (v_id, (it->>'dia')::smallint, (it->>'opcion')::smallint,
             nullif(it->>'producto_id', '')::uuid, trim(it->>'nombre'),
             coalesce((it->>'especial')::boolean, false),
             coalesce((it->>'precio_habitual')::numeric, 0),
             nullif(it->>'precio_especial', '')::numeric,
-            coalesce((it->>'activa')::boolean, true))
+            true)
     on conflict (semana_id, dia, opcion) do update
       set producto_id = excluded.producto_id, nombre = excluded.nombre, especial = excluded.especial,
           precio_habitual = excluded.precio_habitual, precio_especial = excluded.precio_especial,
-          activa = excluded.activa;
+          activa = true;
   end loop;
 
   update comedor_menu_semana set updated_at = now() where id = v_id;

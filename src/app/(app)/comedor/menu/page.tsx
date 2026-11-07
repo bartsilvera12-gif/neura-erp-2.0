@@ -54,7 +54,9 @@ export default function MenuSemanalPage() {
     setGuardando(true);
     setError(null);
     try {
-      const opciones = Object.values(opts).filter((o) => o.nombre.trim());
+      // Mandamos los 10 slots (incluidos los vacíos): un slot sin nombre le dice al backend que
+      // esa opción se quitó del menú, así se puede borrar un plato y no solo agregarlo.
+      const opciones = Object.values(opts);
       const s = await apiFetch<Semana>("/api/comedor/menu", { method: "POST", body: JSON.stringify({ semana_inicio: fecha, opciones }) });
       aplicar(s);
     } catch (e) {
@@ -69,7 +71,7 @@ export default function MenuSemanalPage() {
     setError(null);
     try {
       // Guarda una vez (asegura id + opciones al día) y después publica.
-      const guardada = await apiFetch<Semana>("/api/comedor/menu", { method: "POST", body: JSON.stringify({ semana_inicio: fecha, opciones: Object.values(opts).filter((o) => o.nombre.trim()) }) });
+      const guardada = await apiFetch<Semana>("/api/comedor/menu", { method: "POST", body: JSON.stringify({ semana_inicio: fecha, opciones: Object.values(opts) }) });
       const s = await apiFetch<Semana>("/api/comedor/menu/publicar", {
         method: "POST",
         body: JSON.stringify({ semana_id: guardada.id, cierre_at: cierre ? new Date(cierre).toISOString() : null, publicar: valor }),
