@@ -19,11 +19,11 @@ export type Guia = {
    * Solo para este rubro. comercio/gastronomia: la guía del día a día. Un rubro de módulo
    * (inmobiliaria, sorteos, gimnasio): se ve si la empresa tiene esa función prendida.
    */
-  rubro?: "comercio" | "gastronomia" | "inmobiliaria" | "sorteos" | "gimnasio";
+  rubro?: "comercio" | "gastronomia" | "inmobiliaria" | "sorteos" | "gimnasio" | "comedor";
   bloques: Bloque[];
 };
 
-export const GRUPOS = ["Primeros pasos", "Caja y ventas", "Pedidos y mesas", "Cocina y recetas", "Inventario", "Compras y gastos", "Clientes y ventas", "Cobros", "Sorteos", "Inmobiliaria", "Asistencia", "Reportes", "Atención al cliente", "RR HH", "Configuración"];
+export const GRUPOS = ["Primeros pasos", "Caja y ventas", "Pedidos y mesas", "Cocina y recetas", "Inventario", "Compras y gastos", "Clientes y ventas", "Cobros", "Sorteos", "Inmobiliaria", "Asistencia", "Comedor", "Reportes", "Atención al cliente", "RR HH", "Configuración"];
 
 /** Cómo se llega a la pantalla de cada guía: la sección del menú y la tarjeta de su panel. */
 export const LLEGAR: Record<string, [string, string?]> = {
@@ -54,6 +54,9 @@ export const LLEGAR: Record<string, [string, string?]> = {
   "gim-clase": ["Asistencia", "Clases"], "gim-reglas": ["Asistencia", "Clases"], "gim-membresia": ["Comercial", "Planes"],
   "gim-alumno": ["Asistencia", "Recepción"], "gim-asistencia": ["Asistencia", "Recepción"], "gim-turno": ["Asistencia", "Recepción"],
   "gim-comisiones": ["Asistencia", "Comisiones de profesores"], "gim-autoasistencia": ["Asistencia", "Que el alumno marque solo"],
+  "comedor-empresa": ["Comedor", "Configuración del comedor"], "comedor-padron": ["Comedor", "Funcionarios"],
+  "comedor-menu": ["Comedor", "Menú semanal"], "comedor-reserva": ["Comedor", "Menú semanal"],
+  "comedor-retiro": ["Comedor", "Retiro"], "comedor-cantina": ["Comedor", "Cantina"], "comedor-liquidacion": ["Comedor", "Liquidación"],
 };
 /** La captura del panel que abre cada sección del menú. */
 export const PANELES: Record<string, string> = {
@@ -1344,6 +1347,116 @@ export const GUIAS: Guia[] = [
       { img: "rrhh-cerrada", alt: "Liquidación cerrada", pasos: [{ t: "Para corregir una cerrada, abrila y tocá Reabrir.", d: "Te pide el motivo, y queda en el historial.", marca: "Reabrir" }] },
       { consejo: "El aguinaldo acumulado es una doceava parte de lo ganado en el año. Si hay meses sin cerrar, en mensualeros se estiman con el salario actual." },
       { ojo: "Los cálculos son una ayuda. Tu asesor tiene que revisarlos antes de pagar." },
+    ],
+  },
+  // ── Comedor (receta 161-164): solo si la empresa tiene la función Comedor prendida ──────────
+  {
+    id: "comedor-arranque", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/panel",
+    titulo: "Poner en marcha el comedor", resumen: "El orden para arrancar: empresa, padrón, menú y las terminales.",
+    bloques: [
+      { texto: "El comedor funciona en 4 pasos. Hacelos en orden la primera vez; después es solo el día a día." },
+      { texto: "1) Cargá la empresa y su subsidio en Configuración del comedor." },
+      { texto: "2) Cargá el padrón de funcionarios (importá el Excel) en Funcionarios." },
+      { texto: "3) Armá el menú de la semana y publicá el enlace en Menú semanal." },
+      { texto: "4) Abrí la terminal de Retiro en la tablet del comedor." },
+      { consejo: "El día a día: el domingo publicás el menú, el funcionario reserva por el enlace, al mediodía retira en la terminal, y a fin de mes sacás la Liquidación." },
+    ],
+  },
+  {
+    id: "comedor-empresa", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/configuracion",
+    titulo: "Cargar la empresa y el subsidio", resumen: "La empresa contratante y cuánto subsidio tiene cada funcionario por mes.",
+    bloques: [
+      { pasos: [{ t: "Tocá Nueva empresa.", marca: "Nueva empresa" }] },
+      { pasos: [
+        { t: "Escribí el nombre de la empresa.", d: "Por ejemplo: Kingspan MV Aceros S.A.", marca: "Nombre de la empresa" },
+        { t: "Poné el subsidio mensual por funcionario.", d: "Lo que cubre la empresa por mes a cada uno. Por defecto Gs 350.000.", marca: "Subsidio mensual (Gs)" },
+        { t: "Si querés, elegí el día y la hora de cierre de reservas.", d: "Hasta cuándo pueden reservar los funcionarios cada semana.", marca: "Día de cierre de reservas" },
+        { t: "Tocá Guardar.", marca: "Guardar" },
+      ] },
+      { ojo: "El subsidio no se acumula: arranca de nuevo cada mes. Lo que un funcionario gasta de más queda como excedente, que la empresa le recupera." },
+    ],
+  },
+  {
+    id: "comedor-padron", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/funcionarios",
+    titulo: "Cargar el padrón de funcionarios", resumen: "Importá la lista del Excel o agregalos a mano. Cada funcionario es una ficha de cliente.",
+    bloques: [
+      { texto: "Lo más rápido es importar el Excel con el nombre y la cédula de cada uno." },
+      { pasos: [{ t: "Tocá Importar padrón.", marca: "Importar padrón" }] },
+      { pasos: [
+        { t: "Elegí la empresa a la que pertenecen.", marca: "Empresa contratante del padrón" },
+        { t: "Subí el Excel.", d: "Columnas: Nombre y apellido · CI. Podés bajar la plantilla desde el mismo asistente.", marca: "Analizar (preview)" },
+        { t: "Revisá la vista previa y tocá Confirmar.", d: "Te muestra cuántos se crean y cuántos se actualizan antes de guardar.", marca: "Confirmar e importar" },
+      ] },
+      { texto: "Para cargar uno a mano, tocá Nuevo funcionario y poné nombre, cédula y empresa." },
+      { consejo: "La cédula es la llave: con ella el funcionario reserva y retira. Si alguien deja la empresa, editá su ficha y desactivalo (se conserva su historial)." },
+    ],
+  },
+  {
+    id: "comedor-menu", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/menu",
+    titulo: "Armar y publicar el menú de la semana", resumen: "Dos opciones por día, publicás el enlace y ves cuántos reservaron.",
+    bloques: [
+      { texto: "Para cada día de lunes a viernes cargás 2 opciones de almuerzo." },
+      { pasos: [
+        { t: "Escribí el nombre de cada plato en Opción 1 y Opción 2.", marca: "Nombre del plato" },
+        { t: "Poné el precio del plato.", d: "Es lo que se le descuenta del subsidio al retirar.", marca: "Precio" },
+        { t: "Si un día es especial (ej. asado), marcá Especial y poné el precio especial.", d: "La diferencia con el precio normal la paga la empresa, no sale del subsidio.", marca: "Especial" },
+      ] },
+      { pasos: [
+        { t: "Elegí el cierre de reservas.", d: "Hasta cuándo pueden reservar (ej. domingo 10:00).", marca: "Cierre de reservas" },
+        { t: "Tocá Publicar y generar enlace.", marca: "Publicar y generar enlace" },
+        { t: "Copiá el enlace y mandáselo a los funcionarios.", d: "Por WhatsApp o el grupo. Con ese link reservan su menú.", marca: "Copiar" },
+      ] },
+      { consejo: "Cuando empiecen a reservar, vas a ver el número de reservas en cada opción: así sabés cuánto preparar." },
+    ],
+  },
+  {
+    id: "comedor-reserva", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/menu",
+    titulo: "Cómo reserva el funcionario", resumen: "Lo que hace cada funcionario con el enlace que le pasás.",
+    bloques: [
+      { texto: "El funcionario abre el enlace en el celular (no necesita usuario ni contraseña)." },
+      { texto: "Pone su cédula y elige una opción por día, o 'traigo mi propio almuerzo'." },
+      { ojo: "Solo puede retirar quien reservó. Si no reservó un día, ese día no puede retirar." },
+      { consejo: "Puede cambiar su elección hasta la hora de cierre que vos pusiste." },
+    ],
+  },
+  {
+    id: "comedor-retiro", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/retiro",
+    titulo: "El retiro en el comedor", resumen: "La terminal donde el funcionario marca su almuerzo. Reemplaza la planilla.",
+    bloques: [
+      { texto: "Primero generás el enlace de la terminal y lo dejás abierto en la tablet del comedor." },
+      { pasos: [
+        { t: "Elegí el depósito del que se descuentan los ingredientes.", marca: "Depósito del que descuenta el stock" },
+        { t: "Tocá Generar enlace y abrilo en la tablet del comedor.", d: "Ese enlace queda fijo; no hace falta generarlo de nuevo.", marca: "Generar enlace" },
+      ] },
+      { texto: "Al mediodía, cada funcionario pone su cédula en la tablet, ve su menú reservado y confirma. Eso descuenta su subsidio y queda registrado." },
+      { ojo: "Cada funcionario retira una sola vez por día. Si ya retiró, la terminal lo avisa." },
+      { consejo: "En esta misma pantalla ves los retiros del día con sus totales. Si hubo un error, podés anular un retiro (devuelve el stock y libera el subsidio)." },
+    ],
+  },
+  {
+    id: "comedor-cantina", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/cantina",
+    titulo: "Cargar la cantina a cuenta", resumen: "Productos extra (gaseosa, snack) a la cuenta del funcionario, sin cobrar en caja.",
+    bloques: [
+      { pasos: [
+        { t: "Poné la cédula del funcionario y tocá Buscar.", marca: "Buscar" },
+        { t: "Tocá los productos para agregarlos y ajustá la cantidad.", marca: "Buscar producto…" },
+        { t: "Tocá Cargar a la cuenta.", marca: "Cargar a la cuenta" },
+      ] },
+      { ojo: "La cantina también descuenta del subsidio del mes. Cuando se agota, lo que sigue queda como excedente del funcionario." },
+    ],
+  },
+  {
+    id: "comedor-liquidacion", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/liquidacion",
+    titulo: "La liquidación mensual", resumen: "Lo que se le cobra a la empresa: subsidio, excedente y diferencias de especiales.",
+    bloques: [
+      { pasos: [
+        { t: "Elegí el período (desde y hasta) y, si hay varias, la empresa.", marca: "Desde" },
+      ] },
+      { texto: "La tabla muestra, por funcionario: reservas, almuerzos, cantina, subsidio aplicado, excedente y diferencia de especiales, con el total." },
+      { pasos: [
+        { t: "Bajá la liquidación en PDF o Excel para mandársela a la empresa.", marca: "PDF" },
+      ] },
+      { consejo: "El total es lo que paga la empresa. El excedente es la parte que la empresa le recupera a cada funcionario; la diferencia de los menús especiales la absorbe la empresa." },
     ],
   },
 ];
