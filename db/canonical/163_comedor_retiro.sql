@@ -17,21 +17,6 @@
 begin;
 set local search_path to :"schema", public, extensions;
 
--- Los movimientos de inventario del comedor (retiro/cantina) usan documento_tipo = 'comedor' y
--- origen = 'comedor': se suman a las constraints (idempotente, preservando los valores existentes).
-do $do$
-begin
-  alter table movimientos_inventario drop constraint if exists movinv_documento_tipo_check;
-  alter table movimientos_inventario add constraint movinv_documento_tipo_check
-    check (documento_tipo is null or documento_tipo = any (array['compra','venta','traslado','ajuste','perdida','produccion','nota_credito','comedor']));
-  alter table movimientos_inventario drop constraint if exists movinv_origen_check;
-  alter table movimientos_inventario add constraint movinv_origen_check
-    check (origen = any (array['inventario_inicial','ajuste_manual','venta','anulacion_venta','compra','anulacion_compra',
-      'traslado_salida','traslado_entrada','anulacion_traslado','ajuste','perdida','anulacion_ajuste','anulacion_perdida',
-      'apertura','produccion','anulacion_produccion','devolucion_venta','anulacion_devolucion','comedor']));
-end;
-$do$;
-
 -- =============================================================================
 -- 1. Config del comedor (la terminal de retiro: su token y el depósito del que descuenta)
 -- =============================================================================
@@ -271,7 +256,7 @@ begin
       loop
         -- Best-effort: no frena el retiro si falta stock de algún insumo.
         if coalesce((select cantidad from stock_depositos where producto_id = ins.insumo_id and deposito_id = v_dep), 0) >= ins.cantidad then
-          perform inv_mover(r.o_empresa, ins.insumo_id, v_dep, -ins.cantidad, ins.costo, 'comedor', 'comedor',
+          perform inv_mover(r.o_empresa, ins.insumo_id, v_dep, -ins.cantidad, ins.costo, 'comedor', 'comedor_retiro',
                             v_consumo, '', 'Retiro comedor · ' || v_op.nombre, null, r.o_nombre);
         end if;
       end loop;
@@ -336,7 +321,7 @@ begin
           from receta_insumos(cc.producto_id, cc.cantidad) x join productos i on i.id = x.insumo_id
          where i.controla_stock
       loop
-        perform inv_mover(s.s_empresa, ins.insumo_id, v_dep, ins.cantidad, ins.costo, 'comedor', 'comedor',
+        perform inv_mover(s.s_empresa, ins.insumo_id, v_dep, ins.cantidad, ins.costo, 'comedor', 'comedor_retiro_anul',
                           cc.id, '', 'Anulación retiro comedor', s.s_usuario, s.s_nombre);
       end loop;
     end if;
