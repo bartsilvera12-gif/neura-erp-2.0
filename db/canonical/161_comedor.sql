@@ -311,11 +311,11 @@ declare
 begin
   select * into s from comedor_sesion('comedor_administrar');
 
-  -- Una sola pasada: `base` (los funcionarios que filtran) se computa una vez (materialized) y se
-  -- usa para el total y para la página. El consumido del mes se calcula SOLO en las filas visibles.
-  with base as materialized (
+  with base as (
     select c.id, c.nombre, c.documento, c.activo, c.comedor_empresa_id, ce.nombre as empresa_nombre,
-           coalesce(ce.subsidio_mensual, 350000) as subsidio
+           coalesce(ce.subsidio_mensual, 350000) as subsidio,
+           coalesce((select sum(cc.subsidio_aplicado) from comedor_consumos cc
+                      where cc.funcionario_id = c.id and cc.periodo = v_periodo and cc.anulado_at is null), 0) as consumido
       from clientes c
       left join comedor_empresas ce on ce.id = c.comedor_empresa_id
      where c.empresa_id = s.s_empresa and c.es_funcionario
@@ -323,23 +323,29 @@ begin
        and (p_estado is null or (p_estado = 'activos' and c.activo) or (p_estado = 'inactivos' and not c.activo))
        and (p_busqueda is null or p_busqueda = '' or c.nombre ilike '%' || p_busqueda || '%'
             or regexp_replace(coalesce(c.documento, ''), '\D', '', 'g') like '%' || regexp_replace(p_busqueda, '\D', '', 'g') || '%')
-  ), pagina as (
-    select q.*,
-           coalesce((select sum(cc.subsidio_aplicado) from comedor_consumos cc
-                      where cc.funcionario_id = q.id and cc.periodo = v_periodo and cc.anulado_at is null), 0) as consumido
-      from (select * from base order by nombre limit greatest(p_limit, 0) offset greatest(p_offset, 0)) q
   )
-  select
-    (select count(*) from base),
-    coalesce((
-      select jsonb_agg(jsonb_build_object(
-        'id', id, 'nombre', nombre, 'documento', documento, 'activo', activo,
-        'empresa_id', comedor_empresa_id, 'empresa_nombre', empresa_nombre,
-        'subsidio', subsidio, 'consumido', consumido, 'disponible', greatest(subsidio - consumido, 0)
-      ) order by nombre)
-      from pagina
-    ), '[]'::jsonb)
-  into v_total, v_rows;
+  select count(*) into v_total from base;
+
+  with base as (
+    select c.id, c.nombre, c.documento, c.activo, c.comedor_empresa_id, ce.nombre as empresa_nombre,
+           coalesce(ce.subsidio_mensual, 350000) as subsidio,
+           coalesce((select sum(cc.subsidio_aplicado) from comedor_consumos cc
+                      where cc.funcionario_id = c.id and cc.periodo = v_periodo and cc.anulado_at is null), 0) as consumido
+      from clientes c
+      left join comedor_empresas ce on ce.id = c.comedor_empresa_id
+     where c.empresa_id = s.s_empresa and c.es_funcionario
+       and (p_empresa is null or c.comedor_empresa_id = p_empresa)
+       and (p_estado is null or (p_estado = 'activos' and c.activo) or (p_estado = 'inactivos' and not c.activo))
+       and (p_busqueda is null or p_busqueda = '' or c.nombre ilike '%' || p_busqueda || '%'
+            or regexp_replace(coalesce(c.documento, ''), '\D', '', 'g') like '%' || regexp_replace(p_busqueda, '\D', '', 'g') || '%')
+  )
+  select coalesce(jsonb_agg(jsonb_build_object(
+      'id', id, 'nombre', nombre, 'documento', documento, 'activo', activo,
+      'empresa_id', comedor_empresa_id, 'empresa_nombre', empresa_nombre,
+      'subsidio', subsidio, 'consumido', consumido, 'disponible', greatest(subsidio - consumido, 0)
+    ) order by nombre), '[]'::jsonb)
+    into v_rows
+    from (select * from base order by nombre limit greatest(p_limit, 0) offset greatest(p_offset, 0)) q;
 
   return jsonb_build_object('total', v_total, 'rows', v_rows, 'periodo', v_periodo);
 end;
