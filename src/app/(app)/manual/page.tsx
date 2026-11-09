@@ -10,7 +10,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   AlertTriangle, ArrowLeft, ArrowRight, BarChart3, Banknote, Check, ChefHat, ChevronRight, ClipboardList, Expand, Lightbulb, MessageCircle, Package,
-  Rocket, Search, Settings, ShoppingCart, Ticket, Truck, Users, X, ArrowUp, IdCard, Building2, Dumbbell, UtensilsCrossed,
+  Rocket, Search, Settings, ShoppingCart, Ticket, Truck, Users, X, ArrowUp, IdCard, Building2, Dumbbell,
 } from "lucide-react";
 import { CapaModal } from "@/components/CapaModal";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
@@ -31,7 +31,7 @@ const MARCAS = marcasJson as unknown as Record<string, Record<string, Record<str
 const carpetaDe = (img: string, orden: string[]): string =>
   orden.find((c) => MARCAS[c]?.[img]) ?? Object.keys(MARCAS).find((c) => MARCAS[c]?.[img]) ?? orden[0];
 /** Guías de un rubro de módulo: se ven si la empresa tiene esa función prendida (sola o junto a otras). */
-const RUBROS_MODULO = ["sorteos", "inmobiliaria", "gimnasio", "comedor"] as const;
+const RUBROS_MODULO = ["sorteos", "inmobiliaria", "gimnasio"] as const;
 /** Orden de carpetas de capturas para la empresa (ver carpetaDe). */
 const ContextoRubro = createContext<string[]>(["comercio"]);
 
@@ -46,7 +46,6 @@ const TEMAS: { grupo: string; titulo: string; detalle: string; Icono: ComponentT
   { grupo: "Sorteos", titulo: "Sorteos", detalle: "Crear, vender, confirmar pagos y sortear", Icono: Ticket },
   { grupo: "Inmobiliaria", titulo: "Propiedades", detalle: "Cargar, vender en cuotas, alquilar y avisar", Icono: Building2 },
   { grupo: "Asistencia", titulo: "Asistencia", detalle: "Clases, recepción, membresías y profesores", Icono: Dumbbell },
-  { grupo: "Comedor", titulo: "Comedor", detalle: "Funcionarios, menú, retiro, cantina y liquidación", Icono: UtensilsCrossed },
   { grupo: "Reportes", titulo: "Ver mis números", detalle: "Reportes en Excel o PDF", Icono: BarChart3 },
   { grupo: "Atención al cliente", titulo: "Chats y soporte", detalle: "Responder a tus clientes", Icono: MessageCircle },
   { grupo: "RR HH", titulo: "Mi personal", detalle: "Datos, ausencias, vacaciones y liquidación", Icono: IdCard },
