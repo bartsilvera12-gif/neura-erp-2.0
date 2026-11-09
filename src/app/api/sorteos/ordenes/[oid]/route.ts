@@ -10,6 +10,7 @@ import { withTenant } from "@/lib/api/with-tenant";
 import { avisarCompraWhatsApp } from "@/lib/sorteos/bot";
 import { urlBase } from "@/lib/usuarios/cuentas";
 import { fail, ok } from "@/lib/api/responses";
+// eslint-disable-next-line no-restricted-imports -- Excepción revisada por motivo: link firmado al comprobante en el bucket privado (receta 123). Existía cuando el lint estaba apagado; no copiar sin revisión.
 import { systemClient } from "@/lib/supabase/clients";
 import { tenantSchema } from "@/lib/tenant/schema";
 import { falloSorteo, idDe } from "@/modules/sorteos/server";

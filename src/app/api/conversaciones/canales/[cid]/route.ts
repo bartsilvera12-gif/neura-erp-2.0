@@ -8,6 +8,7 @@ import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { fail, ok } from "@/lib/api/responses";
 import { secretosDelCanal } from "@/lib/conversaciones/servidor";
+// eslint-disable-next-line no-restricted-imports -- Excepción revisada por motivo: claves del canal de WhatsApp (solo ADMIN, receta 126). Existía cuando el lint estaba apagado; no copiar sin revisión.
 import { systemClient } from "@/lib/supabase/clients";
 import { urlBase } from "@/lib/usuarios/cuentas";
 import { probarCredenciales } from "@/modules/conversaciones/conectores";
