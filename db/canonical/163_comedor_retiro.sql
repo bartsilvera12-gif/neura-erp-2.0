@@ -68,8 +68,6 @@ $fn$;
 -- =============================================================================
 -- 2. Gestión de la terminal (comedor_administrar)
 -- =============================================================================
--- Solo lectura (STABLE): PostgREST corre las funciones STABLE en transacción read-only, así que NO
--- debe escribir. La config se crea en comedor_terminal_guardar (volatile), no acá.
 create or replace function :"schema".comedor_terminal_leer()
 returns jsonb language plpgsql stable security definer set search_path = :"schema", public as $fn$
 declare
@@ -77,7 +75,7 @@ declare
   c comedor_config;
 begin
   select * into s from comedor_sesion('comedor_administrar');
-  select * into c from comedor_config where empresa_id = s.s_empresa;
+  c := comedor_config_de(s.s_empresa);
   return jsonb_build_object(
     'retiro_token', c.retiro_token,
     'deposito_id', coalesce(c.deposito_id, comedor_deposito(s.s_empresa)),
