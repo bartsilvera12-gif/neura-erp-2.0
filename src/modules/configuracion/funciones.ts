@@ -93,6 +93,8 @@ export function rubroDe(f: Pick<Funciones, "mesas" | "cocina" | "recetas"> & { p
   if (f.inmobiliaria && !f.sorteos && sinGastro) return "inmobiliaria";
   if (f.sorteos && !f.inmobiliaria && sinGastro) return "sorteos";
   if (f.mesas && f.cocina && f.recetas) return "gastronomia";
+  // Base: sin gastronomía ni ningún rubro de módulo → Comercio (solo caja/ventas/stock + pedidos de mostrador).
+  if (sinGastro && !f.sorteos && !f.inmobiliaria && !f.gimnasio) return "comercio";
   return "personalizado";
 }
 
