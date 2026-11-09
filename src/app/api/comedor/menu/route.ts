@@ -22,7 +22,7 @@ const guardarMenu = z.object({
   opciones: z.array(z.object({
     dia: z.coerce.number().int().min(1).max(5),
     opcion: z.coerce.number().int().min(1).max(2),
-    nombre: z.string().trim().max(160), // vacío = quitar esa opción del menú (el backend la desactiva)
+    nombre: z.string().trim().min(1).max(160),
     producto_id: z.string().uuid().nullable().optional(),
     especial: z.boolean().default(false),
     precio_habitual: z.coerce.number().min(0).default(0),

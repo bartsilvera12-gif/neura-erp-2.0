@@ -79,13 +79,8 @@ begin
       into prod from productos p where p.id = (it->>'producto_id')::uuid and p.empresa_id = s.s_empresa and p.activo;
     if not found then raise exception 'Producto no encontrado'; end if;
     if prod.tipo_producto = 'materia_prima' then raise exception '"%" es materia prima, no se vende', prod.nombre; end if;
-    if prod.tipo_producto = 'menu' then
-      raise exception '"%" es un plato del menú; se entrega por el retiro, no por la cantina', prod.nombre using errcode = '22023';
-    end if;
     v_cant := greatest(coalesce((it->>'cantidad')::numeric, 1), 0.001);
-    -- El precio SIEMPRE sale del catálogo (precio_venta), nunca de lo que mande el cliente:
-    -- así nadie puede cargar a cuenta un monto arbitrario ni falsear el subsidio aplicado.
-    v_total := round(prod.precio_venta * v_cant);
+    v_total := round(coalesce(nullif(it->>'precio', '')::numeric, prod.precio_venta) * v_cant);
     v_subap := least(v_total, v_disponible);
     v_exc := v_total - v_subap;
     v_disponible := v_disponible - v_subap;
@@ -118,7 +113,8 @@ language plpgsql security definer set search_path = :"schema", public as $fn$
 declare
   s record;
   cc record;
-  mv record;
+  v_dep uuid;
+  ins record;
 begin
   select * into s from comedor_sesion('comedor_recepcion');
   select * into cc from comedor_consumos where id = p_consumo and empresa_id = s.s_empresa and anulado_at is null and concepto in ('almuerzo', 'cantina');
@@ -127,17 +123,19 @@ begin
   update comedor_consumos set anulado_at = now(), anulado_por = s.s_usuario, motivo = nullif(trim(coalesce(p_motivo, '')), '')
    where id = p_consumo;
 
-  -- Devuelve EXACTAMENTE lo que se descontó: reversa los movimientos reales de este consumo
-  -- (las salidas que dejó inv_mover), en vez de recalcular la receta. El descuento es best-effort
-  -- (puede saltearse si faltaba stock), así que recalcular infla el inventario; reversar lo real no.
-  for mv in
-    select producto_id, deposito_id, cantidad, costo_unitario
-      from movimientos_inventario
-     where empresa_id = s.s_empresa and documento_tipo = 'comedor' and documento_id = cc.id and tipo = 'SALIDA'
-  loop
-    perform inv_mover(s.s_empresa, mv.producto_id, mv.deposito_id, mv.cantidad, mv.costo_unitario, 'comedor', 'comedor',
-                      cc.id, '', 'Anulación comedor', s.s_usuario, s.s_nombre);
-  end loop;
+  v_dep := comedor_deposito(s.s_empresa);
+  if cc.producto_id is not null and v_dep is not null then
+    if cc.concepto = 'almuerzo' and tiene_receta(cc.producto_id) then
+      for ins in
+        select x.insumo_id, x.cantidad, coalesce(i.costo_promedio, 0) as costo, i.controla_stock
+          from receta_insumos(cc.producto_id, cc.cantidad) x join productos i on i.id = x.insumo_id where i.controla_stock
+      loop
+        perform inv_mover(s.s_empresa, ins.insumo_id, v_dep, ins.cantidad, ins.costo, 'comedor', 'comedor', cc.id, '', 'Anulación comedor', s.s_usuario, s.s_nombre);
+      end loop;
+    elsif cc.concepto = 'cantina' then
+      perform inv_mover(s.s_empresa, cc.producto_id, v_dep, cc.cantidad, cc.costo, 'comedor', 'comedor', cc.id, '', 'Anulación cantina', s.s_usuario, s.s_nombre);
+    end if;
+  end if;
   return jsonb_build_object('ok', true);
 end;
 $fn$;

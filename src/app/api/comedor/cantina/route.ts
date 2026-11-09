@@ -1,8 +1,7 @@
 /**
  * Comedor — cantina a cuenta del funcionario.
  *   GET  /api/comedor/cantina?documento=CI → { funcionario, saldo } (identifica por CI)
- *   POST /api/comedor/cantina { funcionario_id, items:[{producto_id,cantidad}] } → registra
- *   (el precio lo pone el catálogo en la base; el cliente no manda importes)
+ *   POST /api/comedor/cantina { funcionario_id, items:[{producto_id,cantidad,precio?}] } → registra
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
@@ -24,6 +23,7 @@ const registrar = z.object({
   items: z.array(z.object({
     producto_id: z.string().uuid(),
     cantidad: z.coerce.number().positive().max(999),
+    precio: z.coerce.number().min(0).optional(),
   })).min(1, "Agregá al menos un producto").max(50),
 });
 
