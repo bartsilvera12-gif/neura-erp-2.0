@@ -38,7 +38,7 @@ export type Funciones = {
 export type ModuloRubroId = "comercial" | "caja" | "finanzas" | "gastos" | "inventario" | "reportes" | "omnicanal" | "rrhh" | "cuotas" | "soporte";
 
 export const MODULOS_RUBRO: { id: ModuloRubroId; label: string; descripcion: string; modulos: string[]; pantallas?: string[] }[] = [
-  { id: "comercial", label: "Comercial", descripcion: "Clientes, CRM, presupuestos, comisiones de vendedores, planes y agenda.", modulos: ["clientes", "crm", "presupuestos", "gestion-clientes", "comisiones", "planes", "agenda"], pantallas: ["/configuracion/comisiones"] },
+  { id: "comercial", label: "Comercial", descripcion: "Clientes, CRM, presupuestos, proyectos, comisiones de vendedores, planes y agenda.", modulos: ["clientes", "crm", "presupuestos", "gestion-clientes", "comisiones", "planes", "agenda", "proyectos"], pantallas: ["/configuracion/comisiones"] },
   { id: "caja", label: "Caja", descripcion: "Ventas, apertura y cierre, órdenes de venta y notas de crédito.", modulos: ["caja"] },
   { id: "finanzas", label: "Finanzas", descripcion: "Cobranzas, conciliación y pagos.", modulos: ["cobranzas", "conciliacion", "pagos"] },
   { id: "gastos", label: "Gastos empresariales", descripcion: "Compras y gastos, órdenes de compra, proveedores y recurrentes.", modulos: ["gastos-empresariales"] },
