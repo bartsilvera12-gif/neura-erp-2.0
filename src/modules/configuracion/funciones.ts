@@ -57,7 +57,8 @@ export const MODULOS_APAGADOS_RUBRO: Record<Exclude<Rubro, "personalizado">, Mod
   sorteos: ["comercial", "inventario", "cuotas", "soporte"],
   inmobiliaria: ["inventario", "soporte"],
   gimnasio: ["cuotas", "soporte"],
-  comedor: ["cuotas", "soporte"],
+  // Comedor empresarial: menú enfocado (como Kingspan): solo Comedor, Inventario y Reportes.
+  comedor: ["comercial", "caja", "finanzas", "gastos", "omnicanal", "rrhh", "cuotas", "soporte"],
   neura: [],
 };
 
