@@ -20,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 const esquema = z
   .object({
-    rubro: z.enum(["comercio", "gastronomia", "sorteos", "inmobiliaria", "gimnasio", "neura"], { message: "Rubro inválido" }),
+    rubro: z.enum(["comercio", "gastronomia", "sorteos", "inmobiliaria", "gimnasio", "comedor", "neura"], { message: "Rubro inválido" }),
     mesas: z.boolean(),
     cocina: z.boolean(),
     recetas: z.boolean(),
@@ -28,6 +28,7 @@ const esquema = z
     sorteos: z.boolean(),
     inmobiliaria: z.boolean(),
     gimnasio: z.boolean(), // receta 150
+    comedor: z.boolean(), // receta 165
     confirmar_recetas: z.boolean(),
     // Receta 138
     modulos_apagados: z.array(z.enum(["comercial", "caja", "finanzas", "gastos", "inventario", "reportes", "omnicanal", "rrhh", "cuotas", "soporte"])).max(10),
