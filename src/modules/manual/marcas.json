@@ -3952,5 +3952,137 @@
     "y": 40.6
    }
   }
+ },
+ "comedor": {
+  "comedor-menu": {
+   "Comedor": {
+    "x": 11.5,
+    "y": 19.4,
+    "lado": "der"
+   }
+  },
+  "comedor-panel": {
+   "Configuración del comedor": {
+    "x": 38.5,
+    "y": 39.5
+   },
+   "Funcionarios": {
+    "x": 20.1,
+    "y": 25.6
+   },
+   "Menú semanal": {
+    "x": 38.5,
+    "y": 25.6
+   },
+   "Retiro": {
+    "x": 57,
+    "y": 25.6
+   },
+   "Cantina": {
+    "x": 75.4,
+    "y": 25.6
+   },
+   "Liquidación": {
+    "x": 20.1,
+    "y": 39.5
+   }
+  },
+  "comedor-config": {
+   "Nueva empresa": {
+    "x": 83.9,
+    "y": 15.3
+   }
+  },
+  "comedor-config-form": {
+   "Nombre de la empresa": {
+    "x": 37.3,
+    "y": 36.3
+   },
+   "Subsidio mensual (Gs)": {
+    "x": 49.9,
+    "y": 41.7
+   },
+   "Día de cierre de reservas": {
+    "x": 37.3,
+    "y": 47
+   },
+   "Guardar": {
+    "x": 57.3,
+    "y": 58.4
+   }
+  },
+  "comedor-funcionarios": {
+   "Importar padrón": {
+    "x": 73.8,
+    "y": 15.3
+   }
+  },
+  "comedor-padron": {
+   "Empresa contratante del padrón": {
+    "x": 24.6,
+    "y": 38.2
+   },
+   "Analizar (preview)": {
+    "x": 67.3,
+    "y": 60.9
+   }
+  },
+  "comedor-menu-semana": {
+   "Nombre del plato": {
+    "x": 20.4,
+    "y": 27.4
+   },
+   "Precio": {
+    "x": 20.4,
+    "y": 30.4
+   },
+   "Especial": {
+    "x": 30.8,
+    "y": 31.3,
+    "lado": "abajo"
+   },
+   "Cierre de reservas": {
+    "x": 20.1,
+    "y": 44.7
+   },
+   "Publicar y generar enlace": {
+    "x": 31.2,
+    "y": 46.9
+   }
+  },
+  "comedor-retiro": {
+   "Depósito del que descuenta el stock": {
+    "x": 20.1,
+    "y": 25.9
+   },
+   "Generar enlace": {
+    "x": 31.6,
+    "y": 28.5
+   }
+  },
+  "comedor-cantina": {
+   "Buscar": {
+    "x": 37.2,
+    "y": 22.5
+   },
+   "Buscar producto…": {
+    "x": 20.1,
+    "y": 37.1
+   },
+   "Cargar a la cuenta": {
+    "x": 57,
+    "y": 46.3
+   }
+  },
+  "comedor-liquidacion": {
+   "Desde": {
+    "x": 19.9,
+    "y": 22.2
+   },
+   "PDF": {
+    "x": 88.2,
+    "y": 17
+   }
+  }
  }
 }

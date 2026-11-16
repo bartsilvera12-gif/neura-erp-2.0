@@ -62,10 +62,10 @@ export const LLEGAR: Record<string, [string, string?]> = {
 export const PANELES: Record<string, string> = {
   Caja: "panel-caja", Inventario: "panel-inventario", "Gastos empresariales": "panel-gastos", Comercial: "panel-comercial",
   Finanzas: "panel-finanzas", Omnicanal: "panel-omnicanal", Configuración: "panel-config", "RR HH": "rrhh-panel",
-  Sorteos: "panel-sorteos", Inmobiliaria: "inmo-panel", Asistencia: "gim-panel",
+  Sorteos: "panel-sorteos", Inmobiliaria: "inmo-panel", Asistencia: "gim-panel", Comedor: "comedor-panel",
 };
 /** La captura donde se ve la sección en el menú, si no es la de Inicio. */
-export const MENUS: Record<string, string> = { "RR HH": "rrhh-panel", Sorteos: "sorteos-menu", Inmobiliaria: "inmo-menu", Asistencia: "gim-menu" };
+export const MENUS: Record<string, string> = { "RR HH": "rrhh-panel", Sorteos: "sorteos-menu", Inmobiliaria: "inmo-menu", Asistencia: "gim-menu", Comedor: "comedor-menu" };
 
 export const GUIAS: Guia[] = [
   // ── Primeros pasos ───────────────────────────────────────────────────────────
@@ -1354,7 +1354,7 @@ export const GUIAS: Guia[] = [
     id: "comedor-arranque", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/panel",
     titulo: "Poner en marcha el comedor", resumen: "El orden para arrancar: empresa, padrón, menú y las terminales.",
     bloques: [
-      { texto: "El comedor funciona en 4 pasos. Hacelos en orden la primera vez; después es solo el día a día." },
+      { img: "comedor-panel", alt: "Panel del comedor", texto: "El comedor funciona en 4 pasos. Hacelos en orden la primera vez; después es solo el día a día." },
       { texto: "1) Cargá la empresa y su subsidio en Configuración del comedor." },
       { texto: "2) Cargá el padrón de funcionarios (importá el Excel) en Funcionarios." },
       { texto: "3) Armá el menú de la semana y publicá el enlace en Menú semanal." },
@@ -1366,8 +1366,8 @@ export const GUIAS: Guia[] = [
     id: "comedor-empresa", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/configuracion",
     titulo: "Cargar la empresa y el subsidio", resumen: "La empresa contratante y cuánto subsidio tiene cada funcionario por mes.",
     bloques: [
-      { pasos: [{ t: "Tocá Nueva empresa.", marca: "Nueva empresa" }] },
-      { pasos: [
+      { img: "comedor-config", alt: "Configuración del comedor", pasos: [{ t: "Tocá Nueva empresa.", marca: "Nueva empresa" }] },
+      { img: "comedor-config-form", alt: "Formulario de la empresa contratante", pasos: [
         { t: "Escribí el nombre de la empresa.", d: "Por ejemplo: Kingspan MV Aceros S.A.", marca: "Nombre de la empresa" },
         { t: "Poné el subsidio mensual por funcionario.", d: "Lo que cubre la empresa por mes a cada uno. Por defecto Gs 350.000.", marca: "Subsidio mensual (Gs)" },
         { t: "Si querés, elegí el día y la hora de cierre de reservas.", d: "Hasta cuándo pueden reservar los funcionarios cada semana.", marca: "Día de cierre de reservas" },
@@ -1381,12 +1381,12 @@ export const GUIAS: Guia[] = [
     titulo: "Cargar el padrón de funcionarios", resumen: "Importá la lista del Excel o agregalos a mano. Cada funcionario es una ficha de cliente.",
     bloques: [
       { texto: "Lo más rápido es importar el Excel con el nombre y la cédula de cada uno." },
-      { pasos: [{ t: "Tocá Importar padrón.", marca: "Importar padrón" }] },
-      { pasos: [
+      { img: "comedor-funcionarios", alt: "Padrón de funcionarios", pasos: [{ t: "Tocá Importar padrón.", marca: "Importar padrón" }] },
+      { img: "comedor-padron", alt: "Asistente de importación del padrón", pasos: [
         { t: "Elegí la empresa a la que pertenecen.", marca: "Empresa contratante del padrón" },
-        { t: "Subí el Excel.", d: "Columnas: Nombre y apellido · CI. Podés bajar la plantilla desde el mismo asistente.", marca: "Analizar (preview)" },
-        { t: "Revisá la vista previa y tocá Confirmar.", d: "Te muestra cuántos se crean y cuántos se actualizan antes de guardar.", marca: "Confirmar e importar" },
+        { t: "Subí el Excel y tocá Analizar.", d: "Columnas: Nombre y apellido · CI. Podés bajar la plantilla desde el mismo asistente.", marca: "Analizar (preview)" },
       ] },
+      { texto: "Te muestra una vista previa (paso 3) con cuántos funcionarios se crean y cuántos se actualizan: revisala y tocá Confirmar e importar para guardar." },
       { texto: "Para cargar uno a mano, tocá Nuevo funcionario y poné nombre, cédula y empresa." },
       { consejo: "La cédula es la llave: con ella el funcionario reserva y retira. Si alguien deja la empresa, editá su ficha y desactivalo (se conserva su historial)." },
     ],
@@ -1396,16 +1396,16 @@ export const GUIAS: Guia[] = [
     titulo: "Armar y publicar el menú de la semana", resumen: "Dos opciones por día, publicás el enlace y ves cuántos reservaron.",
     bloques: [
       { texto: "Para cada día de lunes a viernes cargás 2 opciones de almuerzo." },
-      { pasos: [
+      { img: "comedor-menu-semana", alt: "Menú de la semana", pasos: [
         { t: "Escribí el nombre de cada plato en Opción 1 y Opción 2.", marca: "Nombre del plato" },
         { t: "Poné el precio del plato.", d: "Es lo que se le descuenta del subsidio al retirar.", marca: "Precio" },
         { t: "Si un día es especial (ej. asado), marcá Especial y poné el precio especial.", d: "La diferencia con el precio normal la paga la empresa, no sale del subsidio.", marca: "Especial" },
       ] },
-      { pasos: [
+      { img: "comedor-menu-semana", alt: "Publicar el menú de la semana", pasos: [
         { t: "Elegí el cierre de reservas.", d: "Hasta cuándo pueden reservar (ej. domingo 10:00).", marca: "Cierre de reservas" },
         { t: "Tocá Publicar y generar enlace.", marca: "Publicar y generar enlace" },
-        { t: "Copiá el enlace y mandáselo a los funcionarios.", d: "Por WhatsApp o el grupo. Con ese link reservan su menú.", marca: "Copiar" },
       ] },
+      { texto: "Al publicar aparece el enlace: copialo y mandáselo a los funcionarios por WhatsApp. Con ese link reservan su menú." },
       { consejo: "Cuando empiecen a reservar, vas a ver el número de reservas en cada opción: así sabés cuánto preparar." },
     ],
   },
@@ -1424,7 +1424,7 @@ export const GUIAS: Guia[] = [
     titulo: "El retiro en el comedor", resumen: "La terminal donde el funcionario marca su almuerzo. Reemplaza la planilla.",
     bloques: [
       { texto: "Primero generás el enlace de la terminal y lo dejás abierto en la tablet del comedor." },
-      { pasos: [
+      { img: "comedor-retiro", alt: "Terminal de retiro", pasos: [
         { t: "Elegí el depósito del que se descuentan los ingredientes.", marca: "Depósito del que descuenta el stock" },
         { t: "Tocá Generar enlace y abrilo en la tablet del comedor.", d: "Ese enlace queda fijo; no hace falta generarlo de nuevo.", marca: "Generar enlace" },
       ] },
@@ -1437,7 +1437,7 @@ export const GUIAS: Guia[] = [
     id: "comedor-cantina", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/cantina",
     titulo: "Cargar la cantina a cuenta", resumen: "Productos extra (gaseosa, snack) a la cuenta del funcionario, sin cobrar en caja.",
     bloques: [
-      { pasos: [
+      { img: "comedor-cantina", alt: "Cantina del comedor", pasos: [
         { t: "Poné la cédula del funcionario y tocá Buscar.", marca: "Buscar" },
         { t: "Tocá los productos para agregarlos y ajustá la cantidad.", marca: "Buscar producto…" },
         { t: "Tocá Cargar a la cuenta.", marca: "Cargar a la cuenta" },
@@ -1449,11 +1449,11 @@ export const GUIAS: Guia[] = [
     id: "comedor-liquidacion", grupo: "Comedor", rubro: "comedor", ruta: "/comedor/liquidacion",
     titulo: "La liquidación mensual", resumen: "Lo que se le cobra a la empresa: subsidio, excedente y diferencias de especiales.",
     bloques: [
-      { pasos: [
+      { img: "comedor-liquidacion", alt: "Liquidación mensual", pasos: [
         { t: "Elegí el período (desde y hasta) y, si hay varias, la empresa.", marca: "Desde" },
       ] },
       { texto: "La tabla muestra, por funcionario: reservas, almuerzos, cantina, subsidio aplicado, excedente y diferencia de especiales, con el total." },
-      { pasos: [
+      { img: "comedor-liquidacion", alt: "Descargar la liquidación", pasos: [
         { t: "Bajá la liquidación en PDF o Excel para mandársela a la empresa.", marca: "PDF" },
       ] },
       { consejo: "El total es lo que paga la empresa. El excedente es la parte que la empresa le recupera a cada funcionario; la diferencia de los menús especiales la absorbe la empresa." },
