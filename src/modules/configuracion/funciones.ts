@@ -9,10 +9,10 @@
  *   · APIs: withTenant corta con 403 las rutas de `funcionDeRutaApi`.
  */
 
-export type FuncionId = "mesas" | "cocina" | "recetas" | "pedidos" | "sorteos" | "inmobiliaria" | "gimnasio";
+export type FuncionId = "mesas" | "cocina" | "recetas" | "pedidos" | "sorteos" | "inmobiliaria" | "gimnasio" | "comedor";
 /** `funcion` de una sub-pantalla: una función, o "rubro" (la pantalla Rubro y funciones: se oculta si Neura la ocultó). */
 export type FuncionPantalla = FuncionId | "rubro";
-export type Rubro = "comercio" | "gastronomia" | "sorteos" | "inmobiliaria" | "gimnasio" | "neura" | "personalizado";
+export type Rubro = "comercio" | "gastronomia" | "sorteos" | "inmobiliaria" | "gimnasio" | "comedor" | "neura" | "personalizado";
 
 export type Funciones = {
   mesas: boolean;
@@ -26,6 +26,8 @@ export type Funciones = {
   inmobiliaria: boolean;
   /** Receta 150: Gimnasio / academia: clases con cupo, asistencias, membresías con clases y recepción. */
   gimnasio: boolean;
+  /** Receta 161: Comedor empresarial (independiente del rubro, como pedidos). Solo la enciende Neura por SQL. */
+  comedor: boolean;
   /** Neura ocultó la sección Rubro y funciones (solo por SQL). */
   ocultas: boolean;
   /** Receta 138: módulos apagados por el rubro o a mano (vacío = todos). */
@@ -55,6 +57,7 @@ export const MODULOS_APAGADOS_RUBRO: Record<Exclude<Rubro, "personalizado">, Mod
   sorteos: ["comercial", "inventario", "cuotas", "soporte"],
   inmobiliaria: ["inventario", "soporte"],
   gimnasio: ["cuotas", "soporte"],
+  comedor: ["cuotas", "soporte"],
   neura: [],
 };
 
@@ -81,14 +84,15 @@ export type FuncionesEmpresa = Funciones & {
   productos_recetas: number | null;
 };
 
-export const SIN_FUNCIONES: Funciones = { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, gimnasio: false, ocultas: false, modulos_apagados: ["soporte"] };
+export const SIN_FUNCIONES: Funciones = { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: false, ocultas: false, modulos_apagados: ["soporte"] };
 
 export const URL_FUNCIONES = "/api/configuracion/funciones";
 export const MSJ_FUNCION_INACTIVA = "Esta función no está activa en tu empresa";
 
-export function rubroDe(f: Pick<Funciones, "mesas" | "cocina" | "recetas"> & { pedidos?: boolean; sorteos?: boolean; inmobiliaria?: boolean; gimnasio?: boolean }): Rubro {
+export function rubroDe(f: Pick<Funciones, "mesas" | "cocina" | "recetas"> & { pedidos?: boolean; sorteos?: boolean; inmobiliaria?: boolean; gimnasio?: boolean; comedor?: boolean }): Rubro {
   const sinGastro = !f.mesas && !f.cocina && !f.recetas;
-  if (f.mesas && f.cocina && f.recetas && f.sorteos && f.inmobiliaria && f.gimnasio && (f.pedidos ?? true)) return "neura"; // receta 139 (150: también Gimnasio)
+  if (f.mesas && f.cocina && f.recetas && f.sorteos && f.inmobiliaria && f.gimnasio && f.comedor && (f.pedidos ?? true)) return "neura"; // receta 139 (150: Gimnasio, 165: Comedor)
+  if (f.comedor) return !f.gimnasio && !f.inmobiliaria && !f.sorteos && sinGastro ? "comedor" : "personalizado"; // receta 165
   if (f.gimnasio) return !f.inmobiliaria && !f.sorteos && sinGastro ? "gimnasio" : "personalizado"; // receta 150
   if (f.inmobiliaria && !f.sorteos && sinGastro) return "inmobiliaria";
   if (f.sorteos && !f.inmobiliaria && sinGastro) return "sorteos";
@@ -120,6 +124,7 @@ export const NOMBRE_FUNCION: Record<FuncionId, string> = {
   sorteos: "Sorteos",
   inmobiliaria: "Inmobiliaria",
   gimnasio: "Asistencia",
+  comedor: "Comedor",
 };
 
 /** Función que exige una ruta de /api (null = ninguna). La pública /api/publico/mesas se chequea aparte. */
@@ -133,5 +138,6 @@ export function funcionDeRutaApi(pathname: string): FuncionId | null {
   if (en("/api/sorteos")) return "sorteos";
   if (en("/api/inmobiliaria")) return "inmobiliaria";
   if (en("/api/gimnasio")) return "gimnasio";
+  if (en("/api/comedor")) return "comedor";
   return null;
 }
