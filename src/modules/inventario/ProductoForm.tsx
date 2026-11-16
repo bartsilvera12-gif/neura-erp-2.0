@@ -472,9 +472,9 @@ export function ProductoForm({
             </>) : null}
           </Bloque>
 
-          {/* ── Historial de costos (solo al editar) ───────────────────────── */}
+          {/* ── Proveedores y costos (solo al editar) ──────────────────────── */}
           {editando && producto ? (
-            <Bloque titulo="Historial de costos">
+            <Bloque titulo="Proveedores y costos">
               <HistorialCostos productoId={producto.id} unidad={producto.unidad_medida ?? "Unidad"} />
             </Bloque>
           ) : null}
