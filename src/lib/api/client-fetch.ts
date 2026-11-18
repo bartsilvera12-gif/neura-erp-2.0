@@ -57,15 +57,23 @@ export async function apiFetch<T = unknown>(path: string, init: RequestInit = {}
   });
   const body = await res.json().catch(() => null);
   if (!res.ok || body?.ok === false) {
-    throw new Error(body?.error?.message || `Error ${res.status}`);
+    throw errorApi(body?.error?.message || `Error ${res.status}`, res.status);
   }
   return (body?.data ?? body) as T;
+}
+
+/** Error de la API con el código HTTP adjunto (para distinguir, p. ej., un 403 de función apagada). */
+export type ApiError = Error & { status?: number };
+function errorApi(mensaje: string, status: number): ApiError {
+  const e = new Error(mensaje) as ApiError;
+  e.status = status;
+  return e;
 }
 
 /** Igual que apiFetch pero manda un form-data (subida de archivos): sin Content-Type JSON. */
 export async function apiForm<T = unknown>(path: string, form: FormData): Promise<T> {
   const res = await conSesion((t) => fetch(path, { method: "POST", body: form, headers: t ? { Authorization: `Bearer ${t}` } : {} }));
   const body = await res.json().catch(() => null);
-  if (!res.ok || body?.ok === false) throw new Error(body?.error?.message || `Error ${res.status}`);
+  if (!res.ok || body?.ok === false) throw errorApi(body?.error?.message || `Error ${res.status}`, res.status);
   return (body?.data ?? body) as T;
 }

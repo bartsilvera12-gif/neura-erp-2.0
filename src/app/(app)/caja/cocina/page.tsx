@@ -31,6 +31,7 @@ import { invalidar } from "@/lib/api/cache-cliente";
 import { clienteConfig } from "@/cliente.config";
 import { BOTON_SECUNDARIO } from "@/modules/inventario/ui";
 import { useTablero } from "@/modules/mesas/useTablero";
+import { useFuncion } from "@/lib/sesion/ContextoUsuario";
 import { imprimirComanda } from "@/modules/mesas/imprimirComanda";
 import { ModsDetalle } from "@/modules/mesas/ModsDetalle";
 import {
@@ -68,7 +69,8 @@ export default function CocinaPage() {
     if (q) setFiltroUrl(q);
   }, []);
 
-  const { datos, error, recargar, ahora } = useTablero(4000);
+  const cocinaActiva = useFuncion("cocina");
+  const { datos, error, recargar, ahora } = useTablero(4000, undefined, "nuevo", cocinaActiva);
   const [, tic] = useState(0);
   useEffect(() => { const id = setInterval(() => tic((x) => x + 1), 30_000); return () => clearInterval(id); }, []);
 

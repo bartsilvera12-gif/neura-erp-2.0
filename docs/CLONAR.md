@@ -7,8 +7,8 @@ conoce a ningún cliente: lo único que cambia es `src/cliente.config.ts` y `.en
 los escribe `npm run setup`.
 
 Probado de punta a punta el 3-nov-2026 con un schema descartable (`erp_clon_prueba`): las recetas
-arman la base desde cero, el resultado es idéntico a `erp_demo`, pasan las 178 pruebas de plata y
-stock y la revisión de seguridad da 0 problemas.
+arman la base desde cero, el resultado es idéntico a `erp_demo`, pasan todas las pruebas de plata y
+stock (0 fallaron) y la revisión de seguridad da 0 problemas.
 
 ## La forma rápida: el formulario
 
@@ -57,7 +57,7 @@ Abajo está lo mismo a mano, paso por paso.
 | Dominio | `republica.neura.com.py` | único por cliente |
 | Admin | `admin@republica.com.py`, Juan Pérez | el primer usuario |
 | Empresa | Ferretería República S.A. | razón social |
-| Rubro | Comercio, Gastronomía, Sorteos o Inmobiliaria | define qué funciones arrancan prendidas |
+| Rubro | Comercio, Gastronomía, Sorteos, Inmobiliaria, Gimnasio o Comedor | define qué funciones arrancan prendidas |
 | Color y logo | `#1F6F8B`, `logo.webp` | opcional; sin logo, el de Zentra |
 
 Cada cliente tiene **todos los módulos**; lo que cambia es el rubro:
@@ -68,6 +68,9 @@ Cada cliente tiene **todos los módulos**; lo que cambia es el rubro:
 - **Sorteos** (rifas): sorteos con venta por web, WhatsApp y vendedores con link y PIN, revisión de
   comprobantes, cupones para la urna y sorteo del ganador. Sin cocina ni pedidos de mostrador.
 - **Inmobiliaria**: venta y alquiler de casas, lotes y locales. Sin cocina ni pedidos de mostrador.
+- **Gimnasio / academia**: clases con cupo, asistencias, membresías y recepción.
+- **Comedor empresarial**: menú enfocado (Comedor, Inventario, Reportes). Caso especial; confirmalo con
+  quien mantiene el 2.0 antes de usarlo para un cliente nuevo.
 
 El administrador lo puede cambiar después en Configuración › Rubro y funciones, salvo que se le oculte
 esa pantalla al clonar.
@@ -145,7 +148,7 @@ invitación y de cambio de contraseña no vuelven al dominio del cliente.
 ```bash
 npm run seed-admin -- --schema erp_republica --ssh neura-erp \
   --empresa "Ferretería República S.A." --email admin@republica.com.py --nombre "Juan Pérez" \
-  --rubro comercio            # o gastronomia, sorteos, inmobiliaria; --ocultar-rubro si para que el cliente no lo cambie
+  --rubro comercio            # o gastronomia, sorteos, inmobiliaria, gimnasio, comedor; --ocultar-rubro si para que el cliente no lo cambie
 ```
 
 Crea la cuenta de acceso y, en el schema, la empresa y el usuario ADMIN. La primera sucursal, el
@@ -163,11 +166,11 @@ npm run build
 npm run dev     # entrá con el admin en http://localhost:3000
 ```
 
-- `db:verify-rls`: todas las tablas con RLS y nada abierto a usuarios sin sesión, salvo las 12
-  funciones públicas a propósito (menú QR de las mesas y link del presupuesto). Tiene que decir
-  **0 problema(s)**.
-- `test:db`: tiene que decir **178 pasaron, 0 fallaron**. Corre en una transacción que se deshace:
-  no deja datos.
+- `db:verify-rls`: todas las tablas con RLS y nada abierto a usuarios sin sesión, salvo las funciones
+  públicas a propósito (menú QR de las mesas, link del presupuesto, reserva del comedor, etc.). Tiene
+  que decir **0 problema(s)**.
+- `test:db`: tiene que terminar con **0 fallaron** (verás algo como "NNN pasaron, 0 fallaron"). Corre
+  en una transacción que se deshace: no deja datos.
 
 ## 7. Publicar (GitHub, Cloudflare y Coolify)
 
@@ -229,6 +232,6 @@ Y quitarlo de Supabase (con la llave del administrador):
 - [ ] `.env.local` tiene `APP_DB_SCHEMA=<schema del cliente>` y su propia `SIFEN_SECRETS_KEY`.
 - [ ] `provision` terminó en "Listo".
 - [ ] El schema está en `PGRST_DB_SCHEMAS` y el dominio en `ADDITIONAL_REDIRECT_URLS`.
-- [ ] `db:verify-rls`: 0 problema(s). `test:db`: 178 pasaron.
+- [ ] `db:verify-rls`: 0 problema(s). `test:db`: 0 fallaron.
 - [ ] El admin entra en `https://<dominio>` y ve su empresa.
 - [ ] El repo no menciona otro cliente: `git grep -n "erp_demo" -- src` no devuelve nada.
