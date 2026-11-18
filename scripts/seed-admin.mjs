@@ -4,7 +4,7 @@
  *
  *   node scripts/seed-admin.mjs --schema erp_republica --ssh neura-erp \
  *     --empresa "Ferretería República S.A." --email admin@republica.com.py --nombre "Juan Pérez" [--password ...]
- *     [--rubro comercio|gastronomia|sorteos|inmobiliaria|gimnasio|comedor] [--ocultar-rubro si]
+ *     [--rubro comercio|gastronomia|sorteos|inmobiliaria|gimnasio|comedor|neura] [--ocultar-rubro si]
  *
  * 1. Cuenta de acceso en Supabase Auth (con SUPABASE_SERVICE_ROLE_KEY de .env.local). Si el email ya
  *    tiene cuenta (el Auth es compartido por la flota) se usa esa, sin tocarle la contraseña.
@@ -36,7 +36,7 @@ if (!/^[a-z][a-z0-9_]{1,62}$/.test(schema)) falla("Falta --schema erp_cliente");
 if (!empresa || !nombre || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) falla("Faltan --empresa, --nombre o un --email válido");
 if (!args.ssh && !args.db) falla("Falta --ssh <servidor> o --db <postgres://...>");
 const rubro = (args.rubro ?? "comercio").trim().toLowerCase();
-if (!["comercio", "gastronomia", "sorteos", "inmobiliaria", "gimnasio", "comedor"].includes(rubro)) falla("--rubro tiene que ser comercio, gastronomia, sorteos, inmobiliaria, gimnasio o comedor");
+if (!["comercio", "gastronomia", "sorteos", "inmobiliaria", "gimnasio", "comedor", "neura"].includes(rubro)) falla("--rubro tiene que ser comercio, gastronomia, sorteos, inmobiliaria, gimnasio, comedor o neura");
 const ocultarRubro = ["si", "sí", "true", "1"].includes(String(args["ocultar-rubro"] ?? "").toLowerCase());
 
 const env = existsSync(join(raiz, ".env.local")) ? readFileSync(join(raiz, ".env.local"), "utf8") : "";

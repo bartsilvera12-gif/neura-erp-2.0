@@ -50,7 +50,7 @@ function validar(d) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.adminEmail ?? "")) e.push("El correo del administrador no es válido.");
   if (d.adminPassword && d.adminPassword.length < 8) e.push("La contraseña tiene que tener al menos 8 caracteres (o dejala vacía y se genera).");
   if (!/^#[0-9a-f]{6}$/i.test(d.color ?? "")) e.push("Color inválido: #RRGGBB.");
-  if (!["comercio", "gastronomia", "sorteos", "inmobiliaria", "gimnasio", "comedor"].includes(d.rubro)) e.push("Elegí el rubro: Comercio, Gastronomía, Sorteos, Inmobiliaria, Gimnasio o Comedor.");
+  if (!["comercio", "gastronomia", "sorteos", "inmobiliaria", "gimnasio", "comedor", "neura"].includes(d.rubro)) e.push("Elegí el rubro: Comercio, Gastronomía, Sorteos, Inmobiliaria, Gimnasio, Comedor o Todo (Neura).");
   if (!d.destino?.trim()) e.push("Falta la carpeta del clon.");
   if (!d.ssh?.trim()) e.push("Falta el servidor SSH.");
   if (d.logo && !/^data:image\/(webp|png|svg\+xml|jpeg);base64,/.test(d.logo.data ?? "")) e.push("El logo tiene que ser .webp, .png, .svg o .jpg.");
