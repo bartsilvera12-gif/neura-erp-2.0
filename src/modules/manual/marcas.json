@@ -1225,209 +1225,6 @@
     "y": 18.7
    }
   },
-  "sorteos-menu": {
-   "Sorteos": {
-    "x": 17,
-    "y": 39.3,
-    "lado": "der"
-   }
-  },
-  "panel-sorteos": {
-   "Sorteos": {
-    "x": 21.3,
-    "y": 12
-   },
-   "Vender": {
-    "x": 47.6,
-    "y": 38.5
-   },
-   "Compras": {
-    "x": 74,
-    "y": 38.5
-   },
-   "Por revisar": {
-    "x": 21.3,
-    "y": 59.2
-   },
-   "Vendedores": {
-    "x": 47.6,
-    "y": 59.2
-   },
-   "WhatsApp": {
-    "x": 74,
-    "y": 59.2
-   }
-  },
-  "sorteos-lista": {
-   "Nuevo sorteo": {
-    "x": 86.5,
-    "y": 21.5
-   }
-  },
-  "sorteo-nuevo-datos": {
-   "Nombre": {
-    "x": 21.6,
-    "y": 32.2
-   },
-   "Precio por boleta (Gs.)": {
-    "x": 61.2,
-    "y": 32.2
-   },
-   "Hasta el número": {
-    "x": 79.1,
-    "y": 40.4
-   }
-  },
-  "sorteo-nuevo-cobro": {
-   "Agregar combo": {
-    "x": 21.6,
-    "y": 41
-   },
-   "Banco o billetera": {
-    "x": 62,
-    "y": 31.6
-   },
-   "Crear sorteo": {
-    "x": 88.7,
-    "y": 62.4
-   }
-  },
-  "sorteo-activar": {
-   "Activar": {
-    "x": 89.9,
-    "y": 23.4
-   }
-  },
-  "sorteo-ficha": {
-   "Premios y ganadores": {
-    "x": 30,
-    "y": 59.1
-   },
-   "Cerrar la venta": {
-    "x": 86.2,
-    "y": 23.4
-   },
-   "Participantes y urna": {
-    "x": 41.7,
-    "y": 59.1
-   }
-  },
-  "sorteo-premios": {
-   "El vivo del sorteo": {
-    "x": 21.6,
-    "y": 59.9
-   },
-   "Imagen para redes": {
-    "x": 22.3,
-    "y": 85.6
-   },
-   "Avisarle por WhatsApp": {
-    "x": 36.7,
-    "y": 85.6
-   }
-  },
-  "sorteo-cupones": {
-   "Lista para mostrar en el vivo": {
-    "x": 61.2,
-    "y": 66.5
-   },
-   "Imprimir cupones": {
-    "x": 21.6,
-    "y": 91
-   },
-   "Ticketera 80 mm": {
-    "x": 22.8,
-    "y": 70.9
-   }
-  },
-  "sorteo-vender": {
-   "Gs. 25.000": {
-    "x": 34.2,
-    "y": 41.2
-   },
-   "Nombre y apellido": {
-    "x": 21.6,
-    "y": 62.5
-   },
-   "Efectivo": {
-    "x": 72.9,
-    "y": 29.8
-   },
-   "Registrar venta": {
-    "x": 72.6,
-    "y": 59.9
-   }
-  },
-  "sorteo-revision": {
-   "Carlos Duarte": {
-    "x": 21.6,
-    "y": 45.1
-   }
-  },
-  "sorteo-revision-detalle": {
-   "Lectura automática del comprobante": {
-    "x": 26,
-    "y": 34.9
-   }
-  },
-  "sorteo-vendedores": {
-   "Nuevo vendedor": {
-    "x": 84.8,
-    "y": 21.6
-   },
-   "Link nuevo": {
-    "x": 29.1,
-    "y": 64.2
-   },
-   "Rendición": {
-    "x": 39.3,
-    "y": 64.2
-   }
-  },
-  "sorteo-vendedor-nuevo": {
-   "Nombre": {
-    "x": 31.3,
-    "y": 27.5
-   },
-   "Comisión (%)": {
-    "x": 31.3,
-    "y": 50.7
-   },
-   "Cupo por sorteo (opcional)": {
-    "x": 50.2,
-    "y": 50.7
-   },
-   "Guardar": {
-    "x": 61.2,
-    "y": 77.7
-   }
-  },
-  "sorteo-whatsapp": {
-   "Atender los chats de WhatsApp con el bot": {
-    "x": 22.8,
-    "y": 31.6
-   },
-   "Guardar": {
-    "x": 53.7,
-    "y": 55.7
-   },
-   "Hola": {
-    "x": 65.1,
-    "y": 95.6
-   }
-  },
-  "sorteo-revision-acciones": {
-   "Confirmar pago": {
-    "x": 67.2,
-    "y": 66.6,
-    "lado": "abajo"
-   },
-   "Rechazar": {
-    "x": 56,
-    "y": 66.6,
-    "lado": "abajo"
-   }
-  },
   "canales-lista": {
    "Conectar un WhatsApp": {
     "x": 81.3,
@@ -3319,37 +3116,58 @@
     "lado": "der"
    }
   },
+  "canales-lista": {
+   "Conectar un WhatsApp": {
+    "x": 81.3,
+    "y": 24.1
+   }
+  },
+  "canales-nuevo": {
+   "YCloud": {
+    "x": 31.3,
+    "y": 27.8
+   },
+   "Número de WhatsApp Business": {
+    "x": 31.3,
+    "y": 43.4
+   },
+   "API key": {
+    "x": 31.3,
+    "y": 53.9
+   },
+   "Secreto del webhook": {
+    "x": 31.3,
+    "y": 64.4
+   },
+   "Guardar": {
+    "x": 65,
+    "y": 80.5,
+    "lado": "abajo"
+   }
+  },
+  "canales-tarjeta": {
+   "URL del webhook (pegala en el proveedor)": {
+    "x": 61.2,
+    "y": 43.5
+   },
+   "Probar conexión": {
+    "x": 73.9,
+    "y": 57.8,
+    "lado": "abajo"
+   },
+   "Prender": {
+    "x": 85.1,
+    "y": 57.8,
+    "lado": "abajo"
+   }
+  }
+ },
+ "sorteos": {
   "sorteos-menu": {
    "Sorteos": {
     "x": 17,
     "y": 39.3,
     "lado": "der"
-   }
-  },
-  "panel-sorteos": {
-   "Sorteos": {
-    "x": 21.3,
-    "y": 12
-   },
-   "Vender": {
-    "x": 47.6,
-    "y": 38.5
-   },
-   "Compras": {
-    "x": 74,
-    "y": 38.5
-   },
-   "Por revisar": {
-    "x": 21.3,
-    "y": 59.2
-   },
-   "Vendedores": {
-    "x": 47.6,
-    "y": 59.2
-   },
-   "WhatsApp": {
-    "x": 74,
-    "y": 59.2
    }
   },
   "sorteos-lista": {
@@ -3522,49 +3340,30 @@
     "lado": "abajo"
    }
   },
-  "canales-lista": {
-   "Conectar un WhatsApp": {
-    "x": 81.3,
-    "y": 24.1
-   }
-  },
-  "canales-nuevo": {
-   "YCloud": {
-    "x": 31.3,
-    "y": 27.8
+  "panel-sorteos": {
+   "Sorteos": {
+    "x": 21.3,
+    "y": 12
    },
-   "Número de WhatsApp Business": {
-    "x": 31.3,
-    "y": 43.4
+   "Vender": {
+    "x": 47.6,
+    "y": 38.5
    },
-   "API key": {
-    "x": 31.3,
-    "y": 53.9
+   "Compras": {
+    "x": 74,
+    "y": 38.5
    },
-   "Secreto del webhook": {
-    "x": 31.3,
-    "y": 64.4
+   "Por revisar": {
+    "x": 21.3,
+    "y": 59.2
    },
-   "Guardar": {
-    "x": 65,
-    "y": 80.5,
-    "lado": "abajo"
-   }
-  },
-  "canales-tarjeta": {
-   "URL del webhook (pegala en el proveedor)": {
-    "x": 61.2,
-    "y": 43.5
+   "Vendedores": {
+    "x": 47.6,
+    "y": 59.2
    },
-   "Probar conexión": {
-    "x": 73.9,
-    "y": 57.8,
-    "lado": "abajo"
-   },
-   "Prender": {
-    "x": 85.1,
-    "y": 57.8,
-    "lado": "abajo"
+   "WhatsApp": {
+    "x": 74,
+    "y": 59.2
    }
   }
  },
@@ -4151,6 +3950,138 @@
    "Entrar": {
     "x": 33.8,
     "y": 40.6
+   }
+  }
+ },
+ "comedor": {
+  "comedor-menu": {
+   "Comedor": {
+    "x": 11.5,
+    "y": 19.4,
+    "lado": "der"
+   }
+  },
+  "comedor-panel": {
+   "Configuración del comedor": {
+    "x": 38.5,
+    "y": 39.5
+   },
+   "Funcionarios": {
+    "x": 20.1,
+    "y": 25.6
+   },
+   "Menú semanal": {
+    "x": 38.5,
+    "y": 25.6
+   },
+   "Retiro": {
+    "x": 57,
+    "y": 25.6
+   },
+   "Cantina": {
+    "x": 75.4,
+    "y": 25.6
+   },
+   "Liquidación": {
+    "x": 20.1,
+    "y": 39.5
+   }
+  },
+  "comedor-config": {
+   "Nueva empresa": {
+    "x": 83.9,
+    "y": 15.3
+   }
+  },
+  "comedor-config-form": {
+   "Nombre de la empresa": {
+    "x": 37.3,
+    "y": 36.3
+   },
+   "Subsidio mensual (Gs)": {
+    "x": 49.9,
+    "y": 41.7
+   },
+   "Día de cierre de reservas": {
+    "x": 37.3,
+    "y": 47
+   },
+   "Guardar": {
+    "x": 57.3,
+    "y": 58.4
+   }
+  },
+  "comedor-funcionarios": {
+   "Importar padrón": {
+    "x": 73.8,
+    "y": 15.3
+   }
+  },
+  "comedor-padron": {
+   "Empresa contratante del padrón": {
+    "x": 24.6,
+    "y": 38.2
+   },
+   "Analizar (preview)": {
+    "x": 67.3,
+    "y": 60.9
+   }
+  },
+  "comedor-menu-semana": {
+   "Nombre del plato": {
+    "x": 20.4,
+    "y": 27.4
+   },
+   "Precio": {
+    "x": 20.4,
+    "y": 30.4
+   },
+   "Especial": {
+    "x": 30.8,
+    "y": 31.3,
+    "lado": "abajo"
+   },
+   "Cierre de reservas": {
+    "x": 20.1,
+    "y": 44.7
+   },
+   "Publicar y generar enlace": {
+    "x": 31.2,
+    "y": 46.9
+   }
+  },
+  "comedor-retiro": {
+   "Depósito del que descuenta el stock": {
+    "x": 20.1,
+    "y": 25.9
+   },
+   "Generar enlace": {
+    "x": 31.6,
+    "y": 28.5
+   }
+  },
+  "comedor-cantina": {
+   "Buscar": {
+    "x": 37.2,
+    "y": 22.5
+   },
+   "Buscar producto…": {
+    "x": 20.1,
+    "y": 37.1
+   },
+   "Cargar a la cuenta": {
+    "x": 57,
+    "y": 46.3
+   }
+  },
+  "comedor-liquidacion": {
+   "Desde": {
+    "x": 19.9,
+    "y": 22.2
+   },
+   "PDF": {
+    "x": 88.2,
+    "y": 17
    }
   }
  }

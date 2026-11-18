@@ -12,7 +12,6 @@ import { fail, ok } from "@/lib/api/responses";
 import { canalSimulador, firmarAdjuntosChat, registrarEntrante, subirAdjuntoChat } from "@/lib/conversaciones/servidor";
 import { botSorteos } from "@/lib/sorteos/bot";
 import { esquemaLectura } from "@/lib/sorteos/lector-comprobante";
-// eslint-disable-next-line no-restricted-imports -- Excepción revisada por motivo: simulador del bot de Sorteos (receta 125). Existía cuando el lint estaba apagado; no copiar sin revisión.
 import { systemClient } from "@/lib/supabase/clients";
 import { urlBase } from "@/lib/usuarios/cuentas";
 

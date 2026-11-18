@@ -5,7 +5,6 @@
 import { randomUUID } from "node:crypto";
 import { withTenant } from "@/lib/api/with-tenant";
 import { fail, ok } from "@/lib/api/responses";
-// eslint-disable-next-line no-restricted-imports -- Excepción revisada por motivo: subida al bucket erp-sorteos-publico (receta 123). Existía cuando el lint estaba apagado; no copiar sin revisión.
 import { systemClient } from "@/lib/supabase/clients";
 import { tenantSchema } from "@/lib/tenant/schema";
 

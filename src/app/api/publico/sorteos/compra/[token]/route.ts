@@ -9,7 +9,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { clientePublico } from "@/lib/supabase/publico";
-// eslint-disable-next-line no-restricted-imports -- Excepción revisada por motivo: comprobante al bucket privado erp-sorteos desde la ruta pública por token (receta 123). Existía cuando el lint estaba apagado; no copiar sin revisión.
 import { systemClient } from "@/lib/supabase/clients";
 import { tenantSchema } from "@/lib/tenant/schema";
 import { permitirIp } from "@/app/api/publico/mesas/limite";

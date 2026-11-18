@@ -9,7 +9,7 @@
  * Solo el Administrador guarda (la base lo vuelve a exigir). Apagar no borra nada.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Blocks, Check, ChevronDown, Building2, ChefHat, ClipboardList, Dumbbell, Loader2, QrCode, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
+import { AlertTriangle, Blocks, Check, ChevronDown, Building2, ChefHat, ClipboardList, Dumbbell, Loader2, QrCode, Soup, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
@@ -20,7 +20,7 @@ import { BOTON_PRIMARIO, BOTON_SECUNDARIO } from "@/modules/inventario/ui";
 import { MODULOS_APAGADOS_RUBRO, MODULOS_RUBRO, rubroDe, URL_FUNCIONES, type FuncionesEmpresa, type FuncionPantalla, type ModuloRubroId, type Rubro } from "@/modules/configuracion/funciones";
 import { pantallasCatalogo } from "@/modules/registry";
 
-type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean; sorteos: boolean; inmobiliaria: boolean; gimnasio: boolean; modulos_apagados: ModuloRubroId[] };
+type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean; sorteos: boolean; inmobiliaria: boolean; gimnasio: boolean; comedor: boolean; modulos_apagados: ModuloRubroId[] };
 
 const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: string; resumen: string; Icono: typeof Store }[] = [
   {
@@ -59,6 +59,13 @@ const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: 
     Icono: Dumbbell,
   },
   {
+    key: "comedor",
+    titulo: "Comedor Empresarial",
+    ejemplos: "Comedor de empresa, catering institucional",
+    resumen: "Funcionarios con subsidio, menú semanal con reservas, retiro autoservicio por CI, cantina a cuenta y liquidación mensual.",
+    Icono: Soup,
+  },
+  {
     key: "neura",
     titulo: "Neura",
     ejemplos: "Uso interno de Neura",
@@ -68,16 +75,17 @@ const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: 
 ];
 
 const PRESET: Record<Exclude<Rubro, "personalizado">, Borrador> = {
-  comercio: { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, gimnasio: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.comercio },
-  gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.gastronomia },
-  sorteos: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: true, inmobiliaria: false, gimnasio: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.sorteos },
-  inmobiliaria: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: true, gimnasio: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.inmobiliaria },
-  neura: { mesas: true, cocina: true, recetas: true, pedidos: true, sorteos: true, inmobiliaria: true, gimnasio: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.neura },
-  gimnasio: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.gimnasio },
+  comercio: { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.comercio },
+  gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.gastronomia },
+  sorteos: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: true, inmobiliaria: false, gimnasio: false, comedor: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.sorteos },
+  inmobiliaria: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: true, gimnasio: false, comedor: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.inmobiliaria },
+  neura: { mesas: true, cocina: true, recetas: true, pedidos: true, sorteos: true, inmobiliaria: true, gimnasio: true, comedor: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.neura },
+  gimnasio: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: true, comedor: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.gimnasio },
+  comedor: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.comedor },
 };
 
 const deEmpresa = (d: FuncionesEmpresa): Borrador => ({
-  mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false, sorteos: !!d.sorteos, inmobiliaria: !!d.inmobiliaria, gimnasio: !!d.gimnasio,
+  mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false, sorteos: !!d.sorteos, inmobiliaria: !!d.inmobiliaria, gimnasio: !!d.gimnasio, comedor: !!d.comedor,
   modulos_apagados: d.modulos_apagados ?? [],
 });
 
