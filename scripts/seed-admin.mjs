@@ -4,7 +4,7 @@
  *
  *   node scripts/seed-admin.mjs --schema erp_republica --ssh neura-erp \
  *     --empresa "Ferretería República S.A." --email admin@republica.com.py --nombre "Juan Pérez" [--password ...]
- *     [--rubro comercio|gastronomia|sorteos|inmobiliaria|gimnasio|comedor] [--ocultar-rubro si]
+ *     [--rubro comercio|gastronomia|sorteos|inmobiliaria|gimnasio] [--ocultar-rubro si]
  *
  * 1. Cuenta de acceso en Supabase Auth (con SUPABASE_SERVICE_ROLE_KEY de .env.local). Si el email ya
  *    tiene cuenta (el Auth es compartido por la flota) se usa esa, sin tocarle la contraseña.
@@ -36,7 +36,7 @@ if (!/^[a-z][a-z0-9_]{1,62}$/.test(schema)) falla("Falta --schema erp_cliente");
 if (!empresa || !nombre || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) falla("Faltan --empresa, --nombre o un --email válido");
 if (!args.ssh && !args.db) falla("Falta --ssh <servidor> o --db <postgres://...>");
 const rubro = (args.rubro ?? "comercio").trim().toLowerCase();
-if (!["comercio", "gastronomia", "sorteos", "inmobiliaria", "gimnasio", "comedor"].includes(rubro)) falla("--rubro tiene que ser comercio, gastronomia, sorteos, inmobiliaria, gimnasio o comedor");
+if (!["comercio", "gastronomia", "sorteos", "inmobiliaria", "gimnasio"].includes(rubro)) falla("--rubro tiene que ser comercio, gastronomia, sorteos, inmobiliaria o gimnasio");
 const ocultarRubro = ["si", "sí", "true", "1"].includes(String(args["ocultar-rubro"] ?? "").toLowerCase());
 
 const env = existsSync(join(raiz, ".env.local")) ? readFileSync(join(raiz, ".env.local"), "utf8") : "";
@@ -90,7 +90,7 @@ select set_config('request.jwt.claim.sub', '', false);
 select 'empresa=' || (select nombre from empresas order by creado_at limit 1) || ' perfil=' || coalesce((select p.nombre from usuarios u join perfiles p on p.id = u.perfil_id where u.auth_user_id = :'auth'::uuid), 'NINGUNO')
   || ' rubro=' || :'rubro' || ' funciones=' || (select concat_ws(',', case when mesas then 'mesas' end, case when cocina then 'cocina' end,
                    case when recetas then 'recetas' end, case when pedidos then 'pedidos' end, case when sorteos then 'sorteos' end,
-                   case when inmobiliaria then 'inmobiliaria' end, case when gimnasio then 'gimnasio' end, case when comedor then 'comedor' end)
+                   case when inmobiliaria then 'inmobiliaria' end, case when gimnasio then 'gimnasio' end)
                    || ' modulos_apagados=' || array_to_string(modulos_apagados, ',')
                    || case when funciones_ocultas then ' (oculto al cliente)' else '' end from empresa_funciones order by updated_at desc limit 1);
 `;

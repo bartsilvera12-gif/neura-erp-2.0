@@ -186,18 +186,8 @@ export function ProductoForm({
   const faltaInicial = cantInicial > 0 && (!depositoInicial || (f.controla_lotes && !stockIni.vencimiento));
   const puede = !soloLectura && f.nombre.trim() !== "" && f.sku.trim() !== "" && !faltaInicial;
 
-  const [margenStr, setMargenStr] = useState<string | null>(null);
   // Cálculos en vivo (IVA incluido en precio y costo, igual que el listado).
   const margen = f.precio_venta ? ((f.precio_venta - f.costo_promedio) / f.precio_venta) * 100 : null;
-  // Margen editable: al escribirlo, calcula el precio de venta (precio = costo / (1 - margen/100), IVA incluido).
-  // Mientras se edita se muestra lo tecleado (margenStr); al salir del campo (blur) vuelve al margen real del precio.
-  const margenView = margenStr ?? (margen != null ? margen.toFixed(1).replace(/\.0$/, "").replace(".", ",") : "");
-  function onMargen(raw: string) {
-    const vista = raw.replace(/[^\d.,]/g, "").slice(0, 5);
-    setMargenStr(vista);
-    const m = parseFloat(vista.replace(",", "."));
-    if (Number.isFinite(m) && m < 100 && f.costo_promedio > 0) set("precio_venta", Math.round(f.costo_promedio / (1 - m / 100)));
-  }
   const desc = Math.min(100, Math.max(0, Number(f.descuento_pct) || 0));
   const precioFinal = Math.round(f.precio_venta * (1 - desc / 100));
   const margenFinal = precioFinal ? ((precioFinal - f.costo_promedio) / precioFinal) * 100 : null;
@@ -404,25 +394,18 @@ export function ProductoForm({
 
           {/* ── Precios ──────────────────────────────────────────────────── */}
           <Bloque titulo="Precios" extra={<span className="text-[11px] text-slate-400">IVA incluido</span>}>
-            <div className={`grid grid-cols-1 gap-3 ${esMP ? "sm:grid-cols-[1fr_1fr_140px]" : "sm:grid-cols-[1fr_1fr_100px_128px]"}`}>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[1fr_1fr_140px]">
               <label className="block">
                 <span className={ET}>{esMP ? `Costo promedio (por ${f.unidad_medida === "Unidad" ? "unidad" : f.unidad_medida})` : "Costo promedio"}</span>
                 <MontoInput decimals={false} value={f.costo_promedio} onChange={(v) => set("costo_promedio", v)} className={NUM} placeholder="0" />
                 {esMenu ? <span className="mt-1 block text-[11px] text-slate-400">Se recalcula con su receta (al guardarla y en cada venta).</span> : null}
               </label>
-              {!esMP ? (<>
+              {!esMP ? (
                 <label className="block">
                   <span className={ET}>Precio de venta</span>
-                  <MontoInput decimals={false} value={f.precio_venta} onChange={(v) => { set("precio_venta", v); setMargenStr(null); }} className={NUM} placeholder="0" />
+                  <MontoInput decimals={false} value={f.precio_venta} onChange={(v) => set("precio_venta", v)} className={NUM} placeholder="0" />
                 </label>
-                <label className="block">
-                  <span className={ET}>Margen</span>
-                  <div className="relative">
-                    <input inputMode="decimal" value={margenView} onChange={(e) => onMargen(e.target.value)} onBlur={() => setMargenStr(null)} enterKeyHint="next" className={`${NUM} pr-8`} placeholder="—" aria-label="Margen de ganancia" />
-                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-sm text-slate-400">%</span>
-                  </div>
-                </label>
-              </>) : (
+              ) : (
                 <p className="self-end pb-2.5 text-[11px] text-slate-500">Una materia prima no se vende: no lleva precio de venta. Su costo es el que usan las recetas.</p>
               )}
               <div className="block">
@@ -432,8 +415,8 @@ export function ProductoForm({
             </div>
             {margen != null && !esMP ? (
               <p className="mt-1.5 text-right text-xs text-slate-500">
-                Escribí el margen y se calcula el precio (o al revés). Ganancia por unidad{" "}
-                <strong className={`tabular-nums font-semibold ${margen >= 40 ? "text-emerald-600" : margen >= 20 ? "text-amber-600" : "text-red-600"}`}>{gs(f.precio_venta - f.costo_promedio)}</strong>
+                Ganancia por unidad <strong className="tabular-nums text-slate-700">{gs(f.precio_venta - f.costo_promedio)}</strong> ·{" "}
+                <span className={`font-semibold ${margen >= 40 ? "text-emerald-600" : margen >= 20 ? "text-amber-600" : "text-red-600"}`}>margen {margen.toFixed(1).replace(".", ",")} %</span>
               </p>
             ) : null}
 
@@ -472,9 +455,9 @@ export function ProductoForm({
             </>) : null}
           </Bloque>
 
-          {/* ── Proveedores y costos (solo al editar) ──────────────────────── */}
+          {/* ── Historial de costos (solo al editar) ───────────────────────── */}
           {editando && producto ? (
-            <Bloque titulo="Proveedores y costos">
+            <Bloque titulo="Historial de costos">
               <HistorialCostos productoId={producto.id} unidad={producto.unidad_medida ?? "Unidad"} />
             </Bloque>
           ) : null}

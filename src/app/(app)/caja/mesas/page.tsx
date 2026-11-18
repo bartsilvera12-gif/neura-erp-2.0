@@ -37,7 +37,6 @@ export default function PedidosMesasPage() {
   const puedeAtender = tienePermiso(me, "pedidos_mesas");
   // Sin "Cocina y estaciones" nadie marca las comandas como listas: la caja entrega directo.
   const conCocina = useFuncion("cocina");
-  const mesasActiva = useFuncion("mesas");
   const [sonido, setSonido] = useState(true);
   useEffect(() => { try { setSonido(localStorage.getItem(CLAVE_SONIDO) !== "0"); } catch { /* sin storage */ } }, []);
   const sonidoRef = useRef(sonido);
@@ -46,7 +45,7 @@ export default function PedidosMesasPage() {
   const { datos, error, recargar, ahora } = useTablero(4000, (n) => {
     setLlegaron((x) => x + n.length);
     if (sonidoRef.current) pitido();
-  }, "nuevo", mesasActiva);
+  });
   const [, tic] = useState(0);
   useEffect(() => { const id = setInterval(() => tic((x) => x + 1), 30_000); return () => clearInterval(id); }, []);
 

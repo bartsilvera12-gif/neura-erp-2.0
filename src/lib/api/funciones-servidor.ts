@@ -20,10 +20,10 @@ async function consultar(empresaId: string, schema: string): Promise<Funciones> 
     .maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) return SIN_FUNCIONES;
-  const f = data as { mesas: boolean; cocina: boolean; recetas: boolean; pedidos?: boolean | null; sorteos?: boolean | null; inmobiliaria?: boolean | null; gimnasio?: boolean | null; comedor?: boolean | null; funciones_ocultas: boolean; modulos_apagados?: string[] | null };
+  const f = data as { mesas: boolean; cocina: boolean; recetas: boolean; pedidos?: boolean | null; sorteos?: boolean | null; inmobiliaria?: boolean | null; gimnasio?: boolean | null; funciones_ocultas: boolean; modulos_apagados?: string[] | null };
   // Receta 77: sin la columna (schema viejo) o null → prendida.
   return {
-    mesas: !!f.mesas, cocina: !!f.cocina && !!f.mesas, recetas: !!f.recetas, pedidos: f.pedidos !== false, sorteos: !!f.sorteos, inmobiliaria: !!f.inmobiliaria, gimnasio: !!f.gimnasio, comedor: !!f.comedor, ocultas: !!f.funciones_ocultas,
+    mesas: !!f.mesas, cocina: !!f.cocina && !!f.mesas, recetas: !!f.recetas, pedidos: f.pedidos !== false, sorteos: !!f.sorteos, inmobiliaria: !!f.inmobiliaria, gimnasio: !!f.gimnasio, ocultas: !!f.funciones_ocultas,
     modulos_apagados: (f.modulos_apagados ?? []) as Funciones["modulos_apagados"],
   };
 }

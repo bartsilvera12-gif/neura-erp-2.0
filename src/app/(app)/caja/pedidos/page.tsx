@@ -19,7 +19,6 @@ import { createPortal } from "react-dom";
 import { ArrowLeft, CheckCircle2, ClipboardList, Loader2, Package, Pencil, Printer, RotateCw, Search, Trash2, UserRound, UserRoundPlus, X } from "lucide-react";
 import { NuevoCliente } from "@/modules/clientes/NuevoCliente";
 import { apiFetch } from "@/lib/api/client-fetch";
-import { useFuncion } from "@/lib/sesion/ContextoUsuario";
 import { buscar, buscarEnIndice, exactosPrimero, indexar } from "@/lib/busqueda";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
 import { QtyInput } from "@/components/ui/QtyInput";
@@ -54,9 +53,6 @@ const precioBase = (p: Producto) => Math.round(Number(p.precio_venta) * (1 - Mat
 const cantTxt = (n: number) => Number(n).toLocaleString("es-PY", { maximumFractionDigits: 3 });
 
 export default function PedidosMostradorPage() {
-  // Pedidos de mostrador apagada (o sesión aún sin cargar): no se consulta /api/pedidos-mostrador
-  // (el layout puede renderizar esta página durante la carrera de carga, antes del guard → 403).
-  const pedidosActiva = useFuncion("pedidos");
   // ── Lista (y contexto: sucursal, depósito, si ve todos) ────────────────────
   const [lista, setLista] = useState<ListaPedidosMostrador | null>(null);
   const [errorLista, setErrorLista] = useState<string | null>(null);
@@ -71,11 +67,10 @@ export default function PedidosMostradorPage() {
     }
   }, [verTodos]);
   useEffect(() => {
-    if (!pedidosActiva) return;
     void cargarLista();
     const id = setInterval(() => { if (document.visibilityState === "visible") void cargarLista(); }, 10_000);
     return () => clearInterval(id);
-  }, [cargarLista, pedidosActiva]);
+  }, [cargarLista]);
 
   // ── Catálogo (stock del depósito de la sucursal) ───────────────────────────
   const [productos, setProductos] = useState<Producto[]>([]);

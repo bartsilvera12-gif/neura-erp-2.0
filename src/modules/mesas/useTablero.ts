@@ -5,22 +5,14 @@
  * revalidate: al volver a la pantalla pinta lo último al instante) mientras la pestaña está a la
  * vista, y enseguida al volver a ella. `onNuevos` recibe los pedidos que pasaron a `estadoAviso`
  * ("nuevo" en la caja, "aceptado" en la cocina) desde la última consulta; la primera carga no avisa.
- *
- * `activo` (default true): mientras sea false NO se consulta el tablero. Las pantallas le pasan
- * `useFuncion("mesas"/"cocina")`, que es false hasta que la sesión cargó y si la función está
- * apagada: así no se dispara un GET que el portón cortaría con 403. Si la función se apaga mientras
- * el tablero está abierto (otra pestaña), un 403 corta el polling en silencio en vez de repetirlo.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import { apiFetchSWR, guardadoAlInstante } from "@/lib/api/cache-cliente";
-import type { ApiError } from "@/lib/api/client-fetch";
 import { URL_TABLERO, type PedidoMesa, type TableroMesas } from "@/modules/mesas/tipos";
 
-export function useTablero(cadaMs = 4000, onNuevos?: (p: PedidoMesa[]) => void, estadoAviso: PedidoMesa["estado"] = "nuevo", activo = true) {
+export function useTablero(cadaMs = 4000, onNuevos?: (p: PedidoMesa[]) => void, estadoAviso: PedidoMesa["estado"] = "nuevo") {
   const [datos, setDatos] = useState<TableroMesas | null>(() => guardadoAlInstante<TableroMesas>(URL_TABLERO) ?? null);
   const [error, setError] = useState<string | null>(null);
-  // La función se apagó mientras el tablero estaba abierto: se deja de pedir (no tiene sentido).
-  const detenido = useRef(false);
   const vistos = useRef<Set<string> | null>(null);
   const aviso = useRef(onNuevos);
   aviso.current = onNuevos;
@@ -42,27 +34,21 @@ export function useTablero(cadaMs = 4000, onNuevos?: (p: PedidoMesa[]) => void, 
   }, [estadoAviso]);
 
   const pedir = useCallback(async (signal?: AbortSignal) => {
-    if (detenido.current) return;
     try {
       await apiFetchSWR<TableroMesas>(URL_TABLERO, recibir, { fresco: true, signal });
     } catch (e) {
-      if (signal?.aborted) return;
-      // Función apagada: cortar el polling sin mostrar error (no reintentar cada 4 s).
-      if ((e as ApiError).status === 403) { detenido.current = true; return; }
-      setError((e as Error).message);
+      if (!signal?.aborted) setError((e as Error).message);
     }
   }, [recibir]);
 
   useEffect(() => {
-    if (!activo) return;
-    detenido.current = false;
     const ctrl = new AbortController();
     const hit = guardadoAlInstante<TableroMesas>(URL_TABLERO);
     if (hit) recibir(hit, true);
     // Un solo pedido a la vez: con la red lenta (respuesta > cadaMs) no se encima otro.
     let enCurso = false;
     const tic = () => {
-      if (detenido.current || enCurso || document.visibilityState !== "visible") return;
+      if (enCurso || document.visibilityState !== "visible") return;
       enCurso = true;
       void pedir(ctrl.signal).finally(() => { enCurso = false; });
     };
@@ -75,7 +61,7 @@ export function useTablero(cadaMs = 4000, onNuevos?: (p: PedidoMesa[]) => void, 
       clearInterval(id);
       document.removeEventListener("visibilitychange", alVolver);
     };
-  }, [cadaMs, pedir, recibir, activo]);
+  }, [cadaMs, pedir, recibir]);
 
   return { datos, error, recargar: () => pedir(), ahora: () => Date.now() + desfase };
 }
