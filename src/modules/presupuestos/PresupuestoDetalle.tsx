@@ -198,14 +198,14 @@ export function PresupuestoDetalle({ id, onCerrar, onCambio, avisoInicial }: {
     : e === "rechazado" ? { id: "duplicar", etiqueta: "Duplicar", icono: <Copy className="h-4 w-4" />, onClick: () => void accion("duplicar", { accion: "duplicar" }, ""), cargando: busy === "duplicar" }
     : e === "borrador" ? { id: "pdf", etiqueta: "Descargar PDF", icono: <Download className="h-4 w-4" />, onClick: () => void pdf(), cargando: busy === "pdf" }
     : e === "enviado" ? { id: "aceptar", etiqueta: "Marcar aceptado", icono: <ThumbsUp className="h-4 w-4" />, onClick: () => void accion("aceptar", { accion: "aceptar" }, "Marcado como aceptado."), cargando: busy === "aceptar" }
-    : puedeConvertir ? { id: "convertir", etiqueta: "Convertir a venta", icono: <ShoppingCart className="h-4 w-4" />, onClick: () => setModal("convertir") }
+    : puedeConvertir ? { id: "convertir", etiqueta: "Enviar a la caja", icono: <ShoppingCart className="h-4 w-4" />, onClick: () => setModal("convertir") }
     : null;
   const secundarias: Acc[] = [
     ...(principal?.id !== "pdf" ? [{ id: "pdf", etiqueta: "Descargar PDF", corta: "PDF", icono: <Download className="h-4 w-4" />, onClick: () => void pdf(), cargando: busy === "pdf" }] : []),
     ...(puedeCompartir ? [{ id: "compartir", etiqueta: "Compartir PDF", corta: "Compartir", icono: <Share2 className="h-4 w-4" />, onClick: () => void compartirPdf(), cargando: busy === "compartir" }] : []),
     ...(g === "borrador" ? [{ id: "enviado", etiqueta: "Marcar como enviado", corta: "Enviado", icono: <Send className="h-4 w-4" />, onClick: () => void accion("enviar", { accion: "enviar", canal: "manual" }, "Marcado como enviado."), cargando: busy === "enviar" }] : []),
     ...(puedeEditar && e !== "vencido" ? [{ id: "editar", etiqueta: "Editar", icono: <Pencil className="h-4 w-4" />, href: `/presupuestos/nuevo?editar=${p.id}` }] : []),
-    ...(puedeConvertir && principal?.id !== "convertir" ? [{ id: "convertir", etiqueta: "Convertir a venta", icono: <ShoppingCart className="h-4 w-4" />, onClick: () => setModal("convertir") }] : []),
+    ...(puedeConvertir && principal?.id !== "convertir" ? [{ id: "convertir", etiqueta: "Enviar a la caja", icono: <ShoppingCart className="h-4 w-4" />, onClick: () => setModal("convertir") }] : []),
   ];
   // Celular: 2 secundarias a la vista; el resto se suma al menú "⋯".
   const visiblesMovil = 2;

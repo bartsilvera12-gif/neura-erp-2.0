@@ -318,3 +318,20 @@ export const nombreArchivoPresupuesto = (numero: string, revision: number) =>
 /** "Contado" · "Crédito a 30 días" · "Crédito · 3 cuotas mensuales (1ª a 30 días)". */
 export const condicionTexto = (c: "contado" | "credito", plazo: number | null, cuotas?: number | null, cada?: string | null) =>
   c !== "credito" ? "Contado" : Number(cuotas) > 1 ? textoCredito(plazo, cuotas, cada) : `Crédito${plazo ? ` a ${plazo} días` : ""}`;
+
+/** Presupuesto en la bandeja "Presupuestos por cobrar" de la caja (receta 167). */
+export type PresupuestoPorCobrar = {
+  id: string;
+  numero: string;
+  revision: number;
+  cliente: string;
+  total: number;
+  moneda: string;
+  condicion: "contado" | "credito";
+  items: number;
+  aceptado_at: string | null;
+  valido_hasta: string;
+  vencido: boolean;
+};
+export type PresupuestosPorCobrar = { ahora: string; presupuestos: PresupuestoPorCobrar[] };
+export const URL_PRESUPUESTOS_POR_COBRAR = "/api/presupuestos/por-cobrar";

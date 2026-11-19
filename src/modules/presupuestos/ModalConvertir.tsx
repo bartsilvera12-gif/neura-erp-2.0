@@ -9,8 +9,7 @@
  * Nada se hace solo: la venta se confirma en la Caja como siempre.
  */
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { AlertTriangle, ArrowRight, Ban, CircleDollarSign, Link2, Loader2, PackagePlus, PackageX, ShoppingCart, UserRound } from "lucide-react";
+import { AlertTriangle, ArrowRight, Ban, CheckCircle2, CircleDollarSign, Link2, Loader2, PackagePlus, PackageX, ShoppingCart, UserRound } from "lucide-react";
 import { ALTO_MAX_MODAL, CapaModal } from "@/components/CapaModal";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { useUsuario } from "@/lib/sesion/ContextoUsuario";
@@ -29,7 +28,6 @@ export function ModalConvertir({ presupuestoId, validoHasta, onClose, onCambio }
   /** se ligó una línea a un producto: la ficha se refresca */
   onCambio: () => void;
 }) {
-  const router = useRouter();
   const esAdmin = useUsuario()?.rol === "ADMIN";
   const [conv, setConv] = useState<ConversionPresupuesto | null>(null);
   const [a, setA] = useState<AnalisisConversion | null>(null);
@@ -37,6 +35,8 @@ export function ModalConvertir({ presupuestoId, validoHasta, onClose, onCambio }
   const [eligiendo, setEligiendo] = useState<string | null>(null);   // item_id de la línea sin producto
   const [creando, setCreando] = useState<{ itemId: string; nombre: string } | null>(null);
   const [ligando, setLigando] = useState(false);
+  const [enviando, setEnviando] = useState(false);
+  const [enviado, setEnviado] = useState(false);
 
   const cargar = useCallback(() => {
     apiFetch<ConversionPresupuesto>(`/api/presupuestos/${presupuestoId}/conversion`)
@@ -63,14 +63,33 @@ export function ModalConvertir({ presupuestoId, validoHasta, onClose, onCambio }
   const p = conv?.presupuesto;
   const puede = !!a && a.lineas.length > 0 && p?.estado !== "rechazado" && p?.estado !== "convertido";
 
+  async function enviarACaja() {
+    if (!p) return;
+    setEnviando(true);
+    setError(null);
+    try {
+      // El vendedor envía a la caja: queda "aceptado" (listo para cobrar) y aparece en la bandeja
+      // de Caja › Presupuestos por cobrar. No se lo lleva a la caja: para eso está el cajero.
+      if (p.estado !== "aceptado") {
+        await apiFetch(`/api/presupuestos/${presupuestoId}/accion`, { method: "POST", body: JSON.stringify({ accion: "aceptar" }) });
+      }
+      setEnviado(true);
+      onCambio();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setEnviando(false);
+    }
+  }
+
   return (
     <CapaModal onClose={ligando || creando ? undefined : onClose}>
       <div role="dialog" aria-modal className={`flex w-full max-w-2xl ${ALTO_MAX_MODAL} flex-col overflow-hidden rounded-2xl bg-white shadow-2xl`}>
         <div className="flex shrink-0 items-start gap-3 px-6 pt-6 pb-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--brand-50)] text-[var(--brand)]"><ShoppingCart className="h-5 w-5" /></span>
           <div className="min-w-0">
-            <h2 className="text-lg font-semibold text-slate-900">Convertir en venta{p ? ` · ${numeroConRevision(p.numero, p.revision)}` : ""}</h2>
-            <p className="mt-0.5 text-sm text-slate-500">Revisá esto antes de ir a la caja. La venta se confirma allá, como siempre.</p>
+            <h2 className="text-lg font-semibold text-slate-900">Enviar a la caja{p ? ` · ${numeroConRevision(p.numero, p.revision)}` : ""}</h2>
+            <p className="mt-0.5 text-sm text-slate-500">Revisá esto y envialo a la caja. El cajero lo cobra desde Caja › Nueva venta.</p>
           </div>
         </div>
 
@@ -191,13 +210,20 @@ export function ModalConvertir({ presupuestoId, validoHasta, onClose, onCambio }
           )}
         </div>
 
-        <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
-          <button type="button" onClick={onClose} disabled={ligando} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
-          <button type="button" disabled={!puede || ligando} onClick={() => router.push(`/caja/nueva?presupuesto=${presupuestoId}`)}
-            className="inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: TEAL }}>
-            Ir a la caja <ArrowRight className="h-4 w-4" />
-          </button>
-        </div>
+        {enviado ? (
+          <div className="flex shrink-0 items-center justify-between gap-3 border-t border-emerald-100 bg-emerald-50/60 px-6 py-4">
+            <p className="flex items-center gap-2 text-sm text-emerald-800"><CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" /> Enviado a la caja. El cajero lo cobra desde <b>Caja › Nueva venta › Presupuestos por cobrar</b>.</p>
+            <button type="button" onClick={onClose} className="rounded-xl px-5 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95" style={{ backgroundColor: TEAL }}>Listo</button>
+          </div>
+        ) : (
+          <div className="flex shrink-0 items-center justify-end gap-2 border-t border-slate-100 px-6 py-4">
+            <button type="button" onClick={onClose} disabled={ligando || enviando} className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50">Cancelar</button>
+            <button type="button" disabled={!puede || ligando || enviando} onClick={() => void enviarACaja()}
+              className="inline-flex items-center gap-2 rounded-xl px-5 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95 disabled:opacity-40" style={{ backgroundColor: TEAL }}>
+              {enviando ? <><Loader2 className="h-4 w-4 animate-spin" /> Enviando…</> : <>Enviar a la caja <ArrowRight className="h-4 w-4" /></>}
+            </button>
+          </div>
+        )}
       </div>
 
       {creando ? (

@@ -65,6 +65,8 @@ import {
   type TipoPrecio,
 } from "@/modules/caja/lib";
 import { analizarConversion, type AnalisisConversion, type ConversionPresupuesto } from "@/modules/presupuestos/caja";
+import { usePresupuestosPorCobrar } from "@/modules/presupuestos/cobrar";
+import { numeroConRevision, type PresupuestoPorCobrar } from "@/modules/presupuestos/tipos";
 
 const TEAL = clienteConfig.color;
 // Cantidades con coma (una pizza compartida entre 3 → "0,333").
@@ -709,6 +711,16 @@ function CajaPageContenido() {
   const { pedidos: pedidosPorCobrar, fresco: pedidosFresco, recargar: recargarPedidos, ahora: ahoraPedidos } =
     usePedidosPorCobrar(conPedidos && cobraPedidos ? caja?.id ?? null : null, () => pitido());
   const [bandejaPedidos, setBandejaPedidos] = useState(false);
+
+  // ── Presupuestos por cobrar (receta 167) ────────────────────────────────────
+  // Los presupuestos "aceptados" que el vendedor envió a la caja. El cajero toca uno y la caja
+  // lo carga por ?presupuesto=<id> (el camino de siempre). El vendedor recibe lista vacía.
+  const { presupuestos: presuPorCobrar } = usePresupuestosPorCobrar(!!caja);
+  const [bandejaPresu, setBandejaPresu] = useState(false);
+  function cargarPresupuesto(pr: PresupuestoPorCobrar) {
+    setBandejaPresu(false);
+    router.push(`/caja/nueva?presupuesto=${pr.id}`);
+  }
   const [pedido, setPedido] = useState<PedidoMostrador | null>(null);
   const [errorPedido, setErrorPedido] = useState<string | null>(null);
   const [buscandoPedido, setBuscandoPedido] = useState(false);
@@ -1078,7 +1090,7 @@ function CajaPageContenido() {
 
   // Espejo del estado para los atajos de teclado (siempre el último valor).
   kbRef.current = {
-    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente || hojaOpciones || pedirComprador || bandejaMesas || bandejaPedidos || !!hojaMods, cart, q, inputRef,
+    abrirCobro, cobroOpen, modalAbierto: modalCaja !== null || modalNuevoCliente || hojaOpciones || pedirComprador || bandejaMesas || bandejaPedidos || bandejaPresu || !!hojaMods, cart, q, inputRef,
     updateCant, removeFromCart, setCobroOpen, setQ, setClienteOpen,
   };
 
@@ -1475,6 +1487,21 @@ function CajaPageContenido() {
             </div>
           ) : null}
         </div>
+      ) : null}
+      {/* Presupuestos por cobrar (receta 167): bandeja; al tocar uno la caja lo carga (?presupuesto=). */}
+      {caja && presuPorCobrar.length > 0 ? (
+        <button type="button" onClick={() => setBandejaPresu(true)}
+          className="flex min-h-12 w-full shrink-0 items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-left transition hover:bg-amber-100 active:scale-[0.99] lg:min-h-0 lg:py-1.5">
+          <span className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white text-amber-700 ring-1 ring-amber-200 lg:h-7 lg:w-7">
+            <FileSignature className="h-4 w-4" aria-hidden />
+            <span className="absolute -top-1 -right-1 grid h-5 min-w-5 place-items-center rounded-full bg-amber-600 px-1 text-[11px] font-bold text-white tabular-nums">{presuPorCobrar.length}</span>
+          </span>
+          <span className="min-w-0 flex-1 lg:flex lg:items-baseline lg:gap-2">
+            <span className="block shrink-0 text-sm font-semibold text-amber-900">Presupuestos por cobrar ({presuPorCobrar.length})</span>
+            <span className="block min-w-0 truncate text-xs text-amber-800/80">{presuPorCobrar.map((x) => x.cliente).join(" · ")}</span>
+          </span>
+          <span className="inline-flex shrink-0 items-center gap-0.5 text-xs font-semibold text-amber-800">Ver <ChevronRight className="h-4 w-4" aria-hidden /></span>
+        </button>
       ) : null}
       {(errorPedido || buscandoPedido) && !bandejaPedidos ? (
         <p className={`flex shrink-0 items-center justify-between gap-2 rounded-xl px-3 py-2 text-sm ${errorPedido ? "bg-rose-50 text-rose-700" : "bg-slate-50 text-slate-600"}`} role={errorPedido ? "alert" : "status"}>
@@ -2046,6 +2073,48 @@ function CajaPageContenido() {
               {errorPedido ? <p className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{errorPedido}</p> : null}
               {cart.some((l) => l.pedido_cant == null) ? <p className="mt-3 text-[11px] text-slate-500">Lo que ya está en el carrito se mantiene: el pedido se suma.</p> : null}
               <p className="mt-2 text-[11px] text-slate-500">También podés escanear el código del comprobante en el buscador de productos.</p>
+            </div>
+          </div>
+        </CapaModal>
+      ) : null}
+
+      {/* Presupuestos por cobrar (receta 167): elegir el presupuesto que carga la caja */}
+      {bandejaPresu ? (
+        <CapaModal onClose={() => setBandejaPresu(false)} z="z-[70]">
+          <div role="dialog" aria-modal="true" aria-labelledby="presu-titulo" className={`flex w-full max-w-lg flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ${ALTO_MAX_MODAL}`}>
+            <div className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-5 py-4">
+              <div className="min-w-0">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Caja</p>
+                <h3 id="presu-titulo" className="text-base font-semibold text-slate-900">Presupuestos por cobrar ({presuPorCobrar.length})</h3>
+              </div>
+              <button type="button" aria-label="Cerrar" onClick={() => setBandejaPresu(false)} className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 lg:h-9 lg:w-9"><X className="h-5 w-5" /></button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-5">
+              {presuPorCobrar.length === 0 ? (
+                <p className="py-10 text-center text-sm text-slate-400">No hay presupuestos enviados a la caja.</p>
+              ) : (
+                <ul className="space-y-2">
+                  {presuPorCobrar.map((x) => (
+                    <li key={x.id}>
+                      <button type="button" onClick={() => cargarPresupuesto(x)}
+                        className="flex min-h-14 w-full items-center gap-3 rounded-xl border border-slate-200 px-3 py-2.5 text-left transition hover:bg-slate-50 active:scale-[0.99]">
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-mono text-base font-bold text-slate-900">{numeroConRevision(x.numero, x.revision)}</span>
+                          <span className="block text-xs text-slate-500 [overflow-wrap:anywhere]">
+                            {x.cliente} · {x.items} producto{x.items === 1 ? "" : "s"} · {x.condicion === "credito" ? "Crédito" : "Contado"}
+                            {x.vencido ? <b className="ml-1 font-semibold text-amber-700">· vencido</b> : null}
+                          </span>
+                        </span>
+                        <span className="shrink-0 text-right">
+                          <span className="block text-base font-bold tabular-nums text-slate-900">{formatGs(x.total)}</span>
+                          <span className="text-xs font-semibold" style={{ color: TEAL }}>Cobrar</span>
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+              <p className="mt-2 text-[11px] text-slate-500">Los envía el vendedor desde Presupuestos. Al tocar uno, se cargan sus líneas acá para cobrarlo.</p>
             </div>
           </div>
         </CapaModal>
