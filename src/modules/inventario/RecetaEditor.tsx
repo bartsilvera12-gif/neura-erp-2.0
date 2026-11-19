@@ -148,7 +148,9 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
   const esPlato = det?.producto.tipo_producto === "menu";
   // Se mide en su unidad (kg, l, unidades) en vez de porciones.
   const porUnidad = esPreparacion;
-  const porTanda = esPreparacion && tanda;
+  // Receta 168: un Menú también se puede "fabricar por tanda" (stock propio) además de las preparaciones.
+  const permiteTanda = esPreparacion || esPlato;
+  const porTanda = permiteTanda && tanda;
   const unidadProd = det?.producto.unidad_medida ?? "Unidad";
   const rendimiento = Math.max(0, numero(rend));
   const costos = useMemo(() => lineas.map((l) => {
@@ -278,7 +280,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
         body: JSON.stringify({
           rendimiento: rendimiento || 1,
           notas: notas.trim() || null,
-          ...(esPreparacion ? { por_tanda: tanda } : {}),
+          ...(permiteTanda ? { por_tanda: tanda } : {}),
           items: items.map((l) => ({
             insumo_id: l.insumo_id, cantidad: numero(l.cantidad), unidad: l.unidad, merma_pct: numero(l.merma),
             se_puede_quitar: esPlato ? l.quitar : false,
@@ -398,12 +400,16 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                   detalle={porTanda && det.por_tanda ? `con tu depósito · hay ${cant(det.stock ?? 0)} ${unidadCorta(unidadProd)} en stock` : "con el stock de tu depósito"} />
               </div>
 
-              {/* Receta 97: cómo se usa la preparación */}
-              {esPreparacion ? (
-                <div role="radiogroup" aria-label="Cómo se usa la preparación" className="grid gap-2 sm:grid-cols-2">
+              {/* Receta 97 / 168: cómo se usa (preparación o Menú fabricable por tanda) */}
+              {permiteTanda ? (
+                <div role="radiogroup" aria-label={esPlato ? "Cómo se vende este producto" : "Cómo se usa la preparación"} className="grid gap-2 sm:grid-cols-2">
                   {([
-                    [false, "Se descuenta al vender", "No lleva stock propio: al vender un plato que la usa se descuentan sus ingredientes."],
-                    [true, "Se fabrica por tanda", "Tiene stock: la fabricás en Producción (descuenta sus ingredientes) y los platos usan ese stock."],
+                    [false, "Se descuenta al vender", esPlato
+                      ? "No lleva stock propio: al venderlo se descuentan los ingredientes de su receta."
+                      : "No lleva stock propio: al vender un plato que la usa se descuentan sus ingredientes."],
+                    [true, "Se fabrica por tanda", esPlato
+                      ? "Tiene stock propio: lo fabricás en Producción (descuenta sus ingredientes) y al venderlo se descuenta de ese stock."
+                      : "Tiene stock: la fabricás en Producción (descuenta sus ingredientes) y los platos usan ese stock."],
                   ] as const).map(([v, t, d]) => (
                     <button key={t} type="button" role="radio" aria-checked={tanda === v} disabled={!puedeEditar}
                       onClick={() => setTanda(v)}
@@ -419,10 +425,12 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
                   ))}
                 </div>
               ) : null}
-              {esPreparacion && tanda !== !!det.por_tanda && det.tiene_receta ? (
+              {permiteTanda && tanda !== !!det.por_tanda && det.tiene_receta ? (
                 <p className="rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
                   {tanda
-                    ? "Al guardar pasa a tener stock propio (empieza en 0): fabricala en Producción antes de vender platos que la usen."
+                    ? esPlato
+                      ? "Al guardar pasa a tener stock propio (empieza en 0): fabricalo en Producción antes de venderlo."
+                      : "Al guardar pasa a tener stock propio (empieza en 0): fabricala en Producción antes de vender platos que la usen."
                     : "Al guardar deja de tener stock propio: tiene que estar en 0 (si tiene, hacé un ajuste antes)."}
                 </p>
               ) : null}
