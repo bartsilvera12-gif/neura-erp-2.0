@@ -17,7 +17,7 @@ const jakarta = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Neura ERP",
+  title: clienteConfig.nombreApp || "Neura ERP",
   description: "ERP de Neura",
 };
 

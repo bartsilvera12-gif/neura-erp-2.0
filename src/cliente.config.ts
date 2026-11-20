@@ -6,6 +6,7 @@ import type { ClienteConfig } from "@/modules/types";
  */
 export const clienteConfig: ClienteConfig = {
   nombre: "Empresa Demo",
+  nombreApp: "Demo ERP",
   dominio: "demo.neura.com.py",
   color: "#3F8E91",
   modulos: ["caja", "inventario", "gastos-empresariales", "clientes", "crm", "presupuestos", "gestion-clientes", "comisiones", "planes", "agenda", "cobranzas", "conciliacion", "pagos", "conversaciones", "soporte", "reportes", "rrhh", "sorteos", "inmobiliaria", "gimnasio", "comedor", "configuracion"], // ids de módulos activos

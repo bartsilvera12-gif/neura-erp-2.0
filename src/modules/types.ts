@@ -84,4 +84,6 @@ export type ClienteConfig = {
   modulos: string[];
   /** logo del login y del menú, en /public (lo copia setup.mjs). Sin logo: el de Zentra. */
   logo?: string;
+  /** Título de la pestaña del navegador (document.title). Sin esto: "Neura ERP". */
+  nombreApp?: string;
 };
