@@ -148,8 +148,9 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
   const esPlato = det?.producto.tipo_producto === "menu";
   // Se mide en su unidad (kg, l, unidades) en vez de porciones.
   const porUnidad = esPreparacion;
-  // Receta 168: un Menú también se puede "fabricar por tanda" (stock propio) además de las preparaciones.
-  const permiteTanda = esPreparacion || esPlato;
+  // Receta 168/169: fabricar por tanda (stock propio) queda SOLO para los Menú. La fabricación de
+  // materias primas (preparaciones) está deshabilitada por ahora (pedido del dueño 2026-11-20).
+  const permiteTanda = esPlato;
   const porTanda = permiteTanda && tanda;
   const unidadProd = det?.producto.unidad_medida ?? "Unidad";
   const rendimiento = Math.max(0, numero(rend));
@@ -332,7 +333,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
               </button>
             )
           ) : null}
-          {det.por_tanda && det.tiene_receta && puedeFabricar && !confirmarQuitar ? (
+          {esPlato && det.por_tanda && det.tiene_receta && puedeFabricar && !confirmarQuitar ? (
             <Link href={`/inventario/produccion?fabricar=${det.producto.id}`}
               className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:w-full`}>
               <Factory className="h-4 w-4" /> Fabricar

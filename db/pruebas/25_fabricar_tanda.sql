@@ -61,3 +61,41 @@ end $$;
 select pg_temp.ok('menu normal NO lleva stock', not (select controla_stock from productos where id = pg_temp.fx('plato')));
 do $$ begin perform pg_temp.vender(pg_temp.fx('plato'), 1); end $$;
 select pg_temp.igual('menu normal explota el maní al vender', pg_temp.stock(pg_temp.fx('mani')), 88);
+
+-- MERMA al fabricar: el consumo es el BRUTO = neto / (1 − merma). Ej. 1 kg neto con 20% de merma.
+do $$
+declare v_harina uuid; v_pan uuid;
+begin
+  v_harina := pg_temp.producto('Harina', 0);
+  update productos set tipo_producto = 'materia_prima', unidad_medida = 'kg' where id = v_harina;
+  perform pg_temp.comprar(v_harina, 100, 3000);        -- 100 kg a Gs. 3.000/kg
+  v_pan := pg_temp.producto('Pan por tanda', 5000);
+  update productos set tipo_producto = 'menu' where id = v_pan;
+  perform receta_guardar(jsonb_build_object(
+    'producto_id', v_pan, 'rendimiento', 1, 'por_tanda', true,
+    'items', jsonb_build_array(jsonb_build_object('insumo_id', v_harina, 'cantidad', 1, 'unidad', 'kg', 'merma_pct', 20))));
+  insert into prueba_fx values ('harina', v_harina), ('pan', v_pan);
+end $$;
+-- Fabricar 8 panes: neto 8 kg, con 20% de merma consume 8 / 0,8 = 10 kg → de 100 quedan 90.
+do $$ begin perform fabricar(jsonb_build_object('producto_id', pg_temp.fx('pan'), 'cantidad', 8, 'deposito_id', pg_temp.fx('dep_a'))); end $$;
+select pg_temp.igual('la merma del 20% se aplica al fabricar (bruto = neto / 0,8)', pg_temp.stock(pg_temp.fx('harina')), 90);
+select pg_temp.igual('entran los 8 panes fabricados', pg_temp.stock(pg_temp.fx('pan')), 8);
+-- La merma va al costo: 10 kg × 3.000 = 30.000 repartido en 8 panes = 3.750 (sin merma sería 3.000).
+select pg_temp.igual('la merma sube el costo del pan', (select costo_promedio from productos where id = pg_temp.fx('pan')), 3750);
+
+-- FABRICAR SOLO MENÚ (receta 169): una materia prima por tanda NO se puede fabricar.
+do $$
+declare v_prep uuid;
+begin
+  v_prep := pg_temp.producto('Salsa por tanda', 0);
+  update productos set tipo_producto = 'materia_prima', unidad_medida = 'kg' where id = v_prep;
+  perform receta_guardar(jsonb_build_object(
+    'producto_id', v_prep, 'rendimiento', 1, 'por_tanda', true,
+    'items', jsonb_build_array(jsonb_build_object('insumo_id', pg_temp.fx('harina'), 'cantidad', 1, 'unidad', 'kg'))));
+  insert into prueba_fx values ('prep', v_prep);
+end $$;
+select pg_temp.rechaza('una materia prima no se fabrica (solo Menú)',
+  $q$ select fabricar(jsonb_build_object('producto_id', pg_temp.fx('prep'), 'cantidad', 1, 'deposito_id', pg_temp.fx('dep_a'))) $q$,
+  'solo los productos Menú');
+select pg_temp.ok('la materia prima no aparece en la lista de fabricables',
+  not exists (select 1 from jsonb_array_elements(fabricables(pg_temp.fx('dep_a'))->'items') i where (i->>'id')::uuid = pg_temp.fx('prep')));
