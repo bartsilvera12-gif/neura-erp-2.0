@@ -29,6 +29,7 @@ import { buscar } from "@/lib/busqueda";
 import { clienteConfig } from "@/cliente.config";
 import { BuscadorProductos } from "@/modules/compras/partes";
 import { BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT, ModalDocumento, Pestanas } from "@/modules/inventario/ui";
+import { FabricarModal } from "@/modules/inventario/FabricarModal";
 import type { ProductoInventario } from "@/modules/inventario/tipos";
 import {
   brutoEnUnidadInsumo, cant, colorMargen, gs, margenPct, numero, precioFinal, unidadCorta, unidadSugerida, unidadesCompatibles,
@@ -123,6 +124,9 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
   const [copiando, setCopiando] = useState(false);
   // Receta 97: la preparación se fabrica por tanda (tiene stock) o se descuenta al vender.
   const [tanda, setTanda] = useState(false);
+  // Fabricar desde la receta: se abre el modal acá mismo (no manda a la pantalla de Producción),
+  // así al cerrar seguís en Recetas. Al terminar se recarga el detalle (cambió el stock).
+  const [fabricando, setFabricando] = useState(false);
   const me = useUsuario();
   const puedeFabricar = tienePermiso(me, "fabricar");
 
@@ -310,6 +314,7 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
   const titulo = det ? det.producto.nombre : "Receta";
   const quitables = lineas.filter((l) => l.quitar).length;
   return (
+    <>
     <ModalDocumento
       ancho="max-w-3xl"
       titulo={<><ChefHat className="h-5 w-5 shrink-0" style={{ color: TEAL }} /> <span className="min-w-0 truncate">{titulo}</span></>}
@@ -334,10 +339,10 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
             )
           ) : null}
           {esPlato && det.por_tanda && det.tiene_receta && puedeFabricar && !confirmarQuitar ? (
-            <Link href={`/inventario/produccion?fabricar=${det.producto.id}`}
+            <button type="button" onClick={() => setFabricando(true)} disabled={busy}
               className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:w-full`}>
               <Factory className="h-4 w-4" /> Fabricar
-            </Link>
+            </button>
           ) : null}
           <button type="button" onClick={onClose} disabled={busy} className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:flex-1`}>{puedeEditar ? "Cancelar" : "Cerrar"}</button>
           {puedeEditar ? (
@@ -648,6 +653,15 @@ export function RecetaEditor({ productoId, puedeEditar, onClose, onGuardado }: {
       )}
       {copiando && det ? <CopiarDePlato excluir={det.producto.id} onElegir={copiarDe} onClose={() => setCopiando(false)} /> : null}
     </ModalDocumento>
+    {fabricando && det ? (
+      <FabricarModal productoInicial={det.producto.id} onClose={() => setFabricando(false)}
+        onHecho={() => {
+          setFabricando(false);
+          // Recarga el detalle: cambió el stock del producto y lo que alcanza fabricar.
+          apiFetch<DetalleReceta>(`/api/inventario/recetas/${productoId}`).then(cargarDetalle).catch(() => {});
+        }} />
+    ) : null}
+    </>
   );
 }
 
