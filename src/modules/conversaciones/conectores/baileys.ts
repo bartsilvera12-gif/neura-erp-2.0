@@ -82,6 +82,12 @@ export const conectorBaileys: ConectorChat = {
   enviarPlantilla: (d, p) => enviar(d, "/send", { text: p.texto }),
   // El puente no marca leídos (a propósito: no le roba las notificaciones al celular).
   async marcarLeido() {},
+  // Necesita la rama del puente con POST /presence; un puente viejo responde 404 y no pasa nada.
+  async escribiendo(d, activo) {
+    const to = soloDigitos(d.telefono);
+    if (to.length < 8) return;
+    await pedir(await secretosDelCanal(d.canal.id), "/presence", { to, estado: activo ? "composing" : "paused" }).catch(() => {});
+  },
 };
 
 export type EstadoPuente = { conexion: "conectado" | "qr" | "desconectado"; qr: string | null; numero: string | null };

@@ -37,6 +37,8 @@ export interface ConectorChat {
   enviarPlantilla(d: DestinoChat, plantilla: { id: string; idioma: string; variables: string[]; texto: string }): Promise<ResultadoEnvio>;
   /** Avisa al proveedor que se leyó un mensaje entrante (doble tilde azul del lado del cliente). */
   marcarLeido(d: DestinoChat, externoMensajeId: string): Promise<void>;
+  /** "Escribiendo…" en el chat del cliente (opcional: hoy solo por QR). Nunca tira. */
+  escribiendo?(d: DestinoChat, activo: boolean): Promise<void>;
   /**
    * Solo el simulador: avanza los estados de entrega como lo haría el proveedor por webhook
    * (enviado → entregado → leído). Se ejecuta en segundo plano después de responder.

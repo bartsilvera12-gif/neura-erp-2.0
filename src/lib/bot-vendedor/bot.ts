@@ -279,14 +279,14 @@ function sistemaFijo(cfg: ConfigBot, categorias: Categoria[]): string {
   return [
     `Atendés el WhatsApp de ${tienda}, en Paraguay. Hablás en español de Paraguay, con voseo, cálido y breve: son mensajes de WhatsApp, de 1 a 4 líneas, sin títulos ni tablas. Podés usar *negrita* de WhatsApp y algún emoji, sin exagerar.`,
     "",
-    "Menús numerados (importante): el cliente no tiene que escribir frases. Cada vez que le ofrezcas opciones (categorías, productos, talle o color, cantidad, envío o retiro, forma de pago, confirmar o cambiar), mostralas numeradas, una por línea, así: *1* · Remeras. Máximo 10 opciones; terminá con una línea corta como \"Respondé con el número 👇\". Si el cliente responde solo un número, es la opción con ese número de TU último mensaje con opciones. Igual aceptá que escriba con sus palabras, aunque esté mal escrito o sin tildes (\"remra\", \"pantalon\", \"zapatiyas\"): entendé a qué se refiere.",
+    "Menús numerados (importante): el cliente no tiene que escribir frases. Cada vez que le ofrezcas opciones (categorías, productos, talle o color, envío o retiro, forma de pago, confirmar o cambiar; la cantidad no: esa la escribe el cliente), mostralas numeradas, una por línea, así: *1* · Remeras. Máximo 10 opciones; terminá con una línea corta como \"Respondé con el número 👇\". Si el cliente responde solo un número, es la opción con ese número de TU último mensaje con opciones. Igual aceptá que escriba con sus palabras, aunque esté mal escrito o sin tildes (\"remra\", \"pantalon\", \"zapatiyas\"): entendé a qué se refiere.",
     "",
     "Cómo funciona la atención:",
     "1. Si el cliente todavía no eligió una categoría, saludalo y mostrale las categorías numeradas. Si ya dice lo que busca, elegí vos la categoría que corresponde.",
     "2. Cuando elige una (por número o por nombre), llamá a elegir_categoria con el nombre exacto de la lista: desde ahí sos el vendedor especialista de esa categoría y seguís sus instrucciones. Si después quiere otra cosa, cambiá de categoría con elegir_categoria. Ofrecé siempre una opción numerada para volver a las categorías.",
     "3. Mostrá los productos de esa categoría numerados, con el precio en la misma línea. Precios, stock y descripciones salen SOLO de las herramientas: nunca inventes un producto, un precio, un descuento ni un plazo. Si algo no está, decilo y ofrecé lo más parecido.",
     "4. Si el producto tiene foto y ayuda a vender, mandala con enviar_foto.",
-    "5. Para la cantidad ofrecé *1* a *5* (o hasta el stock si es menor) y aceptá que escriba otro número. Con agregar_al_carrito armás el pedido; nunca agregues más unidades que el stock que muestra la herramienta. Después ofrecé: seguir comprando, ver otra categoría o terminar el pedido.",
+    "5. Para la cantidad preguntá simplemente \"¿Cuántas querés?\" (sin lista numerada: el cliente escribe el número). Con agregar_al_carrito armás el pedido; nunca agregues más unidades que el stock que muestra la herramienta. Después ofrecé: seguir comprando, ver otra categoría o terminar el pedido.",
     "6. Para cerrar pedí, de a una cosa por mensaje y con opciones numeradas cuando se pueda: envío o retiro, la dirección si es envío (sirve la ubicación de WhatsApp), la forma de pago y el nombre de quien recibe. Mostrá el resumen con el total y ofrecé *1* · Confirmar pedido, *2* · Cambiar algo. Recién cuando elige confirmar, llamá a confirmar_pedido.",
     "7. Si pide hablar con una persona, se queja, o pregunta algo que las herramientas no responden (garantías, cambios, mayoristas, factura con RUC), llamá a pasar_a_humano.",
     "8. Nunca te desdigas de algo que ya le confirmaste al cliente (un pedido, un precio). Si algo no te cierra, no afirmes que no existe: llamá a pasar_a_humano.",
@@ -537,6 +537,21 @@ function textoCuentas(cuentas: Cuenta[]): string {
     .join("\n\n");
 }
 
+// ── "Escribiendo…" ───────────────────────────────────────────────────────────
+/**
+ * Muestra "escribiendo…" en el chat del cliente mientras el bot piensa. WhatsApp lo apaga solo a los
+ * pocos segundos, así que se repite cada 8 s; al mandar el mensaje se apaga igual.
+ */
+function mostrarEscribiendo(conv: Conv): () => void {
+  if (!conv.canal) return () => {};
+  const c = conectorPara(conv.canal.proveedor);
+  if (!c.escribiendo) return () => {};
+  const d = destinoDe(conv);
+  void c.escribiendo(d, true);
+  const reloj = setInterval(() => void c.escribiendo!(d, true), 8000);
+  return () => clearInterval(reloj);
+}
+
 // ── Claude ───────────────────────────────────────────────────────────────────
 let cliente: Anthropic | null = null;
 
@@ -684,7 +699,13 @@ export async function botVendedor(e: EntranteVendedor): Promise<{ respondio: boo
       atendido = ultimoEntrante;
       s.turnos_dia += 1;
       const ctx: Ctx = { conv, cfg, s, categorias, fin: false, envios: 0 };
-      const respuesta = await conversar(ctx, mensajes);
+      const parar = mostrarEscribiendo(conv);
+      let respuesta: string | null;
+      try {
+        respuesta = await conversar(ctx, mensajes);
+      } finally {
+        parar();
+      }
       s = ctx.s;
       if (ctx.fin) return { respondio: true };
       await guardarSesion(s);
