@@ -1,18 +1,22 @@
 /**
  * Canales de WhatsApp reales (receta 126) — lado servidor de la pantalla Omnicanal › Canales.
  * Las claves viven en chat_canal_secretos (service role): acá solo se dice si están, nunca su valor
- * (salvo el verify token de Meta, que hay que pegar en Meta).
+ * (salvo el verify token de Meta, que hay que pegar en Meta, y los datos del puente de WhatsApp por
+ * QR, que el ADMIN tiene que pegar en las variables del puente).
  */
 import { systemClient } from "@/lib/supabase/clients";
 
-export const CLAVES: Record<"ycloud" | "meta", string[]> = {
+export type ProveedorReal = "ycloud" | "meta" | "baileys";
+export const CLAVES: Record<ProveedorReal, string[]> = {
   ycloud: ["api_key", "webhook_secret"],
   meta: ["access_token", "app_secret", "verify_token"],
+  // WhatsApp por QR: dónde está el puente y el secreto que comparten.
+  baileys: ["bridge_url", "bridge_secret"],
 };
 
 /** Las claves que el entorno ya resuelve para toda la app (el canal no las necesita). */
 export const DEL_ENTORNO: Record<string, string> = {
-  webhook_secret: "YCLOUD_WEBHOOK_SECRET", app_secret: "META_APP_SECRET", verify_token: "META_VERIFY_TOKEN",
+  webhook_secret: "YCLOUD_WEBHOOK_SECRET", app_secret: "META_APP_SECRET", verify_token: "META_VERIFY_TOKEN", bridge_secret: "BAILEYS_BRIDGE_SECRET",
 };
 export const enEntorno = (k: string) => !!(DEL_ENTORNO[k] && process.env[DEL_ENTORNO[k]]?.trim());
 
@@ -37,17 +41,22 @@ export async function listarCanales(empresaId: string, base: string) {
   const conf = new Map(((sec ?? []) as { canal_id: string; config: Record<string, unknown> }[]).map((s) => [s.canal_id, s.config ?? {}]));
   return filas.map((f) => {
     const c = conf.get(f.id) ?? {};
-    const lista = CLAVES[f.proveedor as "ycloud" | "meta"] ?? [];
+    const lista = CLAVES[f.proveedor as ProveedorReal] ?? [];
+    const texto = (k: string) => (typeof c[k] === "string" && c[k] ? String(c[k]) : null);
     return {
       ...f,
       claves: Object.fromEntries(lista.map((k) => [k, typeof c[k] === "string" && !!c[k] ? "canal" : enEntorno(k) ? "entorno" : null])) as Record<string, "canal" | "entorno" | null>,
-      webhook: f.proveedor === "simulador" ? null : `${base}/api/webhooks/chat/${f.proveedor}`,
+      webhook: f.proveedor === "simulador" || f.proveedor === "baileys" ? null : `${base}/api/webhooks/chat/${f.proveedor}`,
       verify_token: f.proveedor === "meta" && typeof c.verify_token === "string" ? c.verify_token : null,
+      // WhatsApp por QR: lo que va en las variables de entorno del puente de este número.
+      puente: f.proveedor === "baileys"
+        ? { url: texto("bridge_url"), entrada: `${base}/api/webhooks/baileys/inbound`, secreto: texto("bridge_secret"), canal_id: f.id, empresa_id: empresaId }
+        : null,
     };
   });
 }
 
 /** Las claves que le faltan a un canal para poder prenderlo. */
 export function clavesQueFaltan(proveedor: string, config: Record<string, unknown>): string[] {
-  return (CLAVES[proveedor as "ycloud" | "meta"] ?? []).filter((k) => !(typeof config[k] === "string" && config[k]) && !enEntorno(k));
+  return (CLAVES[proveedor as ProveedorReal] ?? []).filter((k) => !(typeof config[k] === "string" && config[k]) && !enEntorno(k));
 }

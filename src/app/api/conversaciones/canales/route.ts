@@ -1,8 +1,11 @@
 /**
- * Canales de WhatsApp (solo ADMIN, receta 126): conectar YCloud o la API de Meta sin tocar código.
+ * Canales de WhatsApp (solo ADMIN, receta 126): conectar YCloud, la API de Meta o un número por QR
+ * (puente Baileys) sin tocar código.
  *   GET  /api/conversaciones/canales → canales, qué claves tiene cada uno (nunca el valor), y los datos
  *        del webhook para pegar en el proveedor (URL; en Meta, el verify token del canal)
- *   POST /api/conversaciones/canales { id?, nombre, proveedor: ycloud | meta, identificador, numero?, claves? }
+ *   POST /api/conversaciones/canales { id?, nombre, proveedor: ycloud | meta | baileys, identificador, numero?, claves? }
+ *        Por QR (baileys): identificador = el número que se va a vincular; claves = { bridge_url, bridge_secret? }
+ *        (sin secreto se genera uno, que después se pega en el puente).
  *        Un canal real nace APAGADO; se prende desde /canales/<id> después de probarlo.
  *        `claves`: solo se guardan las que vienen con valor (vacío = no cambiar).
  */
@@ -13,6 +16,7 @@ import { fail, ok } from "@/lib/api/responses";
 import { systemClient } from "@/lib/supabase/clients";
 import { urlBase } from "@/lib/usuarios/cuentas";
 import { CLAVES, enEntorno, listarCanales } from "@/modules/conversaciones/canales-server";
+import { urlPuenteValida } from "@/modules/conversaciones/conectores";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +32,7 @@ export const GET = withTenant(async (ctx, req) => {
 const cuerpo = z.object({
   id: z.string().uuid().nullish(),
   nombre: z.string().trim().min(2, "Poné un nombre").max(80),
-  proveedor: z.enum(["ycloud", "meta"]),
+  proveedor: z.enum(["ycloud", "meta", "baileys"]),
   identificador: z.string().trim().transform((v) => v.replace(/\D/g, "")),
   numero: z.string().trim().max(30).nullish(),
   claves: z.record(z.string(), z.string().trim().max(2000)).nullish(),
@@ -37,6 +41,14 @@ const cuerpo = z.object({
 export const POST = withTenant(async (ctx, req, b) => {
   if (b.proveedor === "ycloud" && !/^\d{8,15}$/.test(b.identificador)) return fail("El número de WhatsApp Business va con código de país, ej. 595981123456", 422, "invalid_input");
   if (b.proveedor === "meta" && !/^\d{8,25}$/.test(b.identificador)) return fail("El Phone number ID son solo números (está en Meta › WhatsApp › Configuración de la API)", 422, "invalid_input");
+  if (b.proveedor === "baileys" && !/^\d{8,15}$/.test(b.identificador)) return fail("El número de WhatsApp va con código de país, ej. 595981123456", 422, "invalid_input");
+  // Por QR: la URL del puente se guarda ya normalizada (y es obligatoria al crear el canal).
+  const claves: Record<string, string> = { ...(b.claves ?? {}) };
+  if (b.proveedor === "baileys" && (claves.bridge_url || !b.id)) {
+    const url = urlPuenteValida(claves.bridge_url ?? "");
+    if (!url) return fail("La URL del puente tiene que empezar con https://, ej. https://baileys-cliente.neura.com.py", 422, "invalid_input");
+    claves.bridge_url = url;
+  }
   const db = systemClient();
 
   // Otro canal (de esta empresa o de otra en el mismo sistema) ya usa ese número.
@@ -47,7 +59,8 @@ export const POST = withTenant(async (ctx, req, b) => {
   const fila = { nombre: b.nombre, tipo: "whatsapp", proveedor: b.proveedor, identificador: b.identificador, numero: b.numero?.trim() || null };
   let id = b.id ?? null;
   if (id) {
-    const { data, error } = await db.from("chat_canales").update(fila).eq("id", id).eq("empresa_id", ctx.empresaId).neq("proveedor", "simulador").select("id");
+    // El proveedor de un canal no se cambia (las claves y el webhook son otros): se crea uno nuevo.
+    const { data, error } = await db.from("chat_canales").update(fila).eq("id", id).eq("empresa_id", ctx.empresaId).eq("proveedor", b.proveedor).select("id");
     if (error) return fail("No se pudo guardar el canal", 500);
     if (!data?.length) return fail("No existe ese canal", 404);
   } else {
@@ -59,7 +72,8 @@ export const POST = withTenant(async (ctx, req, b) => {
   // Claves: se mezclan con las que ya estaban; vacío = no cambiar. Meta: verify token propio si no hay.
   const { data: prev } = await db.from("chat_canal_secretos").select("config").eq("canal_id", id).maybeSingle();
   const config: Record<string, unknown> = { ...((prev as { config?: Record<string, unknown> } | null)?.config ?? {}) };
-  for (const k of CLAVES[b.proveedor]) if (b.claves?.[k]) config[k] = b.claves[k];
+  for (const k of CLAVES[b.proveedor]) if (claves[k]) config[k] = claves[k];
+  if (b.proveedor === "baileys" && !config.bridge_secret && !enEntorno("bridge_secret")) config.bridge_secret = randomBytes(24).toString("base64url");
   if (b.proveedor === "meta" && !config.verify_token && !enEntorno("verify_token")) config.verify_token = randomBytes(18).toString("base64url");
   const { error: errSec } = await db.from("chat_canal_secretos").upsert({ canal_id: id, empresa_id: ctx.empresaId, config, updated_at: new Date().toISOString() });
   if (errSec) return fail("El canal se guardó pero no sus claves", 500);

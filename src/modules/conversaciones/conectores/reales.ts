@@ -6,6 +6,7 @@
  * También bajan la media entrante (foto del comprobante) y prueban las credenciales.
  */
 import { secretosDelCanal } from "@/lib/conversaciones/servidor";
+import { probarPuente } from "./baileys";
 import type { MediaEntrante } from "./normalizadores";
 import type { ConectorChat, DestinoChat, MediaSaliente, OpcionesEnvio, ResultadoEnvio } from "./tipos";
 
@@ -163,5 +164,6 @@ export async function probarCredenciales(proveedor: string, identificador: strin
     const j = await pedir(`${GRAPH}/${encodeURIComponent(identificador)}?fields=display_phone_number,verified_name,quality_rating`, { headers: { Authorization: `Bearer ${token}` } });
     return `${j.display_phone_number ?? identificador}${j.verified_name ? ` · ${j.verified_name}` : ""}`;
   }
+  if (proveedor === "baileys") return probarPuente(identificador, c);
   throw new Error("Proveedor no soportado");
 }

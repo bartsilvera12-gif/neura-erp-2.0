@@ -3,6 +3,8 @@
  *   POST /api/conversaciones/canales/<id> { accion: "probar" }   → prueba las credenciales (no manda mensajes)
  *   POST /api/conversaciones/canales/<id> { accion: "prender" }  → solo si tiene todas sus claves
  *   POST /api/conversaciones/canales/<id> { accion: "apagar" }   → deja de recibir y de mandar
+ *   POST /api/conversaciones/canales/<id> { accion: "qr" }       → solo WhatsApp por QR: estado del puente
+ *        ({ conexion: conectado | qr | desconectado, qr, numero }); la pantalla lo consulta cada pocos segundos
  */
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
@@ -10,13 +12,13 @@ import { fail, ok } from "@/lib/api/responses";
 import { secretosDelCanal } from "@/lib/conversaciones/servidor";
 import { systemClient } from "@/lib/supabase/clients";
 import { urlBase } from "@/lib/usuarios/cuentas";
-import { probarCredenciales } from "@/modules/conversaciones/conectores";
+import { estadoPuente, probarCredenciales } from "@/modules/conversaciones/conectores";
 import { idDeRuta } from "@/modules/tipificacion/server";
 import { clavesQueFaltan, listarCanales } from "@/modules/conversaciones/canales-server";
 
 export const dynamic = "force-dynamic";
 
-const cuerpo = z.object({ accion: z.enum(["probar", "prender", "apagar"]) });
+const cuerpo = z.object({ accion: z.enum(["probar", "prender", "apagar", "qr"]) });
 
 export const POST = withTenant(async (ctx, req, b) => {
   const id = idDeRuta(req, "canales");
@@ -27,6 +29,15 @@ export const POST = withTenant(async (ctx, req, b) => {
   if (!canal) return fail("No existe ese canal", 404);
   if (canal.proveedor === "simulador") return fail("El canal de prueba no se configura", 400);
   const config = await secretosDelCanal(id);
+
+  if (b.accion === "qr") {
+    if (canal.proveedor !== "baileys") return fail("Este canal no se vincula por QR", 400);
+    try {
+      return ok({ ok: true, ...(await estadoPuente(config)) });
+    } catch (e) {
+      return ok({ ok: false, detalle: (e as Error).message });
+    }
+  }
 
   if (b.accion === "probar") {
     try {

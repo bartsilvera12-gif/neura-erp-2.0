@@ -5,6 +5,7 @@
  *   · ycloud:    whatsapp.inbound_message.received (whatsappInboundMessage) y
  *                whatsapp.message.updated (whatsappMessage)        — docs.ycloud.com
  *   · meta:      entry[].changes[].value.messages[] / statuses[]  — WhatsApp Cloud API
+ *   · baileys:   lo que manda el puente de WhatsApp por QR (neura-whatsapp-bridge) a /inbound
  * La media (foto del comprobante, PDF, audio) viene como referencia: el procesador del webhook la
  * descarga con la clave del canal y la guarda en erp-chat.
  */
@@ -204,6 +205,67 @@ function meta(payload: unknown): Normalizado {
   return out;
 }
 
+// ── Baileys (puente de WhatsApp por QR) ──────────────────────────────────────
+/** Lo que se muestra mientras el archivo todavía no llegó (el puente lo sube aparte, después). */
+export const CARTEL_MEDIA: Record<string, string> = { imagen: "[imagen]", video: "[video]", audio: "[audio]", documento: "[documento]", sticker: "[sticker]" };
+const CLASE_BAILEYS: [RegExp, string][] = [
+  [/^image/i, "imagen"], [/^video|^ptv/i, "video"], [/^audio/i, "audio"], [/^document/i, "documento"], [/^sticker/i, "sticker"],
+];
+
+/**
+ * Mensaje entrante del puente: { channelId, fromDigits, fromPhone, waMessageId, messageKind, text,
+ * hasMedia, fromMe, pushName, timestamp, location, contacts, referral }.
+ *   · Lo que el negocio mandó desde el celular (fromMe) no entra: la bandeja muestra lo del cliente
+ *     y lo que se mandó desde el ERP.
+ *   · La media llega después por /inbound/media: mientras tanto queda un cartel ("[imagen]").
+ */
+function baileys(payload: unknown): Normalizado {
+  const p = obj(payload);
+  if (!p || p.fromMe === true) return VACIO;
+  const canal = txt(p.channelId, 60);
+  // Con @lid el puente manda el código interno en fromDigits y el teléfono de verdad en fromPhone.
+  const telefono = digitos(p.fromPhone) || digitos(p.fromDigits);
+  if (!canal || telefono.length < 5) return VACIO;
+  const clase = String(p.messageKind ?? "");
+  const texto = txt(p.text);
+  const tipoMedia = p.hasMedia === true ? (CLASE_BAILEYS.find(([re]) => re.test(clase))?.[1] ?? "documento") : null;
+  let tipo = "texto";
+  let contenido = texto;
+  const l = obj(p.location);
+  if (tipoMedia) {
+    contenido = texto ?? CARTEL_MEDIA[tipoMedia];
+  } else if (l && l.latitude != null && l.longitude != null) {
+    tipo = "ubicacion";
+    contenido = [txt(l.name) ?? txt(l.address), `${l.latitude},${l.longitude}`].filter(Boolean).join(" · ");
+  } else if (/^reaction/i.test(clase)) {
+    tipo = "reaccion";
+  } else if (!texto) {
+    const tarjetas = (Array.isArray(p.contacts) ? p.contacts : []).map((c) => {
+      const o = obj(c);
+      const tels = (Array.isArray(o?.phones) ? o.phones : []).map((t) => txt(obj(t)?.phone, 40) ?? txt(obj(t)?.wa_id, 40) ?? txt(t, 40)).filter(Boolean);
+      return [txt(obj(o?.name)?.formatted_name, 120), tels.join(", ")].filter(Boolean).join(" ");
+    }).filter(Boolean);
+    contenido = tarjetas.length ? `Contacto: ${tarjetas.join(" · ")}` : `[${clase.replace(/Message$/, "") || "mensaje"}]`;
+  }
+  if (!contenido) return VACIO;
+  const seg = Number(p.timestamp);
+  const r = obj(p.referral);
+  const anuncioId = txt(r?.source_id, 120) ?? txt(r?.ctwa_clid, 200);
+  return {
+    entrantes: [{
+      canal_id: canal,
+      telefono,
+      nombre: nombrePerfil(p.pushName, telefono),
+      externo_id: txt(p.waMessageId, 200),
+      tipo,
+      contenido,
+      fecha: Number.isFinite(seg) && seg > 0 ? new Date(seg * 1000).toISOString() : null,
+      anuncio: anuncioId ? { id: anuncioId, titulo: txt(r?.headline, 200) ?? txt(r?.body, 200) } : null,
+    }],
+    estados: [],
+  };
+}
+
 export function normalizar(proveedor: string, payload: unknown): Normalizado {
   switch (proveedor) {
     case "simulador":
@@ -212,7 +274,8 @@ export function normalizar(proveedor: string, payload: unknown): Normalizado {
       return ycloud(payload);
     case "meta":
       return meta(payload);
-    // baileys: formato del worker propio, cuando exista.
+    case "baileys":
+      return baileys(payload);
     default:
       return VACIO;
   }

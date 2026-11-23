@@ -134,7 +134,8 @@ export function VentanaWhatsApp({ canalTipo, expira, compacta }: { canalTipo: st
       </span>
     );
   }
-  if (compacta) return null;
+  // WhatsApp por QR no tiene ventana (receta 171 la deja abierta): no hay nada que contar.
+  if (compacta || restante > 48 * 3_600_000) return null;
   const h = Math.floor(restante / 3_600_000);
   const min = Math.floor((restante % 3_600_000) / 60_000);
   const poco = restante < 2 * 3_600_000;
