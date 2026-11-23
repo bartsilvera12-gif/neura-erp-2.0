@@ -557,13 +557,16 @@ let cliente: Anthropic | null = null;
 
 async function conversar(ctx: Ctx, mensajes: Anthropic.Beta.BetaMessageParam[]): Promise<string | null> {
   cliente ??= new Anthropic({ timeout: 60_000, maxRetries: 2 });
-  const fijo = sistemaFijo(ctx.cfg, ctx.categorias);
+  // Las instrucciones (incluido el estado: categoría, carrito, pedidos) se arman UNA vez por respuesta.
+  // Si cambian entre una vuelta de herramientas y la siguiente, la API rechaza el pensamiento de la
+  // vuelta anterior ("block is bound to a different conversation") y el bot se queda callado. Lo que
+  // cambia durante la respuesta (carrito, pedido creado) ya le llega por el resultado de la herramienta.
+  const system: Anthropic.Beta.BetaTextBlockParam[] = [
+    { type: "text", text: sistemaFijo(ctx.cfg, ctx.categorias), cache_control: { type: "ephemeral" } },
+    { type: "text", text: await sistemaEstado(ctx.s, ctx.categorias) },
+  ];
   const conversacion = [...mensajes];
   for (let vuelta = 0; vuelta < VUELTAS_HERRAMIENTAS; vuelta++) {
-    const system: Anthropic.Beta.BetaTextBlockParam[] = [
-      { type: "text", text: fijo, cache_control: { type: "ephemeral" } },
-      { type: "text", text: await sistemaEstado(ctx.s, ctx.categorias) },
-    ];
     const r = await cliente.beta.messages.create({
       model: MODELO,
       max_tokens: 4000,
