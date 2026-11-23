@@ -325,7 +325,7 @@ async function resumenCarrito(s: Sesion): Promise<{ texto: string; total: number
 // ── Herramientas ─────────────────────────────────────────────────────────────
 const obj = (props: Record<string, unknown>, required: string[]) => ({ type: "object" as const, properties: props, required, additionalProperties: false });
 
-const HERRAMIENTAS: Anthropic.Beta.BetaToolUnion[] = [
+export const HERRAMIENTAS: Anthropic.Beta.BetaToolUnion[] = [
   { name: "ver_categorias", description: "Lista las categorías de la tienda (con cuántos productos tiene cada una).", input_schema: obj({}, []), strict: true },
   {
     name: "elegir_categoria",
@@ -348,7 +348,7 @@ const HERRAMIENTAS: Anthropic.Beta.BetaToolUnion[] = [
   {
     name: "agregar_al_carrito",
     description: "Pone la cantidad de un producto en el carrito (si ya estaba, reemplaza la cantidad). Cantidad 0 lo saca.",
-    input_schema: obj({ producto_id: { type: "string" }, cantidad: { type: "integer", minimum: 0 } }, ["producto_id", "cantidad"]),
+    input_schema: obj({ producto_id: { type: "string" }, cantidad: { type: "integer", description: "Unidades (0 lo saca del carrito)" } }, ["producto_id", "cantidad"]),
     strict: true,
   },
   { name: "ver_carrito", description: "Muestra el carrito con el total.", input_schema: obj({}, []), strict: true },
