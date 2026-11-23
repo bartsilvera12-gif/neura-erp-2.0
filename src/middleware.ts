@@ -12,7 +12,7 @@ import { NextResponse, type NextRequest } from "next/server";
  * cliente afuera por un glitch). El cambio tarda hasta `TTL_MS` en propagarse.
  */
 const BLOQUEADO_PATH = "/bloqueado";
-const TTL_MS = 30_000;
+const TTL_MS = 5_000;
 let cache: { suspendido: boolean; at: number } = { suspendido: false, at: 0 };
 
 async function leerSuspendido(): Promise<boolean> {
