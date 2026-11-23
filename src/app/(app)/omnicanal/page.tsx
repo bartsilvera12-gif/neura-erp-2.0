@@ -20,6 +20,7 @@ const TARJETAS: TarjetaPanel[] = [
   },
   { href: "/conversaciones/historial", titulo: "Historial omnicanal", imagen: "/omnicanal/historial-archivo-dueno.webp", color: "28 40% 23%", posicion: "50% 40%" },
   { href: "/conversaciones/canales", titulo: "Canales de WhatsApp", imagen: "/soporte/configuracion-engranajes.webp", color: "150 40% 20%", posicion: "50% 50%" },
+  { href: "/conversaciones/bot-vendedor", titulo: "Bot vendedor", imagen: "/omnicanal/conversaciones-chat-dueno.webp", color: "262 35% 26%", posicion: "35% 45%" },
 ];
 
 export default function PanelOmnicanalPage() {

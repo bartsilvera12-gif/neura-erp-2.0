@@ -15,6 +15,7 @@ import {
 } from "@/lib/conversaciones/servidor";
 import { bajarMediaEntrante, identificadoresDe, normalizar } from "@/modules/conversaciones/conectores";
 import { botSorteos } from "@/lib/sorteos/bot";
+import { botVendedor } from "@/lib/bot-vendedor/bot";
 
 export const PROVEEDORES = ["meta", "ycloud", "baileys", "simulador"] as const;
 export type ProveedorWebhook = (typeof PROVEEDORES)[number];
@@ -168,15 +169,23 @@ export async function procesarEvento(eventoId: number, proveedor: ProveedorWebho
         fecha: e.fecha && Date.parse(e.fecha) < Date.now() ? e.fecha : null,
       });
       await anotarCanal(canal.id, errorMedia);
-      // Rubro Sorteos: el bot de venta contesta si está prendido (nunca rompe el procesamiento).
+      // Rubro Sorteos: el bot de venta contesta si está prendido; si no atiende, el bot vendedor
+      // (receta 172), si está prendido. Ninguno rompe el procesamiento.
       if (!r.duplicado) {
-        await botSorteos(
+        const tipo = media ? e.tipo ?? "texto" : e.tipo === "ubicacion" ? "ubicacion" : "texto";
+        const sorteos = await botSorteos(
           {
-            conversacion_id: r.conversacion_id, mensaje_id: r.mensaje_id, tipo: media ? e.tipo ?? "texto" : "texto", contenido: e.contenido ?? null,
+            conversacion_id: r.conversacion_id, mensaje_id: r.mensaje_id, tipo, contenido: e.contenido ?? null,
             media_path: media?.path ?? null, media_mime: media?.mime ?? null, anuncio: e.anuncio ?? null,
           },
           { base },
         );
+        if (!sorteos.respondio) {
+          await botVendedor({
+            conversacion_id: r.conversacion_id, mensaje_id: r.mensaje_id, tipo, contenido: e.contenido ?? null,
+            media_path: media?.path ?? null, media_mime: media?.mime ?? null,
+          });
+        }
       }
     }
     // Estados de entrega por id externo (enviado → entregado → leído / fallido). Los avisos pueden

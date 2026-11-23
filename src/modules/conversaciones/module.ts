@@ -30,5 +30,7 @@ export const moduloOmnicanal: Modulo = {
     { label: "Monitoreo", href: "/conversaciones/monitoreo", roles: ["ADMIN"], accesoPropio: true, palabras: ["colas", "supervisor", "agentes", "asesores"] },
     { label: "Historial omnicanal", href: "/conversaciones/historial", palabras: ["historial de chats", "auditoria"] },
     { label: "Canales de WhatsApp", href: "/conversaciones/canales", roles: ["ADMIN"], palabras: ["ycloud", "meta", "conectar whatsapp", "numero", "webhook", "api key"] },
+    // Receta 172: el bot que vende por WhatsApp (un "vendedor" por categoría) y toma pedidos.
+    { label: "Bot vendedor", href: "/conversaciones/bot-vendedor", roles: ["ADMIN"], palabras: ["bot", "ia", "claude", "vendedor", "pedidos por whatsapp", "categorias", "automatico"] },
   ],
 };

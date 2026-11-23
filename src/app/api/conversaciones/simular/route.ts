@@ -9,6 +9,7 @@ import { after } from "next/server";
 import { z } from "zod";
 import { withTenant } from "@/lib/api/with-tenant";
 import { botSorteos } from "@/lib/sorteos/bot";
+import { botVendedor } from "@/lib/bot-vendedor/bot";
 import { urlBase } from "@/lib/usuarios/cuentas";
 import { created, fail } from "@/lib/api/responses";
 import { canalSimulador, registrarEntrante } from "@/lib/conversaciones/servidor";
@@ -42,7 +43,11 @@ export const POST = withTenant(
       });
       // Rubro Sorteos: si el bot de venta está prendido, contesta como en WhatsApp.
       const base = urlBase(req);
-      after(() => botSorteos({ conversacion_id: r.conversacion_id, mensaje_id: r.mensaje_id, tipo: "texto", contenido: input.texto }, { base }));
+      // Si Sorteos no atiende el chat, el bot vendedor (receta 172), si está prendido.
+      after(async () => {
+        const entrante = { conversacion_id: r.conversacion_id, mensaje_id: r.mensaje_id, tipo: "texto", contenido: input.texto };
+        if (!(await botSorteos(entrante, { base })).respondio) await botVendedor(entrante);
+      });
       return created(r);
     } catch (e) {
       console.error("[conversaciones] simular", (e as Error).message);

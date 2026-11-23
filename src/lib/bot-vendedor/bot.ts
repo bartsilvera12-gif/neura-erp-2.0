@@ -1,0 +1,620 @@
+/**
+ * Bot vendedor por WhatsApp (receta 172). Solo servidor (service_role).
+ *
+ * El cliente escribe, elige una categoría y el bot pasa a ser el VENDEDOR de esa categoría, con las
+ * instrucciones que la tienda cargó para ella (Omnicanal › Bot vendedor). Muestra productos con
+ * precio y stock del ERP, arma el carrito y toma el pedido: envío o retiro, y pago al recibir o por
+ * transferencia (con la foto del comprobante). El pedido cae en Caja › Pedidos de WhatsApp.
+ *
+ * La conversación la lleva Claude con herramientas; lo que tiene que ser verdad (precios, stock, el
+ * pedido) lo deciden la base y este archivo, nunca el modelo.
+ *
+ * Atiende si: el bot está prendido, el canal es el elegido (o no hay uno elegido), la función Pedidos
+ * está activa y nadie de la empresa escribió en el chat en las últimas 12 h. "Asesor" o el pedido
+ * explícito del cliente lo pasan a una persona.
+ */
+import Anthropic from "@anthropic-ai/sdk";
+import { systemClient } from "@/lib/supabase/clients";
+import { conectorPara, type DestinoChat } from "@/modules/conversaciones/conectores";
+import { CARTEL_MEDIA } from "@/modules/conversaciones/conectores/normalizadores";
+import { leerComprobante, lectorConfigurado } from "@/lib/sorteos/lector-comprobante";
+import { CHAT_BUCKET } from "@/lib/conversaciones/servidor";
+
+const MODELO = process.env.BOT_VENDEDOR_MODELO?.trim() || "claude-sonnet-5-5";
+const HUMANO_MS = 12 * 60 * 60 * 1000;
+/** Tope de respuestas del bot por chat y por día (cuida el saldo de la API). */
+const TURNOS_DIA = 60;
+const HISTORIA = 30;
+const VUELTAS_HERRAMIENTAS = 8;
+
+const db = () => systemClient();
+const gs = (n: number) => `Gs ${Math.round(Number(n) || 0).toLocaleString("es-PY")}`;
+const CARTELES = new Set(Object.values(CARTEL_MEDIA));
+
+// ── Tipos ────────────────────────────────────────────────────────────────────
+type Cuenta = { banco?: string; titular?: string; cuenta?: string; documento?: string; alias?: string };
+export type ConfigBot = {
+  empresa_id: string; activo: boolean; canal_id: string | null; tienda: string | null; instrucciones: string | null;
+  envio_activo: boolean; envio_texto: string | null; retiro_activo: boolean; retiro_texto: string | null;
+  pago_al_recibir: boolean; pago_transferencia: boolean; cuentas: Cuenta[];
+};
+type Conv = {
+  id: string; empresa_id: string; etiquetas: string[] | null;
+  canal: { id: string; tipo: string; proveedor: string; identificador: string | null; activo: boolean } | null;
+  contacto: { telefono: string | null; nombre: string | null; externo_id: string | null } | null;
+};
+type Linea = { producto_id: string; cantidad: number };
+type Sesion = {
+  conversacion_id: string; empresa_id: string; categoria_id: string | null; carrito: Linea[];
+  datos: { ubicacion?: string }; paso: "charla" | "pago" | "humano"; pedido_id: string | null;
+  turnos_dia: number; turnos_fecha: string | null; updated_at: string;
+};
+type Categoria = { id: string; nombre: string; descripcion: string | null; bot_instrucciones: string | null };
+type Producto = {
+  id: string; nombre: string; descripcion: string | null; precio_venta: number; descuento_pct: number; stock_actual: number;
+  controla_stock: boolean; tipo_producto: string; imagen_url: string | null; categoria_principal_id: string | null;
+};
+type Pedido = { id: string; etiqueta: string; total: number; estado: string; whatsapp: { forma_pago: string | null; pago_estado: string | null } | null };
+
+export type EntranteVendedor = {
+  conversacion_id: string; mensaje_id: string; tipo: string; contenido: string | null; media_path?: string | null; media_mime?: string | null;
+  /** Por QR: el archivo de una foto que llegó después del mensaje (el epígrafe, si tenía, ya se contestó). */
+  archivoTardio?: boolean;
+};
+
+// ── Lecturas ─────────────────────────────────────────────────────────────────
+async function leerConv(id: string): Promise<Conv | null> {
+  const { data } = await db()
+    .from("chat_conversaciones")
+    .select("id, empresa_id, etiquetas, canal:chat_canales!canal_id(id, tipo, proveedor, identificador, activo), contacto:chat_contactos!contacto_id(telefono, nombre, externo_id)")
+    .eq("id", id)
+    .maybeSingle();
+  return (data as unknown as Conv | null) ?? null;
+}
+
+async function configDe(conv: Conv): Promise<ConfigBot | null> {
+  if (!conv.canal || conv.canal.tipo !== "whatsapp") return null;
+  const [cfg, fun] = await Promise.all([
+    db().from("bot_vendedor_config").select("*").eq("empresa_id", conv.empresa_id).maybeSingle(),
+    db().from("empresa_funciones").select("pedidos").eq("empresa_id", conv.empresa_id).maybeSingle(),
+  ]);
+  const c = cfg.data as ConfigBot | null;
+  if (!c?.activo || (c.canal_id && c.canal_id !== conv.canal.id)) return null;
+  // Sin fila de funciones = Comercio = Pedidos prendida (receta 77).
+  if ((fun.data as { pedidos?: boolean } | null)?.pedidos === false) return null;
+  return { ...c, cuentas: Array.isArray(c.cuentas) ? c.cuentas : [] };
+}
+
+async function leerSesion(conv: Conv): Promise<Sesion> {
+  const { data } = await db().from("bot_vendedor_sesiones").select("*").eq("conversacion_id", conv.id).maybeSingle();
+  const s = data as Sesion | null;
+  return s
+    ? { ...s, carrito: Array.isArray(s.carrito) ? s.carrito : [], datos: s.datos ?? {} }
+    : { conversacion_id: conv.id, empresa_id: conv.empresa_id, categoria_id: null, carrito: [], datos: {}, paso: "charla", pedido_id: null, turnos_dia: 0, turnos_fecha: null, updated_at: new Date().toISOString() };
+}
+
+async function guardarSesion(s: Sesion) {
+  const { error } = await db().from("bot_vendedor_sesiones").upsert({
+    conversacion_id: s.conversacion_id, empresa_id: s.empresa_id, categoria_id: s.categoria_id, carrito: s.carrito, datos: s.datos,
+    paso: s.paso, pedido_id: s.pedido_id, turnos_dia: s.turnos_dia, turnos_fecha: s.turnos_fecha, updated_at: new Date().toISOString(),
+  });
+  if (error) console.error("[bot-vendedor] sesión", error.message);
+}
+
+/** Toma el chat para un turno (dos mensajes seguidos no disparan dos respuestas a la vez). */
+async function tomarTurno(conv: Conv): Promise<boolean> {
+  await db().from("bot_vendedor_sesiones").upsert({ conversacion_id: conv.id, empresa_id: conv.empresa_id }, { onConflict: "conversacion_id", ignoreDuplicates: true });
+  const ahora = new Date();
+  const { data } = await db()
+    .from("bot_vendedor_sesiones")
+    .update({ ocupado_hasta: new Date(ahora.getTime() + 120_000).toISOString() })
+    .eq("conversacion_id", conv.id)
+    .or(`ocupado_hasta.is.null,ocupado_hasta.lt.${ahora.toISOString()}`)
+    .select("conversacion_id");
+  return !!data?.length;
+}
+const soltarTurno = (convId: string) => db().from("bot_vendedor_sesiones").update({ ocupado_hasta: null }).eq("conversacion_id", convId);
+
+async function categoriasVisibles(empresaId: string): Promise<Categoria[]> {
+  const { data } = await db()
+    .from("categorias_productos")
+    .select("id, nombre, descripcion, bot_instrucciones")
+    .eq("empresa_id", empresaId)
+    .eq("activo", true)
+    .eq("bot_visible", true)
+    .order("nombre")
+    .limit(60);
+  return (data ?? []) as Categoria[];
+}
+
+const COLS_PRODUCTO = "id, nombre, descripcion, precio_venta, descuento_pct, stock_actual, controla_stock, tipo_producto, imagen_url, categoria_principal_id";
+const precioDe = (p: Producto) => Math.round(Number(p.precio_venta) * (1 - Math.max(0, Math.min(Number(p.descuento_pct) || 0, 100)) / 100));
+const conStock = (p: Producto) => !p.controla_stock || p.tipo_producto === "menu" || Number(p.stock_actual) > 0;
+const disponible = (p: Producto) => (!p.controla_stock || p.tipo_producto === "menu" ? null : Math.max(0, Number(p.stock_actual)));
+
+function vistaProducto(p: Producto) {
+  const stock = disponible(p);
+  return {
+    producto_id: p.id,
+    nombre: p.nombre,
+    precio: gs(precioDe(p)),
+    ...(Number(p.descuento_pct) > 0 ? { precio_lista: gs(Number(p.precio_venta)), descuento: `${Number(p.descuento_pct)}%` } : {}),
+    stock: stock === null ? "disponible" : stock > 0 ? `quedan ${stock}` : "sin stock",
+    ...(p.descripcion ? { descripcion: p.descripcion.slice(0, 300) } : {}),
+    tiene_foto: /^https?:\/\//i.test(p.imagen_url ?? ""),
+  };
+}
+
+async function productosVendibles(empresaId: string, filtro: { categorias?: string[]; texto?: string; ids?: string[] }, limite = 40): Promise<Producto[]> {
+  let q = db()
+    .from("productos")
+    .select(COLS_PRODUCTO)
+    .eq("empresa_id", empresaId)
+    .eq("activo", true)
+    .eq("es_vendible", true)
+    .neq("tipo_producto", "materia_prima");
+  if (filtro.ids) q = q.in("id", filtro.ids);
+  if (filtro.categorias) q = q.in("categoria_principal_id", filtro.categorias.length ? filtro.categorias : ["00000000-0000-0000-0000-000000000000"]);
+  if (filtro.texto) {
+    const t = filtro.texto.replace(/[%,()*]/g, " ").trim().slice(0, 60);
+    if (t) q = q.or(`nombre.ilike.%${t}%,descripcion.ilike.%${t}%`);
+  }
+  const { data, error } = await q.order("destacado", { ascending: false }).order("nombre").limit(limite);
+  if (error) console.error("[bot-vendedor] productos", error.message);
+  return (data ?? []) as Producto[];
+}
+
+// ── Envío ────────────────────────────────────────────────────────────────────
+function destinoDe(conv: Conv): DestinoChat {
+  return {
+    canal: { id: conv.canal!.id, tipo: conv.canal!.tipo, proveedor: conv.canal!.proveedor, identificador: conv.canal!.identificador },
+    telefono: conv.contacto?.telefono ?? null,
+    externoContacto: conv.contacto?.externo_id ?? null,
+  };
+}
+
+/** Lo que escribe el bot queda en el chat como mensaje saliente sin autor (lo ven los asesores). */
+async function enviar(conv: Conv, contenido: string, foto?: { url: string; nombre: string }) {
+  if (!conv.canal || !contenido.trim()) return;
+  const { data, error } = await db()
+    .from("chat_mensajes")
+    .insert({ empresa_id: conv.empresa_id, conversacion_id: conv.id, from_me: true, tipo: "texto", contenido, estado_entrega: "pendiente" })
+    .select("id")
+    .single();
+  if (error || !data) {
+    console.error("[bot-vendedor] guardar mensaje", error?.message);
+    return;
+  }
+  let estado = "enviado";
+  let externo: string | null = null;
+  let fallo: string | null = null;
+  try {
+    const c = conectorPara(conv.canal.proveedor);
+    const r = foto
+      ? await c.enviarMedia(destinoDe(conv), { tipo: "imagen", mime: "image/jpeg", nombre: foto.nombre, caption: contenido, url: async () => foto.url })
+      : await c.enviarTexto(destinoDe(conv), contenido);
+    externo = r.externo_id;
+    if (conv.canal.proveedor === "simulador") estado = "entregado";
+  } catch (e) {
+    estado = "fallido";
+    fallo = (e as Error).message || "No se pudo enviar";
+  }
+  await db().from("chat_mensajes").update({ estado_entrega: estado, externo_id: externo, error: fallo }).eq("id", (data as { id: string }).id);
+}
+
+async function pasarAHumano(conv: Conv, s: Sesion, aviso: string) {
+  s.paso = "humano";
+  const etiquetas = new Set(conv.etiquetas ?? []);
+  etiquetas.add("Pide asesor");
+  await db().from("chat_conversaciones").update({ etiquetas: [...etiquetas], updated_at: new Date().toISOString() }).eq("id", conv.id);
+  await guardarSesion(s);
+  await enviar(conv, aviso);
+}
+
+// ── Historia del chat → mensajes para Claude ─────────────────────────────────
+type FilaMsg = { id: string; from_me: boolean; tipo: string; contenido: string | null; media_path: string | null; created_at: string };
+
+function textoDe(m: FilaMsg): string {
+  const c = (m.contenido ?? "").trim();
+  if (m.tipo === "ubicacion") return `[El cliente compartió su ubicación: ${c}]`;
+  if (m.tipo === "imagen" || (CARTELES.has(c) && c === "[imagen]")) return c && !CARTELES.has(c) ? `[Foto] ${c}` : "[El cliente mandó una foto]";
+  if (m.tipo === "audio" || c === "[audio]") return "[El cliente mandó un audio: no podés escucharlo, pedile que lo escriba]";
+  if (m.tipo === "video" || c === "[video]") return "[El cliente mandó un video]";
+  if (m.tipo === "documento" || c === "[documento]") return "[El cliente mandó un archivo]";
+  if (m.tipo === "sticker" || c === "[sticker]") return "[sticker]";
+  return c;
+}
+
+async function historia(convId: string): Promise<{ mensajes: Anthropic.Beta.BetaMessageParam[]; ultimoEntrante: string | null }> {
+  const { data } = await db()
+    .from("chat_mensajes")
+    .select("id, from_me, tipo, contenido, media_path, created_at")
+    .eq("conversacion_id", convId)
+    .not("tipo", "in", "(nota,sistema,reaccion)")
+    .order("created_at", { ascending: false })
+    .limit(HISTORIA);
+  const filas = ((data ?? []) as FilaMsg[]).reverse();
+  const mensajes: Anthropic.Beta.BetaMessageParam[] = [];
+  for (const m of filas) {
+    const texto = textoDe(m);
+    if (!texto) continue;
+    const role = m.from_me ? "assistant" : "user";
+    const ult = mensajes[mensajes.length - 1];
+    if (ult && ult.role === role) ult.content = `${ult.content as string}\n${texto}`;
+    else mensajes.push({ role, content: texto });
+  }
+  while (mensajes.length && mensajes[0].role !== "user") mensajes.shift();
+  const ultimo = [...filas].reverse().find((m) => !m.from_me);
+  return { mensajes, ultimoEntrante: ultimo?.id ?? null };
+}
+
+// ── Instrucciones ────────────────────────────────────────────────────────────
+function sistemaFijo(cfg: ConfigBot, categorias: Categoria[]): string {
+  const tienda = cfg.tienda?.trim() || "la tienda";
+  const entrega = [
+    cfg.envio_activo ? `- Envío a domicilio${cfg.envio_texto ? `: ${cfg.envio_texto}` : ""}` : null,
+    cfg.retiro_activo ? `- Retiro en el local${cfg.retiro_texto ? `: ${cfg.retiro_texto}` : ""}` : null,
+  ].filter(Boolean).join("\n");
+  const pago = [
+    cfg.pago_al_recibir ? "- al_recibir: paga cuando recibe o retira el pedido" : null,
+    cfg.pago_transferencia ? "- transferencia: transfiere y manda la foto del comprobante por este chat" : null,
+  ].filter(Boolean).join("\n");
+  return [
+    `Atendés el WhatsApp de ${tienda}, en Paraguay. Hablás en español de Paraguay, con voseo, cálido y breve: son mensajes de WhatsApp, de 1 a 4 líneas, sin títulos ni tablas. Podés usar *negrita* de WhatsApp y algún emoji, sin exagerar.`,
+    "",
+    "Cómo funciona la atención:",
+    "1. Si el cliente todavía no eligió una categoría, saludalo y mostrale las categorías para que elija (una por línea). Si ya dice lo que busca, elegí vos la categoría que corresponde.",
+    "2. Cuando elige una, llamá a elegir_categoria: desde ahí sos el vendedor especialista de esa categoría y seguís sus instrucciones. Si después quiere otra cosa, cambiá de categoría con elegir_categoria.",
+    "3. Ofrecé productos de esa categoría. Precios, stock y descripciones salen SOLO de las herramientas: nunca inventes un producto, un precio, un descuento ni un plazo. Si algo no está, decilo y ofrecé lo más parecido.",
+    "4. Si el producto tiene foto y ayuda a vender, mandala con enviar_foto.",
+    "5. Con agregar_al_carrito armás el pedido. Nunca agregues más unidades que el stock que muestra la herramienta.",
+    "6. Para cerrar, pedí lo que falte: nombre de quien recibe, envío o retiro (y la dirección si es envío; sirve la ubicación de WhatsApp) y forma de pago. Mostrá el resumen con el total y pedí que confirme. Recién cuando el cliente confirma, llamá a confirmar_pedido.",
+    "7. Si pide hablar con una persona, se queja, o pregunta algo que las herramientas no responden (garantías, cambios, mayoristas, factura con RUC), llamá a pasar_a_humano.",
+    "",
+    `Categorías de la tienda: ${categorias.length ? categorias.map((c) => c.nombre).join(" · ") : "(todavía no hay categorías cargadas)"}`,
+    "",
+    `Entrega:\n${entrega || "- A coordinar con la tienda"}`,
+    "",
+    `Formas de pago (valor para confirmar_pedido):\n${pago || "- al_recibir"}`,
+    "",
+    "Los precios son en guaraníes (Gs) y ya tienen el IVA. El envío no está en el total del pedido: si tiene costo, decilo aparte tal como figura arriba.",
+    cfg.instrucciones?.trim() ? `\nInstrucciones de la tienda:\n${cfg.instrucciones.trim()}` : "",
+  ].join("\n");
+}
+
+async function sistemaEstado(s: Sesion, categorias: Categoria[]): Promise<string> {
+  const cat = categorias.find((c) => c.id === s.categoria_id) ?? null;
+  const partes: string[] = [];
+  if (cat) {
+    partes.push(`Ahora sos el vendedor de *${cat.nombre}*.${cat.descripcion ? ` ${cat.descripcion}` : ""}`);
+    if (cat.bot_instrucciones?.trim()) partes.push(`Cómo vende el vendedor de ${cat.nombre}:\n${cat.bot_instrucciones.trim()}`);
+  } else {
+    partes.push("El cliente todavía no eligió una categoría.");
+  }
+  partes.push(`Carrito: ${s.carrito.length ? (await resumenCarrito(s)).texto : "vacío"}`);
+  if (s.datos.ubicacion) partes.push(`Ubicación que compartió el cliente: ${s.datos.ubicacion}`);
+  if (s.paso === "pago" && s.pedido_id) partes.push("Ya hizo un pedido y falta la foto del comprobante de la transferencia: si pregunta, recordale que la mande por acá.");
+  return partes.join("\n\n");
+}
+
+async function resumenCarrito(s: Sesion): Promise<{ texto: string; total: number; lineas: { p: Producto; cantidad: number }[] }> {
+  if (!s.carrito.length) return { texto: "vacío", total: 0, lineas: [] };
+  const prods = await productosVendibles(s.empresa_id, { ids: s.carrito.map((l) => l.producto_id) }, 60);
+  const lineas = s.carrito.map((l) => ({ p: prods.find((x) => x.id === l.producto_id), cantidad: l.cantidad })).filter((l): l is { p: Producto; cantidad: number } => !!l.p);
+  const total = lineas.reduce((a, l) => a + precioDe(l.p) * l.cantidad, 0);
+  return { texto: `${lineas.map((l) => `${l.cantidad} × ${l.p.nombre} (${gs(precioDe(l.p))} c/u)`).join("; ")}. Total ${gs(total)}`, total, lineas };
+}
+
+// ── Herramientas ─────────────────────────────────────────────────────────────
+const obj = (props: Record<string, unknown>, required: string[]) => ({ type: "object" as const, properties: props, required, additionalProperties: false });
+
+const HERRAMIENTAS: Anthropic.Beta.BetaToolUnion[] = [
+  { name: "ver_categorias", description: "Lista las categorías de la tienda (con cuántos productos tiene cada una).", input_schema: obj({}, []), strict: true },
+  {
+    name: "elegir_categoria",
+    description: "El cliente eligió una categoría (o lo que busca pertenece a ella): pasás a ser el vendedor de esa categoría. Devuelve sus productos con precio y stock.",
+    input_schema: obj({ categoria: { type: "string", description: "Nombre de la categoría, tal como figura en la lista" } }, ["categoria"]),
+    strict: true,
+  },
+  {
+    name: "buscar_productos",
+    description: "Busca productos por nombre o descripción en todas las categorías. Usala cuando el cliente pide algo puntual.",
+    input_schema: obj({ texto: { type: "string" } }, ["texto"]),
+    strict: true,
+  },
+  {
+    name: "enviar_foto",
+    description: "Manda al cliente la foto de un producto (solo si tiene_foto es true). El texto va como epígrafe de la foto.",
+    input_schema: obj({ producto_id: { type: "string" }, texto: { type: "string" } }, ["producto_id", "texto"]),
+    strict: true,
+  },
+  {
+    name: "agregar_al_carrito",
+    description: "Pone la cantidad de un producto en el carrito (si ya estaba, reemplaza la cantidad). Cantidad 0 lo saca.",
+    input_schema: obj({ producto_id: { type: "string" }, cantidad: { type: "integer", minimum: 0 } }, ["producto_id", "cantidad"]),
+    strict: true,
+  },
+  { name: "ver_carrito", description: "Muestra el carrito con el total.", input_schema: obj({}, []), strict: true },
+  {
+    name: "confirmar_pedido",
+    description: "Crea el pedido con el carrito. Solo después de mostrar el resumen y que el cliente diga que confirma.",
+    input_schema: obj(
+      {
+        nombre: { type: "string", description: "Nombre de quien recibe o retira" },
+        entrega: { type: "string", enum: ["envio", "retiro"] },
+        direccion: { type: "string", description: "Dirección y referencias para el envío. Vacío si retira." },
+        forma_pago: { type: "string", enum: ["al_recibir", "transferencia"] },
+        nota: { type: "string", description: "Aclaraciones del cliente (horario, talle, color). Vacío si no hay." },
+      },
+      ["nombre", "entrega", "direccion", "forma_pago", "nota"],
+    ),
+    strict: true,
+  },
+  {
+    name: "pasar_a_humano",
+    description: "Pasa la conversación a una persona del equipo. Después de esto no respondés más en este chat.",
+    input_schema: obj({ motivo: { type: "string" } }, ["motivo"]),
+    strict: true,
+  },
+];
+
+/** envios: mensajes que el bot ya mandó en este turno (texto antes de las herramientas, fotos). */
+type Ctx = { conv: Conv; cfg: ConfigBot; s: Sesion; categorias: Categoria[]; fin: boolean; envios: number };
+
+async function ejecutar(ctx: Ctx, nombre: string, input: Record<string, unknown>): Promise<unknown> {
+  const { conv, cfg, s, categorias } = ctx;
+  const str = (k: string) => (typeof input[k] === "string" ? (input[k] as string).trim() : "");
+  switch (nombre) {
+    case "ver_categorias": {
+      const prods = await productosVendibles(s.empresa_id, { categorias: categorias.map((c) => c.id) }, 1000);
+      return categorias.map((c) => ({ categoria: c.nombre, productos: prods.filter((p) => p.categoria_principal_id === c.id && conStock(p)).length }));
+    }
+    case "elegir_categoria": {
+      const buscado = str("categoria").toLowerCase();
+      const cat = categorias.find((c) => c.nombre.toLowerCase() === buscado) ?? categorias.find((c) => c.nombre.toLowerCase().includes(buscado) || buscado.includes(c.nombre.toLowerCase()));
+      if (!cat) return { error: `No existe esa categoría. Las categorías son: ${categorias.map((c) => c.nombre).join(", ")}` };
+      s.categoria_id = cat.id;
+      const prods = (await productosVendibles(s.empresa_id, { categorias: [cat.id] })).filter(conStock);
+      return {
+        ahora_sos: `el vendedor de ${cat.nombre}`,
+        instrucciones: cat.bot_instrucciones?.trim() || null,
+        productos: prods.map(vistaProducto),
+        ...(prods.length ? {} : { aviso: "Esta categoría no tiene productos con stock ahora." }),
+      };
+    }
+    case "buscar_productos": {
+      const prods = await productosVendibles(s.empresa_id, { categorias: categorias.map((c) => c.id), texto: str("texto") }, 15);
+      return prods.length ? prods.map((p) => ({ ...vistaProducto(p), categoria: categorias.find((c) => c.id === p.categoria_principal_id)?.nombre ?? null })) : { resultado: "No hay productos con ese nombre." };
+    }
+    case "enviar_foto": {
+      const [p] = await productosVendibles(s.empresa_id, { ids: [str("producto_id")] }, 1);
+      if (!p || !/^https?:\/\//i.test(p.imagen_url ?? "")) return { error: "Ese producto no tiene foto." };
+      await enviar(conv, str("texto") || p.nombre, { url: p.imagen_url!, nombre: `${p.nombre}.jpg` });
+      ctx.envios += 1;
+      return { ok: true, nota: "La foto ya se mandó con ese texto: no repitas el texto." };
+    }
+    case "agregar_al_carrito": {
+      const id = str("producto_id");
+      const cant = Math.max(0, Math.floor(Number(input.cantidad) || 0));
+      const [p] = await productosVendibles(s.empresa_id, { ids: [id] }, 1);
+      if (!p) return { error: "Ese producto no existe o ya no está a la venta." };
+      const tope = disponible(p);
+      if (tope !== null && cant > tope) return { error: `De ${p.nombre} quedan ${tope}.` };
+      s.carrito = s.carrito.filter((l) => l.producto_id !== id);
+      if (cant > 0) s.carrito.push({ producto_id: id, cantidad: cant });
+      return { carrito: (await resumenCarrito(s)).texto };
+    }
+    case "ver_carrito":
+      return { carrito: (await resumenCarrito(s)).texto };
+    case "confirmar_pedido": {
+      if (!s.carrito.length) return { error: "El carrito está vacío." };
+      const entrega = str("entrega");
+      const pago = str("forma_pago");
+      if (entrega === "envio" && !cfg.envio_activo) return { error: "La tienda no hace envíos: solo retiro." };
+      if (entrega === "retiro" && !cfg.retiro_activo) return { error: "La tienda no tiene retiro: solo envío." };
+      if (pago === "transferencia" && !cfg.pago_transferencia) return { error: "La tienda no acepta transferencia." };
+      if (pago === "al_recibir" && !cfg.pago_al_recibir) return { error: "La tienda no cobra al recibir: solo transferencia." };
+      const { data, error } = await db().rpc("pedido_whatsapp_crear", {
+        p_empresa: s.empresa_id,
+        p: {
+          conversacion_id: conv.id, telefono: conv.contacto?.telefono ?? null, nombre: str("nombre"), entrega,
+          direccion: entrega === "envio" ? str("direccion") : null, ubicacion: entrega === "envio" ? s.datos.ubicacion ?? null : null,
+          forma_pago: pago, nota: str("nota"), items: s.carrito,
+        },
+      });
+      if (error || !data) return { error: error?.message ?? "No se pudo crear el pedido." };
+      const ped = data as Pedido;
+      s.pedido_id = ped.id;
+      s.carrito = [];
+      s.paso = pago === "transferencia" ? "pago" : "charla";
+      return {
+        pedido: ped.etiqueta,
+        total: gs(Number(ped.total)),
+        siguiente: pago === "transferencia"
+          ? `Pasale los datos para transferir y pedile la foto del comprobante por este chat:\n${textoCuentas(cfg.cuentas)}`
+          : "Confirmale el pedido con su número y contale que la tienda lo prepara y le avisa.",
+      };
+    }
+    case "pasar_a_humano": {
+      ctx.fin = true;
+      await pasarAHumano(conv, s, "Listo, te paso con una persona del equipo. En breve te responden por acá. 🙌");
+      return { ok: true };
+    }
+    default:
+      return { error: "Herramienta desconocida" };
+  }
+}
+
+function textoCuentas(cuentas: Cuenta[]): string {
+  if (!cuentas.length) return "(La tienda no cargó cuentas: decile que en breve le pasan los datos y llamá a pasar_a_humano.)";
+  return cuentas
+    .map((c) => [c.banco, c.titular && `Titular: ${c.titular}`, c.cuenta && `Cuenta: ${c.cuenta}`, c.documento && `CI/RUC: ${c.documento}`, c.alias && `Alias: ${c.alias}`].filter(Boolean).join("\n"))
+    .join("\n\n");
+}
+
+// ── Claude ───────────────────────────────────────────────────────────────────
+let cliente: Anthropic | null = null;
+
+async function conversar(ctx: Ctx, mensajes: Anthropic.Beta.BetaMessageParam[]): Promise<string | null> {
+  cliente ??= new Anthropic({ timeout: 60_000, maxRetries: 2 });
+  const fijo = sistemaFijo(ctx.cfg, ctx.categorias);
+  const conversacion = [...mensajes];
+  for (let vuelta = 0; vuelta < VUELTAS_HERRAMIENTAS; vuelta++) {
+    const system: Anthropic.Beta.BetaTextBlockParam[] = [
+      { type: "text", text: fijo, cache_control: { type: "ephemeral" } },
+      { type: "text", text: await sistemaEstado(ctx.s, ctx.categorias) },
+    ];
+    const r = await cliente.beta.messages.create({
+      model: MODELO,
+      max_tokens: 4000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      output_config: { effort: "low" },
+      system,
+      tools: HERRAMIENTAS,
+      messages: conversacion,
+    });
+    if (r.stop_reason === "refusal") return null;
+    const usos = r.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
+    const texto = r.content.filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text").map((b) => b.text).join("\n").trim();
+    if (!usos.length || r.stop_reason !== "tool_use") return texto || null;
+    // Lo que dijo antes de usar las herramientas sale ya (ej. "Dame un segundo que me fijo").
+    if (texto) {
+      await enviar(ctx.conv, texto);
+      ctx.envios += 1;
+    }
+    conversacion.push({ role: "assistant", content: r.content });
+    const resultados: Anthropic.Beta.BetaToolResultBlockParam[] = [];
+    for (const u of usos) {
+      let res: unknown;
+      try {
+        res = await ejecutar(ctx, u.name, (u.input ?? {}) as Record<string, unknown>);
+      } catch (e) {
+        res = { error: (e as Error).message };
+      }
+      resultados.push({ type: "tool_result", tool_use_id: u.id, content: JSON.stringify(res), ...(res && typeof res === "object" && "error" in res ? { is_error: true } : {}) });
+    }
+    conversacion.push({ role: "user", content: resultados });
+    await guardarSesion(ctx.s);
+    if (ctx.fin) return null;
+  }
+  return null;
+}
+
+// ── Comprobante de transferencia ─────────────────────────────────────────────
+async function tomarComprobante(conv: Conv, s: Sesion, e: EntranteVendedor): Promise<void> {
+  const mime = (e.media_mime ?? "").split(";")[0].trim().toLowerCase();
+  let lectura: unknown = null;
+  if (lectorConfigurado() && e.media_path) {
+    const { data } = await db().storage.from(CHAT_BUCKET).download(e.media_path);
+    if (data) lectura = await leerComprobante(Buffer.from(await data.arrayBuffer()), mime).catch(() => null);
+  }
+  const { data, error } = await db().rpc("pedido_whatsapp_comprobante", { p_empresa: conv.empresa_id, p_id: s.pedido_id, p_path: e.media_path, p_mime: mime, p_lectura: lectura });
+  if (error || !data) {
+    console.error("[bot-vendedor] comprobante", error?.message);
+    return;
+  }
+  const ped = data as Pedido;
+  s.paso = "charla";
+  await guardarSesion(s);
+  const l = lectura as { es_comprobante?: boolean; monto?: number | null } | null;
+  const aviso = l && l.es_comprobante === false
+    ? `Recibí la imagen, pero no parece un comprobante de transferencia. Si ya transferiste, mandame la captura del comprobante del pedido *${ped.etiqueta}*. 🙏`
+    : `¡Gracias! Recibimos el comprobante del pedido *${ped.etiqueta}*. Lo verificamos y la tienda te avisa por acá cuando esté listo. 🙌`;
+  await enviar(conv, aviso);
+}
+
+// ── Entrada ──────────────────────────────────────────────────────────────────
+export function botVendedorConfigurado(): boolean {
+  return !!process.env.ANTHROPIC_API_KEY?.trim();
+}
+
+/**
+ * Se llama con cada mensaje que ENTRA a la bandeja (y, por QR, cuando llega el archivo de una foto).
+ * Nunca tira: un error del bot no rompe el procesamiento del mensaje.
+ */
+export async function botVendedor(e: EntranteVendedor): Promise<{ respondio: boolean }> {
+  if (!botVendedorConfigurado()) return { respondio: false };
+  let convId: string | null = null;
+  try {
+    const conv = await leerConv(e.conversacion_id);
+    if (!conv?.canal?.activo) return { respondio: false };
+    const cfg = await configDe(conv);
+    if (!cfg) return { respondio: false };
+
+    // Una persona de la empresa escribió en el chat hace poco: el bot no se mete.
+    const { data: humano } = await db()
+      .from("chat_mensajes")
+      .select("id")
+      .eq("conversacion_id", conv.id)
+      .eq("from_me", true)
+      .not("autor_usuario_id", "is", null)
+      .neq("tipo", "nota")
+      .gte("created_at", new Date(Date.now() - HUMANO_MS).toISOString())
+      .limit(1);
+    if (humano?.length) return { respondio: false };
+
+    const contenido = (e.contenido ?? "").trim();
+    // Por QR la foto llega en dos tiempos: primero el cartel "[imagen]" y después el archivo, que vuelve a
+    // llamar acá con media_path. Se contesta recién con el archivo (si no, se contestaría dos veces).
+    if (!e.media_path && (contenido === "[imagen]" || contenido === "[documento]")) return { respondio: false };
+
+    if (!(await tomarTurno(conv))) return { respondio: false };
+    convId = conv.id;
+    let s = await leerSesion(conv);
+    if (s.paso === "humano") {
+      if (Date.now() - Date.parse(s.updated_at) < HUMANO_MS) return { respondio: false };
+      s.paso = "charla";
+    }
+    if (e.tipo === "ubicacion" && contenido) s.datos.ubicacion = contenido.slice(0, 200);
+
+    // Esperando el comprobante y llegó una foto o un PDF: se toma como comprobante, sin pasar por Claude.
+    if (s.paso === "pago" && s.pedido_id && (e.tipo === "imagen" || e.tipo === "documento") && e.media_path) {
+      await tomarComprobante(conv, s, e);
+      return { respondio: true };
+    }
+    // La foto con epígrafe ya se contestó cuando llegó el texto: el archivo solo servía como comprobante.
+    if (e.archivoTardio && contenido) return { respondio: false };
+
+    const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Asuncion" });
+    if (s.turnos_fecha !== hoy) {
+      s.turnos_fecha = hoy;
+      s.turnos_dia = 0;
+    }
+    if (s.turnos_dia >= TURNOS_DIA) {
+      await pasarAHumano(conv, s, "Para seguir con tu consulta te paso con una persona del equipo. En breve te responden por acá. 🙌");
+      return { respondio: true };
+    }
+
+    const categorias = await categoriasVisibles(conv.empresa_id);
+    // Mensajes que llegan mientras el bot piensa: se contestan en la vuelta siguiente (hasta 3).
+    let respondio = false;
+    let atendido: string | null = null;
+    for (let vuelta = 0; vuelta < 3; vuelta++) {
+      const { mensajes, ultimoEntrante } = await historia(conv.id);
+      if (!mensajes.length || mensajes[mensajes.length - 1].role !== "user" || ultimoEntrante === atendido) break;
+      atendido = ultimoEntrante;
+      s.turnos_dia += 1;
+      const ctx: Ctx = { conv, cfg, s, categorias, fin: false, envios: 0 };
+      const respuesta = await conversar(ctx, mensajes);
+      s = ctx.s;
+      if (ctx.fin) return { respondio: true };
+      await guardarSesion(s);
+      if (respuesta) {
+        await enviar(conv, respuesta);
+        respondio = true;
+      } else if (ctx.envios > 0) {
+        respondio = true;
+      } else if (!respondio) {
+        await pasarAHumano(conv, s, "Te paso con una persona del equipo para seguir. En breve te responden por acá. 🙌");
+        return { respondio: true };
+      }
+    }
+    return { respondio };
+  } catch (err) {
+    console.error("[bot-vendedor]", (err as Error).message);
+    return { respondio: false };
+  } finally {
+    if (convId) await soltarTurno(convId);
+  }
+}

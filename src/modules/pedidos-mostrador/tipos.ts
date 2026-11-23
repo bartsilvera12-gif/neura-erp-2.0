@@ -6,13 +6,15 @@
  */
 import type { ModsSeleccion, ModsSnapshot } from "@/modules/mesas/modificadores";
 
-export type EstadoPedidoMostrador = "en_caja" | "cobrado" | "vencido" | "anulado";
+export type EstadoPedidoMostrador = "en_caja" | "cobrado" | "vencido" | "anulado" | "whatsapp";
 
 export const ESTADOS_PEDIDO_MOSTRADOR: Record<EstadoPedidoMostrador, { texto: string; clase: string }> = {
   en_caja: { texto: "En caja", clase: "bg-sky-50 text-sky-800 ring-sky-200" },
   cobrado: { texto: "Cobrado", clase: "bg-emerald-50 text-emerald-800 ring-emerald-200" },
   vencido: { texto: "Vencido", clase: "bg-amber-50 text-amber-900 ring-amber-200" },
   anulado: { texto: "Anulado", clase: "bg-slate-100 text-slate-600 ring-slate-200" },
+  // Receta 172: lo tomó el bot por WhatsApp y espera que la tienda lo prepare y lo envíe a caja.
+  whatsapp: { texto: "WhatsApp · por preparar", clase: "bg-violet-50 text-violet-800 ring-violet-200" },
 };
 
 export type ItemPedidoMostrador = {
@@ -58,6 +60,27 @@ export type PedidoMostrador = {
   anulado_por_nombre: string | null;
   motivo_anulacion: string | null;
   items: ItemPedidoMostrador[];
+  /** Receta 172: 'whatsapp' = lo tomó el bot vendedor. */
+  origen?: "mostrador" | "whatsapp";
+  whatsapp?: DatosPedidoWhatsapp | null;
+};
+
+/** Lo que el bot vendedor anotó del pedido (receta 172). */
+export type DatosPedidoWhatsapp = {
+  conversacion_id: string | null;
+  telefono: string | null;
+  entrega: "envio" | "retiro" | null;
+  direccion: string | null;
+  /** "lat,lng" o lo que compartió por WhatsApp */
+  ubicacion: string | null;
+  forma_pago: "al_recibir" | "transferencia" | null;
+  pago_estado: "pendiente" | "comprobante" | null;
+  comprobante_path: string | null;
+  comprobante_mime: string | null;
+  comprobante_lectura: { es_comprobante?: boolean; monto?: number | null; fecha?: string | null; referencia?: string | null; banco_origen?: string | null; titular_origen?: string | null } | null;
+  comprobante_at: string | null;
+  /** URL firmada (la agrega GET /api/pedidos-mostrador/whatsapp) */
+  comprobante_url?: string | null;
 };
 
 /** GET /api/pedidos-mostrador */

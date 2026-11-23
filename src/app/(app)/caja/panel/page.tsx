@@ -19,6 +19,7 @@ const TARJETAS: TarjetaPanel[] = [
   { href: "/caja/cocina", titulo: "Cocina", imagen: "/soporte/mis-tickets-lista-pendientes.webp", color: "8 45% 24%", posicion: "50% 45%" },
   // Receta 77: foto prestada (la de compras: canasto) hasta tener una propia — ver docs/creditos-imagenes-demo.md.
   { href: "/caja/pedidos", titulo: "Pedidos", imagen: "/finanzas/compras-canasto-supermercado.webp", color: "262 32% 26%", posicion: "50% 50%" },
+  { href: "/caja/pedidos-whatsapp", titulo: "Pedidos de WhatsApp", imagen: "/omnicanal/conversaciones-chat-dueno.webp", color: "150 40% 20%", posicion: "50% 45%" },
 ];
 
 export default function PanelCajaPage() {

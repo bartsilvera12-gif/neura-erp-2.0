@@ -26,5 +26,7 @@ export const moduloCaja: Modulo = {
     { label: "Cocina", href: "/caja/cocina", permiso: "cocina", funcion: "cocina" },
     // Receta 77: pedidos de mostrador (el vendedor arma y envía a caja; la caja cobra en Nueva venta).
     { label: "Pedidos", href: "/caja/pedidos", permiso: "pedidos_mostrador", funcion: "pedidos" },
+    // Receta 172: los pedidos que toma el bot vendedor por WhatsApp (se preparan y se envían a caja).
+    { label: "Pedidos de WhatsApp", href: "/caja/pedidos-whatsapp", permiso: "pedidos_mostrador", funcion: "pedidos", roles: ["ADMIN", "SUPERVISOR", "CAJERO"], palabras: ["bot", "pedidos online", "envios", "delivery", "comprobante"] },
   ],
 };

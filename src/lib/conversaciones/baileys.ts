@@ -11,6 +11,7 @@ import { timingSafeEqual } from "node:crypto";
 import { systemClient } from "@/lib/supabase/clients";
 import { canalPorId, pathAdjuntoChat, secretosDelCanal, subirAdjuntoChat, type CanalChat } from "@/lib/conversaciones/servidor";
 import { CARTEL_MEDIA } from "@/modules/conversaciones/conectores/normalizadores";
+import { botVendedor } from "@/lib/bot-vendedor/bot";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 export const esUuid = (v: unknown): v is string => typeof v === "string" && UUID.test(v);
@@ -78,6 +79,13 @@ export async function adjuntarMediaEntrante(
     await db.rpc("chat_avisar", { p_topic: `chat:conv:${m.conversacion_id}`, p_evento: "mensaje", p_payload: { id: m.id } });
   } catch {
     /* solo es el aviso en vivo */
+  }
+  // Por QR la foto llega después del mensaje: recién ahora el bot vendedor puede tomarla (ej. el
+  // comprobante de una transferencia). Va en segundo plano para no demorar al puente.
+  const contenido = m.contenido && CARTELES.has(m.contenido) ? null : m.contenido;
+  // Audios y videos ya se contestaron con el cartel (el bot no los escucha ni los mira).
+  if (tipo === "imagen" || tipo === "documento") {
+    void botVendedor({ conversacion_id: m.conversacion_id, mensaje_id: m.id, tipo, contenido, media_path: path, media_mime: mime, archivoTardio: true });
   }
   return "ok";
 }
