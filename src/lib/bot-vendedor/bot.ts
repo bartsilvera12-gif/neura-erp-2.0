@@ -499,6 +499,20 @@ async function ejecutar(ctx: Ctx, nombre: string, input: Record<string, unknown>
       if (entrega === "retiro" && !cfg.retiro_activo) return { error: "La tienda no tiene retiro: solo envío." };
       if (pago === "transferencia" && !cfg.pago_transferencia) return { error: "La tienda no acepta transferencia." };
       if (pago === "al_recibir" && !cfg.pago_al_recibir) return { error: "La tienda no cobra al recibir: solo transferencia." };
+      // Freno contra duplicados: si este chat ya tiene un pedido por preparar con los mismos productos y
+      // cantidades (de las últimas 6 h), es el mismo pedido confirmado otra vez (ej. una respuesta que
+      // falló y el cliente repitió "confirmar"): no se crea otro.
+      const previo = await pedidoIgualReciente(conv.id, s.carrito);
+      if (previo) {
+        s.pedido_id = previo.id;
+        s.carrito = [];
+        return {
+          pedido: previo.etiqueta,
+          total: gs(previo.total),
+          ya_existia: true,
+          siguiente: "Este pedido YA estaba registrado (no se creó otro). Confirmale al cliente ese número, sin decir que se creó de nuevo.",
+        };
+      }
       const { data, error } = await db().rpc("pedido_whatsapp_crear", {
         p_empresa: s.empresa_id,
         p: {
@@ -528,6 +542,25 @@ async function ejecutar(ctx: Ctx, nombre: string, input: Record<string, unknown>
     default:
       return { error: "Herramienta desconocida" };
   }
+}
+
+/** Un pedido por preparar de este chat, de las últimas 6 h, con exactamente los mismos productos y cantidades. */
+async function pedidoIgualReciente(convId: string, carrito: Linea[]): Promise<{ id: string; etiqueta: string; total: number } | null> {
+  const { data } = await db()
+    .from("pedidos_mostrador")
+    .select("id, numero, total, items:pedido_mostrador_items(producto_id, cantidad)")
+    .eq("conversacion_id", convId)
+    .eq("origen", "whatsapp")
+    .eq("estado", "whatsapp")
+    .gte("creado_at", new Date(Date.now() - 6 * 3_600_000).toISOString())
+    .order("creado_at", { ascending: false })
+    .limit(5);
+  const clave = (l: { producto_id: string | null; cantidad: number }[]) =>
+    l.map((x) => `${x.producto_id}:${Number(x.cantidad)}`).sort().join("|");
+  const buscada = clave(carrito);
+  const igual = ((data ?? []) as { id: string; numero: number; total: number; items: { producto_id: string | null; cantidad: number }[] }[])
+    .find((p) => clave(p.items ?? []) === buscada);
+  return igual ? { id: igual.id, etiqueta: `P-${String(igual.numero).padStart(4, "0")}`, total: Number(igual.total) } : null;
 }
 
 function textoCuentas(cuentas: Cuenta[]): string {
