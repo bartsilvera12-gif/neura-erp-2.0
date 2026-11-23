@@ -311,7 +311,9 @@ const ESTADO_PEDIDO: Record<string, string> = {
  * al volver el cliente veía "Pedido confirmado P-0001" en la historia y el carrito vacío, y concluía
  * que el pedido no existía.
  */
-async function pedidosDelChat(convId: string): Promise<string | null> {
+type PedidoChat = { etiqueta: string; estado: string; texto: string };
+
+async function pedidosDelChat(convId: string): Promise<PedidoChat[]> {
   const { data } = await db()
     .from("pedidos_mostrador")
     .select("numero, estado, total, entrega, forma_pago, pago_estado, creado_at, items:pedido_mostrador_items(cantidad, producto_nombre)")
@@ -321,15 +323,18 @@ async function pedidosDelChat(convId: string): Promise<string | null> {
     .order("creado_at", { ascending: false })
     .limit(5);
   const filas = (data ?? []) as { numero: number; estado: string; total: number; entrega: string | null; forma_pago: string | null; pago_estado: string | null; creado_at: string; items: { cantidad: number; producto_nombre: string }[] }[];
-  if (!filas.length) return null;
-  return filas
-    .map((p) => {
-      const fecha = new Date(p.creado_at).toLocaleDateString("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit" });
-      const items = (p.items ?? []).map((i) => `${Number(i.cantidad)} × ${i.producto_nombre}`).join(", ");
-      const pago = p.forma_pago === "transferencia" ? (p.pago_estado === "comprobante" ? "transferencia, comprobante recibido" : "transferencia, falta el comprobante") : "paga al recibir o retirar";
-      return `- *P-${String(p.numero).padStart(4, "0")}* (${fecha}): ${items}. Total ${gs(Number(p.total))}. ${p.entrega === "envio" ? "Envío" : "Retiro"}, ${pago}. Estado: ${ESTADO_PEDIDO[p.estado] ?? p.estado}.`;
-    })
-    .join("\n");
+  return filas.map((p, i) => {
+    const min = Math.max(0, Math.round((Date.now() - Date.parse(p.creado_at)) / 60_000));
+    const hace = min < 60 ? `hace ${min} min` : min < 1440 ? `hace ${Math.round(min / 60)} h` : `hace ${Math.round(min / 1440)} días`;
+    const etiqueta = `P-${String(p.numero).padStart(4, "0")}`;
+    const items = (p.items ?? []).map((x) => `${Number(x.cantidad)} × ${x.producto_nombre}`).join(", ");
+    const pago = p.forma_pago === "transferencia" ? (p.pago_estado === "comprobante" ? "transferencia, comprobante recibido" : "transferencia, falta el comprobante") : "paga al recibir o retirar";
+    return {
+      etiqueta,
+      estado: p.estado,
+      texto: `- *${etiqueta}* (creado ${hace}${i === 0 ? "; es el último pedido que confirmaste en esta charla" : ""}): ${items}. Total ${gs(Number(p.total))}. ${p.entrega === "envio" ? "Envío" : "Retiro"}, ${pago}. Estado: ${ESTADO_PEDIDO[p.estado] ?? p.estado}.`,
+    };
+  });
 }
 
 async function sistemaEstado(s: Sesion, categorias: Categoria[]): Promise<string> {
@@ -343,10 +348,11 @@ async function sistemaEstado(s: Sesion, categorias: Categoria[]): Promise<string
   }
   partes.push(`Carrito: ${s.carrito.length ? (await resumenCarrito(s)).texto : "vacío"}`);
   const pedidos = await pedidosDelChat(s.conversacion_id);
-  if (pedidos) {
+  if (pedidos.length) {
     partes.push(
-      `Pedidos que este cliente ya hizo (están registrados en el sistema; nunca digas que no existen):\n${pedidos}\n` +
-        "Si pregunta por uno, contale el estado. Si escribe de nuevo para comprar, es una compra nueva: el carrito vacío es normal después de confirmar un pedido.",
+      `Pedidos de este cliente REGISTRADOS en el sistema (son reales y correctos):\n${pedidos.map((p) => p.texto).join("\n")}\n` +
+        "Todo pedido que confirmaste en esta charla está en esta lista, con el mismo número. El carrito queda vacío cuando un pedido se confirma: es lo normal, no significa que algo falló. " +
+        "Nunca digas que un pedido no quedó confirmado o registrado, ni ofrezcas armarlo de nuevo. Si el cliente agradece o se despide, despedite. Si pregunta por un pedido, contale su estado.",
     );
   }
   if (s.datos.ubicacion) partes.push(`Ubicación que compartió el cliente: ${s.datos.ubicacion}`);
@@ -563,6 +569,12 @@ async function pedidoIgualReciente(convId: string, carrito: Linea[]): Promise<{ 
   return igual ? { id: igual.id, etiqueta: `P-${String(igual.numero).padStart(4, "0")}`, total: Number(igual.total) } : null;
 }
 
+/** ¿La respuesta dice que un pedido no se registró o que hay que armarlo de nuevo? */
+function desdiceUnPedido(t: string): boolean {
+  const x = t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[*_]/g, "");
+  return /no (quedo|fue|se|esta) (confirmad|registrad|guardad|creado)|no se registro|no quedo (confirmad|registrad)|corregir un error|armar(lo|la)? de nuevo|armalo de nuevo/.test(x);
+}
+
 function textoCuentas(cuentas: Cuenta[]): string {
   if (!cuentas.length) return "(La tienda no cargó cuentas: decile que en breve le pasan los datos y llamá a pasar_a_humano.)";
   return cuentas
@@ -745,6 +757,15 @@ export async function botVendedor(e: EntranteVendedor): Promise<{ respondio: boo
       s = ctx.s;
       if (ctx.fin) return { respondio: true };
       await guardarSesion(s);
+      if (respuesta && desdiceUnPedido(respuesta)) {
+        // El bot quiso desdecirse de un pedido. Si el chat tiene pedidos registrados, eso es falso:
+        // no sale, y en su lugar se confirma el último.
+        const [ultimo] = await pedidosDelChat(conv.id);
+        if (ultimo && ultimo.estado !== "anulado") {
+          console.warn("[bot-vendedor] respuesta que negaba un pedido registrado: no se envió", ultimo.etiqueta);
+          respuesta = `Tu pedido *${ultimo.etiqueta}* está registrado ✅ La tienda ya lo tiene y te avisa por acá cuando esté listo. ¡Gracias! 🙌`;
+        }
+      }
       if (respuesta) {
         await enviar(conv, respuesta);
         respondio = true;
