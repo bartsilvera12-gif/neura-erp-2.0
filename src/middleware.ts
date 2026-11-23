@@ -41,22 +41,32 @@ async function leerSuspendido(): Promise<boolean> {
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  if (pathname === BLOQUEADO_PATH) return NextResponse.next();
-
   const suspendido = await leerSuspendido();
-  if (!suspendido) return NextResponse.next();
 
-  if (pathname.startsWith("/api/")) {
-    return NextResponse.json(
-      { error: "Acceso suspendido por falta de pago. Comunicate con Neura." },
-      { status: 402 }
-    );
+  if (suspendido) {
+    // Bloqueado: todo va a /bloqueado; las APIs responden 402.
+    if (pathname === BLOQUEADO_PATH) return NextResponse.next();
+    if (pathname.startsWith("/api/")) {
+      return NextResponse.json(
+        { error: "Acceso suspendido por falta de pago. Comunicate con Neura." },
+        { status: 402 }
+      );
+    }
+    const destino = request.nextUrl.clone();
+    destino.pathname = BLOQUEADO_PATH;
+    destino.search = "";
+    return NextResponse.redirect(destino, 307);
   }
 
-  const destino = request.nextUrl.clone();
-  destino.pathname = BLOQUEADO_PATH;
-  destino.search = "";
-  return NextResponse.redirect(destino, 307);
+  // Habilitado: si quedó parado en /bloqueado, al recargar lo mandamos al inicio.
+  if (pathname === BLOQUEADO_PATH) {
+    const destino = request.nextUrl.clone();
+    destino.pathname = "/";
+    destino.search = "";
+    return NextResponse.redirect(destino, 307);
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
