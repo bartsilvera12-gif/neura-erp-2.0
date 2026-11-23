@@ -289,6 +289,7 @@ function sistemaFijo(cfg: ConfigBot, categorias: Categoria[]): string {
     "5. Para la cantidad ofrecé *1* a *5* (o hasta el stock si es menor) y aceptá que escriba otro número. Con agregar_al_carrito armás el pedido; nunca agregues más unidades que el stock que muestra la herramienta. Después ofrecé: seguir comprando, ver otra categoría o terminar el pedido.",
     "6. Para cerrar pedí, de a una cosa por mensaje y con opciones numeradas cuando se pueda: envío o retiro, la dirección si es envío (sirve la ubicación de WhatsApp), la forma de pago y el nombre de quien recibe. Mostrá el resumen con el total y ofrecé *1* · Confirmar pedido, *2* · Cambiar algo. Recién cuando elige confirmar, llamá a confirmar_pedido.",
     "7. Si pide hablar con una persona, se queja, o pregunta algo que las herramientas no responden (garantías, cambios, mayoristas, factura con RUC), llamá a pasar_a_humano.",
+    "8. Nunca te desdigas de algo que ya le confirmaste al cliente (un pedido, un precio). Si algo no te cierra, no afirmes que no existe: llamá a pasar_a_humano.",
     "",
     `Categorías de la tienda: ${categorias.length ? categorias.map((c) => c.nombre).join(" · ") : "(todavía no hay categorías cargadas)"}`,
     "",
@@ -301,6 +302,36 @@ function sistemaFijo(cfg: ConfigBot, categorias: Categoria[]): string {
   ].join("\n");
 }
 
+const ESTADO_PEDIDO: Record<string, string> = {
+  whatsapp: "recibido, la tienda lo está preparando", en_caja: "listo, esperando el cobro", cobrado: "cobrado y entregado o listo para entregar", anulado: "anulado por la tienda",
+};
+
+/**
+ * Los pedidos que este chat ya hizo (últimos 30 días). El bot ve la charla solo como texto: sin esto,
+ * al volver el cliente veía "Pedido confirmado P-0001" en la historia y el carrito vacío, y concluía
+ * que el pedido no existía.
+ */
+async function pedidosDelChat(convId: string): Promise<string | null> {
+  const { data } = await db()
+    .from("pedidos_mostrador")
+    .select("numero, estado, total, entrega, forma_pago, pago_estado, creado_at, items:pedido_mostrador_items(cantidad, producto_nombre)")
+    .eq("conversacion_id", convId)
+    .eq("origen", "whatsapp")
+    .gte("creado_at", new Date(Date.now() - 30 * 86_400_000).toISOString())
+    .order("creado_at", { ascending: false })
+    .limit(5);
+  const filas = (data ?? []) as { numero: number; estado: string; total: number; entrega: string | null; forma_pago: string | null; pago_estado: string | null; creado_at: string; items: { cantidad: number; producto_nombre: string }[] }[];
+  if (!filas.length) return null;
+  return filas
+    .map((p) => {
+      const fecha = new Date(p.creado_at).toLocaleDateString("es-PY", { timeZone: "America/Asuncion", day: "2-digit", month: "2-digit" });
+      const items = (p.items ?? []).map((i) => `${Number(i.cantidad)} × ${i.producto_nombre}`).join(", ");
+      const pago = p.forma_pago === "transferencia" ? (p.pago_estado === "comprobante" ? "transferencia, comprobante recibido" : "transferencia, falta el comprobante") : "paga al recibir o retirar";
+      return `- *P-${String(p.numero).padStart(4, "0")}* (${fecha}): ${items}. Total ${gs(Number(p.total))}. ${p.entrega === "envio" ? "Envío" : "Retiro"}, ${pago}. Estado: ${ESTADO_PEDIDO[p.estado] ?? p.estado}.`;
+    })
+    .join("\n");
+}
+
 async function sistemaEstado(s: Sesion, categorias: Categoria[]): Promise<string> {
   const cat = categorias.find((c) => c.id === s.categoria_id) ?? null;
   const partes: string[] = [];
@@ -311,6 +342,13 @@ async function sistemaEstado(s: Sesion, categorias: Categoria[]): Promise<string
     partes.push("El cliente todavía no eligió una categoría.");
   }
   partes.push(`Carrito: ${s.carrito.length ? (await resumenCarrito(s)).texto : "vacío"}`);
+  const pedidos = await pedidosDelChat(s.conversacion_id);
+  if (pedidos) {
+    partes.push(
+      `Pedidos que este cliente ya hizo (están registrados en el sistema; nunca digas que no existen):\n${pedidos}\n` +
+        "Si pregunta por uno, contale el estado. Si escribe de nuevo para comprar, es una compra nueva: el carrito vacío es normal después de confirmar un pedido.",
+    );
+  }
   if (s.datos.ubicacion) partes.push(`Ubicación que compartió el cliente: ${s.datos.ubicacion}`);
   if (s.paso === "pago" && s.pedido_id) partes.push("Ya hizo un pedido y falta la foto del comprobante de la transferencia: si pregunta, recordale que la mande por acá.");
   return partes.join("\n\n");
