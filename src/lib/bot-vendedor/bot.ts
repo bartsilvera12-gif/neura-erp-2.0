@@ -279,13 +279,15 @@ function sistemaFijo(cfg: ConfigBot, categorias: Categoria[]): string {
   return [
     `Atendés el WhatsApp de ${tienda}, en Paraguay. Hablás en español de Paraguay, con voseo, cálido y breve: son mensajes de WhatsApp, de 1 a 4 líneas, sin títulos ni tablas. Podés usar *negrita* de WhatsApp y algún emoji, sin exagerar.`,
     "",
+    "Menús numerados (importante): el cliente no tiene que escribir frases. Cada vez que le ofrezcas opciones (categorías, productos, talle o color, cantidad, envío o retiro, forma de pago, confirmar o cambiar), mostralas numeradas, una por línea, así: *1* · Remeras. Máximo 10 opciones; terminá con una línea corta como \"Respondé con el número 👇\". Si el cliente responde solo un número, es la opción con ese número de TU último mensaje con opciones. Igual aceptá que escriba con sus palabras, aunque esté mal escrito o sin tildes (\"remra\", \"pantalon\", \"zapatiyas\"): entendé a qué se refiere.",
+    "",
     "Cómo funciona la atención:",
-    "1. Si el cliente todavía no eligió una categoría, saludalo y mostrale las categorías para que elija (una por línea). Si ya dice lo que busca, elegí vos la categoría que corresponde.",
-    "2. Cuando elige una, llamá a elegir_categoria: desde ahí sos el vendedor especialista de esa categoría y seguís sus instrucciones. Si después quiere otra cosa, cambiá de categoría con elegir_categoria.",
-    "3. Ofrecé productos de esa categoría. Precios, stock y descripciones salen SOLO de las herramientas: nunca inventes un producto, un precio, un descuento ni un plazo. Si algo no está, decilo y ofrecé lo más parecido.",
+    "1. Si el cliente todavía no eligió una categoría, saludalo y mostrale las categorías numeradas. Si ya dice lo que busca, elegí vos la categoría que corresponde.",
+    "2. Cuando elige una (por número o por nombre), llamá a elegir_categoria con el nombre exacto de la lista: desde ahí sos el vendedor especialista de esa categoría y seguís sus instrucciones. Si después quiere otra cosa, cambiá de categoría con elegir_categoria. Ofrecé siempre una opción numerada para volver a las categorías.",
+    "3. Mostrá los productos de esa categoría numerados, con el precio en la misma línea. Precios, stock y descripciones salen SOLO de las herramientas: nunca inventes un producto, un precio, un descuento ni un plazo. Si algo no está, decilo y ofrecé lo más parecido.",
     "4. Si el producto tiene foto y ayuda a vender, mandala con enviar_foto.",
-    "5. Con agregar_al_carrito armás el pedido. Nunca agregues más unidades que el stock que muestra la herramienta.",
-    "6. Para cerrar, pedí lo que falte: nombre de quien recibe, envío o retiro (y la dirección si es envío; sirve la ubicación de WhatsApp) y forma de pago. Mostrá el resumen con el total y pedí que confirme. Recién cuando el cliente confirma, llamá a confirmar_pedido.",
+    "5. Para la cantidad ofrecé *1* a *5* (o hasta el stock si es menor) y aceptá que escriba otro número. Con agregar_al_carrito armás el pedido; nunca agregues más unidades que el stock que muestra la herramienta. Después ofrecé: seguir comprando, ver otra categoría o terminar el pedido.",
+    "6. Para cerrar pedí, de a una cosa por mensaje y con opciones numeradas cuando se pueda: envío o retiro, la dirección si es envío (sirve la ubicación de WhatsApp), la forma de pago y el nombre de quien recibe. Mostrá el resumen con el total y ofrecé *1* · Confirmar pedido, *2* · Cambiar algo. Recién cuando elige confirmar, llamá a confirmar_pedido.",
     "7. Si pide hablar con una persona, se queja, o pregunta algo que las herramientas no responden (garantías, cambios, mayoristas, factura con RUC), llamá a pasar_a_humano.",
     "",
     `Categorías de la tienda: ${categorias.length ? categorias.map((c) => c.nombre).join(" · ") : "(todavía no hay categorías cargadas)"}`,
@@ -376,6 +378,35 @@ export const HERRAMIENTAS: Anthropic.Beta.BetaToolUnion[] = [
 ];
 
 /** envios: mensajes que el bot ya mandó en este turno (texto antes de las herramientas, fotos). */
+/** Texto para comparar: sin tildes, sin mayúsculas y sin signos ("Remeras!" = "remeras"). */
+const plano = (t: string) => t.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
+
+/** Distancia de edición (para "remra" ≈ "remeras"). */
+function distancia(a: string, b: string): number {
+  const d = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++)
+    for (let j = 1; j <= b.length; j++) d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+  return d[a.length][b.length];
+}
+
+/** La categoría que quiso decir: exacta, contenida, singular/plural o con un error de tipeo chico. */
+export function buscarCategoria<T extends { nombre: string }>(categorias: T[], texto: string): T | null {
+  const q = plano(texto);
+  if (!q) return null;
+  const sinS = (t: string) => t.replace(/(es|s)$/, "");
+  return (
+    categorias.find((c) => plano(c.nombre) === q) ??
+    categorias.find((c) => sinS(plano(c.nombre)) === sinS(q)) ??
+    categorias.find((c) => plano(c.nombre).includes(q) || q.includes(plano(c.nombre))) ??
+    categorias
+      .map((c) => ({ c, d: distancia(sinS(plano(c.nombre)), sinS(q)) }))
+      .filter((x) => x.d <= Math.max(1, Math.floor(sinS(plano(x.c.nombre)).length / 4)))
+      .sort((a, b) => a.d - b.d)[0]?.c ??
+    null
+  );
+}
+
 type Ctx = { conv: Conv; cfg: ConfigBot; s: Sesion; categorias: Categoria[]; fin: boolean; envios: number };
 
 async function ejecutar(ctx: Ctx, nombre: string, input: Record<string, unknown>): Promise<unknown> {
@@ -387,8 +418,7 @@ async function ejecutar(ctx: Ctx, nombre: string, input: Record<string, unknown>
       return categorias.map((c) => ({ categoria: c.nombre, productos: prods.filter((p) => p.categoria_principal_id === c.id && conStock(p)).length }));
     }
     case "elegir_categoria": {
-      const buscado = str("categoria").toLowerCase();
-      const cat = categorias.find((c) => c.nombre.toLowerCase() === buscado) ?? categorias.find((c) => c.nombre.toLowerCase().includes(buscado) || buscado.includes(c.nombre.toLowerCase()));
+      const cat = buscarCategoria(categorias, str("categoria"));
       if (!cat) return { error: `No existe esa categoría. Las categorías son: ${categorias.map((c) => c.nombre).join(", ")}` };
       s.categoria_id = cat.id;
       const prods = (await productosVendibles(s.empresa_id, { categorias: [cat.id] })).filter(conStock);
