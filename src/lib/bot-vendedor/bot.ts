@@ -10,8 +10,9 @@
  * pedido) lo deciden la base y este archivo, nunca el modelo.
  *
  * Atiende si: el bot está prendido, el canal es el elegido (o no hay uno elegido), la función Pedidos
- * está activa y nadie de la empresa escribió en el chat en las últimas 12 h. "Asesor" o el pedido
- * explícito del cliente lo pasan a una persona.
+ * está activa y nadie de la empresa escribió en el chat en las últimas 12 h (o lo escribió pero
+ * después finalizó el chat: Finalizar le devuelve el chat al bot). "Asesor" o el pedido explícito
+ * del cliente lo pasan a una persona.
  */
 import Anthropic from "@anthropic-ai/sdk";
 import { systemClient } from "@/lib/supabase/clients";
@@ -200,6 +201,22 @@ async function enviar(conv: Conv, contenido: string, foto?: { url: string; nombr
     fallo = (e as Error).message || "No se pudo enviar";
   }
   await db().from("chat_mensajes").update({ estado_entrega: estado, externo_id: externo, error: fallo }).eq("id", (data as { id: string }).id);
+}
+
+/**
+ * ¿Alguien del equipo finalizó el chat (botón Finalizar de la bandeja) después de `desde`?
+ * Finalizar deja una nota "✅ Conversación finalizada": desde ahí el chat vuelve a ser del bot.
+ */
+async function finalizadaDespuesDe(convId: string, desde: string): Promise<boolean> {
+  const { data } = await db()
+    .from("chat_mensajes")
+    .select("id")
+    .eq("conversacion_id", convId)
+    .eq("tipo", "nota")
+    .like("contenido", "✅ Conversación finalizada%")
+    .gt("created_at", desde)
+    .limit(1);
+  return !!data?.length;
 }
 
 async function pasarAHumano(conv: Conv, s: Sesion, aviso: string) {
@@ -542,17 +559,20 @@ export async function botVendedor(e: EntranteVendedor): Promise<{ respondio: boo
     const cfg = await configDe(conv);
     if (!cfg) return { respondio: false };
 
-    // Una persona de la empresa escribió en el chat hace poco: el bot no se mete.
+    // Una persona de la empresa escribió en el chat hace poco: el bot no se mete, salvo que después
+    // la hayan finalizado (Finalizar en la bandeja le devuelve el chat al bot).
     const { data: humano } = await db()
       .from("chat_mensajes")
-      .select("id")
+      .select("created_at")
       .eq("conversacion_id", conv.id)
       .eq("from_me", true)
       .not("autor_usuario_id", "is", null)
       .neq("tipo", "nota")
       .gte("created_at", new Date(Date.now() - HUMANO_MS).toISOString())
+      .order("created_at", { ascending: false })
       .limit(1);
-    if (humano?.length) return { respondio: false };
+    const ultimoHumano = (humano?.[0] as { created_at: string } | undefined)?.created_at ?? null;
+    if (ultimoHumano && !(await finalizadaDespuesDe(conv.id, ultimoHumano))) return { respondio: false };
 
     const contenido = (e.contenido ?? "").trim();
     // Por QR la foto llega en dos tiempos: primero el cartel "[imagen]" y después el archivo, que vuelve a
@@ -563,7 +583,7 @@ export async function botVendedor(e: EntranteVendedor): Promise<{ respondio: boo
     convId = conv.id;
     let s = await leerSesion(conv);
     if (s.paso === "humano") {
-      if (Date.now() - Date.parse(s.updated_at) < HUMANO_MS) return { respondio: false };
+      if (Date.now() - Date.parse(s.updated_at) < HUMANO_MS && !(await finalizadaDespuesDe(conv.id, s.updated_at))) return { respondio: false };
       s.paso = "charla";
     }
     if (e.tipo === "ubicacion" && contenido) s.datos.ubicacion = contenido.slice(0, 200);

@@ -121,7 +121,7 @@ export default function BotVendedorPage() {
 
           <Seccion titulo="Estado">
             <Interruptor on={cfg.activo} onChange={(v) => poner("activo", v)} label="Bot prendido"
-              ayuda="Atiende los chats nuevos. Si alguien del equipo escribe en un chat, el bot no se mete en ese chat por 12 horas. El cliente puede pedir hablar con una persona cuando quiera." />
+              ayuda="Atiende los chats nuevos. Si alguien del equipo escribe en un chat, el bot no se mete en ese chat por 12 horas, salvo que el chat se finalice: Finalizar se lo devuelve al bot. El cliente puede pedir hablar con una persona cuando quiera." />
             <Campo label="WhatsApp que atiende">
               <select className={INPUT} value={cfg.canal_id ?? ""} onChange={(e) => poner("canal_id", e.target.value || null)}>
                 <option value="">Todos los WhatsApp de la empresa</option>
