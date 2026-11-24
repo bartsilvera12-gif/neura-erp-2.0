@@ -40,6 +40,8 @@ export type Envio = {
   productos: { nombre: string; cantidad: number }[];
   /** Hora estimada de entrega "HH:MM" (receta 176). */
   hora_estimada: string | null;
+  /** Vendedor que cargó el envío (receta 178). */
+  vendedor: string | null;
   creado_at: string;
   entregado_at: string | null;
 };

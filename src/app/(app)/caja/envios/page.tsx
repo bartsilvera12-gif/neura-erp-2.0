@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable, pointerWithin, type DragStartEvent, type DragEndEvent } from "@dnd-kit/core";
-import { MapPin, Phone, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Package, Banknote, Clock, Search, ChevronRight } from "lucide-react";
+import { MapPin, Phone, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Package, Banknote, Clock, Search, ChevronRight, User } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { useUsuario, tienePermiso } from "@/lib/sesion/ContextoUsuario";
@@ -218,7 +218,7 @@ function TarjetaEnvio({ env, color, chofer, onAbrir, enOverlay = false }: {
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold text-white shadow-sm" style={{ backgroundColor: color }}>{inicial}</span>
           <div className="min-w-0 flex-1">
             <p className="truncate text-[15px] font-bold leading-tight text-slate-900">{env.cliente_nombre || "Consumidor final"}</p>
-            <p className="mt-0.5 text-[11px] text-slate-400">{env.numero ? <span className="font-mono">#{env.numero}</span> : null}{env.numero ? " · " : ""}{haceCuanto(env.creado_at)}</p>
+            <p className="mt-0.5 truncate text-[11px] text-slate-400">{env.numero ? <span className="font-mono">#{env.numero}</span> : null}{env.numero ? " · " : ""}{haceCuanto(env.creado_at)}{env.vendedor ? ` · ${env.vendedor}` : ""}</p>
           </div>
           <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-slate-300 transition group-hover:text-[var(--brand)]" />
         </div>
@@ -373,6 +373,8 @@ function ModalEnvioDetalle({ env, estados, choferes, ocupado, onClose, onMover, 
             </ul>
           ) : <p className="text-xs text-slate-400">Sin productos cargados.</p>}
         </div>
+
+        {env.vendedor ? <p className="flex items-center gap-1.5 text-[11px] text-slate-400"><User className="h-3.5 w-3.5" />Cargado por {env.vendedor} · {fechaHora(env.creado_at)}</p> : null}
 
         {/* Datos de entrega */}
         <div className="space-y-3 border-t border-slate-100 pt-3">
