@@ -161,7 +161,7 @@ function ColumnaEstado({ estado, envios, arrastrando, children }: { estado: Envi
   const { setNodeRef, isOver } = useDroppable({ id: estado.id });
   const col = estado.color ?? "#94a3b8";
   return (
-    <section className={`flex w-full shrink-0 flex-col overflow-hidden rounded-2xl border transition-all duration-150 lg:w-[340px] ${
+    <section className={`flex w-full shrink-0 flex-col overflow-hidden rounded-2xl border transition-all duration-150 lg:w-[360px] ${
       isOver ? "border-[var(--brand)] bg-[var(--brand-50)] shadow-[0_12px_30px_-10px_color-mix(in_srgb,var(--brand)_60%,transparent)] ring-4 ring-[var(--brand-100)] lg:scale-[1.02]"
       : arrastrando ? "border-2 border-dashed border-[color-mix(in_srgb,var(--brand)_45%,transparent)] bg-slate-50/50"
       : "border-slate-200/70 bg-slate-50/50"}`}>
@@ -202,37 +202,67 @@ function TarjetaEnvio({ env, color, chofer, onAbrir, enOverlay = false }: {
   env: Envio; color: string; chofer: string | null; onAbrir?: () => void; enOverlay?: boolean;
 }) {
   const cobro = COBRO[env.cobro_estado];
+  const inicial = (env.cliente_nombre || "C").trim().charAt(0).toUpperCase() || "C";
   return (
     <div
       onClick={onAbrir}
       role={onAbrir ? "button" : undefined}
-      className={`group flex gap-2.5 rounded-xl bg-white p-3 ring-1 transition ${
-        enOverlay ? "rotate-2 cursor-grabbing shadow-2xl ring-[var(--brand)]"
-        : onAbrir ? "cursor-grab ring-slate-200/80 hover:ring-[var(--brand)] hover:shadow-md active:cursor-grabbing" : "ring-slate-200/80"}`}
+      className={`group overflow-hidden rounded-2xl bg-white ring-1 transition ${
+        enOverlay ? "rotate-1 cursor-grabbing shadow-2xl ring-[var(--brand)]"
+        : onAbrir ? "cursor-grab ring-slate-200 hover:-translate-y-0.5 hover:shadow-lg hover:ring-[var(--brand)] active:cursor-grabbing" : "ring-slate-200"}`}
     >
-      <span className="w-1.5 shrink-0 self-stretch rounded-full" style={{ backgroundColor: color }} />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-start gap-1.5">
+      <span className="block h-1.5 w-full" style={{ backgroundColor: color }} />
+      <div className="p-3.5">
+        {/* Cliente + cuándo */}
+        <div className="flex items-start gap-2.5">
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold text-white shadow-sm" style={{ backgroundColor: color }}>{inicial}</span>
           <div className="min-w-0 flex-1">
-            <p className="text-[15px] font-semibold leading-tight text-slate-900">{env.cliente_nombre || "Consumidor final"}</p>
-            {env.numero ? <p className="mt-0.5 font-mono text-[10px] text-slate-400">#{env.numero}</p> : null}
+            <p className="truncate text-[15px] font-bold leading-tight text-slate-900">{env.cliente_nombre || "Consumidor final"}</p>
+            <p className="mt-0.5 text-[11px] text-slate-400">{env.numero ? <span className="font-mono">#{env.numero}</span> : null}{env.numero ? " · " : ""}{haceCuanto(env.creado_at)}</p>
           </div>
-          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[var(--brand)]" />
+          <ChevronRight className="mt-1 h-5 w-5 shrink-0 text-slate-300 transition group-hover:text-[var(--brand)]" />
         </div>
-        {env.direccion ? (
-          <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-slate-600"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" /><span className="min-w-0">{env.direccion}{env.referencia ? <span className="text-slate-400"> · {env.referencia}</span> : null}</span></p>
-        ) : <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-600"><MapPin className="h-4 w-4 shrink-0" /> Sin dirección cargada</p>}
-        {env.telefono ? <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500"><Phone className="h-4 w-4 shrink-0 text-slate-400" />{env.telefono}</p> : null}
-        <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
-          <span className="text-base font-bold tabular-nums text-slate-800">{gs(env.total)}</span>
-          <span className={`inline-flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1 text-xs ${chofer ? "bg-[var(--brand-50)] font-semibold text-[var(--brand-700)]" : "text-slate-400"}`}>
-            <Truck className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{chofer ?? "Sin chofer"}</span>
-          </span>
+
+        {/* Dirección + teléfono (bloque destacado) */}
+        <div className="mt-3 space-y-2 rounded-xl bg-slate-50 px-3 py-2.5">
+          {env.direccion ? (
+            <div className="flex items-start gap-2 text-xs leading-relaxed">
+              <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" />
+              <span className="min-w-0 text-slate-700"><span className="font-medium">{env.direccion}</span>{env.referencia ? <span className="mt-0.5 block text-slate-400">{env.referencia}</span> : null}</span>
+            </div>
+          ) : <p className="flex items-center gap-2 text-xs font-semibold text-amber-600"><MapPin className="h-4 w-4 shrink-0" /> Falta cargar la dirección</p>}
+          {env.telefono ? <p className="flex items-center gap-2 text-xs text-slate-600"><Phone className="h-4 w-4 shrink-0 text-slate-400" /><span className="truncate">{env.telefono}</span></p> : null}
         </div>
-        {cobro ? <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${cobro.clase}`}>{cobro.texto}</span> : null}
+
+        {/* Total + estado de cobro */}
+        <div className="mt-3 flex items-end justify-between gap-2">
+          <div>
+            <p className="text-[10px] font-medium uppercase tracking-wide text-slate-400">Total</p>
+            <p className="text-lg font-bold leading-none tabular-nums text-slate-900">{gs(env.total)}</p>
+          </div>
+          {cobro ? <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${cobro.clase}`}>{cobro.texto}</span> : null}
+        </div>
+
+        {/* Chofer */}
+        <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-2.5">
+          <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${chofer ? "bg-[var(--brand-50)] text-[var(--brand-700)]" : "bg-slate-100 text-slate-400"}`}><Truck className="h-3.5 w-3.5" /></span>
+          {chofer ? <span className="truncate text-sm font-semibold text-slate-700">{chofer}</span> : <span className="text-sm text-slate-400">Sin chofer asignado</span>}
+        </div>
       </div>
     </div>
   );
+}
+
+function haceCuanto(iso: string): string {
+  try {
+    const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (min < 1) return "recién";
+    if (min < 60) return `hace ${min} min`;
+    const h = Math.floor(min / 60);
+    if (h < 24) return `hace ${h} h`;
+    const dias = Math.floor(h / 24);
+    return dias === 1 ? "ayer" : `hace ${dias} días`;
+  } catch { return ""; }
 }
 
 function ModalEnvioDetalle({ env, estados, choferes, ocupado, onClose, onMover, onAsignar, onCambio, onCobrar }: {
