@@ -29,6 +29,7 @@ const esquema = z
     inmobiliaria: z.boolean(),
     gimnasio: z.boolean(), // receta 150
     comedor: z.boolean(), // receta 165
+    envios: z.boolean(), // receta 175
     confirmar_recetas: z.boolean(),
     // Receta 138
     modulos_apagados: z.array(z.enum(["comercial", "caja", "finanzas", "gastos", "inventario", "reportes", "omnicanal", "rrhh", "cuotas", "soporte"])).max(10),

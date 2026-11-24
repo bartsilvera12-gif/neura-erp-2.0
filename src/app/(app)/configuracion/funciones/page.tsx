@@ -9,7 +9,7 @@
  * Solo el Administrador guarda (la base lo vuelve a exigir). Apagar no borra nada.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, Blocks, Check, ChevronDown, Building2, ChefHat, ClipboardList, Dumbbell, Loader2, QrCode, Soup, Sparkles, Store, Ticket, UtensilsCrossed, BookOpen, X } from "lucide-react";
+import { AlertTriangle, Blocks, Check, ChevronDown, Building2, ChefHat, ClipboardList, Dumbbell, Loader2, QrCode, Soup, Sparkles, Store, Ticket, Truck, UtensilsCrossed, BookOpen, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { CapaModal, ALTO_MAX_MODAL } from "@/components/CapaModal";
@@ -20,7 +20,7 @@ import { BOTON_PRIMARIO, BOTON_SECUNDARIO } from "@/modules/inventario/ui";
 import { MODULOS_APAGADOS_RUBRO, MODULOS_RUBRO, rubroDe, URL_FUNCIONES, type FuncionesEmpresa, type FuncionPantalla, type ModuloRubroId, type Rubro } from "@/modules/configuracion/funciones";
 import { pantallasCatalogo } from "@/modules/registry";
 
-type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean; sorteos: boolean; inmobiliaria: boolean; gimnasio: boolean; comedor: boolean; modulos_apagados: ModuloRubroId[] };
+type Borrador = { mesas: boolean; cocina: boolean; recetas: boolean; pedidos: boolean; sorteos: boolean; inmobiliaria: boolean; gimnasio: boolean; comedor: boolean; envios: boolean; modulos_apagados: ModuloRubroId[] };
 
 const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: string; resumen: string; Icono: typeof Store }[] = [
   {
@@ -75,17 +75,17 @@ const RUBROS: { key: Exclude<Rubro, "personalizado">; titulo: string; ejemplos: 
 ];
 
 const PRESET: Record<Exclude<Rubro, "personalizado">, Borrador> = {
-  comercio: { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.comercio },
-  gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.gastronomia },
-  sorteos: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: true, inmobiliaria: false, gimnasio: false, comedor: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.sorteos },
-  inmobiliaria: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: true, gimnasio: false, comedor: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.inmobiliaria },
-  neura: { mesas: true, cocina: true, recetas: true, pedidos: true, sorteos: true, inmobiliaria: true, gimnasio: true, comedor: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.neura },
-  gimnasio: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: true, comedor: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.gimnasio },
-  comedor: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: true, modulos_apagados: MODULOS_APAGADOS_RUBRO.comedor },
+  comercio: { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: false, envios: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.comercio },
+  gastronomia: { mesas: true, cocina: true, recetas: true, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: false, envios: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.gastronomia },
+  sorteos: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: true, inmobiliaria: false, gimnasio: false, comedor: false, envios: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.sorteos },
+  inmobiliaria: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: true, gimnasio: false, comedor: false, envios: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.inmobiliaria },
+  neura: { mesas: true, cocina: true, recetas: true, pedidos: true, sorteos: true, inmobiliaria: true, gimnasio: true, comedor: true, envios: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.neura },
+  gimnasio: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: true, comedor: false, envios: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.gimnasio },
+  comedor: { mesas: false, cocina: false, recetas: false, pedidos: false, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: true, envios: false, modulos_apagados: MODULOS_APAGADOS_RUBRO.comedor },
 };
 
 const deEmpresa = (d: FuncionesEmpresa): Borrador => ({
-  mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false, sorteos: !!d.sorteos, inmobiliaria: !!d.inmobiliaria, gimnasio: !!d.gimnasio, comedor: !!d.comedor,
+  mesas: d.mesas, cocina: d.cocina, recetas: d.recetas, pedidos: d.pedidos !== false, sorteos: !!d.sorteos, inmobiliaria: !!d.inmobiliaria, gimnasio: !!d.gimnasio, comedor: !!d.comedor, envios: !!d.envios,
   modulos_apagados: d.modulos_apagados ?? [],
 });
 
@@ -264,7 +264,7 @@ export default function RubroFuncionesPage() {
                 role="radio"
                 aria-checked={sel}
                 disabled={soloLectura || guardando}
-                onClick={() => tocar(PRESET[r.key])}
+                onClick={() => tocar({ ...PRESET[r.key], envios: b.envios })}
                 className={`flex h-full min-h-11 flex-col rounded-2xl border p-4 text-left transition disabled:cursor-not-allowed ${sel ? "border-[var(--brand)] bg-[var(--brand-50,#eef7f7)] ring-2 ring-[var(--brand-100)]" : "border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm"} ${soloLectura && !sel ? "opacity-60" : ""}`}
               >
                 <span className="flex w-full items-start gap-3">
@@ -301,7 +301,7 @@ export default function RubroFuncionesPage() {
 
       {/* ── Funciones ─────────────────────────────────────────────────────── */}
       <Plegable icono={<Sparkles className="h-4 w-4" />} titulo="Funciones"
-        resumen={prendidas([b.mesas, b.cocina, b.recetas, b.pedidos, b.sorteos, b.inmobiliaria, b.gimnasio].filter(Boolean).length, 7)}
+        resumen={prendidas([b.mesas, b.cocina, b.recetas, b.pedidos, b.sorteos, b.inmobiliaria, b.gimnasio, b.envios].filter(Boolean).length, 8)}
         detalle="La Caja, el inventario y las compras funcionan igual con todo apagado. Al prender Mesas y QR o Cocina, los perfiles Cajero y Supervisor ya las reciben; con Sorteos, también el Vendedor. Recetas y Producción quedan para el Administrador. Se ajusta en Usuarios › Perfiles y permisos.">
         <div className="space-y-2.5">
           <Interruptor
@@ -357,6 +357,13 @@ export default function RubroFuncionesPage() {
             onChange={(v) => tocar({ gimnasio: v })}
             etiqueta={<span className="inline-flex items-center gap-1.5"><Dumbbell className="h-4 w-4 text-slate-400" aria-hidden /> Asistencia</span>}
             descripcion="Clases con horario y cupo, turnos individuales, recepción que marca la asistencia y frena a quien debe, membresías con clases por mes, clase suelta que se cobra en la caja y comisión de profesores. Al prenderla, Supervisor, Cajero y Vendedor ya atienden la recepción."
+          />
+          <Interruptor
+            activo={b.envios}
+            disabled={soloLectura || guardando}
+            onChange={(v) => tocar({ envios: v })}
+            etiqueta={<span className="inline-flex items-center gap-1.5"><Truck className="h-4 w-4 text-slate-400" aria-hidden /> Envíos</span>}
+            descripcion="Caja › Envíos: un tablero por estados (configurables) para seguir cada entrega y asignar choferes. Toda venta a domicilio cae al tablero (el cajero puede marcar “entrega en local”); con venta a crédito se cobra contra entrega. Al prenderla, Supervisor, Cajero y Vendedor ya operan el tablero."
           />
         </div>
       </Plegable>
