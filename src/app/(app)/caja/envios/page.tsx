@@ -210,36 +210,36 @@ function TarjetaEnvio({ env, color, chofer, estados, onAbrir, onMover, enOverlay
   const cobro = COBRO[env.cobro_estado];
   return (
     <div
-      className={`rounded-2xl border border-l-4 border-slate-200 bg-white p-3.5 shadow-sm transition-all ${
+      className={`rounded-xl border border-l-4 border-slate-200 bg-white p-2.5 shadow-sm transition-all ${
         enOverlay ? "rotate-1 cursor-grabbing shadow-2xl"
         : onAbrir ? "cursor-grab hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing" : ""}`}
       style={{ borderLeftColor: color }}
     >
       {/* Contenido: tocar abre el detalle */}
       <div onClick={onAbrir} role={onAbrir ? "button" : undefined} className={onAbrir ? "block w-full cursor-pointer text-left" : undefined}>
-        <div className="flex items-start gap-2">
-          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+        <div className="flex items-start gap-1.5">
+          <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[15px] font-semibold leading-snug text-slate-950">{env.cliente_nombre || "Consumidor final"}</p>
-            <p className="mt-0.5 truncate text-xs font-medium text-slate-500">
+            <p className="truncate text-[13px] font-semibold leading-snug text-slate-950">{env.cliente_nombre || "Consumidor final"}</p>
+            <p className="truncate text-[10.5px] font-medium text-slate-500">
               {env.numero ? <span className="font-mono">#{env.numero}</span> : null}{env.numero ? " · " : ""}{haceCuanto(env.creado_at)}
             </p>
           </div>
         </div>
 
         {/* Pills: cantidad, cobro y hora estimada */}
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-2 flex flex-wrap gap-1">
           <span className={BADGE_NEUTRO}>{env.items} {env.items === 1 ? "producto" : "productos"}</span>
           {cobro ? <span className={`${BADGE} border-transparent font-semibold ${cobro.clase}`}>{cobro.texto}</span> : <span className={BADGE_NEUTRO}>Contado</span>}
           {env.hora_estimada ? <span className={`${BADGE} border-[color-mix(in_srgb,var(--brand)_30%,transparent)] bg-[var(--brand-50)] font-semibold text-[var(--brand-700)]`}><Clock className="mr-1 h-3 w-3" />{env.hora_estimada}</span> : null}
         </div>
 
         {/* Bloque: personas + datos del envío */}
-        <div className="mt-3 space-y-1.5 rounded-xl bg-slate-50/80 px-3 py-2.5">
+        <div className="mt-2 space-y-1 rounded-lg bg-slate-50/80 px-2.5 py-2">
           <PersonaMeta rol="Vend" nombre={env.vendedor} />
           <PersonaMeta rol="Chofer" nombre={chofer} />
 
-          <div className="grid grid-cols-2 gap-x-3 gap-y-1 border-t border-slate-200/70 pt-1.5 text-[10.5px]">
+          <div className="grid grid-cols-2 gap-x-3 gap-y-0.5 border-t border-slate-200/70 pt-1 text-[10px]">
             <DatoMeta label="Teléfono" value={env.telefono || "—"} />
             <DatoMeta label="Entrega est." value={env.hora_estimada || "A coordinar"} alerta={!env.hora_estimada} />
             <div className="col-span-2">
@@ -248,23 +248,25 @@ function TarjetaEnvio({ env, color, chofer, estados, onAbrir, onMover, enOverlay
           </div>
 
           {env.productos.length > 0 ? (
-            <div className="border-t border-slate-200/70 pt-1.5">
-              <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Pedido</span>
-              <ul className="mt-0.5 space-y-0.5">
-                {env.productos.slice(0, 3).map((p, i) => (
-                  <li key={i} className="flex items-center gap-1.5 text-[11px] text-slate-700">
-                    <span className="min-w-[1.4rem] shrink-0 rounded bg-white px-1 text-center text-[10px] font-bold text-slate-500 ring-1 ring-slate-200">{fmtCant(p.cantidad)}×</span>
+            <div className="border-t border-slate-200/70 pt-1">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[8.5px] font-bold uppercase tracking-wide text-slate-400">Pedido</span>
+                {env.productos.length > 2 ? <span className="text-[9px] text-slate-400">+{env.productos.length - 2} más</span> : null}
+              </div>
+              <ul className="mt-0.5 space-y-px">
+                {env.productos.slice(0, 2).map((p, i) => (
+                  <li key={i} className="flex items-center gap-1.5 text-[10.5px] text-slate-700">
+                    <span className="min-w-[1.3rem] shrink-0 rounded bg-white px-1 text-center text-[9px] font-bold text-slate-500 ring-1 ring-slate-200">{fmtCant(p.cantidad)}×</span>
                     <span className="min-w-0 truncate">{p.nombre}</span>
                   </li>
                 ))}
               </ul>
-              {env.productos.length > 3 ? <p className="mt-0.5 text-[10px] text-slate-400">+{env.productos.length - 3} {env.productos.length - 3 === 1 ? "producto" : "productos"} más</p> : null}
             </div>
           ) : null}
 
-          <div className="border-t border-slate-200/70 pt-1.5">
-            <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Total</span>
-            <div className="text-sm font-bold tabular-nums text-slate-900">{gs(env.total)}</div>
+          <div className="flex items-baseline justify-between border-t border-slate-200/70 pt-1">
+            <span className="text-[8.5px] font-bold uppercase tracking-wide text-slate-400">Total</span>
+            <span className="text-[13px] font-bold tabular-nums text-slate-900">{gs(env.total)}</span>
           </div>
         </div>
       </div>
@@ -272,13 +274,13 @@ function TarjetaEnvio({ env, color, chofer, estados, onAbrir, onMover, enOverlay
       {/* Footer: ver detalle + mover a (no arrastra ni abre el detalle) */}
       {!enOverlay && onMover && estados ? (
         <>
-          <div className="mt-3 border-t border-slate-100 pt-3" onClick={(e) => e.stopPropagation()}>
-            <button type="button" onClick={(e) => { e.stopPropagation(); onAbrir?.(); }} className="text-[11px] font-semibold text-[var(--brand)] hover:underline">
+          <div className="mt-2 border-t border-slate-100 pt-2" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={(e) => { e.stopPropagation(); onAbrir?.(); }} className="text-[10.5px] font-semibold text-[var(--brand)] hover:underline">
               Ver detalle completo
             </button>
           </div>
-          <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2" onClick={(e) => e.stopPropagation()} onPointerDownCapture={(e) => e.stopPropagation()}>
-            <label className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Mover a</label>
+          <div className="mt-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1.5" onClick={(e) => e.stopPropagation()} onPointerDownCapture={(e) => e.stopPropagation()}>
+            <label className="block text-[9px] font-semibold uppercase tracking-wide text-slate-500">Mover a</label>
             <div className="mt-1">
               <Select value={env.estado_id} onChange={(id) => { if (id !== env.estado_id) onMover(id); }}
                 options={estados.map((e) => [e.id, e.nombre] as [string, string])} chico block etiqueta="Mover a" />
@@ -309,17 +311,17 @@ function PersonaMeta({ rol, nombre }: { rol: string; nombre?: string | null }) {
   if (!completo) {
     return (
       <div className="flex min-w-0 items-center gap-1.5">
-        <span className="w-12 shrink-0 text-[9px] font-bold uppercase tracking-wide text-slate-400">{rol}</span>
-        <span className="text-[11px] text-slate-300">Sin asignar</span>
+        <span className="w-10 shrink-0 text-[8.5px] font-bold uppercase tracking-wide text-slate-400">{rol}</span>
+        <span className="text-[10.5px] text-slate-300">Sin asignar</span>
       </div>
     );
   }
   const color = colorDePersona(completo);
   return (
     <div className="flex min-w-0 items-center gap-1.5" title={`${rol}: ${completo}`}>
-      <span className="w-12 shrink-0 text-[9px] font-bold uppercase tracking-wide text-slate-400">{rol}</span>
-      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-bold" style={{ background: `${color}22`, color }}>{inicialesNombre(completo)}</span>
-      <span className="min-w-0 truncate text-[11px] font-medium text-slate-700">{completo}</span>
+      <span className="w-10 shrink-0 text-[8.5px] font-bold uppercase tracking-wide text-slate-400">{rol}</span>
+      <span className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[7px] font-bold" style={{ background: `${color}22`, color }}>{inicialesNombre(completo)}</span>
+      <span className="min-w-0 truncate text-[10.5px] font-medium text-slate-700">{completo}</span>
     </div>
   );
 }
