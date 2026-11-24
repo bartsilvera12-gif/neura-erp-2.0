@@ -9,7 +9,7 @@
  *   · APIs: withTenant corta con 403 las rutas de `funcionDeRutaApi`.
  */
 
-export type FuncionId = "mesas" | "cocina" | "recetas" | "pedidos" | "sorteos" | "inmobiliaria" | "gimnasio" | "comedor";
+export type FuncionId = "mesas" | "cocina" | "recetas" | "pedidos" | "sorteos" | "inmobiliaria" | "gimnasio" | "comedor" | "envios";
 /** `funcion` de una sub-pantalla: una función, o "rubro" (la pantalla Rubro y funciones: se oculta si Neura la ocultó). */
 export type FuncionPantalla = FuncionId | "rubro";
 export type Rubro = "comercio" | "gastronomia" | "sorteos" | "inmobiliaria" | "gimnasio" | "comedor" | "neura" | "personalizado";
@@ -28,6 +28,8 @@ export type Funciones = {
   gimnasio: boolean;
   /** Receta 161: Comedor empresarial (independiente del rubro, como pedidos). Solo la enciende Neura por SQL. */
   comedor: boolean;
+  /** Receta 170: Envíos (kanban de entregas, rubro Comercio). Independiente del rubro, como pedidos. */
+  envios: boolean;
   /** Neura ocultó la sección Rubro y funciones (solo por SQL). */
   ocultas: boolean;
   /** Receta 138: módulos apagados por el rubro o a mano (vacío = todos). */
@@ -85,7 +87,7 @@ export type FuncionesEmpresa = Funciones & {
   productos_recetas: number | null;
 };
 
-export const SIN_FUNCIONES: Funciones = { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: false, ocultas: false, modulos_apagados: ["soporte"] };
+export const SIN_FUNCIONES: Funciones = { mesas: false, cocina: false, recetas: false, pedidos: true, sorteos: false, inmobiliaria: false, gimnasio: false, comedor: false, envios: false, ocultas: false, modulos_apagados: ["soporte"] };
 
 export const URL_FUNCIONES = "/api/configuracion/funciones";
 export const MSJ_FUNCION_INACTIVA = "Esta función no está activa en tu empresa";
@@ -126,6 +128,7 @@ export const NOMBRE_FUNCION: Record<FuncionId, string> = {
   inmobiliaria: "Inmobiliaria",
   gimnasio: "Asistencia",
   comedor: "Comedor",
+  envios: "Envíos",
 };
 
 /** Función que exige una ruta de /api (null = ninguna). La pública /api/publico/mesas se chequea aparte. */
@@ -140,5 +143,6 @@ export function funcionDeRutaApi(pathname: string): FuncionId | null {
   if (en("/api/inmobiliaria")) return "inmobiliaria";
   if (en("/api/gimnasio")) return "gimnasio";
   if (en("/api/comedor")) return "comedor";
+  if (en("/api/envios")) return "envios";
   return null;
 }

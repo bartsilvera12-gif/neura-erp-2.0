@@ -28,5 +28,7 @@ export const moduloCaja: Modulo = {
     { label: "Pedidos", href: "/caja/pedidos", permiso: "pedidos_mostrador", funcion: "pedidos" },
     // Receta 172: los pedidos que toma el bot vendedor por WhatsApp (se preparan y se envían a caja).
     { label: "Pedidos de WhatsApp", href: "/caja/pedidos-whatsapp", permiso: "pedidos_mostrador", funcion: "pedidos", roles: ["ADMIN", "SUPERVISOR", "CAJERO"], palabras: ["bot", "pedidos online", "envios", "delivery", "comprobante"] },
+    // Receta 170: Envíos (kanban de entregas, rubro Comercio). La función la enciende Neura por SQL.
+    { label: "Envíos", href: "/caja/envios", permiso: "envios_operar", funcion: "envios" },
   ],
 };

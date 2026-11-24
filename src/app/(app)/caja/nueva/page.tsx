@@ -154,6 +154,9 @@ function CajaPageContenido() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const me = useUsuario();
+  // Receta 170: Envíos. Cuando la función está activa, cada venta de mostrador cae al tablero de
+  // Envíos salvo que el cajero marque "Entrega en local". No aplica a cuentas de mesa ni pedidos.
+  const enviosOn = useFuncion("envios");
   // Perfil: vender a crédito (la base lo vuelve a exigir, igual que los descuentos y el precio manual).
   const puedeCredito = tienePermiso(me, "vender_credito");
 
@@ -205,6 +208,10 @@ function CajaPageContenido() {
   const [refEntrega, setRefEntrega] = useState("");
   const limpiarEntrega = () => { setPlanId(""); setEntrega(0); setMedioEntrega("efectivo"); setRefEntrega(""); };
   const [tipoDocumento, setTipoDocumento] = useState<"factura" | "ticket">("ticket");
+  // Envíos (receta 170): por defecto la venta va a domicilio (al tablero); el cajero puede marcar
+  // "Entrega en local". Dirección opcional (si se deja vacía, el envío toma la del cliente).
+  const [aDomicilio, setADomicilio] = useState(true);
+  const [dirEnvio, setDirEnvio] = useState("");
   const [clienteId, setClienteId] = useState("");
   // Receta 67: "Cliente ocasional (X)" — consumidor final sin datos; sin cliente, solo contado, se puede facturar.
   const [ocasional, setOcasional] = useState(false);
@@ -1034,6 +1041,11 @@ function CajaPageContenido() {
         }),
       });
       idempotencyKeyRef.current = null;
+      // Receta 170: venta de mostrador "a domicilio" → cae al tablero de Envíos (el server toma la
+      // dirección del cliente si no se cargó una). No corta la venta si falla.
+      if (enviosOn && aDomicilio && !cuentaMesa && !pedido) {
+        void apiFetch("/api/envios", { method: "POST", body: JSON.stringify({ accion: "crear", venta_id: venta.venta_id, direccion: dirEnvio.trim() || null }) }).catch(() => {});
+      }
       if (cuentaMesa) void recargarPorCobrar();
       if (pedido) void recargarPedidos();
       if (presuActivo) {
@@ -1070,6 +1082,7 @@ function CajaPageContenido() {
       vaciarCarrito();
       setClienteId("");
       setClienteQuery("");
+      setDirEnvio("");
       setOcasional(false);
       setTipoVenta("CONTADO");
       setPlazoDias("");
@@ -1215,6 +1228,22 @@ function CajaPageContenido() {
             entrega={cuentaMesa || pedido ? undefined : { planId, setPlanId, monto: entrega, setMonto: setEntrega, medio: medioEntrega, setMedio: setMedioEntrega, referencia: refEntrega, setReferencia: setRefEntrega }} />
         )}
       </div>
+
+      {/* Envío (receta 170): a domicilio (cae al tablero de Envíos) o entrega en local. */}
+      {enviosOn && !cuentaMesa && !pedido ? (
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-slate-700 lg:mb-1 lg:text-xs">Entrega</label>
+          <Segmented value={aDomicilio ? "envio" : "local"} onChange={(v) => setADomicilio(v === "envio")} options={[
+            { value: "envio", label: "A domicilio" },
+            { value: "local", label: "En local" },
+          ]} />
+          {aDomicilio ? (
+            <input value={dirEnvio} onChange={(e) => setDirEnvio(e.target.value)} maxLength={300}
+              placeholder={clienteSel ? "Dirección (vacía = la del cliente)" : "Dirección de entrega"}
+              className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Documento */}
       <div>

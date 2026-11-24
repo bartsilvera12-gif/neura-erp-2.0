@@ -1,0 +1,50 @@
+/** Envíos (receta 170): tipos compartidos del tablero y la configuración. */
+
+export type EnvioEstado = {
+  id: string;
+  nombre: string;
+  color: string | null;
+  orden: number;
+  es_inicial: boolean;
+  es_final: boolean;
+  activo?: boolean;
+  usado?: boolean;
+};
+
+export type EnvioChofer = {
+  id: string;
+  nombre: string;
+  telefono: string | null;
+  documento?: string | null;
+  activo?: boolean;
+  usado?: boolean;
+};
+
+export type EnvioCobro = "na" | "pendiente" | "cobrado";
+
+export type Envio = {
+  id: string;
+  numero: string | null;
+  cliente_nombre: string | null;
+  direccion: string | null;
+  referencia: string | null;
+  telefono: string | null;
+  estado_id: string;
+  chofer_id: string | null;
+  total: number;
+  cobro_estado: EnvioCobro;
+  notas: string | null;
+  creado_at: string;
+  entregado_at: string | null;
+};
+
+export type EnviosTablero = {
+  estados: EnvioEstado[];
+  choferes: Pick<EnvioChofer, "id" | "nombre" | "telefono">[];
+  envios: Envio[];
+};
+
+export const URL_ENVIOS_TABLERO = "/api/envios/tablero";
+export const URL_ENVIOS = "/api/envios";
+export const URL_ENVIOS_ESTADOS = "/api/envios/estados";
+export const URL_ENVIOS_CHOFERES = "/api/envios/choferes";

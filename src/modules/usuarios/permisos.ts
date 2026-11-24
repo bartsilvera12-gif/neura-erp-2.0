@@ -27,7 +27,8 @@ export type Permiso =
   | "ver_cierres_caja" | "ver_reportes_financieros" | "exportar"
   | "administrar_usuarios" | "configuracion" | "administrar_rrhh"
   | "sorteos_vender" | "sorteos_revisar" | "sorteos_administrar"
-  | "gimnasio_recepcion" | "gimnasio_forzar_entrada" | "gimnasio_administrar";
+  | "gimnasio_recepcion" | "gimnasio_forzar_entrada" | "gimnasio_administrar"
+  | "envios_operar" | "envios_administrar";
 
 export type DefPermiso = {
   id: Permiso;
@@ -131,6 +132,15 @@ export const GRUPOS_PERMISOS: { id: string; label: string; permisos: DefPermiso[
       { id: "gimnasio_administrar", label: "Administrar clases, precios y comisiones", descripcion: "Crea y cambia clases y horarios, el precio de la clase suelta, el bloqueo por deuda y la comisión de los profesores.", niveles: ["ADMIN"], sensible: true },
     ],
   },
+  {
+    // Receta 170
+    id: "envios",
+    label: "Envíos",
+    permisos: [
+      { id: "envios_operar", label: "Operar el tablero de envíos", descripcion: "Ve el tablero de entregas, crea envíos desde la venta, los mueve de estado y les asigna chofer." },
+      { id: "envios_administrar", label: "Configurar estados y choferes", descripcion: "Crea y cambia los estados del kanban y la lista de choferes.", niveles: ["ADMIN"], sensible: true },
+    ],
+  },
 ];
 
 export const PERMISOS: DefPermiso[] = GRUPOS_PERMISOS.flatMap((g) => g.permisos);
@@ -145,6 +155,8 @@ export const FUNCION_DE_PERMISO: Partial<Record<Permiso, import("@/modules/confi
   gimnasio_recepcion: "gimnasio",
   gimnasio_forzar_entrada: "gimnasio",
   gimnasio_administrar: "gimnasio",
+  envios_operar: "envios",
+  envios_administrar: "envios",
 };
 export const permisoDef = (id: string) => PERMISOS.find((p) => p.id === id);
 
