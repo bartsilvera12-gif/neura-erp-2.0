@@ -20,6 +20,8 @@ const TARJETAS: TarjetaPanel[] = [
   // Receta 77: foto prestada (la de compras: canasto) hasta tener una propia — ver docs/creditos-imagenes-demo.md.
   { href: "/caja/pedidos", titulo: "Pedidos", imagen: "/finanzas/compras-canasto-supermercado.webp", color: "262 32% 26%", posicion: "50% 50%" },
   { href: "/caja/pedidos-whatsapp", titulo: "Pedidos de WhatsApp", imagen: "/omnicanal/conversaciones-chat-dueno.webp", color: "150 40% 20%", posicion: "50% 45%" },
+  // Receta 170: Envíos. Foto prestada (logística de traslados) hasta tener una propia.
+  { href: "/caja/envios", titulo: "Envíos", imagen: "/inventario/traslados-autoelevador.webp", color: "190 45% 22%", posicion: "50% 50%" },
 ];
 
 export default function PanelCajaPage() {
