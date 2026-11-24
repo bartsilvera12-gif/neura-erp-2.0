@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable, pointerWithin, type DragStartEvent, type DragEndEvent } from "@dnd-kit/core";
-import { MapPin, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Banknote, Clock, Search, ChevronRight } from "lucide-react";
+import { MapPin, Phone, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Banknote, Clock, Search, ChevronRight } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { useUsuario, tienePermiso } from "@/lib/sesion/ContextoUsuario";
@@ -127,7 +127,9 @@ export default function EnviosPage() {
         </div>
       ) : (
         <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragEnd={onDragEnd}>
-          <div className="flex gap-4 overflow-x-auto px-0.5 pb-4">
+          {/* Celular: columnas apiladas a todo el ancho (scroll vertical, arrastre vertical).
+              Escritorio (lg+): kanban horizontal. */}
+          <div className="flex flex-col gap-4 lg:flex-row lg:overflow-x-auto lg:px-0.5 lg:pb-4">
             {tablero.estados.map((est) => (
               <ColumnaEstado key={est.id} estado={est} envios={porEstado.get(est.id) ?? []} arrastrando={!!arrastrando}>
                 {(porEstado.get(est.id) ?? []).map((env) => (
@@ -159,7 +161,7 @@ function ColumnaEstado({ estado, envios, arrastrando, children }: { estado: Envi
   const { setNodeRef, isOver } = useDroppable({ id: estado.id });
   const col = estado.color ?? "#94a3b8";
   return (
-    <section className={`flex w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border bg-slate-50/50 transition-colors ${isOver ? "border-[var(--brand)] bg-[var(--brand-50)]" : "border-slate-200/70"}`}>
+    <section className={`flex w-full shrink-0 flex-col overflow-hidden rounded-2xl border bg-slate-50/50 transition-colors lg:w-[340px] ${isOver ? "border-[var(--brand)] bg-[var(--brand-50)]" : "border-slate-200/70"}`}>
       <header className="relative flex items-center gap-2.5 px-3.5 pb-2.5 pt-3.5">
         <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: col }} />
         <span className="h-3 w-3 shrink-0 rounded-full ring-2 ring-white" style={{ backgroundColor: col }} />
@@ -201,19 +203,22 @@ function TarjetaEnvio({ env, color, chofer, onAbrir, enOverlay = false }: {
         enOverlay ? "rotate-2 cursor-grabbing shadow-2xl ring-[var(--brand)]"
         : onAbrir ? "cursor-grab ring-slate-200/80 hover:ring-[var(--brand)] hover:shadow-md active:cursor-grabbing" : "ring-slate-200/80"}`}
     >
-      <span className="w-1 shrink-0 self-stretch rounded-full" style={{ backgroundColor: color }} />
+      <span className="w-1.5 shrink-0 self-stretch rounded-full" style={{ backgroundColor: color }} />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5">
-          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">{env.cliente_nombre || "Consumidor final"}</p>
-          {env.numero ? <span className="shrink-0 font-mono text-[10px] text-slate-400">#{env.numero}</span> : null}
-          <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[var(--brand)]" />
+        <div className="flex items-start gap-1.5">
+          <div className="min-w-0 flex-1">
+            <p className="text-[15px] font-semibold leading-tight text-slate-900">{env.cliente_nombre || "Consumidor final"}</p>
+            {env.numero ? <p className="mt-0.5 font-mono text-[10px] text-slate-400">#{env.numero}</p> : null}
+          </div>
+          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[var(--brand)]" />
         </div>
         {env.direccion ? (
-          <p className="mt-1 flex items-start gap-1 text-xs leading-snug text-slate-500"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--brand)]" /><span className="min-w-0 truncate">{env.direccion}</span></p>
-        ) : <p className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-600"><MapPin className="h-3.5 w-3.5 shrink-0" /> Sin dirección</p>}
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <span className="text-sm font-bold tabular-nums text-slate-800">{gs(env.total)}</span>
-          <span className={`inline-flex min-w-0 items-center gap-1 text-xs ${chofer ? "font-medium text-slate-600" : "text-slate-400"}`}>
+          <p className="mt-2 flex items-start gap-1.5 text-xs leading-relaxed text-slate-600"><MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[var(--brand)]" /><span className="min-w-0">{env.direccion}{env.referencia ? <span className="text-slate-400"> · {env.referencia}</span> : null}</span></p>
+        ) : <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-600"><MapPin className="h-4 w-4 shrink-0" /> Sin dirección cargada</p>}
+        {env.telefono ? <p className="mt-1.5 flex items-center gap-1.5 text-xs text-slate-500"><Phone className="h-4 w-4 shrink-0 text-slate-400" />{env.telefono}</p> : null}
+        <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
+          <span className="text-base font-bold tabular-nums text-slate-800">{gs(env.total)}</span>
+          <span className={`inline-flex min-w-0 items-center gap-1.5 rounded-full px-2 py-1 text-xs ${chofer ? "bg-[var(--brand-50)] font-semibold text-[var(--brand-700)]" : "text-slate-400"}`}>
             <Truck className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{chofer ?? "Sin chofer"}</span>
           </span>
         </div>
