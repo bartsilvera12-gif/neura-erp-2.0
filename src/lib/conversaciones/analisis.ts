@@ -28,11 +28,16 @@ export { esquemaInforme, type Informe };
 
 type Msg = { conversacion_id: string; from_me: boolean; autor_usuario_id: string | null; desde_celular: boolean; tipo: string; contenido: string | null; created_at: string };
 
-/** Tapa lo que identifica a una persona: teléfonos, documentos, cuentas, correos. */
+/** Tapa lo que identifica a una persona: teléfonos, documentos, cuentas, correos. Los precios quedan. */
 export function anonimizar(t: string): string {
   return t
     .replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "[correo]")
-    .replace(/\+?\d[\d .-]{5,}\d/g, "[número]");
+    .replace(/\+?\d[\d .-]{5,}\d/g, (n, i: number, todo: string) => {
+      const antes = todo.slice(Math.max(0, i - 6), i).toLowerCase();
+      const despues = todo.slice(i + n.length, i + n.length + 12).toLowerCase();
+      const esPrecio = /(gs\.?|₲|\$)\s*$/.test(antes) || /^\s*(gs\b|₲|guaran|mil\b)/.test(despues);
+      return esPrecio && n.replace(/\D/g, "").length <= 9 ? n : "[número]";
+    });
 }
 
 function linea(m: Msg): string | null {
