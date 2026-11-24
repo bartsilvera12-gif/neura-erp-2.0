@@ -83,21 +83,23 @@ export default function EnviosPage() {
       {!tablero ? (
         <div className="py-20 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" /></div>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-4">
+        <div className="flex gap-4 overflow-x-auto px-0.5 pb-4">
           {tablero.estados.map((est) => {
             const lista = porEstado.get(est.id) ?? [];
+            const col = est.color ?? "#94a3b8";
             return (
-              <section key={est.id} className="flex w-[300px] shrink-0 flex-col rounded-2xl bg-slate-50/70 ring-1 ring-slate-200/70">
-                <header className="flex items-center gap-2 px-3 py-2.5">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: est.color ?? "#94a3b8" }} />
-                  <h2 className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-800">{est.nombre}</h2>
-                  <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-xs font-semibold tabular-nums text-slate-500 ring-1 ring-slate-200">{lista.length}</span>
+              <section key={est.id} className="flex w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-slate-50/50 shadow-sm">
+                <header className="relative flex items-center gap-2.5 px-3.5 pb-2.5 pt-3.5">
+                  <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: col }} />
+                  <span className="h-3 w-3 shrink-0 rounded-full ring-2 ring-white" style={{ backgroundColor: col }} />
+                  <h2 className="min-w-0 flex-1 truncate text-[12px] font-bold uppercase tracking-[0.08em] text-slate-600">{est.nombre}</h2>
+                  <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums" style={{ backgroundColor: `${col}22`, color: col }}>{lista.length}</span>
                 </header>
-                <ul className="flex-1 space-y-2 px-2 pb-3">
+                <ul className="flex-1 space-y-3 px-2.5 pb-3.5">
                   {lista.length === 0 ? (
-                    <li className="rounded-xl border border-dashed border-slate-200 px-3 py-6 text-center text-xs text-slate-400">Sin envíos</li>
+                    <li className="rounded-xl border border-dashed border-slate-200 bg-white/50 px-3 py-8 text-center text-xs text-slate-400">Sin envíos</li>
                   ) : lista.map((env) => (
-                    <TarjetaEnvio key={env.id} env={env} estados={tablero.estados} estadoOpts={estadoOpts} choferOpts={choferOpts}
+                    <TarjetaEnvio key={env.id} env={env} color={col} estadoOpts={estadoOpts} choferOpts={choferOpts}
                       ocupado={ocupado === env.id} onMover={(e) => mover(env, e)} onAsignar={(c) => asignar(env, c)} onEditar={() => setEditar(env)} />
                   ))}
                 </ul>
@@ -119,33 +121,34 @@ export default function EnviosPage() {
   );
 }
 
-function TarjetaEnvio({ env, estados, estadoOpts, choferOpts, ocupado, onMover, onAsignar, onEditar }: {
-  env: Envio; estados: EnvioEstado[]; estadoOpts: [string, string][]; choferOpts: [string, string][];
+function TarjetaEnvio({ env, color, estadoOpts, choferOpts, ocupado, onMover, onAsignar, onEditar }: {
+  env: Envio; color: string; estadoOpts: [string, string][]; choferOpts: [string, string][];
   ocupado: boolean; onMover: (estadoId: string) => void; onAsignar: (choferId: string) => void; onEditar: () => void;
 }) {
   const cobro = COBRO[env.cobro_estado];
   return (
-    <li className={`rounded-xl border border-slate-200 bg-white p-3 shadow-sm transition ${ocupado ? "opacity-60" : ""}`}>
+    <li className={`group relative overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--brand)_30%,#e2e8f0)] bg-white py-3 pl-4 pr-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--brand)] hover:shadow-[0_10px_24px_-10px_color-mix(in_srgb,var(--brand)_55%,transparent)] ${ocupado ? "pointer-events-none opacity-60" : ""}`}>
+      <span className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: color }} />
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-slate-900">{env.cliente_nombre || "Consumidor final"}</p>
-          {env.numero ? <p className="text-[11px] text-slate-400">#{env.numero}</p> : null}
+          <p className="truncate text-sm font-bold text-slate-900">{env.cliente_nombre || "Consumidor final"}</p>
+          {env.numero ? <span className="mt-0.5 inline-block rounded bg-slate-100 px-1.5 py-px font-mono text-[10px] font-medium text-slate-500">#{env.numero}</span> : null}
         </div>
-        <button type="button" onClick={onEditar} aria-label="Editar envío" className="shrink-0 rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+        <button type="button" onClick={onEditar} aria-label="Editar envío" className="shrink-0 rounded-lg p-1 text-slate-300 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand-700)] group-hover:text-slate-400">
           <Pencil className="h-3.5 w-3.5" />
         </button>
       </div>
       {env.direccion ? (
-        <p className="mt-1.5 flex items-start gap-1.5 text-xs text-slate-600"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="min-w-0">{env.direccion}{env.referencia ? <span className="text-slate-400"> · {env.referencia}</span> : null}</span></p>
-      ) : <p className="mt-1.5 text-xs text-amber-600">Sin dirección</p>}
-      {env.telefono ? <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-600"><Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />{env.telefono}</p> : null}
-      <div className="mt-2 flex items-center justify-between gap-2">
-        <span className="text-sm font-semibold tabular-nums text-slate-900">{gs(env.total)}</span>
-        {cobro ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${cobro.clase}`}>{cobro.texto}</span> : null}
+        <p className="mt-2 flex items-start gap-1.5 text-xs leading-snug text-slate-600"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--brand)]" /><span className="min-w-0">{env.direccion}{env.referencia ? <span className="text-slate-400"> · {env.referencia}</span> : null}</span></p>
+      ) : <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-600"><MapPin className="h-3.5 w-3.5 shrink-0" /> Sin dirección</p>}
+      {env.telefono ? <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />{env.telefono}</p> : null}
+      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
+        <span className="text-[15px] font-bold tabular-nums text-[var(--brand-700)]">{gs(env.total)}</span>
+        {cobro ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${cobro.clase}`}>{cobro.texto}</span> : null}
       </div>
       <div className="mt-2.5 space-y-1.5">
         <div className="flex items-center gap-1.5">
-          <Truck className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+          <Truck className="h-4 w-4 shrink-0 text-slate-400" />
           <Select value={env.chofer_id ?? ""} onChange={onAsignar} options={choferOpts} chico block etiqueta="Chofer" />
         </div>
         <Select value={env.estado_id} onChange={onMover} options={estadoOpts} chico block etiqueta="Mover a estado" />
