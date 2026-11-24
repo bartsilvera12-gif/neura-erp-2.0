@@ -5,6 +5,7 @@
  *     mover:   { id, estado_id }
  *     asignar: { id, chofer_id|null }
  *     editar:  { id, direccion?, referencia?, telefono?, notas? }
+ *     cobrar:  { id, metodo, referencia?, caja_id? }  (pago contra entrega, receta 173)
  */
 import { withTenant } from "@/lib/api/with-tenant";
 import { ok, fail } from "@/lib/api/responses";
@@ -30,6 +31,9 @@ export const POST = withTenant(async (ctx, req) => {
       break;
     case "editar":
       res = await ctx.db.rpc("envio_editar", { p: { id: str("id"), direccion: str("direccion"), referencia: str("referencia"), telefono: str("telefono"), notas: str("notas") } });
+      break;
+    case "cobrar":
+      res = await ctx.db.rpc("envio_cobrar", { p: { id: str("id"), metodo: str("metodo"), referencia: str("referencia"), caja_id: str("caja_id") } });
       break;
     default:
       return fail("Acción inválida");

@@ -7,7 +7,7 @@
  * Configuración (estados + choferes) con permiso envios_administrar.
  */
 import { useEffect, useMemo, useState } from "react";
-import { MapPin, Phone, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen } from "lucide-react";
+import { MapPin, Phone, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Banknote } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { useUsuario, tienePermiso } from "@/lib/sesion/ContextoUsuario";
@@ -34,6 +34,7 @@ export default function EnviosPage() {
   const [aviso, setAviso] = useState<string | null>(null);
   const [config, setConfig] = useState(false);
   const [editar, setEditar] = useState<Envio | null>(null);
+  const [cobrar, setCobrar] = useState<Envio | null>(null);
 
   const porEstado = useMemo(() => {
     const m = new Map<string, Envio[]>();
@@ -100,7 +101,7 @@ export default function EnviosPage() {
                     <li className="rounded-xl border border-dashed border-slate-200 bg-white/50 px-3 py-8 text-center text-xs text-slate-400">Sin envíos</li>
                   ) : lista.map((env) => (
                     <TarjetaEnvio key={env.id} env={env} color={col} estadoOpts={estadoOpts} choferOpts={choferOpts}
-                      ocupado={ocupado === env.id} onMover={(e) => mover(env, e)} onAsignar={(c) => asignar(env, c)} onEditar={() => setEditar(env)} />
+                      ocupado={ocupado === env.id} onMover={(e) => mover(env, e)} onAsignar={(c) => asignar(env, c)} onEditar={() => setEditar(env)} onCobrar={() => setCobrar(env)} />
                   ))}
                 </ul>
               </section>
@@ -116,14 +117,15 @@ export default function EnviosPage() {
       )}
 
       {editar ? <ModalEditarEnvio env={editar} onClose={() => setEditar(null)} onGuardado={async () => { setEditar(null); invalidar(URL_ENVIOS_TABLERO); await recargar(); }} /> : null}
+      {cobrar ? <ModalCobrarEnvio env={cobrar} onClose={() => setCobrar(null)} onCobrado={async () => { setCobrar(null); invalidar(URL_ENVIOS_TABLERO); await recargar(); }} /> : null}
       {config ? <ConfigEnvios onClose={() => { setConfig(false); invalidar(URL_ENVIOS_TABLERO); void recargar(); }} /> : null}
     </div>
   );
 }
 
-function TarjetaEnvio({ env, color, estadoOpts, choferOpts, ocupado, onMover, onAsignar, onEditar }: {
+function TarjetaEnvio({ env, color, estadoOpts, choferOpts, ocupado, onMover, onAsignar, onEditar, onCobrar }: {
   env: Envio; color: string; estadoOpts: [string, string][]; choferOpts: [string, string][];
-  ocupado: boolean; onMover: (estadoId: string) => void; onAsignar: (choferId: string) => void; onEditar: () => void;
+  ocupado: boolean; onMover: (estadoId: string) => void; onAsignar: (choferId: string) => void; onEditar: () => void; onCobrar: () => void;
 }) {
   const cobro = COBRO[env.cobro_estado];
   return (
@@ -146,6 +148,11 @@ function TarjetaEnvio({ env, color, estadoOpts, choferOpts, ocupado, onMover, on
         <span className="text-[15px] font-bold tabular-nums text-[var(--brand-700)]">{gs(env.total)}</span>
         {cobro ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${cobro.clase}`}>{cobro.texto}</span> : null}
       </div>
+      {env.cobro_estado === "pendiente" ? (
+        <button type="button" onClick={onCobrar} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700">
+          <Banknote className="h-4 w-4" /> Cobrar al entregar
+        </button>
+      ) : null}
       <div className="mt-2.5 space-y-1.5">
         <div className="flex items-center gap-1.5">
           <Truck className="h-4 w-4 shrink-0 text-slate-400" />
@@ -187,6 +194,53 @@ function ModalEditarEnvio({ env, onClose, onGuardado }: { env: Envio; onClose: (
         <label className="block"><span className={ET}>Referencia <span className="font-normal text-slate-400">(entre calles, color de casa…)</span></span><input value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={200} className={INPUT} /></label>
         <label className="block"><span className={ET}>Teléfono</span><input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={40} className={INPUT} /></label>
         <label className="block"><span className={ET}>Notas</span><textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} maxLength={500} className={`${INPUT} resize-none`} /></label>
+      </div>
+    </ModalDocumento>
+  );
+}
+
+function ModalCobrarEnvio({ env, onClose, onCobrado }: { env: Envio; onClose: () => void; onCobrado: () => void }) {
+  const [metodo, setMetodo] = useState("efectivo");
+  const [referencia, setReferencia] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const METODOS: [string, string][] = [["efectivo", "Efectivo"], ["transferencia", "Transferencia"], ["tarjeta", "Tarjeta"]];
+
+  async function cobrar() {
+    setBusy(true); setError(null);
+    try {
+      await apiFetch(URL_ENVIOS, { method: "POST", body: JSON.stringify({ accion: "cobrar", id: env.id, metodo, referencia: referencia.trim() || null }) });
+      onCobrado();
+    } catch (e) { setError((e as Error).message); setBusy(false); }
+  }
+
+  return (
+    <ModalDocumento titulo="Cobrar contra entrega" subtitulo={env.cliente_nombre ?? undefined} ancho="max-w-sm" onClose={busy ? undefined : onClose}
+      footer={<>
+        <button type="button" onClick={onClose} disabled={busy} className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:flex-1`}>Cancelar</button>
+        <button type="button" onClick={() => void cobrar()} disabled={busy} className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-emerald-700 disabled:opacity-50 max-sm:min-h-11 max-sm:flex-[2]">
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Banknote className="h-4 w-4" />} Cobrar {gs(env.total)}
+        </button>
+      </>}>
+      <div className="space-y-3.5">
+        {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
+        <div className="rounded-xl bg-[var(--brand-50)] px-3 py-3 text-center">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--brand-700)]/70">A cobrar</p>
+          <p className="text-2xl font-bold tabular-nums text-[var(--brand-700)]">{gs(env.total)}</p>
+        </div>
+        <div>
+          <span className={ET}>Forma de pago</span>
+          <div className="mt-1 grid grid-cols-3 gap-2">
+            {METODOS.map(([v, t]) => (
+              <button key={v} type="button" onClick={() => setMetodo(v)}
+                className={`rounded-lg border px-2 py-2.5 text-xs font-semibold transition ${metodo === v ? "border-[var(--brand)] bg-[var(--brand-50)] text-[var(--brand-700)] ring-2 ring-[var(--brand-100)]" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}>{t}</button>
+            ))}
+          </div>
+        </div>
+        {metodo !== "efectivo" ? (
+          <label className="block"><span className={ET}>Referencia <span className="font-normal text-slate-400">(opcional)</span></span><input value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={120} className={INPUT} placeholder="N° de operación, últimos dígitos…" /></label>
+        ) : null}
+        <p className="text-[11px] leading-snug text-slate-400">El cobro entra a tu caja abierta y la cuenta del cliente queda saldada.</p>
       </div>
     </ModalDocumento>
   );
