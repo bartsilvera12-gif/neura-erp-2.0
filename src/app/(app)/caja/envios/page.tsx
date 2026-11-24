@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable, pointerWithin, type DragStartEvent, type DragEndEvent } from "@dnd-kit/core";
-import { MapPin, Phone, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Package, Banknote, Clock, Search, ChevronRight, User } from "lucide-react";
+import { Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Package, Banknote, Clock, Search, User } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { useUsuario, tienePermiso } from "@/lib/sesion/ContextoUsuario";
@@ -198,85 +198,139 @@ function TarjetaDraggable({ env, color, chofer, estados, ocupado, onAbrir, onMov
   );
 }
 
+// Diseño inspirado en el tablero de proyectos de sistemas-propio: acento de color
+// a la izquierda, título + pills, un bloque con personas (Vend/Chofer) y datos, y
+// abajo el link al detalle + "Mover a". Toda la tarjeta arrastra; el footer no.
+const BADGE = "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium leading-4";
+const BADGE_NEUTRO = "inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-[10px] font-medium leading-4 text-slate-600";
+
 function TarjetaEnvio({ env, color, chofer, estados, onAbrir, onMover, enOverlay = false }: {
   env: Envio; color: string; chofer: string | null; estados?: EnvioEstado[]; onAbrir?: () => void; onMover?: (estadoId: string) => void; enOverlay?: boolean;
 }) {
   const cobro = COBRO[env.cobro_estado];
-  const inicial = (env.cliente_nombre || "C").trim().charAt(0).toUpperCase() || "C";
   return (
     <div
-      onClick={onAbrir}
-      role={onAbrir ? "button" : undefined}
-      className={`group flex min-h-[244px] flex-col overflow-hidden rounded-xl bg-white ring-1 transition ${
-        enOverlay ? "rotate-1 cursor-grabbing shadow-2xl ring-[var(--brand)]"
-        : onAbrir ? "cursor-grab ring-slate-200 hover:-translate-y-0.5 hover:shadow-lg hover:ring-[var(--brand)] active:cursor-grabbing" : "ring-slate-200"}`}
+      className={`rounded-2xl border border-l-4 border-slate-200 bg-white p-3.5 shadow-sm transition-all ${
+        enOverlay ? "rotate-1 cursor-grabbing shadow-2xl"
+        : onAbrir ? "cursor-grab hover:-translate-y-0.5 hover:shadow-md active:cursor-grabbing" : ""}`}
+      style={{ borderLeftColor: color }}
     >
-      <span className="block h-1 w-full" style={{ backgroundColor: color }} />
-      <div className="flex flex-1 flex-col p-2.5">
-        {/* Cliente + cuándo */}
+      {/* Contenido: tocar abre el detalle */}
+      <div onClick={onAbrir} role={onAbrir ? "button" : undefined} className={onAbrir ? "block w-full cursor-pointer text-left" : undefined}>
         <div className="flex items-start gap-2">
-          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-bold text-white shadow-sm" style={{ backgroundColor: color }}>{inicial}</span>
+          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[13px] font-bold leading-tight text-slate-900">{env.cliente_nombre || "Consumidor final"}</p>
-            <p className="mt-0.5 truncate text-[10px] text-slate-400">{env.numero ? <span className="font-mono">#{env.numero}</span> : null}{env.numero ? " · " : ""}{haceCuanto(env.creado_at)}{env.vendedor ? ` · ${env.vendedor}` : ""}</p>
+            <p className="truncate text-[15px] font-semibold leading-snug text-slate-950">{env.cliente_nombre || "Consumidor final"}</p>
+            <p className="mt-0.5 truncate text-xs font-medium text-slate-500">
+              {env.numero ? <span className="font-mono">#{env.numero}</span> : null}{env.numero ? " · " : ""}{haceCuanto(env.creado_at)}
+            </p>
           </div>
-          <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[var(--brand)]" />
         </div>
 
-        {/* Dirección + teléfono (bloque destacado) */}
-        <div className="mt-2 space-y-1.5 rounded-lg bg-slate-50 px-2.5 py-2">
-          {env.direccion ? (
-            <div className="flex items-start gap-1.5 text-[11px] leading-snug">
-              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
-              <span className="min-w-0 text-slate-700"><span className="font-medium">{env.direccion}</span>{env.referencia ? <span className="mt-0.5 block text-slate-400">{env.referencia}</span> : null}</span>
+        {/* Pills: cantidad, cobro y hora estimada */}
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          <span className={BADGE_NEUTRO}>{env.items} {env.items === 1 ? "producto" : "productos"}</span>
+          {cobro ? <span className={`${BADGE} border-transparent font-semibold ${cobro.clase}`}>{cobro.texto}</span> : <span className={BADGE_NEUTRO}>Contado</span>}
+          {env.hora_estimada ? <span className={`${BADGE} border-[color-mix(in_srgb,var(--brand)_30%,transparent)] bg-[var(--brand-50)] font-semibold text-[var(--brand-700)]`}><Clock className="mr-1 h-3 w-3" />{env.hora_estimada}</span> : null}
+        </div>
+
+        {/* Bloque: personas + datos del envío */}
+        <div className="mt-3 space-y-1.5 rounded-xl bg-slate-50/80 px-3 py-2.5">
+          <PersonaMeta rol="Vend" nombre={env.vendedor} />
+          <PersonaMeta rol="Chofer" nombre={chofer} />
+
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1 border-t border-slate-200/70 pt-1.5 text-[10.5px]">
+            <DatoMeta label="Teléfono" value={env.telefono || "—"} />
+            <DatoMeta label="Entrega est." value={env.hora_estimada || "A coordinar"} alerta={!env.hora_estimada} />
+            <div className="col-span-2">
+              <DatoMeta label="Dirección" value={env.direccion || "Falta cargar la dirección"} alerta={!env.direccion} sub={env.referencia} />
             </div>
-          ) : <p className="flex items-center gap-1.5 text-[11px] font-semibold text-amber-600"><MapPin className="h-3.5 w-3.5 shrink-0" /> Falta cargar la dirección</p>}
-          {env.telefono ? <p className="flex items-center gap-1.5 text-[11px] text-slate-600"><Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" /><span className="truncate">{env.telefono}</span></p> : null}
-        </div>
-
-        {/* Productos del pedido (nombre + cantidad) */}
-        {env.productos.length > 0 ? (
-          <div className="mt-2 rounded-lg border border-slate-100 px-2 py-1.5">
-            <p className="mb-1 flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wide text-slate-400"><Package className="h-3 w-3" />Pedido</p>
-            <ul className="space-y-0.5">
-              {env.productos.slice(0, 4).map((p, i) => (
-                <li key={i} className="flex items-center gap-1.5 text-[11px] text-slate-700">
-                  <span className="min-w-[1.5rem] shrink-0 rounded bg-[var(--brand-50)] px-1 py-0.5 text-center text-[10px] font-bold text-[var(--brand-700)]">{fmtCant(p.cantidad)}×</span>
-                  <span className="min-w-0 truncate">{p.nombre}</span>
-                </li>
-              ))}
-            </ul>
-            {env.productos.length > 4 ? <p className="mt-1 text-[10px] text-slate-400">+{env.productos.length - 4} {env.productos.length - 4 === 1 ? "producto" : "productos"} más</p> : null}
           </div>
-        ) : null}
-        {env.hora_estimada ? (
-          <p className="mt-2 inline-flex items-center gap-1 rounded-md bg-[var(--brand-50)] px-1.5 py-0.5 text-[10px] font-semibold text-[var(--brand-700)]"><Clock className="h-3 w-3" />Entrega estimada {env.hora_estimada}</p>
-        ) : null}
 
-        {/* Total + estado de cobro */}
-        <div className="mt-2 flex items-end justify-between gap-2">
-          <div>
-            <p className="text-[9px] font-medium uppercase tracking-wide text-slate-400">Total</p>
-            <p className="text-base font-bold leading-none tabular-nums text-slate-900">{gs(env.total)}</p>
+          {env.productos.length > 0 ? (
+            <div className="border-t border-slate-200/70 pt-1.5">
+              <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Pedido</span>
+              <ul className="mt-0.5 space-y-0.5">
+                {env.productos.slice(0, 3).map((p, i) => (
+                  <li key={i} className="flex items-center gap-1.5 text-[11px] text-slate-700">
+                    <span className="min-w-[1.4rem] shrink-0 rounded bg-white px-1 text-center text-[10px] font-bold text-slate-500 ring-1 ring-slate-200">{fmtCant(p.cantidad)}×</span>
+                    <span className="min-w-0 truncate">{p.nombre}</span>
+                  </li>
+                ))}
+              </ul>
+              {env.productos.length > 3 ? <p className="mt-0.5 text-[10px] text-slate-400">+{env.productos.length - 3} {env.productos.length - 3 === 1 ? "producto" : "productos"} más</p> : null}
+            </div>
+          ) : null}
+
+          <div className="border-t border-slate-200/70 pt-1.5">
+            <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Total</span>
+            <div className="text-sm font-bold tabular-nums text-slate-900">{gs(env.total)}</div>
           </div>
-          {cobro ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${cobro.clase}`}>{cobro.texto}</span> : null}
         </div>
-
-        {/* Chofer */}
-        <div className="mt-auto flex items-center gap-1.5 border-t border-slate-100 pt-2">
-          <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${chofer ? "bg-[var(--brand-50)] text-[var(--brand-700)]" : "bg-slate-100 text-slate-400"}`}><Truck className="h-3 w-3" /></span>
-          {chofer ? <span className="truncate text-xs font-semibold text-slate-700">{chofer}</span> : <span className="text-xs text-slate-400">Sin chofer asignado</span>}
-        </div>
-
-        {/* Selector de estado: cambio rápido sin arrastrar (clave en celular).
-            stopPropagation: no arranca el arrastre ni abre el detalle. */}
-        {onMover && estados && !enOverlay ? (
-          <div className="mt-2" onPointerDownCapture={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
-            <Select value={env.estado_id} onChange={(id) => { if (id !== env.estado_id) onMover(id); }}
-              options={estados.map((e) => [e.id, e.nombre] as [string, string])} chico block etiqueta="Cambiar estado" />
-          </div>
-        ) : null}
       </div>
+
+      {/* Footer: ver detalle + mover a (no arrastra ni abre el detalle) */}
+      {!enOverlay && onMover && estados ? (
+        <>
+          <div className="mt-3 border-t border-slate-100 pt-3" onClick={(e) => e.stopPropagation()}>
+            <button type="button" onClick={(e) => { e.stopPropagation(); onAbrir?.(); }} className="text-[11px] font-semibold text-[var(--brand)] hover:underline">
+              Ver detalle completo
+            </button>
+          </div>
+          <div className="mt-2 rounded-xl border border-slate-200 bg-slate-50 px-2.5 py-2" onClick={(e) => e.stopPropagation()} onPointerDownCapture={(e) => e.stopPropagation()}>
+            <label className="block text-[10px] font-semibold uppercase tracking-wide text-slate-500">Mover a</label>
+            <div className="mt-1">
+              <Select value={env.estado_id} onChange={(id) => { if (id !== env.estado_id) onMover(id); }}
+                options={estados.map((e) => [e.id, e.nombre] as [string, string])} chico block etiqueta="Mover a" />
+            </div>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+/** Paleta de avatares: el color sale del nombre (misma persona, mismo color). */
+const COLORES_PERSONA = ["#4FAEB2", "#8b5cf6", "#f59e0b", "#ec4899", "#22c55e", "#0ea5e9"];
+function colorDePersona(nombre: string): string {
+  let h = 0;
+  for (let i = 0; i < nombre.length; i++) h = (h * 31 + nombre.charCodeAt(i)) >>> 0;
+  return COLORES_PERSONA[h % COLORES_PERSONA.length];
+}
+function inicialesNombre(nombre: string): string {
+  const p = nombre.trim().split(/\s+/).filter(Boolean);
+  if (p.length >= 2) return `${p[0][0]}${p[1][0]}`.toUpperCase();
+  return nombre.trim().slice(0, 2).toUpperCase();
+}
+
+/** Rol + avatar + nombre en una línea (Vend / Chofer). */
+function PersonaMeta({ rol, nombre }: { rol: string; nombre?: string | null }) {
+  const completo = (nombre ?? "").trim();
+  if (!completo) {
+    return (
+      <div className="flex min-w-0 items-center gap-1.5">
+        <span className="w-12 shrink-0 text-[9px] font-bold uppercase tracking-wide text-slate-400">{rol}</span>
+        <span className="text-[11px] text-slate-300">Sin asignar</span>
+      </div>
+    );
+  }
+  const color = colorDePersona(completo);
+  return (
+    <div className="flex min-w-0 items-center gap-1.5" title={`${rol}: ${completo}`}>
+      <span className="w-12 shrink-0 text-[9px] font-bold uppercase tracking-wide text-slate-400">{rol}</span>
+      <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-bold" style={{ background: `${color}22`, color }}>{inicialesNombre(completo)}</span>
+      <span className="min-w-0 truncate text-[11px] font-medium text-slate-700">{completo}</span>
+    </div>
+  );
+}
+
+/** Etiqueta + valor; con `alerta` se resalta en ámbar. `sub` es una segunda línea gris. */
+function DatoMeta({ label, value, alerta, sub }: { label: string; value: string; alerta?: boolean; sub?: string | null }) {
+  return (
+    <div className="min-w-0">
+      <span className="text-[9px] font-bold uppercase tracking-wide text-slate-400">{label}</span>
+      <div className={`truncate ${alerta ? "font-semibold text-amber-600" : "text-slate-700"}`}>{value}</div>
+      {sub ? <div className="truncate text-[10px] text-slate-400">{sub}</div> : null}
     </div>
   );
 }
