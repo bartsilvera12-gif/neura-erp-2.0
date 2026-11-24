@@ -7,7 +7,8 @@
  * Configuración (estados + choferes) con permiso envios_administrar.
  */
 import { useEffect, useMemo, useState } from "react";
-import { MapPin, Phone, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Banknote, Clock, Search } from "lucide-react";
+import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable, pointerWithin, type DragStartEvent, type DragEndEvent } from "@dnd-kit/core";
+import { MapPin, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Banknote, Clock, Search, ChevronRight } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { useUsuario, tienePermiso } from "@/lib/sesion/ContextoUsuario";
@@ -33,10 +34,16 @@ export default function EnviosPage() {
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [config, setConfig] = useState(false);
-  const [editar, setEditar] = useState<Envio | null>(null);
+  const [detalleId, setDetalleId] = useState<string | null>(null);
   const [cobrar, setCobrar] = useState<Envio | null>(null);
   const [filtroChofer, setFiltroChofer] = useState("");
   const [busqueda, setBusqueda] = useState("");
+  const [arrastrando, setArrastrando] = useState<Envio | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 140, tolerance: 8 } }),
+  );
 
   const porEstado = useMemo(() => {
     const q = busqueda.trim().toLowerCase();
@@ -51,9 +58,11 @@ export default function EnviosPage() {
     return m;
   }, [tablero, filtroChofer, busqueda]);
 
-  const choferOpts: [string, string][] = [["", "Sin chofer"], ...(tablero?.choferes ?? []).map((c) => [c.id, c.nombre] as [string, string])];
-  const estadoOpts: [string, string][] = (tablero?.estados ?? []).map((e) => [e.id, e.nombre]);
+  const choferesPorId = useMemo(() => new Map((tablero?.choferes ?? []).map((c) => [c.id, c.nombre])), [tablero]);
+  const colorDeEstado = (id: string) => tablero?.estados.find((e) => e.id === id)?.color ?? "#94a3b8";
   const filtroChoferOpts: [string, string][] = [["", "Todos los choferes"], ["__sin__", "Sin asignar"], ...(tablero?.choferes ?? []).map((c) => [c.id, c.nombre] as [string, string])];
+  // El detalle sale del tablero vivo: tras cada acción + recarga, se re-renderiza con datos frescos.
+  const detalle = detalleId ? (tablero?.envios.find((e) => e.id === detalleId) ?? null) : null;
 
   async function accion(fn: () => Promise<unknown>, id: string) {
     setOcupado(id);
@@ -74,9 +83,19 @@ export default function EnviosPage() {
   const asignar = (env: Envio, chofer_id: string) =>
     accion(() => apiFetch(URL_ENVIOS, { method: "POST", body: JSON.stringify({ accion: "asignar", id: env.id, chofer_id: chofer_id || null }) }), env.id);
 
+  function onDragStart(e: DragStartEvent) {
+    setArrastrando(tablero?.envios.find((x) => x.id === e.active.id) ?? null);
+  }
+  function onDragEnd(e: DragEndEvent) {
+    setArrastrando(null);
+    const env = tablero?.envios.find((x) => x.id === e.active.id);
+    const estadoId = e.over ? String(e.over.id) : null;
+    if (env && estadoId && estadoId !== env.estado_id) void mover(env, estadoId);
+  }
+
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-5 sm:px-6">
-      <Cabecera kicker="Caja · Entregas" titulo="Envíos" subtitulo="Seguí cada entrega y asigná choferes" volver={{ href: "/caja/panel", label: "Caja" }}>
+      <Cabecera kicker="Caja · Entregas" titulo="Envíos" subtitulo="Arrastrá cada entrega entre columnas · tocala para ver y cambiar todo" volver={{ href: "/caja/panel", label: "Caja" }}>
         {puedeConfig ? (
           <button type="button" onClick={() => setConfig(true)} className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:w-full`}>
             <Settings2 className="h-4 w-4" /> Configurar
@@ -102,88 +121,112 @@ export default function EnviosPage() {
 
       {!tablero ? (
         <div className="py-20 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" /></div>
-      ) : (
-        <div className="flex gap-4 overflow-x-auto px-0.5 pb-4">
-          {tablero.estados.map((est) => {
-            const lista = porEstado.get(est.id) ?? [];
-            const col = est.color ?? "#94a3b8";
-            return (
-              <section key={est.id} className="flex w-[320px] shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200/70 bg-slate-50/50 shadow-sm">
-                <header className="relative flex items-center gap-2.5 px-3.5 pb-2.5 pt-3.5">
-                  <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: col }} />
-                  <span className="h-3 w-3 shrink-0 rounded-full ring-2 ring-white" style={{ backgroundColor: col }} />
-                  <h2 className="min-w-0 flex-1 truncate text-[12px] font-bold uppercase tracking-[0.08em] text-slate-600">{est.nombre}</h2>
-                  <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums" style={{ backgroundColor: `${col}22`, color: col }}>{lista.length}</span>
-                </header>
-                <ul className="flex-1 space-y-3 px-2.5 pb-3.5">
-                  {lista.length === 0 ? (
-                    <li className="rounded-xl border border-dashed border-slate-200 bg-white/50 px-3 py-8 text-center text-xs text-slate-400">Sin envíos</li>
-                  ) : lista.map((env) => (
-                    <TarjetaEnvio key={env.id} env={env} color={col} estadoOpts={estadoOpts} choferOpts={choferOpts}
-                      ocupado={ocupado === env.id} onMover={(e) => mover(env, e)} onAsignar={(c) => asignar(env, c)} onEditar={() => setEditar(env)} onCobrar={() => setCobrar(env)} />
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
-          {tablero.estados.length === 0 ? (
-            <div className="flex w-full flex-col items-center gap-2 py-20 text-center text-sm text-slate-500">
-              <PackageOpen className="h-8 w-8 text-slate-300" />
-              No hay estados configurados.
-            </div>
-          ) : null}
+      ) : tablero.estados.length === 0 ? (
+        <div className="flex flex-col items-center gap-2 py-20 text-center text-sm text-slate-500">
+          <PackageOpen className="h-8 w-8 text-slate-300" /> No hay estados configurados.
         </div>
+      ) : (
+        <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragEnd={onDragEnd}>
+          <div className="flex gap-4 overflow-x-auto px-0.5 pb-4">
+            {tablero.estados.map((est) => (
+              <ColumnaEstado key={est.id} estado={est} envios={porEstado.get(est.id) ?? []} arrastrando={!!arrastrando}>
+                {(porEstado.get(est.id) ?? []).map((env) => (
+                  <TarjetaDraggable key={env.id} env={env} color={est.color ?? "#94a3b8"} chofer={env.chofer_id ? choferesPorId.get(env.chofer_id) ?? null : null}
+                    ocupado={ocupado === env.id} onAbrir={() => setDetalleId(env.id)} />
+                ))}
+              </ColumnaEstado>
+            ))}
+          </div>
+          <DragOverlay dropAnimation={null}>
+            {arrastrando ? <TarjetaEnvio env={arrastrando} color={colorDeEstado(arrastrando.estado_id)} chofer={arrastrando.chofer_id ? choferesPorId.get(arrastrando.chofer_id) ?? null : null} enOverlay /> : null}
+          </DragOverlay>
+        </DndContext>
       )}
 
-      {editar ? <ModalEditarEnvio env={editar} onClose={() => setEditar(null)} onGuardado={async () => { setEditar(null); invalidar(URL_ENVIOS_TABLERO); await recargar(); }} /> : null}
+      {detalle ? (
+        <ModalEnvioDetalle env={detalle} estados={tablero?.estados ?? []} choferes={tablero?.choferes ?? []} ocupado={ocupado === detalle.id}
+          onClose={() => setDetalleId(null)} onMover={(e) => mover(detalle, e)} onAsignar={(c) => asignar(detalle, c)}
+          onCambio={async () => { invalidar(URL_ENVIOS_TABLERO); await recargar(); }} onCobrar={() => setCobrar(detalle)} />
+      ) : null}
       {cobrar ? <ModalCobrarEnvio env={cobrar} onClose={() => setCobrar(null)} onCobrado={async () => { setCobrar(null); invalidar(URL_ENVIOS_TABLERO); await recargar(); }} /> : null}
       {config ? <ConfigEnvios onClose={() => { setConfig(false); invalidar(URL_ENVIOS_TABLERO); void recargar(); }} /> : null}
     </div>
   );
 }
 
-function TarjetaEnvio({ env, color, estadoOpts, choferOpts, ocupado, onMover, onAsignar, onEditar, onCobrar }: {
-  env: Envio; color: string; estadoOpts: [string, string][]; choferOpts: [string, string][];
-  ocupado: boolean; onMover: (estadoId: string) => void; onAsignar: (choferId: string) => void; onEditar: () => void; onCobrar: () => void;
-}) {
-  const cobro = COBRO[env.cobro_estado];
+// Columna = estado (drop target). Resalta cuando se arrastra una tarjeta encima.
+function ColumnaEstado({ estado, envios, arrastrando, children }: { estado: EnvioEstado; envios: Envio[]; arrastrando: boolean; children: React.ReactNode }) {
+  const { setNodeRef, isOver } = useDroppable({ id: estado.id });
+  const col = estado.color ?? "#94a3b8";
   return (
-    <li className={`group relative overflow-hidden rounded-xl border border-[color-mix(in_srgb,var(--brand)_30%,#e2e8f0)] bg-white py-3 pl-4 pr-3 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-all duration-150 hover:-translate-y-0.5 hover:border-[var(--brand)] hover:shadow-[0_10px_24px_-10px_color-mix(in_srgb,var(--brand)_55%,transparent)] ${ocupado ? "pointer-events-none opacity-60" : ""}`}>
-      <span className="absolute inset-y-0 left-0 w-1.5" style={{ backgroundColor: color }} />
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="truncate text-sm font-bold text-slate-900">{env.cliente_nombre || "Consumidor final"}</p>
-          {env.numero ? <span className="mt-0.5 inline-block rounded bg-slate-100 px-1.5 py-px font-mono text-[10px] font-medium text-slate-500">#{env.numero}</span> : null}
-        </div>
-        <button type="button" onClick={onEditar} aria-label="Editar envío" className="shrink-0 rounded-lg p-1 text-slate-300 transition hover:bg-[var(--brand-50)] hover:text-[var(--brand-700)] group-hover:text-slate-400">
-          <Pencil className="h-3.5 w-3.5" />
-        </button>
+    <section className={`flex w-[300px] shrink-0 flex-col overflow-hidden rounded-2xl border bg-slate-50/50 transition-colors ${isOver ? "border-[var(--brand)] bg-[var(--brand-50)]" : "border-slate-200/70"}`}>
+      <header className="relative flex items-center gap-2.5 px-3.5 pb-2.5 pt-3.5">
+        <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: col }} />
+        <span className="h-3 w-3 shrink-0 rounded-full ring-2 ring-white" style={{ backgroundColor: col }} />
+        <h2 className="min-w-0 flex-1 truncate text-[12px] font-bold uppercase tracking-[0.08em] text-slate-600">{estado.nombre}</h2>
+        <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums" style={{ backgroundColor: `${col}22`, color: col }}>{envios.length}</span>
+      </header>
+      <div ref={setNodeRef} className="flex-1 space-y-2.5 px-2.5 pb-3.5">
+        {envios.length === 0 ? (
+          <div className={`rounded-xl border border-dashed px-3 py-8 text-center text-xs transition-colors ${isOver || arrastrando ? "border-[var(--brand)] text-[var(--brand-700)]" : "border-slate-200 text-slate-400"}`}>{arrastrando ? "Soltá acá" : "Sin envíos"}</div>
+        ) : children}
       </div>
-      {env.direccion ? (
-        <p className="mt-2 flex items-start gap-1.5 text-xs leading-snug text-slate-600"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--brand)]" /><span className="min-w-0">{env.direccion}{env.referencia ? <span className="text-slate-400"> · {env.referencia}</span> : null}</span></p>
-      ) : <p className="mt-2 flex items-center gap-1.5 text-xs font-medium text-amber-600"><MapPin className="h-3.5 w-3.5 shrink-0" /> Sin dirección</p>}
-      {env.telefono ? <p className="mt-1 flex items-center gap-1.5 text-xs text-slate-500"><Phone className="h-3.5 w-3.5 shrink-0 text-slate-400" />{env.telefono}</p> : null}
-      <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
-        <span className="text-[15px] font-bold tabular-nums text-[var(--brand-700)]">{gs(env.total)}</span>
-        {cobro ? <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${cobro.clase}`}>{cobro.texto}</span> : null}
-      </div>
-      {env.cobro_estado === "pendiente" ? (
-        <button type="button" onClick={onCobrar} className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-700">
-          <Banknote className="h-4 w-4" /> Cobrar al entregar
-        </button>
-      ) : null}
-      <div className="mt-2.5 space-y-1.5">
-        <div className="flex items-center gap-1.5">
-          <Truck className="h-4 w-4 shrink-0 text-slate-400" />
-          <Select value={env.chofer_id ?? ""} onChange={onAsignar} options={choferOpts} chico block etiqueta="Chofer" />
-        </div>
-        <Select value={env.estado_id} onChange={onMover} options={estadoOpts} chico block etiqueta="Mover a estado" />
-      </div>
-    </li>
+    </section>
   );
 }
 
-function ModalEditarEnvio({ env, onClose, onGuardado }: { env: Envio; onClose: () => void; onGuardado: () => void }) {
+// Envoltorio arrastrable (@dnd-kit). En desktop se arrastra con el mouse; en táctil, mantené
+// apretado un instante y arrastrá. Un toque corto (sin arrastrar) abre el detalle.
+function TarjetaDraggable({ env, color, chofer, ocupado, onAbrir }: {
+  env: Envio; color: string; chofer: string | null; ocupado: boolean; onAbrir: () => void;
+}) {
+  const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: env.id });
+  return (
+    <div ref={setNodeRef} {...attributes} {...listeners}
+      className={`${isDragging ? "opacity-40" : ""} ${ocupado ? "pointer-events-none opacity-60" : ""}`}>
+      <TarjetaEnvio env={env} color={color} chofer={chofer} onAbrir={onAbrir} />
+    </div>
+  );
+}
+
+function TarjetaEnvio({ env, color, chofer, onAbrir, enOverlay = false }: {
+  env: Envio; color: string; chofer: string | null; onAbrir?: () => void; enOverlay?: boolean;
+}) {
+  const cobro = COBRO[env.cobro_estado];
+  return (
+    <div
+      onClick={onAbrir}
+      role={onAbrir ? "button" : undefined}
+      className={`group flex gap-2.5 rounded-xl bg-white p-3 ring-1 transition ${
+        enOverlay ? "rotate-2 cursor-grabbing shadow-2xl ring-[var(--brand)]"
+        : onAbrir ? "cursor-grab ring-slate-200/80 hover:ring-[var(--brand)] hover:shadow-md active:cursor-grabbing" : "ring-slate-200/80"}`}
+    >
+      <span className="w-1 shrink-0 self-stretch rounded-full" style={{ backgroundColor: color }} />
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-1.5">
+          <p className="min-w-0 flex-1 truncate text-sm font-semibold text-slate-900">{env.cliente_nombre || "Consumidor final"}</p>
+          {env.numero ? <span className="shrink-0 font-mono text-[10px] text-slate-400">#{env.numero}</span> : null}
+          <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition group-hover:text-[var(--brand)]" />
+        </div>
+        {env.direccion ? (
+          <p className="mt-1 flex items-start gap-1 text-xs leading-snug text-slate-500"><MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--brand)]" /><span className="min-w-0 truncate">{env.direccion}</span></p>
+        ) : <p className="mt-1 flex items-center gap-1 text-xs font-medium text-amber-600"><MapPin className="h-3.5 w-3.5 shrink-0" /> Sin dirección</p>}
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="text-sm font-bold tabular-nums text-slate-800">{gs(env.total)}</span>
+          <span className={`inline-flex min-w-0 items-center gap-1 text-xs ${chofer ? "font-medium text-slate-600" : "text-slate-400"}`}>
+            <Truck className="h-3.5 w-3.5 shrink-0" /><span className="truncate">{chofer ?? "Sin chofer"}</span>
+          </span>
+        </div>
+        {cobro ? <span className={`mt-2 inline-block rounded-full px-2 py-0.5 text-[10px] font-bold ${cobro.clase}`}>{cobro.texto}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+function ModalEnvioDetalle({ env, estados, choferes, ocupado, onClose, onMover, onAsignar, onCambio, onCobrar }: {
+  env: Envio; estados: EnvioEstado[]; choferes: { id: string; nombre: string }[]; ocupado: boolean;
+  onClose: () => void; onMover: (estadoId: string) => void; onAsignar: (choferId: string) => void; onCambio: () => void | Promise<void>; onCobrar: () => void;
+}) {
   const [direccion, setDireccion] = useState(env.direccion ?? "");
   const [referencia, setReferencia] = useState(env.referencia ?? "");
   const [telefono, setTelefono] = useState(env.telefono ?? "");
@@ -191,35 +234,74 @@ function ModalEditarEnvio({ env, onClose, onGuardado }: { env: Envio; onClose: (
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [historial, setHistorial] = useState<EnvioHistorial[] | null>(null);
-  useMountEffect(() => {
+
+  useEffect(() => {
     apiFetch<EnvioHistorial[]>(`${URL_ENVIOS_HISTORIAL}?id=${env.id}`).then(setHistorial).catch(() => setHistorial([]));
-  });
+  }, [env.id, env.estado_id]);
+
+  const choferOpts: [string, string][] = [["", "Sin chofer"], ...choferes.map((c) => [c.id, c.nombre] as [string, string])];
 
   async function guardar() {
     setBusy(true); setError(null);
     try {
       await apiFetch(URL_ENVIOS, { method: "POST", body: JSON.stringify({ accion: "editar", id: env.id, direccion, referencia, telefono, notas }) });
-      onGuardado();
+      await onCambio();
+      onClose();
     } catch (e) { setError((e as Error).message); setBusy(false); }
   }
 
   return (
-    <ModalDocumento titulo="Datos del envío" subtitulo={env.cliente_nombre ?? undefined} ancho="max-w-md" onClose={busy ? undefined : onClose}
+    <ModalDocumento titulo={env.cliente_nombre || "Envío"} subtitulo={`${env.numero ? `#${env.numero} · ` : ""}${gs(env.total)}`} ancho="max-w-md" onClose={busy ? undefined : onClose}
       footer={<>
-        <button type="button" onClick={onClose} disabled={busy} className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:flex-1`}>Cancelar</button>
+        <button type="button" onClick={onClose} disabled={busy} className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:flex-1`}>Cerrar</button>
         <button type="button" onClick={() => void guardar()} disabled={busy} className={`${BOTON_PRIMARIO} max-sm:min-h-11 max-sm:flex-[2]`}>
-          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar
+          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar datos
         </button>
       </>}>
-      <div className="space-y-3">
+      <div className="space-y-4">
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
-        <label className="block"><span className={ET}>Dirección</span><input value={direccion} onChange={(e) => setDireccion(e.target.value)} maxLength={300} className={INPUT} /></label>
-        <label className="block"><span className={ET}>Referencia <span className="font-normal text-slate-400">(entre calles, color de casa…)</span></span><input value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={200} className={INPUT} /></label>
-        <label className="block"><span className={ET}>Teléfono</span><input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={40} className={INPUT} /></label>
-        <label className="block"><span className={ET}>Notas</span><textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} maxLength={500} className={`${INPUT} resize-none`} /></label>
-        {historial === null ? (
-          <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin text-slate-300" /></div>
-        ) : historial.length > 0 ? (
+
+        {env.cobro_estado === "pendiente" ? (
+          <button type="button" onClick={onCobrar} className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700">
+            <Banknote className="h-4 w-4" /> Cobrar al entregar · {gs(env.total)}
+          </button>
+        ) : env.cobro_estado === "cobrado" ? (
+          <p className="flex items-center justify-center gap-1.5 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700"><Banknote className="h-4 w-4" /> Cobrado</p>
+        ) : null}
+
+        {/* Estado: tocá para mover (o arrastrá la tarjeta en el tablero). */}
+        <div>
+          <span className={ET}>Estado</span>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {estados.map((e) => {
+              const activo = e.id === env.estado_id;
+              return (
+                <button key={e.id} type="button" disabled={ocupado} onClick={() => !activo && onMover(e.id)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition disabled:opacity-60 ${activo ? "text-white shadow-sm" : "border-slate-200 text-slate-600 hover:border-slate-300"}`}
+                  style={activo ? { backgroundColor: e.color ?? "#64748b", borderColor: e.color ?? "#64748b" } : undefined}>
+                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: activo ? "#ffffff" : (e.color ?? "#94a3b8") }} />
+                  {e.nombre}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Chofer */}
+        <div>
+          <span className={ET}>Chofer</span>
+          <div className="mt-1.5"><Select value={env.chofer_id ?? ""} onChange={onAsignar} options={choferOpts} block disabled={ocupado} /></div>
+        </div>
+
+        {/* Datos de entrega */}
+        <div className="space-y-3 border-t border-slate-100 pt-3">
+          <label className="block"><span className={ET}>Dirección</span><input value={direccion} onChange={(e) => setDireccion(e.target.value)} maxLength={300} className={INPUT} /></label>
+          <label className="block"><span className={ET}>Referencia <span className="font-normal text-slate-400">(entre calles, color de casa…)</span></span><input value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={200} className={INPUT} /></label>
+          <label className="block"><span className={ET}>Teléfono</span><input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={40} className={INPUT} /></label>
+          <label className="block"><span className={ET}>Notas</span><textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} maxLength={500} className={`${INPUT} resize-none`} /></label>
+        </div>
+
+        {historial && historial.length > 0 ? (
           <div className="border-t border-slate-100 pt-3">
             <p className={ET}>Línea de tiempo</p>
             <ul className="mt-2 space-y-2.5">
