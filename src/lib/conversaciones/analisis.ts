@@ -128,9 +128,20 @@ export async function correrAnalisis(analisisId: string): Promise<void> {
     const costo = ((r.usage.input_tokens + (r.usage.cache_creation_input_tokens ?? 0)) * USD_ENTRADA + r.usage.output_tokens * USD_SALIDA) / 1_000_000;
     if (r.stop_reason === "refusal") throw new Error("Claude no quiso analizar estas conversaciones");
     if (r.stop_reason === "max_tokens") throw new Error("El informe quedó cortado: probá con un período más corto");
-    const texto = r.content.find((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")?.text ?? "";
-    const p = esquemaInforme.safeParse(JSON.parse(texto));
-    if (!p.success) throw new Error("La respuesta de Claude no tuvo el formato esperado");
+    // El informe es el último bloque de texto (con el fallback del servidor puede venir más de uno).
+    const textos2 = r.content.filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text").map((b) => b.text.trim()).filter(Boolean);
+    const texto = textos2.at(-1) ?? "";
+    let json: unknown;
+    try {
+      json = JSON.parse(texto.replace(/^```(?:json)?\s*|\s*```$/g, ""));
+    } catch {
+      throw new Error(`La respuesta de Claude no fue JSON (stop: ${r.stop_reason}, bloques: ${r.content.map((b) => b.type).join(",")}): ${texto.slice(0, 200)}`);
+    }
+    const p = esquemaInforme.safeParse(json);
+    if (!p.success) {
+      const detalle = p.error.issues.slice(0, 3).map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
+      throw new Error(`La respuesta de Claude no tuvo el formato esperado (${detalle})`);
+    }
     await terminar({ estado: "listo", conversaciones: textos.length, mensajes, resultado: p.data, costo_usd: Math.round(costo * 10_000) / 10_000 });
   } catch (e) {
     const msg = e instanceof Anthropic.APIError ? `Claude respondió ${e.status}: ${e.message}` : (e as Error).message;
