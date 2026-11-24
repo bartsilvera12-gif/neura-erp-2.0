@@ -207,12 +207,12 @@ function TarjetaEnvio({ env, color, chofer, onAbrir, enOverlay = false }: {
     <div
       onClick={onAbrir}
       role={onAbrir ? "button" : undefined}
-      className={`group overflow-hidden rounded-2xl bg-white ring-1 transition ${
+      className={`group flex min-h-[340px] flex-col overflow-hidden rounded-2xl bg-white ring-1 transition ${
         enOverlay ? "rotate-1 cursor-grabbing shadow-2xl ring-[var(--brand)]"
         : onAbrir ? "cursor-grab ring-slate-200 hover:-translate-y-0.5 hover:shadow-lg hover:ring-[var(--brand)] active:cursor-grabbing" : "ring-slate-200"}`}
     >
       <span className="block h-1.5 w-full" style={{ backgroundColor: color }} />
-      <div className="p-3.5">
+      <div className="flex flex-1 flex-col p-3.5">
         {/* Cliente + cuándo */}
         <div className="flex items-start gap-2.5">
           <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-sm font-bold text-white shadow-sm" style={{ backgroundColor: color }}>{inicial}</span>
@@ -263,7 +263,7 @@ function TarjetaEnvio({ env, color, chofer, onAbrir, enOverlay = false }: {
         </div>
 
         {/* Chofer */}
-        <div className="mt-3 flex items-center gap-2 border-t border-slate-100 pt-2.5">
+        <div className="mt-auto flex items-center gap-2 border-t border-slate-100 pt-2.5">
           <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-full ${chofer ? "bg-[var(--brand-50)] text-[var(--brand-700)]" : "bg-slate-100 text-slate-400"}`}><Truck className="h-3.5 w-3.5" /></span>
           {chofer ? <span className="truncate text-sm font-semibold text-slate-700">{chofer}</span> : <span className="text-sm text-slate-400">Sin chofer asignado</span>}
         </div>
