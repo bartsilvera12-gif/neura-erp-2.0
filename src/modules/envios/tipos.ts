@@ -34,6 +34,12 @@ export type Envio = {
   total: number;
   cobro_estado: EnvioCobro;
   notas: string | null;
+  /** Cantidad de productos de la venta (receta 176). */
+  items: number;
+  /** Detalle de productos del pedido (receta 177). */
+  productos: { nombre: string; cantidad: number }[];
+  /** Hora estimada de entrega "HH:MM" (receta 176). */
+  hora_estimada: string | null;
   creado_at: string;
   entregado_at: string | null;
 };

@@ -8,7 +8,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useSensor, useSensors, useDraggable, useDroppable, pointerWithin, type DragStartEvent, type DragEndEvent } from "@dnd-kit/core";
-import { MapPin, Phone, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Banknote, Clock, Search, ChevronRight } from "lucide-react";
+import { MapPin, Phone, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Package, Banknote, Clock, Search, ChevronRight } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { useUsuario, tienePermiso } from "@/lib/sesion/ContextoUsuario";
@@ -234,6 +234,25 @@ function TarjetaEnvio({ env, color, chofer, onAbrir, enOverlay = false }: {
           {env.telefono ? <p className="flex items-center gap-2 text-xs text-slate-600"><Phone className="h-4 w-4 shrink-0 text-slate-400" /><span className="truncate">{env.telefono}</span></p> : null}
         </div>
 
+        {/* Productos del pedido (nombre + cantidad) */}
+        {env.productos.length > 0 ? (
+          <div className="mt-2.5 rounded-xl border border-slate-100 px-2.5 py-2">
+            <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-slate-400"><Package className="h-3.5 w-3.5" />Pedido</p>
+            <ul className="space-y-1">
+              {env.productos.slice(0, 4).map((p, i) => (
+                <li key={i} className="flex items-center gap-2 text-xs text-slate-700">
+                  <span className="min-w-[1.7rem] shrink-0 rounded bg-[var(--brand-50)] px-1 py-0.5 text-center text-[11px] font-bold text-[var(--brand-700)]">{fmtCant(p.cantidad)}×</span>
+                  <span className="min-w-0 truncate">{p.nombre}</span>
+                </li>
+              ))}
+            </ul>
+            {env.productos.length > 4 ? <p className="mt-1 text-[11px] text-slate-400">+{env.productos.length - 4} {env.productos.length - 4 === 1 ? "producto" : "productos"} más</p> : null}
+          </div>
+        ) : null}
+        {env.hora_estimada ? (
+          <p className="mt-2.5 inline-flex items-center gap-1 rounded-md bg-[var(--brand-50)] px-2 py-1 text-[11px] font-semibold text-[var(--brand-700)]"><Clock className="h-3.5 w-3.5" />Entrega estimada {env.hora_estimada}</p>
+        ) : null}
+
         {/* Total + estado de cobro */}
         <div className="mt-3 flex items-end justify-between gap-2">
           <div>
@@ -251,6 +270,10 @@ function TarjetaEnvio({ env, color, chofer, onAbrir, enOverlay = false }: {
       </div>
     </div>
   );
+}
+
+function fmtCant(n: number): string {
+  return Number.isInteger(n) ? String(n) : n.toLocaleString("es-PY", { maximumFractionDigits: 3 });
 }
 
 function haceCuanto(iso: string): string {
@@ -272,6 +295,7 @@ function ModalEnvioDetalle({ env, estados, choferes, ocupado, onClose, onMover, 
   const [direccion, setDireccion] = useState(env.direccion ?? "");
   const [referencia, setReferencia] = useState(env.referencia ?? "");
   const [telefono, setTelefono] = useState(env.telefono ?? "");
+  const [horaEstimada, setHoraEstimada] = useState(env.hora_estimada ?? "");
   const [notas, setNotas] = useState(env.notas ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -286,7 +310,7 @@ function ModalEnvioDetalle({ env, estados, choferes, ocupado, onClose, onMover, 
   async function guardar() {
     setBusy(true); setError(null);
     try {
-      await apiFetch(URL_ENVIOS, { method: "POST", body: JSON.stringify({ accion: "editar", id: env.id, direccion, referencia, telefono, notas }) });
+      await apiFetch(URL_ENVIOS, { method: "POST", body: JSON.stringify({ accion: "editar", id: env.id, direccion, referencia, telefono, hora_estimada: horaEstimada || null, notas }) });
       await onCambio();
       onClose();
     } catch (e) { setError((e as Error).message); setBusy(false); }
@@ -335,11 +359,29 @@ function ModalEnvioDetalle({ env, estados, choferes, ocupado, onClose, onMover, 
           <div className="mt-1.5"><Select value={env.chofer_id ?? ""} onChange={onAsignar} options={choferOpts} block disabled={ocupado} /></div>
         </div>
 
+        {/* Pedido: productos y cantidades */}
+        <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-slate-700"><Package className="h-4 w-4 text-slate-400" /> Pedido<span className="ml-auto font-bold tabular-nums text-slate-900">{gs(env.total)}</span></div>
+          {env.productos.length > 0 ? (
+            <ul className="space-y-1.5">
+              {env.productos.map((p, i) => (
+                <li key={i} className="flex items-center gap-2 text-sm text-slate-700">
+                  <span className="min-w-[2rem] shrink-0 rounded bg-[var(--brand-50)] px-1.5 py-0.5 text-center text-xs font-bold text-[var(--brand-700)]">{fmtCant(p.cantidad)}×</span>
+                  <span className="min-w-0 flex-1">{p.nombre}</span>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="text-xs text-slate-400">Sin productos cargados.</p>}
+        </div>
+
         {/* Datos de entrega */}
         <div className="space-y-3 border-t border-slate-100 pt-3">
           <label className="block"><span className={ET}>Dirección</span><input value={direccion} onChange={(e) => setDireccion(e.target.value)} maxLength={300} className={INPUT} /></label>
           <label className="block"><span className={ET}>Referencia <span className="font-normal text-slate-400">(entre calles, color de casa…)</span></span><input value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={200} className={INPUT} /></label>
-          <label className="block"><span className={ET}>Teléfono</span><input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={40} className={INPUT} /></label>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block"><span className={ET}>Teléfono</span><input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={40} className={INPUT} /></label>
+            <label className="block"><span className={ET}>Hora estimada</span><input type="time" value={horaEstimada} onChange={(e) => setHoraEstimada(e.target.value)} className={INPUT} /></label>
+          </div>
           <label className="block"><span className={ET}>Notas</span><textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} maxLength={500} className={`${INPUT} resize-none`} /></label>
         </div>
 

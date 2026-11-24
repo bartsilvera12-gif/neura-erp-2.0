@@ -4,7 +4,7 @@
  *     crear:   { venta_id, direccion?, referencia?, telefono?, chofer_id? }  (lo llama la caja)
  *     mover:   { id, estado_id }
  *     asignar: { id, chofer_id|null }
- *     editar:  { id, direccion?, referencia?, telefono?, notas? }
+ *     editar:  { id, direccion?, referencia?, telefono?, hora_estimada?, notas? }
  *     cobrar:  { id, metodo, referencia?, caja_id? }  (pago contra entrega, receta 173)
  */
 import { withTenant } from "@/lib/api/with-tenant";
@@ -30,7 +30,7 @@ export const POST = withTenant(async (ctx, req) => {
       res = await ctx.db.rpc("envio_asignar_chofer", { p_id: str("id"), p_chofer_id: str("chofer_id") });
       break;
     case "editar":
-      res = await ctx.db.rpc("envio_editar", { p: { id: str("id"), direccion: str("direccion"), referencia: str("referencia"), telefono: str("telefono"), notas: str("notas") } });
+      res = await ctx.db.rpc("envio_editar", { p: { id: str("id"), direccion: str("direccion"), referencia: str("referencia"), telefono: str("telefono"), hora_estimada: str("hora_estimada"), notas: str("notas") } });
       break;
     case "cobrar":
       res = await ctx.db.rpc("envio_cobrar", { p: { id: str("id"), metodo: str("metodo"), referencia: str("referencia"), caja_id: str("caja_id") } });
