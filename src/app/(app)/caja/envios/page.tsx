@@ -161,16 +161,23 @@ function ColumnaEstado({ estado, envios, arrastrando, children }: { estado: Envi
   const { setNodeRef, isOver } = useDroppable({ id: estado.id });
   const col = estado.color ?? "#94a3b8";
   return (
-    <section className={`flex w-full shrink-0 flex-col overflow-hidden rounded-2xl border bg-slate-50/50 transition-colors lg:w-[340px] ${isOver ? "border-[var(--brand)] bg-[var(--brand-50)]" : "border-slate-200/70"}`}>
+    <section className={`flex w-full shrink-0 flex-col overflow-hidden rounded-2xl border transition-all duration-150 lg:w-[340px] ${
+      isOver ? "border-[var(--brand)] bg-[var(--brand-50)] shadow-[0_12px_30px_-10px_color-mix(in_srgb,var(--brand)_60%,transparent)] ring-4 ring-[var(--brand-100)] lg:scale-[1.02]"
+      : arrastrando ? "border-2 border-dashed border-[color-mix(in_srgb,var(--brand)_45%,transparent)] bg-slate-50/50"
+      : "border-slate-200/70 bg-slate-50/50"}`}>
       <header className="relative flex items-center gap-2.5 px-3.5 pb-2.5 pt-3.5">
         <span className="absolute inset-x-0 top-0 h-1" style={{ backgroundColor: col }} />
         <span className="h-3 w-3 shrink-0 rounded-full ring-2 ring-white" style={{ backgroundColor: col }} />
-        <h2 className="min-w-0 flex-1 truncate text-[12px] font-bold uppercase tracking-[0.08em] text-slate-600">{estado.nombre}</h2>
-        <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums" style={{ backgroundColor: `${col}22`, color: col }}>{envios.length}</span>
+        <h2 className={`min-w-0 flex-1 truncate text-[12px] font-bold uppercase tracking-[0.08em] transition-colors ${isOver ? "text-[var(--brand-700)]" : "text-slate-600"}`}>{estado.nombre}</h2>
+        {isOver ? (
+          <span className="shrink-0 rounded-full bg-[var(--brand)] px-2 py-0.5 text-[11px] font-bold text-white">Soltá acá</span>
+        ) : (
+          <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-bold tabular-nums" style={{ backgroundColor: `${col}22`, color: col }}>{envios.length}</span>
+        )}
       </header>
       <div ref={setNodeRef} className="flex-1 space-y-2.5 px-2.5 pb-3.5">
         {envios.length === 0 ? (
-          <div className={`rounded-xl border border-dashed px-3 py-8 text-center text-xs transition-colors ${isOver || arrastrando ? "border-[var(--brand)] text-[var(--brand-700)]" : "border-slate-200 text-slate-400"}`}>{arrastrando ? "Soltá acá" : "Sin envíos"}</div>
+          <div className={`rounded-xl border-2 border-dashed px-3 py-8 text-center text-xs font-semibold transition-colors ${isOver ? "border-[var(--brand)] bg-white/70 text-[var(--brand-700)]" : arrastrando ? "border-[var(--brand)]/40 text-[var(--brand-700)]" : "border-slate-200 font-normal text-slate-400"}`}>{arrastrando ? "Soltá acá" : "Sin envíos"}</div>
         ) : children}
       </div>
     </section>
