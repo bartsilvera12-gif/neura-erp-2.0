@@ -38,6 +38,8 @@ export type Envio = {
   entregado_at: string | null;
 };
 
+export type EnvioHistorial = { estado_nombre: string | null; usuario_nombre: string | null; at: string };
+
 export type EnviosTablero = {
   estados: EnvioEstado[];
   choferes: Pick<EnvioChofer, "id" | "nombre" | "telefono">[];
@@ -48,3 +50,4 @@ export const URL_ENVIOS_TABLERO = "/api/envios/tablero";
 export const URL_ENVIOS = "/api/envios";
 export const URL_ENVIOS_ESTADOS = "/api/envios/estados";
 export const URL_ENVIOS_CHOFERES = "/api/envios/choferes";
+export const URL_ENVIOS_HISTORIAL = "/api/envios/historial";

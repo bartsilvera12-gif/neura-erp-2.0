@@ -7,7 +7,7 @@
  * Configuración (estados + choferes) con permiso envios_administrar.
  */
 import { useEffect, useMemo, useState } from "react";
-import { MapPin, Phone, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Banknote } from "lucide-react";
+import { MapPin, Phone, Truck, Settings2, Loader2, Plus, Pencil, Trash2, PackageOpen, Banknote, Clock, Search } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { invalidar } from "@/lib/api/cache-cliente";
 import { useUsuario, tienePermiso } from "@/lib/sesion/ContextoUsuario";
@@ -17,8 +17,8 @@ import { Cabecera, ModalDocumento, Pestanas, BOTON_PRIMARIO, BOTON_SECUNDARIO, E
 import { gs } from "@/modules/clientes/ui";
 import { useEnviosTablero } from "@/modules/envios/tablero";
 import {
-  URL_ENVIOS, URL_ENVIOS_ESTADOS, URL_ENVIOS_CHOFERES, URL_ENVIOS_TABLERO,
-  type Envio, type EnvioEstado, type EnvioChofer,
+  URL_ENVIOS, URL_ENVIOS_ESTADOS, URL_ENVIOS_CHOFERES, URL_ENVIOS_TABLERO, URL_ENVIOS_HISTORIAL,
+  type Envio, type EnvioEstado, type EnvioChofer, type EnvioHistorial,
 } from "@/modules/envios/tipos";
 
 const COBRO: Record<string, { texto: string; clase: string } | undefined> = {
@@ -35,19 +35,25 @@ export default function EnviosPage() {
   const [config, setConfig] = useState(false);
   const [editar, setEditar] = useState<Envio | null>(null);
   const [cobrar, setCobrar] = useState<Envio | null>(null);
+  const [filtroChofer, setFiltroChofer] = useState("");
+  const [busqueda, setBusqueda] = useState("");
 
   const porEstado = useMemo(() => {
+    const q = busqueda.trim().toLowerCase();
     const m = new Map<string, Envio[]>();
     for (const e of tablero?.envios ?? []) {
+      if (filtroChofer === "__sin__" ? e.chofer_id : filtroChofer ? e.chofer_id !== filtroChofer : false) continue;
+      if (q && ![e.cliente_nombre, e.numero, e.direccion, e.telefono].some((v) => v?.toLowerCase().includes(q))) continue;
       const l = m.get(e.estado_id) ?? [];
       l.push(e);
       m.set(e.estado_id, l);
     }
     return m;
-  }, [tablero]);
+  }, [tablero, filtroChofer, busqueda]);
 
   const choferOpts: [string, string][] = [["", "Sin chofer"], ...(tablero?.choferes ?? []).map((c) => [c.id, c.nombre] as [string, string])];
   const estadoOpts: [string, string][] = (tablero?.estados ?? []).map((e) => [e.id, e.nombre]);
+  const filtroChoferOpts: [string, string][] = [["", "Todos los choferes"], ["__sin__", "Sin asignar"], ...(tablero?.choferes ?? []).map((c) => [c.id, c.nombre] as [string, string])];
 
   async function accion(fn: () => Promise<unknown>, id: string) {
     setOcupado(id);
@@ -80,6 +86,19 @@ export default function EnviosPage() {
 
       {aviso ? <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">{aviso}</p> : null}
       {error ? <p className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p> : null}
+
+      {tablero && (tablero.envios.length > 0 || filtroChofer || busqueda) ? (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <div className="relative min-w-[180px] max-w-xs flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar cliente, N°, dirección…" type="search" aria-label="Buscar envíos"
+              className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
+          </div>
+          <div className="w-52">
+            <Select value={filtroChofer} onChange={setFiltroChofer} options={filtroChoferOpts} chico block etiqueta="Filtrar por chofer" />
+          </div>
+        </div>
+      ) : null}
 
       {!tablero ? (
         <div className="py-20 text-center"><Loader2 className="mx-auto h-6 w-6 animate-spin text-slate-400" /></div>
@@ -171,6 +190,10 @@ function ModalEditarEnvio({ env, onClose, onGuardado }: { env: Envio; onClose: (
   const [notas, setNotas] = useState(env.notas ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [historial, setHistorial] = useState<EnvioHistorial[] | null>(null);
+  useMountEffect(() => {
+    apiFetch<EnvioHistorial[]>(`${URL_ENVIOS_HISTORIAL}?id=${env.id}`).then(setHistorial).catch(() => setHistorial([]));
+  });
 
   async function guardar() {
     setBusy(true); setError(null);
@@ -194,9 +217,32 @@ function ModalEditarEnvio({ env, onClose, onGuardado }: { env: Envio; onClose: (
         <label className="block"><span className={ET}>Referencia <span className="font-normal text-slate-400">(entre calles, color de casa…)</span></span><input value={referencia} onChange={(e) => setReferencia(e.target.value)} maxLength={200} className={INPUT} /></label>
         <label className="block"><span className={ET}>Teléfono</span><input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={40} className={INPUT} /></label>
         <label className="block"><span className={ET}>Notas</span><textarea rows={2} value={notas} onChange={(e) => setNotas(e.target.value)} maxLength={500} className={`${INPUT} resize-none`} /></label>
+        {historial === null ? (
+          <div className="flex justify-center py-2"><Loader2 className="h-4 w-4 animate-spin text-slate-300" /></div>
+        ) : historial.length > 0 ? (
+          <div className="border-t border-slate-100 pt-3">
+            <p className={ET}>Línea de tiempo</p>
+            <ul className="mt-2 space-y-2.5">
+              {historial.map((h, i) => (
+                <li key={i} className="flex items-start gap-2 text-xs">
+                  <Clock className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--brand)]" />
+                  <span className="min-w-0">
+                    <span className="font-semibold text-slate-700">{h.estado_nombre ?? "—"}</span>
+                    <span className="text-slate-400"> · {fechaHora(h.at)}{h.usuario_nombre ? ` · ${h.usuario_nombre}` : ""}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
     </ModalDocumento>
   );
+}
+
+function fechaHora(iso: string): string {
+  try { return new Date(iso).toLocaleString("es-PY", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }); }
+  catch { return iso; }
 }
 
 function ModalCobrarEnvio({ env, onClose, onCobrado }: { env: Envio; onClose: () => void; onCobrado: () => void }) {
