@@ -137,6 +137,20 @@ export async function procesarEvento(eventoId: number, proveedor: ProveedorWebho
         continue;
       }
 
+      // Respuesta del equipo escrita en el celular (por QR): se guarda como saliente y nada más. No es
+      // un mensaje del cliente, así que no dispara bots ni asignaciones (receta 174).
+      if (e.desde_celular) {
+        const { error } = await systemClient().rpc("chat_registrar_desde_celular", {
+          p_canal: canal.id, p_telefono: e.telefono, p_nombre: null, p_externo_id: e.externo_id ?? null,
+          p_tipo: e.tipo ?? "texto", p_contenido: e.contenido ?? null,
+          p_fecha: e.fecha && Date.parse(e.fecha) < Date.now() ? e.fecha : null,
+        });
+        // Sin la receta 174 la función no existe: se ignora como antes de esta versión.
+        if (error && !/does not exist|schema cache/i.test(error.message)) throw new Error(error.message);
+        await anotarCanal(canal.id, null);
+        continue;
+      }
+
       // Foto, PDF o audio: se baja con la clave del canal y se guarda en erp-chat.
       let media: { path: string; mime: string; nombre: string } | null = null;
       let errorMedia: string | null = null;

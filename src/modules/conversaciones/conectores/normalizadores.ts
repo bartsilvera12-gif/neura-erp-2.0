@@ -34,6 +34,8 @@ export type EntranteNormalizado = {
   media?: MediaEntrante | null;
   /** Anuncio de Meta (Click-to-WhatsApp) que trajo al cliente. */
   anuncio?: { id: string; titulo: string | null } | null;
+  /** Por QR: lo mandó alguien del equipo desde el WhatsApp del celular (no es del cliente). */
+  desde_celular?: boolean;
 };
 export type EstadoNormalizado = { externo_id: string; estado: EstadoEntrega; error?: string | null };
 export type Normalizado = { entrantes: EntranteNormalizado[]; estados: EstadoNormalizado[] };
@@ -221,7 +223,10 @@ const CLASE_BAILEYS: [RegExp, string][] = [
  */
 function baileys(payload: unknown): Normalizado {
   const p = obj(payload);
-  if (!p || p.fromMe === true) return VACIO;
+  if (!p) return VACIO;
+  // fromMe: lo mandó el negocio. Puede ser el eco de lo que mandó el ERP (se descarta al guardar) o
+  // una respuesta escrita en el celular, que se guarda como saliente "desde el celular" (receta 174).
+  const delCelular = p.fromMe === true;
   const canal = txt(p.channelId, 60);
   // Con @lid el puente manda el código interno en fromDigits y el teléfono de verdad en fromPhone.
   const telefono = digitos(p.fromPhone) || digitos(p.fromDigits);
@@ -248,6 +253,9 @@ function baileys(payload: unknown): Normalizado {
     contenido = tarjetas.length ? `Contacto: ${tarjetas.join(" · ")}` : `[${clase.replace(/Message$/, "") || "mensaje"}]`;
   }
   if (!contenido) return VACIO;
+  // Del celular solo interesa lo que se ve en el chat: texto, archivos, ubicación o contactos. Los avisos
+  // internos de WhatsApp (protocolMessage, reacciones, etc.) no son mensajes.
+  if (delCelular && !texto && !tipoMedia && tipo !== "ubicacion" && !contenido.startsWith("Contacto:")) return VACIO;
   const seg = Number(p.timestamp);
   const r = obj(p.referral);
   const anuncioId = txt(r?.source_id, 120) ?? txt(r?.ctwa_clid, 200);
@@ -255,12 +263,14 @@ function baileys(payload: unknown): Normalizado {
     entrantes: [{
       canal_id: canal,
       telefono,
-      nombre: nombrePerfil(p.pushName, telefono),
+      // Del celular, pushName es el nombre del negocio, no del cliente.
+      nombre: delCelular ? null : nombrePerfil(p.pushName, telefono),
       externo_id: txt(p.waMessageId, 200),
       tipo,
       contenido,
       fecha: Number.isFinite(seg) && seg > 0 ? new Date(seg * 1000).toISOString() : null,
-      anuncio: anuncioId ? { id: anuncioId, titulo: txt(r?.headline, 200) ?? txt(r?.body, 200) } : null,
+      anuncio: delCelular ? null : anuncioId ? { id: anuncioId, titulo: txt(r?.headline, 200) ?? txt(r?.body, 200) } : null,
+      ...(delCelular ? { desde_celular: true } : {}),
     }],
     estados: [],
   };

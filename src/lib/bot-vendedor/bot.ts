@@ -705,7 +705,8 @@ export async function botVendedor(e: EntranteVendedor): Promise<{ respondio: boo
       .select("created_at")
       .eq("conversacion_id", conv.id)
       .eq("from_me", true)
-      .not("autor_usuario_id", "is", null)
+      // Una persona: escribió desde la bandeja (tiene autor) o desde el WhatsApp del celular (receta 174).
+      .or("autor_usuario_id.not.is.null,desde_celular.eq.true")
       .neq("tipo", "nota")
       .gte("created_at", new Date(Date.now() - HUMANO_MS).toISOString())
       .order("created_at", { ascending: false })
