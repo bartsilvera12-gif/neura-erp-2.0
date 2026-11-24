@@ -32,5 +32,7 @@ export const moduloOmnicanal: Modulo = {
     { label: "Canales de WhatsApp", href: "/conversaciones/canales", roles: ["ADMIN"], palabras: ["ycloud", "meta", "conectar whatsapp", "numero", "webhook", "api key"] },
     // Receta 172: el bot que vende por WhatsApp (un "vendedor" por categoría) y toma pedidos.
     { label: "Bot vendedor", href: "/conversaciones/bot-vendedor", roles: ["ADMIN"], palabras: ["bot", "ia", "claude", "vendedor", "pedidos por whatsapp", "categorias", "automatico"] },
+    // Receta 173: el guion del bot como diagrama editable (varios flujos, uno activo).
+    { label: "Flujo del bot", href: "/conversaciones/bot-vendedor/flujo", roles: ["ADMIN"], palabras: ["flujo", "guion", "diagrama", "pasos", "conversacion del bot"] },
   ],
 };

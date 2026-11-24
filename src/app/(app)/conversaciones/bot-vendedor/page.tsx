@@ -8,7 +8,7 @@
  */
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { Bot, ChevronDown, Loader2, Plus, Trash2, TriangleAlert } from "lucide-react";
+import { Bot, ChevronDown, Loader2, Plus, Trash2, TriangleAlert, Workflow } from "lucide-react";
 import { apiFetch } from "@/lib/api/client-fetch";
 import { EncabezadoPagina } from "@/components/EncabezadoPagina";
 import { BOTON, BOTON_PRIMARIO, Campo, INPUT } from "@/modules/rrhh/ui";
@@ -108,6 +108,7 @@ export default function BotVendedorPage() {
         titulo="Bot vendedor"
         subtitulo="El cliente elige una categoría por WhatsApp y el bot pasa a ser el vendedor de esa categoría: muestra productos con precio y stock, arma el carrito y toma el pedido."
         volver={{ href: "/omnicanal", label: "Omnicanal" }}
+        acciones={<Link href="/conversaciones/bot-vendedor/flujo" className={`${BOTON} max-sm:w-full`}><Workflow className="h-4 w-4" /> Flujo de la conversación</Link>}
       />
       {error ? <p className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</p> : null}
       {!cfg && !error ? <div className="h-64 animate-pulse rounded-2xl border border-slate-200 bg-white" /> : null}

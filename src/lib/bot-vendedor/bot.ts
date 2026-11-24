@@ -20,6 +20,7 @@ import { conectorPara, type DestinoChat } from "@/modules/conversaciones/conecto
 import { CARTEL_MEDIA } from "@/modules/conversaciones/conectores/normalizadores";
 import { leerComprobante, lectorConfigurado } from "@/lib/sorteos/lector-comprobante";
 import { CHAT_BUCKET } from "@/lib/conversaciones/servidor";
+import { FLUJO_ORIGINAL, guionDelFlujo, type Flujo } from "@/lib/bot-vendedor/flujo";
 
 const MODELO = process.env.BOT_VENDEDOR_MODELO?.trim() || "claude-sonnet-5-5";
 const HUMANO_MS = 12 * 60 * 60 * 1000;
@@ -38,6 +39,8 @@ export type ConfigBot = {
   empresa_id: string; activo: boolean; canal_id: string | null; tienda: string | null; instrucciones: string | null;
   envio_activo: boolean; envio_texto: string | null; retiro_activo: boolean; retiro_texto: string | null;
   pago_al_recibir: boolean; pago_transferencia: boolean; cuentas: Cuenta[];
+  /** El flujo activo (receta 173); sin flujo activo, el de fábrica. */
+  flujo?: Flujo;
 };
 type Conv = {
   id: string; empresa_id: string; etiquetas: string[] | null;
@@ -83,7 +86,20 @@ async function configDe(conv: Conv): Promise<ConfigBot | null> {
   if (!c?.activo || (c.canal_id && c.canal_id !== conv.canal.id)) return null;
   // Sin fila de funciones = Comercio = Pedidos prendida (receta 77).
   if ((fun.data as { pedidos?: boolean } | null)?.pedidos === false) return null;
-  return { ...c, cuentas: Array.isArray(c.cuentas) ? c.cuentas : [] };
+  return { ...c, cuentas: Array.isArray(c.cuentas) ? c.cuentas : [], flujo: await flujoActivo(conv.empresa_id) };
+}
+
+/** El flujo que sigue el bot: el activo de la empresa, o el de fábrica (también si la receta 173 no está). */
+export async function flujoActivo(empresaId: string): Promise<Flujo> {
+  const { data, error } = await db()
+    .from("bot_vendedor_flujos")
+    .select("nombre, estilo, nodos, conexiones")
+    .eq("empresa_id", empresaId)
+    .eq("activo", true)
+    .maybeSingle();
+  const f = data as Flujo | null;
+  if (error || !f || !Array.isArray(f.nodos) || !f.nodos.length) return FLUJO_ORIGINAL;
+  return { ...f, conexiones: Array.isArray(f.conexiones) ? f.conexiones : [] };
 }
 
 async function leerSesion(conv: Conv): Promise<Sesion> {
@@ -279,17 +295,9 @@ function sistemaFijo(cfg: ConfigBot, categorias: Categoria[]): string {
   return [
     `Atendés el WhatsApp de ${tienda}, en Paraguay. Hablás en español de Paraguay, con voseo, cálido y breve: son mensajes de WhatsApp, de 1 a 4 líneas, sin títulos ni tablas. Podés usar *negrita* de WhatsApp y algún emoji, sin exagerar.`,
     "",
-    "Menús numerados (importante): el cliente no tiene que escribir frases. Cada vez que le ofrezcas opciones (categorías, productos, talle o color, envío o retiro, forma de pago, confirmar o cambiar; la cantidad no: esa la escribe el cliente), mostralas numeradas, una por línea, así: *1* · Remeras. Máximo 10 opciones; terminá con una línea corta como \"Respondé con el número 👇\". Si el cliente responde solo un número, es la opción con ese número de TU último mensaje con opciones. Igual aceptá que escriba con sus palabras, aunque esté mal escrito o sin tildes (\"remra\", \"pantalon\", \"zapatiyas\"): entendé a qué se refiere.",
+    guionDelFlujo(cfg.flujo ?? FLUJO_ORIGINAL),
     "",
-    "Cómo funciona la atención:",
-    "1. Si el cliente todavía no eligió una categoría, saludalo y mostrale las categorías numeradas. Si ya dice lo que busca, elegí vos la categoría que corresponde.",
-    "2. Cuando elige una (por número o por nombre), llamá a elegir_categoria con el nombre exacto de la lista: desde ahí sos el vendedor especialista de esa categoría y seguís sus instrucciones. Si después quiere otra cosa, cambiá de categoría con elegir_categoria. Ofrecé siempre una opción numerada para volver a las categorías.",
-    "3. Mostrá los productos de esa categoría numerados, con el precio en la misma línea. Precios, stock y descripciones salen SOLO de las herramientas: nunca inventes un producto, un precio, un descuento ni un plazo. Si algo no está, decilo y ofrecé lo más parecido.",
-    "4. Si el producto tiene foto y ayuda a vender, mandala con enviar_foto.",
-    "5. Para la cantidad preguntá simplemente \"¿Cuántas querés?\" (sin lista numerada: el cliente escribe el número). Con agregar_al_carrito armás el pedido; nunca agregues más unidades que el stock que muestra la herramienta. Después ofrecé: seguir comprando, ver otra categoría o terminar el pedido.",
-    "6. Para cerrar pedí, de a una cosa por mensaje y con opciones numeradas cuando se pueda: envío o retiro, la dirección si es envío (sirve la ubicación de WhatsApp), la forma de pago y el nombre de quien recibe. Mostrá el resumen con el total y ofrecé *1* · Confirmar pedido, *2* · Cambiar algo. Recién cuando elige confirmar, llamá a confirmar_pedido.",
-    "7. Si pide hablar con una persona, se queja, o pregunta algo que las herramientas no responden (garantías, cambios, mayoristas, factura con RUC), llamá a pasar_a_humano.",
-    "8. Nunca te desdigas de algo que ya le confirmaste al cliente (un pedido, un precio). Si algo no te cierra, no afirmes que no existe: llamá a pasar_a_humano.",
+    "Reglas que valen siempre: nunca te desdigas de algo que ya le confirmaste al cliente (un pedido, un precio); si algo no te cierra, no afirmes que no existe: llamá a pasar_a_humano.",
     "",
     `Categorías de la tienda: ${categorias.length ? categorias.map((c) => c.nombre).join(" · ") : "(todavía no hay categorías cargadas)"}`,
     "",
