@@ -134,7 +134,7 @@ export default function EnviosPage() {
               <ColumnaEstado key={est.id} estado={est} envios={porEstado.get(est.id) ?? []} arrastrando={!!arrastrando}>
                 {(porEstado.get(est.id) ?? []).map((env) => (
                   <TarjetaDraggable key={env.id} env={env} color={est.color ?? "#94a3b8"} chofer={env.chofer_id ? choferesPorId.get(env.chofer_id) ?? null : null}
-                    ocupado={ocupado === env.id} onAbrir={() => setDetalleId(env.id)} />
+                    estados={tablero.estados} ocupado={ocupado === env.id} onAbrir={() => setDetalleId(env.id)} onMover={(estadoId) => mover(env, estadoId)} />
                 ))}
               </ColumnaEstado>
             ))}
@@ -186,20 +186,20 @@ function ColumnaEstado({ estado, envios, arrastrando, children }: { estado: Envi
 
 // Envoltorio arrastrable (@dnd-kit). En desktop se arrastra con el mouse; en táctil, mantené
 // apretado un instante y arrastrá. Un toque corto (sin arrastrar) abre el detalle.
-function TarjetaDraggable({ env, color, chofer, ocupado, onAbrir }: {
-  env: Envio; color: string; chofer: string | null; ocupado: boolean; onAbrir: () => void;
+function TarjetaDraggable({ env, color, chofer, estados, ocupado, onAbrir, onMover }: {
+  env: Envio; color: string; chofer: string | null; estados: EnvioEstado[]; ocupado: boolean; onAbrir: () => void; onMover: (estadoId: string) => void;
 }) {
   const { setNodeRef, listeners, attributes, isDragging } = useDraggable({ id: env.id });
   return (
     <div ref={setNodeRef} {...attributes} {...listeners}
       className={`${isDragging ? "opacity-40" : ""} ${ocupado ? "pointer-events-none opacity-60" : ""}`}>
-      <TarjetaEnvio env={env} color={color} chofer={chofer} onAbrir={onAbrir} />
+      <TarjetaEnvio env={env} color={color} chofer={chofer} estados={estados} onAbrir={onAbrir} onMover={onMover} />
     </div>
   );
 }
 
-function TarjetaEnvio({ env, color, chofer, onAbrir, enOverlay = false }: {
-  env: Envio; color: string; chofer: string | null; onAbrir?: () => void; enOverlay?: boolean;
+function TarjetaEnvio({ env, color, chofer, estados, onAbrir, onMover, enOverlay = false }: {
+  env: Envio; color: string; chofer: string | null; estados?: EnvioEstado[]; onAbrir?: () => void; onMover?: (estadoId: string) => void; enOverlay?: boolean;
 }) {
   const cobro = COBRO[env.cobro_estado];
   const inicial = (env.cliente_nombre || "C").trim().charAt(0).toUpperCase() || "C";
@@ -267,6 +267,15 @@ function TarjetaEnvio({ env, color, chofer, onAbrir, enOverlay = false }: {
           <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full ${chofer ? "bg-[var(--brand-50)] text-[var(--brand-700)]" : "bg-slate-100 text-slate-400"}`}><Truck className="h-3 w-3" /></span>
           {chofer ? <span className="truncate text-xs font-semibold text-slate-700">{chofer}</span> : <span className="text-xs text-slate-400">Sin chofer asignado</span>}
         </div>
+
+        {/* Selector de estado: cambio rápido sin arrastrar (clave en celular).
+            stopPropagation: no arranca el arrastre ni abre el detalle. */}
+        {onMover && estados && !enOverlay ? (
+          <div className="mt-2" onPointerDownCapture={(e) => e.stopPropagation()} onClick={(e) => e.stopPropagation()}>
+            <Select value={env.estado_id} onChange={(id) => { if (id !== env.estado_id) onMover(id); }}
+              options={estados.map((e) => [e.id, e.nombre] as [string, string])} chico block etiqueta="Cambiar estado" />
+          </div>
+        ) : null}
       </div>
     </div>
   );
