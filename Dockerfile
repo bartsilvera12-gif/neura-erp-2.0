@@ -12,7 +12,11 @@ COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm \
     npm ci
 
-# ── builder: next build (con caché incremental entre deploys) ───────────────
+# ── builder: next build (SIN caché persistente entre deploys) ───────────────
+# No se monta `/app/.next/cache` como caché de BuildKit: el caché persistente de
+# Turbopack (turbo-persistence) se corrompe cuando un build se corta a la mitad y
+# el siguiente deploy revienta con un panic ("range start index out of range for
+# slice"). Compilar limpio cuesta ~60s más, pero el deploy deja de fallar.
 FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
@@ -27,8 +31,7 @@ ENV NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
 ENV NEXT_PUBLIC_SUPABASE_ANON_KEY=$NEXT_PUBLIC_SUPABASE_ANON_KEY
 ENV NEXT_PUBLIC_SOPORTE_NEURA_WHATSAPP=$NEXT_PUBLIC_SOPORTE_NEURA_WHATSAPP
 ENV NEXT_PUBLIC_SOPORTE_NEURA_URL=$NEXT_PUBLIC_SOPORTE_NEURA_URL
-RUN --mount=type=cache,target=/app/.next/cache \
-    npm run build
+RUN npm run build
 
 # ── runner: imagen final mínima ─────────────────────────────────────────────
 FROM ${NODE_IMAGE} AS runner
