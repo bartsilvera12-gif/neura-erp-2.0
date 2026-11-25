@@ -17,6 +17,7 @@ import { ColorPicker } from "@/components/ColorPicker";
 import { Cabecera, ModalDocumento, Pestanas, BOTON_PRIMARIO, BOTON_SECUNDARIO, ET, INPUT } from "@/modules/inventario/ui";
 import { gs } from "@/modules/clientes/ui";
 import { useEnviosTablero } from "@/modules/envios/tablero";
+import { filtrar } from "@/lib/busqueda";
 import {
   URL_ENVIOS, URL_ENVIOS_ESTADOS, URL_ENVIOS_CHOFERES, URL_ENVIOS_TABLERO, URL_ENVIOS_HISTORIAL,
   type Envio, type EnvioEstado, type EnvioChofer, type EnvioHistorial,
@@ -46,11 +47,26 @@ export default function EnviosPage() {
   );
 
   const porEstado = useMemo(() => {
-    const q = busqueda.trim().toLowerCase();
+    const q = busqueda.trim();
+    const nombreChofer = new Map((tablero?.choferes ?? []).map((c) => [c.id, c.nombre]));
+    // Búsqueda INTELIGENTE (regla del 2.0): tildes, typos, N° de documento ("demo 5"),
+    // teléfono en cualquier forma y monto exacto ("12000"). Solo se usa para filtrar
+    // (qué envíos pasan); el orden dentro de cada columna no cambia.
+    const coincideIds = q
+      ? new Set(
+          filtrar(tablero?.envios ?? [], q, (e) => ({
+            principal: e.cliente_nombre,
+            otros: [e.direccion, e.referencia, e.vendedor, e.chofer_id ? nombreChofer.get(e.chofer_id) : null, ...e.productos.map((p) => p.nombre)],
+            codigos: [e.telefono],
+            documentos: [e.numero],
+            montos: [e.total],
+          })).map((e) => e.id),
+        )
+      : null;
     const m = new Map<string, Envio[]>();
     for (const e of tablero?.envios ?? []) {
       if (filtroChofer === "__sin__" ? e.chofer_id : filtroChofer ? e.chofer_id !== filtroChofer : false) continue;
-      if (q && ![e.cliente_nombre, e.numero, e.direccion, e.telefono].some((v) => v?.toLowerCase().includes(q))) continue;
+      if (coincideIds && !coincideIds.has(e.id)) continue;
       const l = m.get(e.estado_id) ?? [];
       l.push(e);
       m.set(e.estado_id, l);
@@ -58,6 +74,7 @@ export default function EnviosPage() {
     return m;
   }, [tablero, filtroChofer, busqueda]);
 
+  const totalFiltrado = useMemo(() => { let n = 0; for (const l of porEstado.values()) n += l.length; return n; }, [porEstado]);
   const choferesPorId = useMemo(() => new Map((tablero?.choferes ?? []).map((c) => [c.id, c.nombre])), [tablero]);
   const colorDeEstado = (id: string) => tablero?.estados.find((e) => e.id === id)?.color ?? "#94a3b8";
   const filtroChoferOpts: [string, string][] = [["", "Todos los choferes"], ["__sin__", "Sin asignar"], ...(tablero?.choferes ?? []).map((c) => [c.id, c.nombre] as [string, string])];
@@ -107,14 +124,23 @@ export default function EnviosPage() {
       {error ? <p className="mb-3 rounded-lg bg-rose-50 px-3 py-2 text-xs text-rose-700">{error}</p> : null}
 
       {tablero && (tablero.envios.length > 0 || filtroChofer || busqueda) ? (
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[180px] max-w-xs flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-            <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar cliente, N°, dirección…" type="search" aria-label="Buscar envíos"
-              className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm outline-none transition focus:border-[var(--brand)] focus:ring-4 focus:ring-[var(--brand-100)]" />
+        <div className="mb-4 flex flex-col gap-2.5 rounded-2xl border border-slate-200 bg-white p-2.5 shadow-sm sm:flex-row sm:items-center">
+          <div className="group relative flex-1">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-[18px] w-[18px] -translate-y-1/2 text-slate-400 transition-colors group-focus-within:text-[var(--brand)]" />
+            <input value={busqueda} onChange={(e) => setBusqueda(e.target.value)} placeholder="Buscar cliente, N°, dirección, teléfono, producto…" type="search" aria-label="Buscar envíos"
+              className="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-9 text-sm font-medium outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-[var(--brand)] focus:bg-white focus:ring-4 focus:ring-[var(--brand-100)]" />
+            {busqueda ? (
+              <button type="button" onClick={() => setBusqueda("")} aria-label="Limpiar búsqueda"
+                className="absolute right-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-600">✕</button>
+            ) : null}
           </div>
-          <div className="w-52">
-            <Select value={filtroChofer} onChange={setFiltroChofer} options={filtroChoferOpts} chico block etiqueta="Filtrar por chofer" />
+          <div className="flex items-center gap-2">
+            <div className="flex h-11 items-center gap-1.5 rounded-xl bg-slate-50 px-3 text-sm font-semibold text-slate-600 max-sm:flex-1 max-sm:justify-center">
+              <Package className="h-4 w-4 text-slate-400" />
+              <span className="tabular-nums text-slate-900">{totalFiltrado}</span>
+              <span className="font-medium text-slate-400">{totalFiltrado === 1 ? "envío" : "envíos"}</span>
+            </div>
+            <Select value={filtroChofer} onChange={setFiltroChofer} options={filtroChoferOpts} chip prefijo="Chofer" textoVacio="Todos" etiqueta="Filtrar por chofer" className="min-w-[150px] max-sm:flex-1" />
           </div>
         </div>
       ) : null}
@@ -652,7 +678,9 @@ function EditarChofer({ chofer, onClose, onGuardado }: { chofer: EnvioChofer | n
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const completo = !!nombre.trim() && !!telefono.trim() && !!documento.trim();
   async function guardar() {
+    if (!completo) { setError("Completá nombre, teléfono y CI / documento."); return; }
     setBusy(true); setError(null);
     try { await apiFetch(URL_ENVIOS_CHOFERES, { method: "POST", body: JSON.stringify({ id: chofer?.id, nombre, telefono, documento, activo }) }); onGuardado(); }
     catch (e) { setError((e as Error).message); setBusy(false); }
@@ -668,14 +696,14 @@ function EditarChofer({ chofer, onClose, onGuardado }: { chofer: EnvioChofer | n
       footer={<>
         {chofer && !chofer.usado ? <button type="button" onClick={() => void eliminar()} disabled={busy} className="mr-auto inline-flex items-center gap-1.5 rounded-lg px-2 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" /> Eliminar</button> : null}
         <button type="button" onClick={onClose} disabled={busy} className={`${BOTON_SECUNDARIO} max-sm:min-h-11 max-sm:flex-1`}>Cancelar</button>
-        <button type="button" onClick={() => void guardar()} disabled={busy || !nombre.trim()} className={`${BOTON_PRIMARIO} max-sm:min-h-11 max-sm:flex-[2]`}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar</button>
+        <button type="button" onClick={() => void guardar()} disabled={busy || !completo} className={`${BOTON_PRIMARIO} max-sm:min-h-11 max-sm:flex-[2]`}>{busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Guardar</button>
       </>}>
       <div className="space-y-3">
         {error ? <p className="rounded-lg bg-rose-50 p-2.5 text-xs text-rose-700">{error}</p> : null}
         <label className="block"><span className={ET}>Nombre *</span><input autoFocus value={nombre} onChange={(e) => setNombre(e.target.value)} maxLength={120} className={INPUT} /></label>
         <div className="grid grid-cols-2 gap-3">
-          <label className="block"><span className={ET}>Teléfono</span><input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={40} className={INPUT} /></label>
-          <label className="block"><span className={ET}>CI / Documento</span><input value={documento} onChange={(e) => setDocumento(e.target.value)} maxLength={40} className={INPUT} /></label>
+          <label className="block"><span className={ET}>Teléfono *</span><input value={telefono} onChange={(e) => setTelefono(e.target.value)} maxLength={40} className={INPUT} /></label>
+          <label className="block"><span className={ET}>CI / Documento *</span><input value={documento} onChange={(e) => setDocumento(e.target.value)} maxLength={40} className={INPUT} /></label>
         </div>
         <Toggle on={activo} onChange={setActivo} texto="Activo" detalle="Los inactivos no se pueden asignar." />
       </div>
